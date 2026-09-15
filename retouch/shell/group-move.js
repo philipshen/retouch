@@ -47,6 +47,14 @@
   }
   for(const el of [...new Set(roots)].filter(el=>!roots.some(parent=>parent!==el&&parent.contains(el))))visit(el);if(!targets.length||targets.length>100||new Set(targets.map(item=>item.id)).size!==targets.length)throw Error('Choose a group with 1–100 distinct source children.');return targets;
  }
+ function selectionBounds(roots,members){
+  const outer=[...new Set(roots)].filter(el=>!roots.some(parent=>parent!==el&&parent.contains(el)));
+  return outer.map(el=>{const items=members.filter(item=>el.contains(item.el));if(!items.length)throw Error('Choose visible selection bounds.');const left=Math.min(...items.map(item=>item.rect.x)),top=Math.min(...items.map(item=>item.rect.y)),right=Math.max(...items.map(item=>item.rect.x+item.rect.width)),bottom=Math.max(...items.map(item=>item.rect.y+item.rect.height));return {el,left,top,width:right-left,height:bottom-top};});
+ }
+ function memberDeltas(bounds,members,deltas){
+  if(bounds.length!==deltas.length||deltas.some(d=>!Number.isFinite(d.x)||!Number.isFinite(d.y)))throw Error('Choose finite selection offsets.');
+  return members.map(item=>{const owners=bounds.map((bound,i)=>bound.el.contains(item.el)?i:-1).filter(i=>i>=0);if(owners.length!==1)throw Error('Resolve one selection root for each layer.');return deltas[owners[0]];});
+ }
  function preview(members){
   const entries=members.map(member=>({...member,value:member.el.style.getPropertyValue('translate'),priority:member.el.style.getPropertyPriority('translate'),hadStyle:member.el.hasAttribute('style'),written:null}));
   const owned=item=>item.written!==null&&item.el.style.getPropertyValue('translate')===item.written&&item.el.style.getPropertyPriority('translate')==='important';
@@ -60,5 +68,5 @@
   const scoped=R.project(value,scope).split(/\s+/).filter(Boolean).filter(token=>!/^!?-?translate(?:-|\[)/.test(token)&&!/^!?\[translate:/.test(token));
   scoped.push('![translate:'+translate.replace(/ /g,'_')+']');return R.replaceScope(value,scoped.join(' '),scope);
  }
- const api={translation,measure,measureSelection,classes,multiply,localDelta,parentMatrix,preview};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupMove=api;
+ const api={translation,measure,measureSelection,selectionBounds,memberDeltas,classes,multiply,localDelta,parentMatrix,preview};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupMove=api;
 })(typeof window==='object'?window:globalThis);

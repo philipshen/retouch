@@ -36,4 +36,22 @@ test('mixed group measurements flatten transparent groups and move covered desce
  assert.deepEqual(move.measureSelection([group,a,c,group]).map(item=>item.id),['a','b','c']);
  assert.throws(()=>move.measureSelection([group,c],el=>el===b),/Unlock/);
  assert.throws(()=>move.measureSelection([group,node('a')]),/distinct/);
+ a.getBoundingClientRect=()=>({x:10,y:20,width:30,height:40});b.getBoundingClientRect=()=>({x:50,y:80,width:20,height:10});c.getBoundingClientRect=()=>({x:100,y:5,width:10,height:10});
+ const members=move.measureSelection([group,a,c]),bounds=move.selectionBounds([group,a,c],members);
+ assert.deepEqual(bounds.map(({el,...rect})=>rect),[{left:10,top:20,width:60,height:70},{left:100,top:5,width:10,height:10}]);
+ assert.deepEqual(move.memberDeltas(bounds,members,[{x:0,y:-15},{x:-90,y:0}]),[{x:0,y:-15},{x:0,y:-15},{x:-90,y:0}]);
+ assert.throws(()=>move.memberDeltas(bounds,members,[{x:NaN,y:0},{x:0,y:0}]),/finite/);
+ assert.throws(()=>move.memberDeltas(bounds.slice(0,1),members,[{x:0,y:0}]),/one selection root/);
+
+});
+
+test('distribution treats each group as one bound while preserving internal child offsets',()=>{
+ const arrange=require('../shell/selection-layout.js').arrange;
+ const a={},b={},c={},d={},e={},root=children=>({contains:el=>children.includes(el)}),roots=[root([a,b]),root([c,d]),root([e])];
+ const members=[{el:a,rect:{x:0,y:0,width:10,height:10}},{el:b,rect:{x:20,y:0,width:10,height:10}},{el:c,rect:{x:60,y:0,width:10,height:10}},{el:d,rect:{x:80,y:0,width:10,height:10}},{el:e,rect:{x:150,y:0,width:10,height:10}}];
+ const bounds=move.selectionBounds(roots,members),deltas=move.memberDeltas(bounds,members,arrange(bounds,'gap-x'));
+ assert.deepEqual(deltas,[{x:0,y:0},{x:0,y:0},{x:15,y:0},{x:15,y:0},{x:0,y:0}]);
+ const moved=members.map((member,i)=>({...member,rect:{...member.rect,x:member.rect.x+deltas[i].x}})),next=move.selectionBounds(roots,moved);
+ assert.equal(next[1].left-next[0].left-next[0].width,45);assert.equal(next[2].left-next[1].left-next[1].width,45);
+ assert.equal(moved[3].rect.x-moved[2].rect.x,20);
 });

@@ -17887,3 +17887,32 @@ the mixed selection and movement action. Legacy position controls still refuse
 boxless group alignment; this remains a UI/geometry gap. Group resizing/rotation,
 full Figma parity and trusted desktop distribution remain incomplete. This
 checkpoint does not rebuild the desktop package.
+
+### Group alignment checkpoint
+
+Mixed selections containing groups now expose the six alignment controls using
+union bounds for each outer selected group. Each child receives its group's
+canvas delta through its own ancestor transform; ordinary layers use their own
+delta. Covered descendants stay deduplicated. All offsets commit atomically and
+restore the full selection through undo/redo. Equal-gap distribution uses these
+same group bounds and requires three outer roots. The incompatible legacy
+alignment section is replaced for group-containing selections.
+
+Validation: 1,650 unit tests pass, including union bounds, ownership checks and
+three-root distribution preserving internal group spacing. HTML/Chromium,
+transformed React/Chromium and transformed Liquid/WebKit browser workflows cover
+all six alignment controls, the Alt+D shortcut, no-op alignment, exact undo/redo,
+selection restoration, and the existing mixed movement/grouping regressions.
+Distribution math is unit-tested; three-root distribution has not yet been
+verified through the browser. Visually inspected the light inspector screenshot
+`/tmp/retouch-group-multi-html.png`; controls appear beneath the Group heading and
+the previous boxless-layer alignment error is gone.
+
+Logs: `/tmp/retouch-group-align-units-final.log`,
+`/tmp/retouch-group-align-html-final.log`,
+`/tmp/retouch-group-align-react-final.log`, and
+`/tmp/retouch-group-align-webkit-final.log`.
+
+Containing-frame/key-layer alignment, group resize/rotation, full Figma parity
+and trusted public Homebrew distribution remain incomplete. No desktop rebuild
+or push for this checkpoint.
