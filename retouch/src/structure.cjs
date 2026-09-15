@@ -92,8 +92,8 @@ function describe(resolved,language) {
     if(index<0) throw Error('The source element could not be located.');
     let canDuplicate=duplicateAllowed(resolved.source,items[index],language);
     if(canDuplicate&&language==='html')try{require('./html-css.cjs').clone(resolved,items[index]);}catch{canDuplicate=false;}
-    return {...(language==='html'?{canReparent:true}:{}),parentId:items.parentId,canPaste:true,canDuplicate,canDelete:true,canMoveBefore:index>0,canMoveAfter:index<items.length-1,canMoveFirst:index>0,canMoveLast:index<items.length-1,reason:null};
-  } catch(error) {return {...(language==='html'?{canReparent:false}:{}),parentId:null,canPaste:false,canDuplicate:false,canDelete:false,canMoveBefore:false,canMoveAfter:false,reason:error.message};}
+    return {canReparent:true,parentId:items.parentId,canPaste:true,canDuplicate,canDelete:true,canMoveBefore:index>0,canMoveAfter:index<items.length-1,canMoveFirst:index>0,canMoveLast:index<items.length-1,reason:null};
+  } catch(error) {return {canReparent:false,parentId:null,canPaste:false,canDuplicate:false,canDelete:false,canMoveBefore:false,canMoveAfter:false,reason:error.message};}
 }
 function planOp(resolved,op,language) {
   if(op.fileHash && op.fileHash!==resolved.hash) return refuse('The file changed. Re-select the element before editing.');

@@ -1719,7 +1719,7 @@ function paintLoop() {
 }
 
 function syncLayerSelection() {
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent),selectionCanReparent:sharedComponentContainers(sel.multiple).length>0,selectionContainers:sharedComponentContainers(sel.multiple),selectionTargets:sharedComponentTargets(sel.multiple),selectionOrdering:sharedComponentOrdering(sel.multiple)}:sel?.multiple?.length>1&&sel.multiple.some(info=>info.svgBooleanOwner)&&sel.multiple.every(info=>info.svgBooleanOwner||info.svgTransform||info.svgGeometry)&&new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1?{...sel.info,selectionBooleanDelete:true}:sel?.multiple?.length>1?{...sel.info,selectionOrdering:sharedNativeOrdering(sel.multiple),selectionCanDuplicate:new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1&&sel.multiple.every(info=>info.kind==='host'&&info.structure?.canDuplicate),selectionCanDelete:new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1&&sel.multiple.every(info=>info.kind==='host'&&info.structure?.canDelete)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent),selectionCanReparent:sharedComponentContainers(sel.multiple).length>0,selectionContainers:sharedComponentContainers(sel.multiple),selectionTargets:sharedComponentTargets(sel.multiple),selectionOrdering:sharedComponentOrdering(sel.multiple)}:sel?.multiple?.length>1&&sel.multiple.some(info=>info.svgBooleanOwner)&&sel.multiple.every(info=>info.svgBooleanOwner||info.svgTransform||info.svgGeometry)&&new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1?{...sel.info,selectionBooleanDelete:true}:sel?.multiple?.length>1?{...sel.info,selectionOrdering:sharedNativeOrdering(sel.multiple),selectionCanReparent:new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1&&sel.multiple.every(info=>info.kind==='host'&&info.structure?.canReparent),selectionCanDuplicate:new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1&&sel.multiple.every(info=>info.kind==='host'&&info.structure?.canDuplicate),selectionCanDelete:new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1&&sel.multiple.every(info=>info.kind==='host'&&info.structure?.canDelete)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
 }
 
 function inTextScope(el, info) {
@@ -4000,7 +4000,7 @@ async function moveLayerInto(info,destinationId,position='inside'){
     const result=await api('POST','/rt/__api/op',{type:'reparentElement',id:info.id,fileHash:info.hash,destinationId,position});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not move layer','err');
     editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter:[result.movedId],sourceIdMap:result.sourceIdMap,undoId:result.undoId});
-    if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);await reloadFrame();
+    if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);if(/\.[jt]sx$/i.test(info.file)){const parent=await api('GET',resolveUrl(result.parentId));if(!parent?.ok)throw Error('The moved parent could not be resolved.');await refreshWrittenElement(parent.element,()=>true);}else await reloadFrame();
     const fresh=await api('GET',resolveUrl(result.movedId));if(fresh?.ok){sel={hostId:result.movedId,instanceId:null,scope:'host',info:fresh.element};renderPanel();}
     toast('Layer moved','ok');
   }finally{busyPanel(false);}
@@ -4087,7 +4087,7 @@ async function restoreLayerSelection(ids){
   const infos=selected.map(result=>result.element),first=infos[0];sel={hostId:first.id,instanceId:first.kind==='instance'?first.id:null,scope:first.kind==='instance'?'instance':'host',info:first,multiple:infos.length>1?infos:undefined};
 }
 async function structureSelection(action,extra={}){
-  if(sel.multiple?.length>1&&!sel.info.cssAuthoring&&!['duplicateElement','deleteElement','moveSelection'].includes(action))return toast('This structural action is not available for these source layers yet.','err');
+  if(sel.multiple?.length>1&&!sel.info.cssAuthoring&&!['duplicateElement','deleteElement','moveSelection','reparentElement'].includes(action))return toast('This structural action is not available for these source layers yet.','err');
   const selection=sel.multiple||[sel.info],info=sel.info;busyPanel(true);
   try{
     const type=['frameSelection','removeFrame','moveSelection'].includes(action)?action:action==='duplicateElement'?'duplicateSelection':action==='deleteElement'?'deleteSelection':'reparentSelection';
