@@ -68,3 +68,10 @@ test('React and Liquid hidden backgrounds keep saved links through refresh and l
   assert.ok(!classes.includes(key));assert.ok(!classes.includes('[background-color:'));assert.ok(classes.includes('bg-white'));assert.ok(classes.includes('md:bg-cover'));
  }
 });
+test('explicit class visibility changes restore paint atomically and validate paired metadata',()=>{
+ const C=require('../src/color-style-classes.cjs'),before='bg-blue-500 md:bg-red-500 md:bg-cover',hidden=B.toggle('#33669980','none',true),classes=C.composeBackground(before,hidden,'md:');
+ assert.ok(classes.includes('bg-blue-500'));assert.ok(classes.includes('md:bg-cover'));assert.equal(C.overridden(classes,'background-color','#33669980','md:'),false);
+ const shown=C.composeBackground(classes,B.toggle(hidden['background-color'],hidden[key],false),'md:');assert.ok(shown.includes('md:![background-color:#33669980]'));assert.ok(shown.includes('md:!['+key+':none]'));
+ const reset=C.composeBackground(classes,B.reset(),'md:');assert.equal(reset,'bg-blue-500 md:bg-cover');
+ for(const changes of [{}, {'background-color':'#fff'}, {...hidden,opacity:'0'}, {...hidden,'background-color':'#ff0000'}, {'background-color':null,[key]:'none'}])assert.throws(()=>C.composeBackground(before,changes,'md:'));
+});

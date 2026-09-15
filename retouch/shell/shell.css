@@ -1234,3 +1234,7 @@ html, body { overflow:clip; }
 .gradient-stop-row > .compact-paint-row > .paint-field-control { display:flex; }
 .gradient-stop-row .compact-paint-alpha { flex-basis:50px; }
 .gradient-stop-row .compact-paint-label { right:50px; }
+.background-visibility { flex: 0 0 24px; width: 24px; height: 24px; padding: 4px; border: 0; border-radius: 4px; background: transparent; color: var(--text-secondary, #666); cursor: pointer; }
+.background-visibility:hover { background: var(--hover, #eee); }
+.background-visibility svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+.background-color-hidden > .paint-field-control, .background-color-hidden > .paint-swatch { opacity: .5; }

@@ -269,11 +269,11 @@ function handle(req, res, ctx) {
         }else if(op.type==='setColorOverrideSelection'){
           if(!['react','liquid'].includes(ctx.adapter.name))return json(res,409,{ok:false,reason:'Shared class color editing needs React or Liquid layers.'});
           result=applyPlan(ctx.appRoot,require('./color-override-selection.cjs').plan(resolved,op,ctx.adapter));
-        }else if(op.type==='setColorOverride'){
+        }else if(['setColorOverride','setBackgroundPaint'].includes(op.type)){
           if(!['react','liquid'].includes(ctx.adapter.name))return json(res,409,{ok:false,reason:'Class color editing is not available for this renderer.'});
           const info=ctx.adapter.describe(resolved);if(info.classNameDynamic)return json(res,409,{ok:false,reason:'Color editing needs literal classes.'});
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
-          let classes;try{classes=require('./color-style-classes.cjs').compose(info.className||'',op.property,op.value,op.scope||'');}catch(error){return json(res,409,{ok:false,reason:error.message});}
+          let classes;try{const paints=require('./color-style-classes.cjs');classes=op.type==='setBackgroundPaint'?paints.composeBackground(info.className||'',op.changes,op.scope||''):paints.compose(info.className||'',op.property,op.value,op.scope||'');}catch(error){return json(res,409,{ok:false,reason:error.message});}
           result=applyPlan(ctx.appRoot,ctx.adapter.planOp(resolved,{type:'setClasses',classes,fileHash:op.fileHash}));
         } else if (['applyColorStyle','resetColorStyle','detachColorStyle','applyColorStyleSelection','resetColorStyleSelection','detachColorStyleSelection'].includes(op.type)) {
           if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!['react','liquid'].includes(ctx.adapter.name))return json(res,409,{ok:false,reason:'Linked color styles are not available for this renderer yet.'});

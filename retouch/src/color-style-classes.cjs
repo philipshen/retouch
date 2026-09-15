@@ -85,4 +85,12 @@ function overridden(className,property,value,scope=''){
  const encoded=encode(property,value),projected=responsive.project(className,scope).split(/\s+/).filter(Boolean);
  return !projected.includes(encoded)||projected.some(token=>token!==encoded&&/^!|!$/.test(token)&&related(inspector.base(token),property));
 }
-module.exports={properties,encode,compose,overridden};
+function composeBackground(className,changes,scope=''){
+ if(!changes||typeof changes!=='object'||Array.isArray(changes)||Object.keys(changes).length!==2||!Object.hasOwn(changes,'background-color')||!Object.hasOwn(changes,background.property)||Object.entries(changes).some(([p,v])=>!colors.valid(p,v)))throw Error('Provide background color and visibility together.');
+ if(changes[background.property]!==null&&changes[background.property]!=='none')background.state(changes['background-color'],changes[background.property]);
+ if((changes['background-color']===null)!==(changes[background.property]===null))throw Error('Reset background color and visibility together.');
+ const kept=className.split(/\s+/).filter(Boolean).filter(token=>{if(!tokens.valid(token))throw Error('The source contains unsupported class syntax.');const part=responsive.split(token);return part.prefix!==scope||!inspector.base(part.value).startsWith('['+background.property+':');}).join(' ');
+ const composed=compose(kept,'background-color',changes['background-color'],scope);
+ return composed+(changes[background.property]===null?'':' '+scope+'!['+background.property+':'+changes[background.property]+']');
+}
+module.exports={properties,encode,compose,overridden,composeBackground};

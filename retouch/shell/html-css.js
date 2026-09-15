@@ -224,7 +224,8 @@
     I.numericPreview(input,el,property,value=>value+unit);
    }
 
-   if(['color','background-color','border-color'].includes(property)){I.fieldDraft(input);input.dataset.paintProperty=property;input.retouchPaintPreview=()=>RetouchPaintPicker.propertyPreview({el,input,property});}
+   if(property==='background-color')RetouchBackgroundPaintUI.bind(info,el,input,changes=>save(changes,null,width));
+   if(['color','background-color','border-color'].includes(property)){I.fieldDraft(input);input.dataset.paintProperty=property;input.retouchPaintPreview??=()=>RetouchPaintPicker.propertyPreview({el,input,property});}
    if(property==='line-height')target.append(I.button('Automatic line height',()=>save(property,'normal',width)));
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
   }
