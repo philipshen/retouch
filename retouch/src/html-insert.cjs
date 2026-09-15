@@ -13,9 +13,10 @@ function plan(resolved,op){
  if(op.fileHash&&op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the container.');
  const capability=describe(resolved);if(!capability.canInsert)return refuse(capability.insertReason);
  if(!Object.hasOwn(presets,op.preset))return refuse('Choose a text layer or frame.');
+ let content=presets[op.preset];if(op.position!==undefined){if(op.preset!=='text')return refuse('Only text supports canvas placement.');try{content=require('./text-placement.cjs').markup(op.position);}catch(error){return refuse(error.message);}}
  const offset=resolved.element.location.endTag.startOffset,source=resolved.source;
  const indent=source.slice(0,resolved.element.location.startTag.startOffset).match(/(?:^|\n)([ \t]*)$/)?.[1]||'';
- const insertion='\n'+indent+'  '+presets[op.preset]+'\n'+indent;
+ const insertion='\n'+indent+'  '+content+'\n'+indent;
  const out=new MagicString(source);out.appendLeft(offset,insertion);const after=out.toString();
  const before=resolved.elements||html.collect(source,resolved.relPath).elements,next=html.collect(after,resolved.relPath).elements;
  const parent=next.find(e=>e.id===resolved.element.id),created=next.find(e=>e.location.startOffset===offset+indent.length+3);

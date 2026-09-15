@@ -19560,3 +19560,38 @@ Logs: `/tmp/retouch-auto-height-{before,unit,units,html,react,liquid}.log`.
 
 No push or native rebuild. Full Figma parity, arbitrary-site support and trusted
 Homebrew distribution remain incomplete.
+
+
+### Choose Text, click the page, and type
+
+The dock Text tool and T shortcut now arm before choosing a container. Clicking
+page content resolves a writable native ancestor, converts the click through
+its affine coordinate system and inserts positioned text in one structural
+history entry. New text is selected for immediate typing. Escape cancels the
+armed tool and pending source resolution; late replies cannot insert text.
+Shift-click belongs to the creation tool while it is armed. The existing
+Add text layer action still supports ordinary in-flow insertion.
+
+HTML stores bounded numeric placement as CSS. React and Liquid use their
+editable utility classes, including position and typography, so later font-size
+edits work. Placement rejects invalid coordinates and does not change existing
+layer identities. Repeated containers and perspective geometry remain outside
+this path's supported placement scope. A blanket all:initial declaration was
+removed during development because it prevented WebKit editing focus.
+
+Toasts now sit above the measured dock height, fixing overlap with the two-row
+dock at narrow window widths.
+
+Fresh validation: all 1,670 unit tests pass, including source placement and
+invalid-input cases across three adapters. HTML/Chromium, React/Chromium and
+Liquid/WebKit Text-tool runs pass transformed click placement, typing via real
+key events, subsequent font-size editing, exact undo/redo and delayed lookup
+cancellation. The fixture clicks content within a padded, rotated/scaled native
+container. HTML and React creation-dock tests pass at full and narrow widths;
+the seven-shape SVG drawing regression passes. Inspected the text-editing
+screenshot `/tmp/retouch-text-placement.png`.
+Logs: `/tmp/retouch-text-tool-{html,react,liquid,units}-final.log`,
+`/tmp/retouch-text-dock-{html,react}.log`, `/tmp/retouch-text-shapes-final.log`.
+
+Drag-to-size text, full Figma text-tool fidelity, arbitrary-site parity and
+trusted Homebrew distribution remain incomplete. No push or desktop rebuild.

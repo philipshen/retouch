@@ -228,7 +228,7 @@ function hookFrame(d, w) {
       const destination=renderedSelection?.element;
       if((action==='pen'?sel?.info.svgInsertion?.pen:sel?.info.svgInsertion?.presets.includes(action.slice(5)))&&destination?.isConnected&&destination.contains(target)&&!layerLocks.locked(destination))return {target:destination,pointerTarget:target,action,info:sel.info};
      }
-     if(valid())toast('Choose an editable container to draw into.','err');
+     if(valid())toast('Choose an editable container to create a layer in.','err');
      return null;
     }
     finally{preparingShapeDrag=false;}
@@ -302,7 +302,7 @@ function hookFrame(d, w) {
       const next=target();if(next&&!layerLocks.locked(next)){if((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.contextSelection||sel?.info.kind==='instance'))await select(next,{toggle:true});else await startInlineEdit(next,e,true);}else if(!next)clearSelection();return;
     }
     if (panelTasks > 0 || undoBusy || sourceRequests) { e.preventDefault(); e.stopPropagation(); return; }
-    const creationToolArmed=armedCanvasTool==='pen'||armedCanvasTool?.startsWith('draw-');
+    const creationToolArmed=armedCanvasTool==='text'||armedCanvasTool==='pen'||armedCanvasTool?.startsWith('draw-');
     if ((e.shiftKey&&!creationToolArmed||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.contextSelection||sel?.info.kind==='instance')){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=pickLayer(e.target,e.clientX,e.clientY);if(target)await select(target,{toggle:true});return;}
     if (editing) {
       if (editing.el.contains(e.target)) return;
@@ -4262,11 +4262,18 @@ async function startCreationAt(target,point,action){
   for(let candidate=target;candidate&&valid();candidate=candidate.parentElement?.closest('[data-rt]')){
    if(layerLocks.locked(candidate))return;
    await select(candidate,{current:valid});if(!valid())return;
+   if(action==='text'){
+    const element=renderedSelection?.element,info=sel?.info;
+    if(info?.structure?.canInsert&&element?.contains(target)&&matchingEls(info.id).length===1){
+     try{const space=RetouchSVGDraw.nativeSpace(element),w=element.ownerDocument.defaultView,p=new w.DOMPoint(point.x,point.y).matrixTransform(space.matrix.inverse());if(!valid()||!space.current())return;setArmedCanvasTool(null);await insertLayer('text',info,'insertElement',{position:{x:p.x,y:p.y}});}catch(error){toast(error.message,'err');}return;
+    }
+    continue;
+   }
    if((action==='pen'?sel?.info.svgInsertion?.pen:sel?.info.svgInsertion?.presets.includes(action.slice(5)))&&renderedSelection?.element?.contains(target)&&!layerLocks.locked(renderedSelection.element)){
     const info=sel.info;setArmedCanvasTool(null);if(action==='pen')await drawVector(info,point);else await drawShape(action.slice(5),info,point);return;
    }
   }
-  if(valid())toast('Choose an editable container to draw into.','err');
+  if(valid())toast('Choose an editable container to create a layer in.','err');
  }finally{preparingShapeDrag=false;}
 }
 async function drawVector(info,initialPoint=null){
@@ -4419,6 +4426,7 @@ window.RetouchShapeTools={
   const move={id:'shape-move',action:'move',label:'Move tool',keywords:'select pointer canvas V',element:modeBtn,available:()=>armedCanvasTool||canMove(),reason:'Finish the current edit and switch to Edit mode.',run(){setArmedCanvasTool(null);if(canMove()){stopDrawing?.();canvasPan.cancel();}}};
   const scaleInfo=sel?.info,scaleControl=panelBody.querySelector('[data-canvas-tool=scale]'),common=[move],canScale=()=>canMove()&&!!scaleInfo&&sel?.info===scaleInfo&&selectionScaleRangeActive()&&!scaleControl?.matches(':disabled')&&!stopDrawing&&!canvasPan.active;
   common.push({id:'shape-scale',action:'scale',label:'Scale tool',keywords:'resize proportional selection canvas K',element:scaleControl||modeBtn,available:()=>!scaleInfo?canMove()&&!stopDrawing&&!canvasPan.active:!!scaleControl&&canScale(),reason:'Select editable layers and finish the current gesture.',run(opener=scaleControl){if(!scaleInfo&&canMove()&&!stopDrawing&&!canvasPan.active){setArmedCanvasTool('scale');return;}if(scaleControl&&canScale()){setArmedCanvasTool(null);return scaleGroupOnCanvas(scaleInfo,opener);}}});
+  common.push({id:'shape-text',action:'text',label:'Text tool',keywords:'text type create canvas T',requiresTarget:true,element:modeBtn,available:()=>canMove()&&!stopDrawing&&!canvasPan.active,reason:'Finish the current edit and switch to Edit mode.',run(){if(canMove()&&!stopDrawing&&!canvasPan.active)setArmedCanvasTool('text');}});
   const hasDrawingTarget=()=>!!sel?.info?.svgInsertion&&!(sel.multiple?.length>1)&&sel.info.kind!=='instance';
   if(!hasDrawingTarget()){
    const available=()=>canMove()&&!hasDrawingTarget()&&!stopDrawing&&!canvasPan.active;

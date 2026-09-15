@@ -98,8 +98,8 @@
   if(event.altKey)return false;
   if(event.shiftKey&&(key!=='l'||event.metaKey||event.ctrlKey))return false;
   if(event.metaKey||event.ctrlKey){if(key!=='k')return false;event.preventDefault();event.stopPropagation();open();return true;}
-  const preset={r:'rectangle',o:'ellipse',l:event.shiftKey?'arrow':'line',p:'pen',v:'move',k:'scale'}[key];if(!preset)return false;
-  const rows=commands(),row=['pen','move','scale'].includes(preset)?rows.find(row=>row.id==='shape-'+preset):rows.find(row=>row.id==='shape-draw-'+preset)||rows.find(row=>row.id==='shape-add-'+preset);
+  const preset={r:'rectangle',o:'ellipse',l:event.shiftKey?'arrow':'line',p:'pen',v:'move',k:'scale',t:'text'}[key];if(!preset)return false;
+  const rows=commands(),row=['pen','move','scale','text'].includes(preset)?rows.find(row=>row.id==='shape-'+preset):rows.find(row=>row.id==='shape-draw-'+preset)||rows.find(row=>row.id==='shape-add-'+preset);
   if(!enabled(row))return false;event.preventDefault();event.stopPropagation();if(!event.repeat)run(row.id);return true;
  }
 
