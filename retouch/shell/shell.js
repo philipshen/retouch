@@ -3954,8 +3954,10 @@ function sharedComponentContainers(infos){
 }
 function sharedNativeOrdering(infos){
  const unavailable={before:false,after:false,first:false,last:false};
- if(infos.length<2||new Set(infos.map(info=>info.file+'#'+info.hash)).size!==1||new Set(infos.map(info=>info.structure?.parentId)).size!==1||infos.some(info=>info.kind!=='host'||!info.structure?.canDelete||!info.structure?.parentId))return unavailable;
- const matches=infos.map(info=>matchingEls(info.id));if(matches.some(nodes=>nodes.length!==1))return unavailable;const nodes=matches.map(nodes=>nodes[0]),parent=nodes[0].parentElement;if(!parent||nodes.some(node=>node.parentElement!==parent))return unavailable;
+ if(infos.length<2||new Set(infos.map(info=>info.file+'#'+info.hash)).size!==1||infos.some(info=>info.kind!=='host'))return unavailable;
+ const matches=infos.map(info=>matchingEls(info.id));if(matches.some(nodes=>nodes.length!==1))return unavailable;const all=matches.map(nodes=>nodes[0]),nodes=all.filter(node=>!all.some(other=>other!==node&&other.contains(node))),roots=nodes.map(node=>infos[all.indexOf(node)]);
+ if(new Set(roots.map(info=>info.structure?.parentId)).size!==1||roots.some(info=>!info.structure?.canDelete||!info.structure?.parentId))return unavailable;
+ const parent=nodes[0]?.parentElement;if(!parent||nodes.some(node=>node.parentElement!==parent))return unavailable;
  const siblings=[...parent.children].filter(node=>node.hasAttribute('data-rt')),selected=new Set(nodes),before=siblings.some((node,i)=>selected.has(node)&&siblings.slice(0,i).some(other=>!selected.has(other))),after=siblings.some((node,i)=>selected.has(node)&&siblings.slice(i+1).some(other=>!selected.has(other)));return {before,after,first:before,last:after};
 }
 function sharedComponentOrdering(infos){
