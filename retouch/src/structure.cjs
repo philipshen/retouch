@@ -145,4 +145,4 @@ function planOp(resolved,op,language) {
     return {ok:true,hash:contentHash(next),structural:true,parentId:items.parentId,...(createdId?{createdId}:{}),...(movedId?{movedId}:{}),...(sourceIdMap?{sourceIdMap}:{}),...(removedSourceIds?{removedSourceIds}:{}),edits:[{file:resolved.file,before:source,after:next}]};
   } catch(error) {return refuse(error.message);}
 }
-module.exports={types,describe,planOp,htmlRange};
+module.exports={types,describe,planOp,htmlRange,ranges};

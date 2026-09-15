@@ -359,7 +359,7 @@ function planOp(resolved, op) {
   if(op.type==='renameElement')return layerNames.plan(resolved,op);
   if(op.type==='setImageFill')return require('../liquid-image-fill.cjs').plan(resolved,op);
   if(op.type==='setClassesSelection')return require('../liquid-class-selection.cjs').plan(resolved,op);
-  if(['duplicateSelection','deleteSelection'].includes(op.type))return require('../native-structure-selection.cjs').plan(resolved,op,'liquid');
+  if(['duplicateSelection','deleteSelection','moveSelection'].includes(op.type))return require('../native-structure-selection.cjs').plan(resolved,op,'liquid');
   if(structure.types.has(op.type)) return structure.planOp(resolved,op,'liquid');
   if (op.fileHash && op.fileHash !== resolved.hash) {
     return refuse('The file changed since it was last read. Re-select the element and retry.');
@@ -469,6 +469,6 @@ module.exports = {
   describeComponent: resolved=>resolved.element.theme?theme.describe(resolved):components.describe(resolved),
   hasReference: components.hasReference,
   assets: { directory: 'assets', urlPrefix: '/assets/', uploadDirectory: '' },
-  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['duplicateSelection','deleteSelection',...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','insertElement','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', 'setImageFill', ...structure.types] },
+  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['duplicateSelection','deleteSelection','moveSelection',...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','insertElement','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', 'setImageFill', ...structure.types] },
   _parse: parse, // exported for tests
 };
