@@ -612,11 +612,11 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    if(backgroundRow){backgroundRow.classList.add('background-paint-row');backgroundRow.title='Background color · below all other fills';}
    if(advancedFills.children.length>1)fillSection.append(advancedFills);
   }
-  const sharedInput=[...panel.querySelectorAll('input')].find(input=>input.retouchPreviewDocument),screenScope=panel.querySelector('.screen-scope');
-  if(sharedInput&&screenScope){
-   const notice=document.createElement('div'),message=document.createElement('span'),preview=document.createElement('button');notice.className='shared-range-notice';notice.setAttribute('role','status');notice.setAttribute('aria-label','Shared edit range');message.textContent='Preview the edit range to see these changes.';preview.type='button';preview.className='control-button';preview.textContent='Preview edit range';
+  const sharedInput=[...panel.querySelectorAll('input')].find(input=>input.retouchPreviewDocument),screenScope=panel.querySelector('.screen-scope'),rangeSource=sharedInput||(screenScope?.retouchPreviewDocument?screenScope:null);
+  if(rangeSource&&screenScope){
+   const notice=document.createElement('div'),message=document.createElement('span'),preview=document.createElement('button');notice.className='shared-range-notice';notice.setAttribute('role','status');notice.setAttribute('aria-label',sharedInput?'Shared edit range':'Edit range');message.textContent='Preview the edit range to see these changes.';preview.type='button';preview.className='control-button';preview.textContent='Preview edit range';
    preview.onclick=()=>{preview.blur();screenScope.retouchPreviewRange?.();};notice.append(message,preview);head.after(notice);
-   const sync=()=>{notice.hidden=sharedRangeActive(sharedInput);const size=notice.hidden?null:screenScope.retouchPreviewSize?.();preview.disabled=!size;preview.title=size?'Preview at '+size.width+' × '+size.height+'. Source and edit range stay unchanged.':'This range cannot be previewed by changing screen size.';};sync();watchSharedRange(sharedInput,sync);
+   const sync=()=>{notice.hidden=sharedRangeActive(rangeSource);const size=notice.hidden?null:screenScope.retouchPreviewSize?.();preview.disabled=!size;preview.title=size?'Preview at '+size.width+' × '+size.height+'. Source and edit range stay unchanged.':'This range cannot be previewed by changing screen size.';};sync();watchSharedRange(rangeSource,sync);
   }
   for(const section of panel.querySelectorAll(':scope > .inspector-section'))collapsibleSection(section);
  }

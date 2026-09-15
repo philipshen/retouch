@@ -17389,3 +17389,9 @@ Single-layer background Fill now uses the same explicit scoped source-state reso
 HTML/Chromium, React/Chromium and Liquid/WebKit flows pass the background-eye, hidden hex/opacity, picker cancellation, framing and exact undo/redo checks with inactive tablet visibility edits. Additional HTML and Liquid checks show the base opacity and visible eye while the tablet's rendered fill is hidden, with no source change from focusing/leaving the base color field. The phone remains unchanged when tablet visibility is edited.
 
 The explicit-declaration behavior now agrees for single and shared backgrounds. General cascade inheritance, other single-layer paint types and full Figma/native/Homebrew parity remain unfinished.
+
+### Single-layer edit-range preview (2026-09-15)
+
+Single-layer inspectors now show the same sticky Preview edit range action used for shared editing when the canvas is outside the selected screen range. The action preserves source bytes and edit scope while choosing a matching canvas size; the notice disappears when the preview matches. The screen-scope section supplies the preview document independently of paint controls, so the action does not depend on multi-selection.
+
+Validation: `RT_E2E_SINGLE_COLOR_SCOPE=1` passed for HTML and React in Chromium and Liquid in WebKit, including base colors under tablet overrides, inactive-range opacity edits, direct preview navigation, unchanged source/scope during navigation, and exact source undo/redo. HTML screenshot `/tmp/retouch-single-range.png` visually inspected with the panel scrolled; the notice remains below Design tabs. Full Figma parity and trusted native distribution remain incomplete.
