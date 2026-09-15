@@ -284,3 +284,21 @@ test('shared sizing overrides ordinary inline dimensions and flex rules at its s
  const context={display:'flex',direction:'row',writingMode:'horizontal-tb',inlineDimensions:['width'],inlineFlex:true};
  for(const mode of ['fixed','hug','fill','auto']){const next=changeSizeMode('h-10','md:','width',mode,100,context),active=R.project(next,'md:');assert.match(active,/!w-/);assert.equal(R.project(next,''),'h-10');if(mode==='fixed'||mode==='hug')assert.match(active,/!flex-none/);if(mode==='fill')assert.match(active,/!flex-1/);assert.equal(changeSizeMode(next,'md:','width','reset',0,context),'h-10');}
 });
+
+test('shared grid controls override ordinary inline rules and guard important declarations',()=>{
+ const {changeContainer,changeGridTracks}=require('../shell/react-selection.js');
+ const el={style:{getPropertyValue:key=>['grid-template-columns','grid-auto-flow'].includes(key)?'inline':'',getPropertyPriority:()=>''}};
+ assert.equal(changeContainer('','md:','columns',3,null,el),'md:!grid-cols-3');
+ assert.equal(changeContainer('','md:','flow','col-dense',null,el),'md:!grid-flow-col-dense');
+ assert.equal(changeGridTracks('','md:','columns','40px 80px',null,el),'md:!grid-cols-[40px_80px]');
+ el.style.getPropertyPriority=key=>key==='grid-template-columns'?'important':'';
+ assert.throws(()=>changeContainer('','md:','columns',3,null,el),/important inline/);
+ assert.throws(()=>changeGridTracks('','md:','columns','40px 80px',null,el),/important inline/);
+ assert.equal(changeGridTracks('md:!grid-cols-[40px_80px]','md:','columns',null,null,el),'');
+});
+
+test('inline grid values hide overridden ordinary custom track utilities',()=>{
+ const {ownGridTemplate}=require('../shell/layout.js');
+ assert.equal(ownGridTemplate('grid-cols-[20px_30px]','columns',true),null);
+ assert.equal(ownGridTemplate('!grid-cols-[20px_30px]','columns',true),'20px 30px');
+});

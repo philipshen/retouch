@@ -20487,3 +20487,29 @@ HTML/WebKit mixed sizing and responsive tests passed on the final ordering. All
 
 Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
 incomplete. No native rebuild or push.
+
+
+### Shared grid editing over ordinary inline definitions
+
+React/Liquid shared grid column/row counts, auto-flow and custom track fields
+now override ordinary inline grid declarations with scoped important utilities.
+Important inline grid rules remain guarded. Counts, flow, custom fields and
+resets also respect the active edit range. Reset can remove an editor override
+even when an important inline rule exists. Custom fields display computed tracks
+when an ordinary class token is overridden by inline CSS, while retaining the
+editable authored value for an effective important utility.
+
+Validation: 1,696 unit tests passed, including priority, important-rule refusal,
+reset and displayed-value tests. New browser coverage exercised column/row
+counts, flow, custom tracks, phone isolation, reset geometry, exact source undo
+and original inline attributes on React/Chromium and Liquid/WebKit. The final
+Liquid run additionally checked important-inline disabled controls. Reset may
+normalize Liquid class serialization; undo restores the exact original bytes.
+The custom disclosure test waits for a visible attached field after responsive
+rebuilds. Logs: `/tmp/retouch-inline-grid-react.log`,
+`/tmp/retouch-inline-grid-liquid-verified.log`,
+`/tmp/retouch-inline-grid-units-complete.log`.
+
+Single-layer inline grid controls and adaptive grid behavior remain separate
+work. Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
+incomplete. No native rebuild or push.

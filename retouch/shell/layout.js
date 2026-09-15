@@ -66,7 +66,7 @@
     if(addition&&(inlineOverride||inherited.split(/\s+/).some(token=>/^!|!$/.test(token)&&matches(I.base(token)||''))))addition='!'+addition;
     return I.replace(classes,matches,addition);
   }
-  function gridTemplateClasses(classes,axis,value,inherited=''){
+  function gridTemplateClasses(classes,axis,value,inherited='',inlineOverride=false){
     if(!['columns','rows'].includes(axis))throw Error('Choose rows or columns.');
     const prefix=axis==='columns'?'grid-cols-':'grid-rows-',property='grid-template-'+axis;
     const matches=t=>t.startsWith(prefix)||t.startsWith('['+property+':');
@@ -75,13 +75,13 @@
     if(!value||value.length>2048||!/^[a-zA-Z0-9_.,%()+\-\[\]\s]+$/.test(value))throw Error('Enter grid track sizes such as 160px 1fr or repeat(3, minmax(0, 1fr)).');
     const stack=[];for(const c of value){if(c==='('||c==='[')stack.push(c);else if(c===')'||c===']'){if(stack.pop()!==(c===')'?'(':'['))throw Error('Close each track-size bracket.');}}if(stack.length)throw Error('Close each track-size bracket.');
     let addition=prefix+'['+value.replace(/_/g,'\\_').replace(/\s+/g,'_')+']';
-    if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(t=>/^!|!$/.test(t)&&(matches(I.base(t)||'')||/^\[grid(?:-template)?:/.test(I.base(t)||''))))addition='!'+addition;
+    if(inlineOverride||[...classes.split(/\s+/),...inherited.split(/\s+/)].some(t=>/^!|!$/.test(t)&&(matches(I.base(t)||'')||/^\[grid(?:-template)?:/.test(I.base(t)||''))))addition='!'+addition;
     return I.replace(classes,matches,addition);
   }
-  function ownGridTemplate(classes,axis){
+  function ownGridTemplate(classes,axis,inlineOverride=false){
     const prefix=axis==='columns'?'grid-cols-[':'grid-rows-[',property='[grid-template-'+axis+':';
     const tokens=classes.split(/\s+/).filter(t=>{const b=I.base(t);return b!==null&&(b.startsWith(prefix)||b.startsWith(property));});
-    const token=I.base(tokens.find(t=>/^!|!$/.test(t))||tokens[0]||'');if(!token)return null;
+    const selected=tokens.find(t=>/^!|!$/.test(t))||tokens[0]||'';if(inlineOverride&&!/^!|!$/.test(selected))return null;const token=I.base(selected);if(!token)return null;
     return token.slice(token.startsWith(prefix)?prefix.length:property.length,-1).replace(/\\_|_/g,t=>t==='\\_'?'_':' ');
   }
 
