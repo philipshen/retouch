@@ -17375,3 +17375,9 @@ Shared opacity, bare hex and simple dash/gap controls can now edit an inactive r
 HTML/Chromium, React/Chromium and Liquid/WebKit flows verify inactive tablet opacity edits, unchanged phone appearance, hidden-fill preservation, correct tablet results and exact undo/redo. HTML and Liquid flows also cover inactive dash-gap edits and subsequent base edits without copying tablet spacing. The missing-source range guard regression remains green. Explicit resize-event assertions check that in-progress derived values survive preview notifications.
 
 This enables declared source values across screens. General inherited/cascade resolution, comparison-canvas editing and the broader full-parity/native distribution requirements remain open.
+
+### Scoped shared fill visibility across previews — 2026-09-15
+
+Shared Fill visibility now reads the selected scope's explicit background state, matching the shared color/opacity fields. When every selected layer has a resolvable source state, hide/show works while another range is previewed. Mixed visibility reflects the edited scope rather than the current canvas. The existing preview requirement remains when source state is incomplete, and disabled paint fields cannot invoke visibility writes.
+
+HTML/Chromium, React/Chromium and Liquid/WebKit flows verify mixed tablet fills, hide-all/show-all from the phone preview, unchanged phone rendering, preserved tablet colors/alpha, later base edits, and exact undo/redo. The Liquid inherited hidden-fill picker/selection regression passes, including its unresolved-scope preview guard. All 1,573 unit tests pass. Complete cascade inheritance, Figma feature coverage and native/Homebrew distribution remain open.

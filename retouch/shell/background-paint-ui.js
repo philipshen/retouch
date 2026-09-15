@@ -80,16 +80,17 @@
    field.append(button);sync();watchVisibility(input,el,sync);
   };
  }
- function mountSelection(input,elements,save){
-  let states;try{states=elements.map(el=>read({},el));}catch(error){input.title=error.message;return;}
+ function mountSelection(input,elements,save,sourceState){
+  const selectedStates=()=>elements.map((el,i)=>sourceState?.(i)??read({},el));
+  let states;try{states=selectedStates();}catch(error){input.title=error.message;return;}
   const allHidden=states.every(state=>state.hidden),mixed=states.some(state=>state.hidden)!==allHidden,button=document.createElement('button');button.type='button';button.className='background-visibility';
   const label=hidden=>(hidden?'Show':'Hide')+' selected background colors';button.setAttribute('aria-label',label(allHidden));button.title=mixed?'Mixed visibility · hide all selected backgrounds':label(allHidden);button.setAttribute('aria-pressed',mixed?'mixed':String(!allHidden));button.disabled=input.disabled;
   button.innerHTML=visibilityIcon(allHidden,mixed);
-  const active=()=>rangeActive(input,elements[0]);button.disabled=input.disabled||!active();if(!active())button.title='Preview this screen range to change fill visibility.';
-  button.onclick=async()=>{if(!active())return;button.disabled=true;try{const current=elements.map(el=>read({},el)),hide=!current.every(state=>state.hidden),changes=current.map(state=>B.toggle(state.current,state.stored,hide));root.RetouchPanelFocus?.queue(button,label(hide));await save(changes);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}finally{if(button.isConnected)button.disabled=input.disabled||!active();}};
+  const active=()=>{try{return rangeActive(input,elements[0])||!!sourceState&&elements.every((_,i)=>sourceState(i)!=null);}catch{return false;}};button.disabled=input.disabled||!active();if(!active())button.title='Preview this screen range to change fill visibility.';
+  button.onclick=async()=>{if(input.disabled||!active())return;button.disabled=true;try{const current=selectedStates(),hide=!current.every(state=>state.hidden),changes=current.map(state=>B.toggle(state.current,state.stored,hide));root.RetouchPanelFocus?.queue(button,label(hide));await save(changes);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}finally{if(button.isConnected)button.disabled=input.disabled||!active();}};
   const field=input.closest('.inspector-field');field.querySelector(':scope > span').textContent='Fill';if(!input.value)input.placeholder='Mixed';field.append(button);
   const sync=()=>{
-   try{const current=elements.map(el=>read({},el)),hidden=current.every(state=>state.hidden),mixed=current.some(state=>state.hidden)!==hidden;button.setAttribute('aria-label',label(hidden));button.setAttribute('aria-pressed',mixed?'mixed':String(!hidden));button.disabled=input.disabled||!active();button.title=!active()?'Preview this screen range to change fill visibility.':mixed?'Mixed visibility · hide all selected backgrounds':label(hidden);button.innerHTML=visibilityIcon(hidden,mixed);}catch(error){button.disabled=true;button.title=error.message;}
+   try{const current=selectedStates(),hidden=current.every(state=>state.hidden),mixed=current.some(state=>state.hidden)!==hidden;button.setAttribute('aria-label',label(hidden));button.setAttribute('aria-pressed',mixed?'mixed':String(!hidden));button.disabled=input.disabled||!active();button.title=!active()?'Preview this screen range to change fill visibility.':mixed?'Mixed visibility · hide all selected backgrounds':label(hidden);button.innerHTML=visibilityIcon(hidden,mixed);}catch(error){button.disabled=true;button.title=error.message;}
   };watchVisibility(input,elements[0],sync);
  }
  root.RetouchBackgroundPaintUI={read,bind,mountSelection,rangeActive,sourceColor,sourceState};

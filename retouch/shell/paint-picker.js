@@ -39,7 +39,7 @@
   const seen=new Set(),colors=[];for(const value of entries.slice(0,48)){if(typeof value!=='string'||value.length>256||!CSS.supports('color',value))continue;const key=colorKey(value);if(!key||seen.has(key))continue;seen.add(key);colors.push(value);if(colors.length===12)break;}return colors;
  }
  function rememberColor(value){const key=colorKey(value);if(!key)return;recentMemory=[value,...recentColors().filter(color=>colorKey(color)!==key)].slice(0,12);try{localStorage.setItem(recentKey,JSON.stringify(recentMemory));}catch{}}
- function mountSelectionField(input,elements,property,saveVisibility,saveValues,sourceColor){
+ function mountSelectionField(input,elements,property,saveVisibility,saveValues,sourceColor,sourceBackground){
   const background=property==='background-color'&&root.RetouchBackgroundPaintUI;
   const paintState=el=>background?background.read({},el):{hidden:false,color:el.ownerDocument.defaultView.getComputedStyle(el).getPropertyValue(property)};
   const colors=()=>elements.map((el,i)=>sourceColor?.(i)??paintState(el).color);
@@ -50,7 +50,7 @@
   input.retouchPaintPreview=()=>{const previews=elements.map(el=>({preview:propertyPreview({el,input,property}),hidden:paintState(el).hidden}));return {update:value=>previews.forEach(({preview,hidden})=>{const parsed=hidden?parsePaint(value):null;if(hidden&&!parsed)return;preview.update(hidden?root.RetouchBackgroundPaint.transparent(parsed.value):value);}),restore:()=>previews.forEach(({preview})=>preview.restore())};};
   const control=document.createElement('span');control.className='paint-field-control gradient-stop-color';input.replaceWith(control);control.append(input);
   const swatch=root.RetouchInspector.button('',()=>open(input));swatch.className='gradient-stop-swatch';swatch.setAttribute('aria-label','Edit '+input.getAttribute('aria-label'));swatch.title='Edit selected colors';swatch.disabled=input.disabled;control.prepend(swatch);
-  if(background&&saveVisibility)background.mountSelection(input,elements,saveVisibility);
+  if(background&&saveVisibility)background.mountSelection(input,elements,saveVisibility,sourceBackground);
   const paint=()=>{const color=input.value.trim();swatch.style.backgroundImage=CSS.supports('color',color)?'linear-gradient('+color+','+color+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)':'repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';};input.addEventListener('input',paint);input.addEventListener('change',paint);input.addEventListener('keydown',event=>{if(event.key==='Escape')queueMicrotask(paint);});paint();
  }
  function open(input,{anchor=input,onApply=null,onClose=null,restorePopover=true}={}){
