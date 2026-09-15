@@ -738,18 +738,18 @@
     const sec = section('Effects');
     if (!el || locked(sec,info)) return sec;
     const css=el.ownerDocument.defaultView.getComputedStyle(el);
-    const effectValue=property=>root.RetouchBackgroundPaintUI.sourceEffect(info,'',property)??css.getPropertyValue(property);
+    const B=root.RetouchBackgroundPaintUI,F=root.RetouchFilterVisibility,states=Object.fromEntries(['filter','backdrop-filter'].map(property=>[property,B.filterState(info,'',el,property)])),effectValue=property=>states[property]?.value??B.sourceEffect(info,'',property)??css.getPropertyValue(property);
     sec.dataset.emptyEffects=String(['filter','backdrop-filter','box-shadow'].every(property=>(effectValue(property)||'none').trim()==='none'));
     for(const [property,label]of [['filter','Layer blur (px)'],['backdrop-filter','Backdrop blur (px)']]){
       const value=effectValue(property).trim(),parsed=root.RetouchHTMLCSSValues.parseFilters(value),blurs=parsed?.filter(item=>item.name==='blur');
       const input=number(sec,label,blurs?.length===1?parseFloat(blurs[0].arg):blurs?.length===0?0:NaN,0,1000,amount=>{
-        const next=root.RetouchHTMLCSSValues.withBlur(value,amount);if(next===null)return notify('This filter stack cannot be edited with a single blur control.');
-        try{save(filterClasses(info.className,property,next));}catch(error){notify(error.message);}
+        const next=states[property].model?F.withBlur(states[property].model,amount):null;if(next===null)return notify('This filter stack cannot be edited with a single blur control.');
+        try{save(B.filterClasses(info.className,'',property,B.filterChanges(property,next,info)));}catch(error){notify(error.message);}
       });
-      numericPreview(input,el,property,amount=>root.RetouchHTMLCSSValues.withBlur(value,amount));
+      numericPreview(input,el,property,amount=>states[property].model?B.filterChanges(property,F.withBlur(states[property].model,amount),info)[property]:null);
       if(!parsed||blurs.length>1||el.style.getPropertyPriority(property)==='important'){input.disabled=true;note(sec,'This '+(property==='filter'?'layer':'backdrop')+' filter cannot be adjusted with a single blur value.');}
       note(sec,value,'computed-value');
-      root.RetouchFilterStack.mount(sec,property,value,next=>save(filterClasses(info.className,property,next)),{disabled:el.style.getPropertyPriority(property)==='important',reset:true});
+      root.RetouchFilterStack.mount(sec,property,value,next=>save(filterClasses(info.className,property,next)),{disabled:el.style.getPropertyPriority(property)==='important',reset:true,element:el,active:()=>states[property].source||B.rangeActive(sec,el),model:states[property].model,saveModel:next=>save(B.filterClasses(info.className,'',property,B.filterChanges(property,next,info)))});
     }
     note(sec,css.boxShadow,'computed-value');
     shadowStack(sec,info,el,save,notify);

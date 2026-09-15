@@ -86,18 +86,19 @@
    input.value=current;input.onchange=()=>save(property,input.value,width);I.field(appearance,label,input);
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);appearance.append(reset);
   }
-  const blur=I.section('Blur');blur.dataset.emptyEffects=String(['filter','backdrop-filter','box-shadow'].every(property=>((own[property]??css.getPropertyValue(property))||'none').trim()==='none'));
+  const filterStates=Object.fromEntries(['filter','backdrop-filter'].map(property=>[property,RetouchBackgroundPaintUI.filterState(info,width?'min-['+width+'px]:':'',el,property)]));
+  const blur=I.section('Blur');blur.dataset.emptyEffects=String(['filter','backdrop-filter','box-shadow'].every(property=>((filterStates[property]?.value??own[property]??css.getPropertyValue(property))||'none').trim()==='none'));
   for(const [property,label]of [['filter','Layer blur'],['backdrop-filter','Background blur']]){
-   const raw=own[property]??(css.getPropertyValue(property)||'none'),filters=parseFilters(raw),blurFilters=filters?.filter(f=>f.name==='blur');
+   const state=filterStates[property],raw=state.value,filters=state.model?parseFilters(raw):null,blurFilters=filters?.filter(f=>f.name==='blur');
    const input=document.createElement('input');input.type='number';input.min=0;input.max=1000;input.step='any';
    input.disabled=!CSS.supports(property,'blur(1px)')||!filters||blurFilters.length>1;input.value=input.disabled?'':blurFilters.length?parseFloat(blurFilters[0].arg):0;
-   input.onchange=()=>{if(input.value!==''&&input.checkValidity()){const value=withBlur(raw,Number(input.value));if(value!==null&&CSS.supports(property,value))save(property,value,width);}};
-   I.numericLabelDrag(I.field(blur,label+' (px)',input));I.numericPreview(input,el,property,value=>withBlur(raw,value));
+   input.onchange=()=>{if(input.value!==''&&input.checkValidity()){const changes=RetouchBackgroundPaintUI.filterChanges(property,RetouchFilterVisibility.withBlur(state.model,Number(input.value)),info);if(CSS.supports(property,changes[property]))save(changes,null,width);}};
+   I.numericLabelDrag(I.field(blur,label+' (px)',input));I.numericPreview(input,el,property,value=>state.model?RetouchBackgroundPaintUI.filterChanges(property,RetouchFilterVisibility.withBlur(state.model,value),info)[property]:null);
    if(input.disabled)I.note(blur,label+' cannot be adjusted with this browser or filter stack.');
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);blur.append(reset);
    const clear=I.button('Clear '+(property==='filter'?'layer':'background')+' filters',()=>save(property,'none',width));clear.disabled=raw==='none';blur.append(clear);
   }
-  for(const property of ['filter','backdrop-filter'])RetouchFilterStack.mount(blur,property,own[property]??css.getPropertyValue(property),value=>save(property,value,width),{reset:Object.hasOwn(own,property)});
+  for(const property of ['filter','backdrop-filter'])RetouchFilterStack.mount(blur,property,own[property]??css.getPropertyValue(property),value=>save(property,value,width),{reset:Object.hasOwn(own,property),element:el,active:()=>filterStates[property].source||RetouchBackgroundPaintUI.rangeActive(blur,el),model:filterStates[property].model,saveModel:next=>save(RetouchBackgroundPaintUI.filterChanges(property,next,info),null,width)});
   I.note(blur,'Layer blur affects the layer and its children. Background blur affects content behind transparent areas. Existing color filters stay in order.');
   const effects=I.section('Shadows'),shadows=RetouchBackgroundPaintUI.sourceShadows(info,width?'min-['+width+'px]:':'')??RetouchBackgroundPaintUI.readShadows(info,el);
   const writeShadows=next=>{const changes=RetouchBackgroundPaintUI.shadowChanges(next,info);if(valid('box-shadow',changes['box-shadow'])&&CSS.supports('box-shadow',changes['box-shadow']))save(changes,null,width);};
@@ -287,7 +288,7 @@
    const reset=I.button('Reset shared '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=infos.every(info=>!Object.hasOwn(info.cssRules?.[width]||{},property));reset.setAttribute('aria-label','Reset shared '+label.toLowerCase());reset.title=reset.getAttribute('aria-label');reset.textContent='↺';reset.classList.add('property-reset');const row=document.createElement('div');row.className='property-row';field.before(row);row.append(field,reset);rows.set(property,row);
   }
   for(const [a,b]of [['width','height'],['min-width','min-height'],['max-width','max-height']]){const first=rows.get(a),second=rows.get(b);if(!first||!second)continue;const pair=document.createElement('div');pair.className='property-pair';first.before(pair);pair.append(first,second);for(const [property,row]of [[a,first],[b,second]])row.querySelector('.inspector-field > span').textContent=property.replace('min-','Min ').replace('max-','Max ').replace('width','W').replace('height','H');}
-  for(const property of ['filter','backdrop-filter'])RetouchFilterStack.mountSharedBlur(groups.effects,infos,elements,width?'min-['+width+'px]:':'',property,values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,{[property]:values[i]}]))));
+  for(const property of ['filter','backdrop-filter'])RetouchFilterStack.mountSharedBlur(groups.effects,infos,elements,width?'min-['+width+'px]:':'',property,values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,values[i]]))));
   RetouchFilterStack.mountSharedShadows(groups.effects,infos,elements,width?'min-['+width+'px]:':'',values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,values[i]===undefined?{}:values[i]]))));
   for(const body of Object.values(groups))if(!body.querySelector('.inspector-field'))body.parentElement.remove();
   return section;

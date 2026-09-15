@@ -30,3 +30,15 @@ test('HTML writes filter visibility and rendering atomically, including replacem
  const replace=css.plan(current,{width:768,property:'filter',value:'blur(2px)'});assert.equal(replace.ok,true,replace.reason);assert.equal(css.describe(resolve(replace.edits[0].after)).cssRules[768][key],'none');
  const reset=css.plan(current,{width:768,property:'filter',value:null});assert.equal(reset.ok,true,reset.reason);assert.equal(css.describe(resolve(reset.edits[0].after)).cssRules[768]?.[key],undefined);
 });
+test('quick blur edits preserve visibility and other filter expressions',()=>{
+ const next=F.withBlur(model,23);assert.equal(next[0].raw,'blur(23px)');assert.equal(next[0].hidden,true);assert.deepEqual(next.slice(1),model.slice(1));assert.deepEqual(F.withBlur(model,0),model.slice(1));assert.equal(F.withBlur([],5)[0].hidden,false);assert.throws(()=>F.withBlur([model[0],model[0]],5));
+});
+test('saved filter libraries propagate paired values, preserve local overrides and reset together',()=>{
+ const catalog=require('../src/effect-styles.cjs'),C=require('../src/effect-style-classes.cjs'),links=require('../src/html-effect-styles.cjs'),before='<html><head></head><body><p>Filters</p></body></html>';
+ for(const property of Object.keys(F.properties)){
+  const key=F.properties[property],values=F.write(property,model),next=F.write(property,F.withBlur(model,23)),style={id:'11111111-1111-4111-8111-111111111111',name:'Hidden',properties:values};assert.deepEqual(catalog.validate({version:1,styles:[style]}).styles[0],style);assert.throws(()=>catalog.validate({version:1,styles:[{...style,properties:{[key]:values[key]}}]}));
+  const classes=C.compose('p-4',values,'md:');assert.deepEqual(C.overrides(classes,values,'md:'),[]);const retained=C.refresh(classes,values,next,'md:',[key]);assert.equal(retained.classes,classes);assert.deepEqual(retained.overrides,[property]);const refresh=C.refresh(classes,values,next,'md:');assert.deepEqual(refresh.overrides,[]);assert.deepEqual(C.overrides(refresh.classes,next,'md:'),[]);const visible=C.compose(classes,{[property]:'none'},'md:');assert.ok(!visible.includes('rtfx1-'));assert.deepEqual(C.refresh(visible,values,next,'md:').overrides,[property]);
+  const apply=(source,type,properties)=>{const result=links.plan(resolve(source),{type,width:768},{...style,properties});assert.equal(result.ok,true,result.reason);return result.edits[0]?.after||source;};let source=apply(before,'applyEffectStyle',values);source=apply(source,'refreshEffectStyle',next);assert.deepEqual(css.describe(resolve(source)).cssRules[768],next);
+  const local=F.write(property,F.withBlur(model,31)),edited=css.plan(resolve(source),{width:768,changes:local});assert.equal(edited.ok,true,edited.reason);source=apply(edited.edits[0].after,'refreshEffectStyle',values);assert.deepEqual(css.describe(resolve(source)).cssRules[768],local);assert.deepEqual(links.describe(resolve(source)).effectStyleOverrides[768],[property]);source=apply(source,'resetEffectStyle',values);assert.deepEqual(css.describe(resolve(source)).cssRules[768],values);
+ }
+});

@@ -1,6 +1,6 @@
 'use strict';
 const MagicString=require('magic-string'),html=require('./adapters/html.cjs'),css=require('./html-css.cjs'),catalog=require('./effect-styles.cjs');
-const attribute='data-rt-effect-styles',shadowVisibility=require('../shell/shadow-visibility.js').property;
+const attribute='data-rt-effect-styles',visibility=catalog.visibility,owners=Object.fromEntries(Object.entries(visibility).map(([property,key])=>[key,property]));
 const refuse=reason=>({ok:false,refused:true,reason});
 const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 function links(resolved){
@@ -16,7 +16,7 @@ function links(resolved){
 }
 function describe(resolved){try{
  const state=links(resolved),rules=css.describe(resolved);if(rules.cssReason)throw Error(rules.cssReason);
- const overrides=Object.fromEntries(Object.entries(state).map(([width,link])=>[width,[...new Set([...(link.overrides||[]),...Object.keys(link.properties).filter(property=>property!==shadowVisibility&&(rules.cssRules[width]?.[property]!==link.properties[property]||property==='box-shadow'&&(rules.cssRules[width]?.[shadowVisibility]||'none')!==(link.properties[shadowVisibility]||'none')))])].sort()]));
+ const overrides=Object.fromEntries(Object.entries(state).map(([width,link])=>[width,[...new Set([...(link.overrides||[]),...Object.keys(link.properties).filter(property=>!owners[property]&&(rules.cssRules[width]?.[property]!==link.properties[property]||visibility[property]&&(rules.cssRules[width]?.[visibility[property]]||'none')!==(link.properties[visibility[property]]||'none')))])].sort()]));
  return {effectStyleLinks:state,effectStyleOverrides:overrides};
 }catch{return {effectStyleLinkReason:'This layer has invalid effect style links or managed CSS.'};}}
 function plan(resolved,op,style){
@@ -36,16 +36,16 @@ function plan(resolved,op,style){
     const state=css.describe(resolved);if(state.cssReason)return refuse(state.cssReason);
     const own=state.cssRules[op.width]||{},retained=new Set(baseline.overrides||[]);changes={};
     for(const property of new Set([...Object.keys(baseline.properties),...Object.keys(validated.properties)])){
-     if(property===shadowVisibility)continue;
-     const shadow=property==='box-shadow',same=Object.hasOwn(baseline.properties,property)?own[property]===baseline.properties[property]:!Object.hasOwn(own,property),sameVisibility=!shadow||(own[shadowVisibility]||'none')===(baseline.properties[shadowVisibility]||'none');
-     if(retained.has(property)||shadow&&retained.has(shadowVisibility)||!same||!sameVisibility){retained.add(property);continue;}
+     if(owners[property])continue;
+     const key=visibility[property],same=Object.hasOwn(baseline.properties,property)?own[property]===baseline.properties[property]:!Object.hasOwn(own,property),sameVisibility=!key||(own[key]||'none')===(baseline.properties[key]||'none');
+     if(retained.has(property)||key&&retained.has(key)||!same||!sameVisibility){retained.add(property);continue;}
      changes[property]=validated.properties[property]??null;
-     if(shadow&&(Object.hasOwn(baseline.properties,shadowVisibility)||Object.hasOwn(validated.properties,shadowVisibility)))changes[shadowVisibility]=validated.properties[shadowVisibility]??(changes[property]===null?null:'none');
+     if(key&&(Object.hasOwn(baseline.properties,key)||Object.hasOwn(validated.properties,key)))changes[key]=validated.properties[key]??(changes[property]===null?null:'none');
     }
-    if(retained.delete(shadowVisibility))retained.add('box-shadow');
+    for(const [key,property]of Object.entries(owners))if(retained.delete(key))retained.add(property);
     overrides=[...retained].sort();
    }
-   if(Object.hasOwn(changes,shadowVisibility)&&changes[shadowVisibility]===null&&changes['box-shadow']!=null)changes[shadowVisibility]='none';
+   for(const [property,key]of Object.entries(visibility))if(Object.hasOwn(changes,key)&&changes[key]===null&&changes[property]!=null)changes[key]='none';
    if(Object.keys(changes).length){const applied=css.plan(resolved,{width:op.width,changes});if(!applied.ok)return applied;source=applied.edits[0]?.after||source;}
    current[op.width]={id:validated.id,properties:validated.properties,...(overrides.length?{overrides}:{})};
    if(Object.keys(current).length>32)return refuse('A layer supports up to 32 effect style scopes.');

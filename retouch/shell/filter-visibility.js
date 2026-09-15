@@ -31,11 +31,15 @@
   const value=stack.some(item=>item.hidden)?'rtfx1-'+Array.from(new TextEncoder().encode(JSON.stringify({version:1,stack})),byte=>byte.toString(16).padStart(2,'0')).join(''):'none';if(value!=='none')metadata(value);
   return {[property]:render(stack),[properties[property]]:value};
  }
+ function withBlur(input,amount){
+  if(!Array.isArray(input))fail();const stack=input.map(normalize),filters=stack.map(item=>V.parseFilters(item.raw)[0]);if(filters.filter(item=>item.name==='blur').length>1||!Number.isFinite(amount)||amount<0||amount>1000)fail();
+  let found=false;const next=[];for(let i=0;i<stack.length;i++){if(filters[i].name==='blur'){found=true;if(amount)next.push({...stack[i],raw:'blur('+amount+'px)'});}else next.push(stack[i]);}if(!found&&amount)next.push({raw:'blur('+amount+'px)',hidden:false});return next;
+ }
  function classes(source,scope,property,changes){
   const key=properties[property];if(!key||!changes||Object.keys(changes).sort().join(',')!==[property,key].sort().join(','))fail();
   const css=changes[property],value=changes[key];if(css===null||value===null){if(css!==null||value!==null)fail();}else read(css,value);
   const I=typeof module==='object'&&module.exports?require('./inspector.js'):root.RetouchInspector,R=typeof module==='object'&&module.exports?require('./responsive.js'):root.RetouchResponsive;
   const next=I.replace(I.filterClasses(R.project(source,scope),property,css),token=>token.startsWith('['+key+':'),value===null?'':'!['+key+':'+value+']');return R.replaceScope(source,next,scope);
  }
- const api={properties,read,write,classes,metadata};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchFilterVisibility=api;
+ const api={properties,read,write,classes,metadata,withBlur};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchFilterVisibility=api;
 })(typeof window==='object'?window:globalThis);

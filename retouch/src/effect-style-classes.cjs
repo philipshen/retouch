@@ -1,6 +1,6 @@
 'use strict';
 const catalog=require('./effect-styles.cjs'),responsive=require('../shell/responsive.js'),inspector=require('../shell/inspector.js'),tokens=require('./class-tokens.cjs');
-const {properties}=catalog,shadowVisibility=require('../shell/shadow-visibility.js').property;
+const {properties,visibility}=catalog,owners=Object.fromEntries(Object.entries(visibility).map(([property,key])=>[key,property]));
 function encode(values){
  const validated=catalog.validate({version:1,styles:[{id:'11111111-1111-4111-8111-111111111111',name:'Effects',properties:values}]}).styles[0].properties;
  return Object.fromEntries(Object.entries(validated).map(([property,value])=>{
@@ -11,7 +11,8 @@ function encode(values){
 }
 function related(plain,property){
  if(/^\[all:/.test(plain)||plain.startsWith('['+property+':'))return true;
- if(property==='box-shadow')return /^(?:shadow|inset-shadow|ring|inset-ring)(?:-|$)/.test(plain)||plain.startsWith('['+shadowVisibility+':')&&plain!=='['+shadowVisibility+':none]';
+ if(visibility[property]&&plain.startsWith('['+visibility[property]+':')&&plain!=='['+visibility[property]+':none]')return true;
+ if(property==='box-shadow')return /^(?:shadow|inset-shadow|ring|inset-ring)(?:-|$)/.test(plain);
  if(property==='backdrop-filter')return /^backdrop-/.test(plain)||/^\[-webkit-backdrop-filter:/.test(plain);
  return /^(?:filter|blur|brightness|contrast|drop-shadow|grayscale|hue-rotate|invert|saturate|sepia)(?:-|$)/.test(plain)||/^-hue-rotate-/.test(plain);
 }
@@ -24,27 +25,27 @@ function compose(className,values,scope='',remove=[]){
   if(!tokens.valid(token))throw Error('The source contains unsupported class syntax.');
   const part=responsive.split(token),plain=inspector.base(part.value);
   if(part.prefix!==scope){kept.push(token);continue;}
-  if(keys.includes('box-shadow')&&plain.startsWith('['+shadowVisibility+':'))continue;
+  if(keys.some(property=>visibility[property]&&plain.startsWith('['+visibility[property]+':')))continue;
   if(keys.some(property=>plain.startsWith('['+property+':')||property==='box-shadow'&&/^shadow-(?:none|2?xs|sm|md|lg|xl|2xl|inner|\[(?:inset_|[-.\d])[^\]]*\])$/.test(plain)))continue;
   // Utility families can share Tailwind custom properties. Keep their source,
   // and refuse important conflicts rather than discard unrelated declarations.
   if(/^!|!$/.test(part.value)&&keys.some(property=>related(plain,property)))throw Error('Resolve the important effect utility before linking this style.');
   kept.push(token);
  }
- // A replacement shadow must mask hidden metadata inherited from smaller ranges.
- if(Object.hasOwn(encoded,'box-shadow')&&!Object.hasOwn(encoded,shadowVisibility)&&className.includes('['+shadowVisibility+':'))kept.push(scope+'!['+shadowVisibility+':none]');
+ // Replacement effects mask hidden metadata inherited from smaller ranges.
+ for(const [property,key]of Object.entries(visibility))if(Object.hasOwn(encoded,property)&&!Object.hasOwn(encoded,key)&&className.includes('['+key+':'))kept.push(scope+'!['+key+':none]');
  return kept.concat(Object.values(encoded).map(token=>scope+token)).join(' ');
 }
 function overrides(className,baseline,scope=''){
  const encoded=encode(baseline),projected=responsive.project(className,scope).split(/\s+/).filter(Boolean);
- return Object.keys(encoded).filter(property=>property!==shadowVisibility&&(!projected.includes(encoded[property])||property==='box-shadow'&&encoded[shadowVisibility]&&!projected.includes(encoded[shadowVisibility])||projected.some(token=>token!==encoded[property]&&token!==encoded[shadowVisibility]&&/^!|!$/.test(token)&&related(inspector.base(token),property)))).sort();
+ return Object.keys(encoded).filter(property=>!owners[property]&&(!projected.includes(encoded[property])||encoded[visibility[property]]&&!projected.includes(encoded[visibility[property]])||projected.some(token=>token!==encoded[property]&&token!==encoded[visibility[property]]&&/^!|!$/.test(token)&&related(inspector.base(token),property)))).sort();
 }
 function refresh(className,baseline,next,scope='',retained=[]){
  encode(baseline);encode(next);
  if(!Array.isArray(retained)||retained.some(property=>!properties.includes(property)))throw Error('Invalid effect style overrides.');
- const local=new Set([...retained,...overrides(className,baseline,scope)]),projected=responsive.project(className,scope).split(/\s+/).filter(Boolean).map(inspector.base);
- for(const property of Object.keys(next))if(property!==shadowVisibility&&!Object.hasOwn(baseline,property)&&projected.some(token=>related(token,property)))local.add(property);
- const overridden=property=>local.has(property===shadowVisibility?'box-shadow':property),values=Object.fromEntries(Object.entries(next).filter(([property])=>!overridden(property))),removed=Object.keys(baseline).filter(property=>!Object.hasOwn(next,property)&&!overridden(property));
+ const local=new Set([...retained.map(property=>owners[property]||property),...overrides(className,baseline,scope)]),projected=responsive.project(className,scope).split(/\s+/).filter(Boolean).map(inspector.base);
+ for(const property of Object.keys(next))if(!owners[property]&&!Object.hasOwn(baseline,property)&&projected.some(token=>related(token,property)))local.add(property);
+ const overridden=property=>local.has(owners[property]||property),values=Object.fromEntries(Object.entries(next).filter(([property])=>!overridden(property))),removed=Object.keys(baseline).filter(property=>!Object.hasOwn(next,property)&&!overridden(property));
  return {classes:Object.keys(values).length||removed.length?compose(className,values,scope,removed):className,overrides:[...local].sort()};
 }
 module.exports={properties,encode,compose,overrides,refresh};

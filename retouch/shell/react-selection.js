@@ -211,7 +211,7 @@
    if(!pair.children.length)pair.remove();
    else I.note(groups.layout,'Gaps space children in flex and grid layouts. Horizontal and vertical follow each container’s writing direction. Reset removes the selected axis override and reveals a shorthand or inherited gap.');
   }
-  for(const property of ['filter','backdrop-filter'])root.RetouchFilterStack.mountSharedBlur(groups.effects,infos,elements,scope,property,values=>save(Object.fromEntries(infos.map((info,i)=>[info.id,root.RetouchResponsive.replaceScope(info.className,I.filterClasses(root.RetouchResponsive.project(info.className,scope),property,values[i]),scope)]))));
+  for(const property of ['filter','backdrop-filter'])root.RetouchFilterStack.mountSharedBlur(groups.effects,infos,elements,scope,property,values=>save(Object.fromEntries(infos.map((info,i)=>[info.id,root.RetouchBackgroundPaintUI.filterClasses(info.className,scope,property,values[i])]))));
 
   root.RetouchFilterStack.mountSharedShadows(groups.effects,infos,elements,scope,values=>save(Object.fromEntries(infos.map((info,i)=>[info.id,values[i]===undefined?info.className:root.RetouchBackgroundPaintUI.shadowClasses(info.className,scope,values[i])]))));
 
