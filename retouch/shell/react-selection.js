@@ -334,5 +334,5 @@
   }
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={rotationDegrees,changeSizeMode,changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={sharedGroups,rotationDegrees,changeSizeMode,changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);

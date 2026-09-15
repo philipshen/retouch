@@ -238,30 +238,42 @@
   container.append(appearance,corners,fills,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);
   if(!textLayer)container.append(typography);container.append(sec);return container;
  }
+ const sharedDetailsOpen=new Set();
  function mountSelection(infos,elements,width,save){
   const section=I.section('Shared styles');
   if(!Number.isInteger(width)||elements.some(el=>!el)||infos.some(info=>info.cssReason)){I.note(section,'Re-select the layers and choose a pixel screen scope.','refused');return section;}
   I.note(section,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Mixed values stay unchanged until edited. Each shared edit is one undo step.');
   section.append(RetouchSiteVariables.mount(elements,width,save,infos.map(info=>info.cssRules?.[width]||{}),changes=>save(null,null,width,Object.fromEntries(infos.map((info,index)=>[info.id,changes[index]]))),infos.map(info=>inheritedVariables(info,width))));
   const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el));
-  const typography=I.section('Shared typography'),families=computed.map(css=>css.fontFamily),mixedFamilies=families.some(value=>value!==families[0]);section.append(typography);
+  const groups=RetouchReactSelection.sharedGroups(section),typography=groups.typography,disclosures=new Map(),rows=new Map();
+  const details=(parent,key,title)=>{if(disclosures.has(key))return disclosures.get(key);const group=document.createElement('details'),summary=document.createElement('summary');group.className='inspector-disclosure';group.setAttribute('aria-label','Shared '+title.toLowerCase());group.open=sharedDetailsOpen.has(key);summary.textContent=title;group.append(summary);group.ontoggle=()=>{if(group.isConnected){if(group.open)sharedDetailsOpen.add(key);else sharedDetailsOpen.delete(key);}};parent.append(group);disclosures.set(key,group);return group;};
+  const families=computed.map(css=>css.fontFamily),mixedFamilies=families.some(value=>value!==families[0]);
   I.fontPicker(typography,elements[0].ownerDocument,mixedFamilies?'':families[0],value=>save('font-family',value,width),{mixed:mixedFamilies,label:'Shared Page font'});
+  typography.querySelector('[aria-label="Shared Page font"]').closest('.inspector-field').querySelector(':scope > span').textContent='Font';
   for(const [property,label,min,max]of [['line-height','Shared Line height (%)',0,1000],['letter-spacing','Shared Letter spacing (%)',-100,1000]]){
    const values=computed.map(css=>{const size=parseFloat(css.fontSize),raw=css.getPropertyValue(property);return raw==='normal'&&property==='line-height'?NaN:(parseFloat(raw)||0)/size*100;}),mixed=values.some(value=>!Number.isFinite(value)||Math.abs(value-values[0])>.0001);
    const input=I.relativeNumber(typography,label,mixed?NaN:values[0],min,max,value=>save(property,String(Math.round(value*1e6)/1e8)+(property==='letter-spacing'?'em':''),width));
-   if(mixed)input.placeholder='Mixed / automatic';input.title='Relative to each selected layer’s own font size.';
+   if(mixed)input.placeholder='Mixed';input.closest('.inspector-field').querySelector(':scope > span').textContent=property==='line-height'?'Line height %':'Spacing %';input.title='Relative to each selected layer’s own font size.';
   }
   typography.append(I.button('Automatic shared line height',()=>save('line-height','normal',width)));
-  I.note(typography,'Relative spacing follows each layer’s own font size. Raw CSS values and property resets are available below.');
+  I.note(details(typography,'type-options','Typography options'),'Percentages follow each layer’s font size. Use the CSS fields below for fixed spacing.');
   const sharedFields=[['visibility','Visibility'],['opacity','Opacity (%)'],['rotate','Rotation (°)'],['mix-blend-mode','Blend mode'],['isolation','Blend group'],...fields,...(elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg')?svgFields.filter(([property])=>['fill','stroke'].includes(property)):[])];
   for(const [property,label]of sharedFields){
+   let target=/^(?:min-|max-)?(?:width|height)$/.test(property)?groups.size:/^margin/.test(property)?groups.item:/^(?:font-|text-|line-height|letter-spacing|color$)/.test(property)?groups.typography:['background-color','fill'].includes(property)?groups.fill:/^border.*radius$/.test(property)||['visibility','opacity','rotate','mix-blend-mode','isolation'].includes(property)?groups.appearance:/^border|^stroke$/.test(property)?groups.stroke:groups.layout;
+   if(/^(?:min-|max-)/.test(property))target=details(groups.size,'size-limits','Size limits');
+   else if(/^padding-/.test(property))target=details(groups.layout,'padding','Individual padding');
+   else if(/^margin-/.test(property))target=details(groups.item,'margin','Individual margins');
+   else if(/^border-(?:top|right|bottom|left)-(?:width|style)$/.test(property))target=details(groups.stroke,'borders','Individual borders');
+   else if(/^border-.+-radius$/.test(property))target=details(groups.appearance,'corners','Individual corners');
+   else if(['font-family','line-height','letter-spacing','text-indent'].includes(property))target=details(groups.typography,'type-options','Typography options');
+
    const values=infos.map((info,i)=>{const raw=info.cssRules?.[width]?.[property]??computed[i].getPropertyValue(property);return property==='rotate'?String(RetouchReactSelection.rotationDegrees(raw)):raw;}),mixed=values.some(value=>value!==values[0]),numeric=['opacity','rotate'].includes(property);
    const input=document.createElement(options[property]?'select':'input');
    if(options[property]){if(mixed){const option=document.createElement('option');option.value='';option.textContent='Mixed';option.disabled=true;input.append(option);}for(const value of new Set([...values,...options[property]])){const option=document.createElement('option');option.value=value;option.textContent=value;input.append(option);}}
    else {input.type=numeric?'number':'text';input.placeholder=mixed?'Mixed':'';if(numeric){input.min=property==='opacity'?0:-360;input.max=property==='opacity'?100:360;input.step='any';}}
    input.value=mixed?'':property==='opacity'?Number(values[0])*100:property==='rotate'?(values[0]==='none'?0:parseFloat(values[0])):values[0];
    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(!input.value.trim()||!input.checkValidity())return;const value=property==='opacity'?String(Number(input.value)/100):property==='rotate'?input.value+'deg':input.value.trim();if(!valid(property,value)||!CSS.supports(property,value)){input.setCustomValidity('Enter a supported CSS value.');input.reportValidity();return;}save(property,value,width);};
-   I.field(section,'Shared '+label,input);
+   I.field(target,'Shared '+label,input);const field=input.closest('.inspector-field');field.querySelector(':scope > span').textContent=({'font-size':'Size','font-weight':'Weight','font-style':'Style','text-decoration-line':'Decoration','text-transform':'Case','text-align':'Alignment','background-color':'Color','border-color':'Color','border-width':'Width','border-style':'Style','border-radius':'Radius','mix-blend-mode':'Blend mode','isolation':'Blend group','opacity':'Opacity','rotate':'Rotation'})[property]||label;field.title='Shared '+label;
    if(['font-size','line-height','letter-spacing'].includes(property)){
     RetouchNumericExpression.calculation(input,{unit:property==='line-height'?'':'px'});I.fieldDraft(input);
    }
@@ -271,8 +283,10 @@
     if(elements.some(el=>el.style.getPropertyValue(property))||property==='rotate'&&values.some(value=>!Number.isFinite(Number(value)))){input.disabled=true;input.title='Edit the selected layer’s inline or 3D property in its source first.';}
    }
    if(['color','background-color','border-color','fill','stroke'].includes(property))RetouchPaintPicker.mountSelectionField(input,elements,property,changes=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,changes[i]]))));
-   const reset=I.button('Reset shared '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=infos.every(info=>!Object.hasOwn(info.cssRules?.[width]||{},property));section.append(reset);
+   const reset=I.button('Reset shared '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=infos.every(info=>!Object.hasOwn(info.cssRules?.[width]||{},property));reset.setAttribute('aria-label','Reset shared '+label.toLowerCase());reset.title=reset.getAttribute('aria-label');reset.textContent='↺';reset.classList.add('property-reset');const row=document.createElement('div');row.className='property-row';field.before(row);row.append(field,reset);rows.set(property,row);
   }
+  for(const [a,b]of [['width','height'],['min-width','min-height'],['max-width','max-height']]){const first=rows.get(a),second=rows.get(b);if(!first||!second)continue;const pair=document.createElement('div');pair.className='property-pair';first.before(pair);pair.append(first,second);for(const [property,row]of [[a,first],[b,second]])row.querySelector('.inspector-field > span').textContent=property.replace('min-','Min ').replace('max-','Max ').replace('width','W').replace('height','H');}
+  for(const body of Object.values(groups))if(!body.querySelector('.inspector-field'))body.parentElement.remove();
   return section;
  }
  window.RetouchHTMLCSS={mount,mountSelection};

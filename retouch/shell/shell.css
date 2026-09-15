@@ -1238,3 +1238,4 @@ html, body { overflow:clip; }
 .background-visibility:hover { background: var(--hover, #eee); }
 .background-visibility svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; }
 .background-color-hidden > .paint-field-control, .background-color-hidden > .paint-swatch { opacity: .5; }
+.shared-inspector-group .hint { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 6px 0; }
