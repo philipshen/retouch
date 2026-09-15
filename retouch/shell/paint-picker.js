@@ -14,12 +14,14 @@
   const canvas=propertyPreview({el,input:group,property:'box-shadow'});
   return {update:color=>canvas.update(root.RetouchBackgroundPaintUI.shadowChanges(shadows.map((shadow,i)=>i===index?{...shadow,color}:shadow),{})['box-shadow']),restore:()=>canvas.restore()};
  }
+ const previewSessions=new WeakMap(),isPreviewing=(el,property)=>(previewSessions.get(el)?.get(property)||0)>0;
  function propertyPreview({el,input,property,respectScope=true}){
   const properties=property==='border-color'?['border-top-color','border-right-color','border-bottom-color','border-left-color']:root.RetouchHTMLCSSValues.families[property]||[property],w=el.ownerDocument.defaultView;
   let originalStyle=null,original=[],lastStyle=null,last=null,restored=false;
+  const sessions=previewSessions.get(el)||new Map();previewSessions.set(el,sessions);sessions.set(property,(sessions.get(property)||0)+1);
   const active=()=>!respectScope||(root.RetouchBackgroundPaintUI?.rangeActive?root.RetouchBackgroundPaintUI.rangeActive(input,el):input.ownerDocument.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false');
   const rollback=()=>{if(last===null)return;if(el.getAttribute('style')===lastStyle){if(originalStyle===null)el.removeAttribute('style');else el.setAttribute('style',originalStyle);}else original.forEach(({name,value,priority},index)=>{if(el.style.getPropertyValue(name)===last[index]&&el.style.getPropertyPriority(name)==='important'){if(value)el.style.setProperty(name,value,priority);else el.style.removeProperty(name);}});last=null;lastStyle=null;};
-  const restore=()=>{if(restored)return;restored=true;w.removeEventListener('resize',resize,true);rollback();},resize=()=>{if(!el.isConnected||!input.isConnected){restore();return;}if(!active())rollback();};
+  const restore=()=>{if(restored)return;restored=true;w.removeEventListener('resize',resize,true);rollback();const count=sessions.get(property)-1;if(count)sessions.set(property,count);else sessions.delete(property);queueMicrotask(()=>w.dispatchEvent(new w.CustomEvent('retouch:paint-preview-restored',{detail:{property}})));},resize=()=>{if(!el.isConnected||!input.isConnected){restore();return;}if(!active())rollback();};
   w.addEventListener('resize',resize,true);
   return {update(color){if(restored)return;if(!el.isConnected||!input.isConnected){restore();return;}if(!active()){rollback();return;}if(last===null){originalStyle=el.getAttribute('style');original=properties.map(name=>({name,value:el.style.getPropertyValue(name),priority:el.style.getPropertyPriority(name)}));}el.style.setProperty(property,color,'important');last=properties.map(name=>el.style.getPropertyValue(name));lastStyle=el.getAttribute('style');},restore};
  }
@@ -195,5 +197,5 @@ handle.style.left=s*100+'%';handle.style.top=(1-v)*100+'%';plane.setAttribute('a
   dialog.addEventListener('close',()=>{libraryAbort.abort();sampling?.abort();resizeObserver.disconnect();observer.disconnect();draftPreview?.restore();root.removeEventListener('resize',position);dialog.remove();if(returnPopover?.isConnected)returnPopover.retouchOpen?.();if(onClose){onClose({applied});return;}if(refreshAfterClose&&root.RetouchPanelFocus?.refreshSavedControl)root.RetouchPanelFocus.refreshSavedControl(input);else if(input.isConnected)input.focus();},{once:true});
   dialog.addEventListener('keydown',event=>{event.stopPropagation();if(event.key==='Enter'&&!event.isComposing&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&event.target.matches('input:not([type=range])')){event.preventDefault();apply();}});sync();dialog.showModal();position();root.addEventListener('resize',position);value.focus();return dialog;
  }
- root.RetouchPaintPicker={open,parsePaint,mountSelectionField,gradientPreview,shadowPreview,propertyPreview};
+ root.RetouchPaintPicker={open,parsePaint,mountSelectionField,gradientPreview,shadowPreview,propertyPreview,isPreviewing};
 })(window);
