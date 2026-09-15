@@ -284,7 +284,7 @@
    else if(/^border-(?:top|right|bottom|left)-(?:width|style)$/.test(property))target=details(groups.stroke,'borders','Individual borders');
    else if(/^border-.+-radius$/.test(property))target=details(groups.appearance,'corners','Individual corners');
    else if(['font-family','line-height','letter-spacing','text-indent'].includes(property))target=details(groups.typography,'type-options','Typography options');
-   else if(!hasFlex&&(['flex-direction','flex-wrap'].includes(property)||!hasGrid&&['align-items','align-content','justify-content','gap'].includes(property)))target=details(groups.layout,'layout-options','Layout options');
+   else if(['display','flex-direction','flex-wrap'].includes(property)||!hasFlex&&!hasGrid&&['align-items','align-content','justify-content','gap'].includes(property))target=details(groups.layout,'layout-options','Layout options');
 
    const values=infos.map((info,i)=>{const raw=info.cssRules?.[width]?.[property]??computed[i].getPropertyValue(property);return property==='rotate'?String(RetouchReactSelection.rotationDegrees(raw)):raw;}),mixed=values.some(value=>value!==values[0]),numeric=['opacity','rotate'].includes(property);
    const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),spacingActive=()=>elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth);

@@ -18932,3 +18932,26 @@ Logs: `/tmp/retouch-html-single-spacing.log`,
 `/tmp/retouch-html-single-spacing-units.log`. No desktop rebuild or push.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete.
+
+
+### Compact HTML layout controls — 2026-09-15
+
+Single HTML containers with layout presets and shared HTML selections now put
+Display, Direction and Wrap in Layout options. The visible panel emphasizes
+layout preset buttons, alignment, gap and padding. Single layers without layout
+presets keep their raw display control accessible in the main inspector.
+Advanced controls remain editable and their disclosure state survives rebuilds.
+
+Chromium shared selection and WebKit single-container checks passed: the three
+raw controls start collapsed, remain available inside Layout options, advanced
+alignment/distribution edits and undo work, and existing spacing/geometry/screen
+range checks pass. All 1,663 unit tests passed. Inspected the shared light-theme
+screenshot: padding now follows alignment directly, removing three primary rows.
+One single-container test needed to wait for a non-null label box after an
+inspector rebuild before pointer input; the rerun passed.
+
+Logs: `/tmp/retouch-html-compact-layout-shared.log`,
+`/tmp/retouch-html-compact-layout-single-verified.log`, and
+`/tmp/retouch-html-compact-layout-units.log`. No desktop rebuild or push.
+React/Liquid raw layout dropdown placement remains to be aligned. Full Figma
+parity, arbitrary-site support and trusted Homebrew distribution remain incomplete.

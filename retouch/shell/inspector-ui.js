@@ -488,7 +488,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
      const dimensions=section.querySelector('[aria-label="Width (CSS)"]')?.closest('.property-pair'),clip=section.querySelector('[aria-label="Clip content"]')?.closest('.property-row');
      if(stacks&&dimensions){stacks.after(dimensions);if(clip)dimensions.after(clip);}
      const display=section.querySelector('[aria-label="Display (CSS)"]')?.value||'',flex=/^(inline-)?flex$/.test(display),grid=/^(inline-)?grid$/.test(display);
-     const inactive=flex?[]:grid?['Direction','Wrap']:['Direction','Wrap','Align items','Align lines','Distribute items','Gap'];if(alignment)inactive.push('Align items','Align lines','Distribute items','Align columns');
+     const inactive=flex?[]:grid?['Direction','Wrap']:['Direction','Wrap','Align items','Align lines','Distribute items','Gap'];if(alignment)inactive.push('Align items','Align lines','Distribute items','Align columns');if(stacks)inactive.push('Display','Direction','Wrap');
      const options=disclosure('Layout options','html-layout-options');
      for(const label of inactive){const row=section.querySelector('[aria-label="'+label+' (CSS)"]')?.closest('.property-row');if(row?.parentElement===section)options.append(row);}
      if(options.children.length>1)section.append(options);
