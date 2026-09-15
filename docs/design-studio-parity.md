@@ -19595,3 +19595,31 @@ Logs: `/tmp/retouch-text-tool-{html,react,liquid,units}-final.log`,
 
 Drag-to-size text, full Figma text-tool fidelity, arbitrary-site parity and
 trusted Homebrew distribution remain incomplete. No push or desktop rebuild.
+
+
+### Drag a text box with the Text tool
+
+The armed Text tool now accepts a canvas drag to create a positioned box with
+explicit width/height and wrapping text. Its preview is an unfilled blue outline,
+and the dock keeps Text active rather than showing the rectangle tool. Ordinary
+clicks still create text without fixed box dimensions. Native source insertion
+validates the optional box dimensions and preserves the existing source layers.
+
+Drawing reuses buffered pointer handling: source lookup may finish while the
+pointer is held or after release. Reverse drags normalize the box bounds.
+Typing starts immediately after insertion; text edits and insertion retain
+separate, exact undo entries. Escape cancels a live box without writing source.
+Creation gestures now suppress native page-text selection on pointerdown.
+
+Fresh validation: 1,670 unit tests passed. HTML/Chromium, React/Chromium and
+Liquid/WebKit Text-tool suites passed transformed placement, held/released and
+reverse box drags, wrap rendering, typing, source undo and cancellation. The
+held preview asserts transparent fill, correct Text-tool state and no native
+text selection. The HTML direct shape/Pen/Scale suite and standalone SVG drawing
+regression also passed. Inspected `/tmp/retouch-text-box-preview.png`.
+Logs: `/tmp/retouch-text-box-{html,react,liquid}-final.log`,
+`/tmp/retouch-text-box-units-final.log`,
+`/tmp/retouch-text-box-direct-shapes.log`, `/tmp/retouch-text-box-shapes.log`.
+
+Full Figma text behavior, arbitrary-site support and trusted Homebrew
+distribution remain incomplete. No push or native rebuild.

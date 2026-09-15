@@ -39,15 +39,15 @@
   function current(){return nativeSnapshots.every(({el,rect,metrics,css})=>{if(!el.isConnected)return false;const now=el.getBoundingClientRect(),style=w.getComputedStyle(el);return [el.clientLeft,el.clientTop,el.clientWidth,el.clientHeight].every((value,i)=>value===metrics[i])&&['x','y','width','height'].every(key=>Math.abs(now[key]-rect[key])<.1)&&css===[style.position,style.transform,style.rotate,style.scale,style.translate,style.zoom,style.contain,style.willChange,style.filter,style.backdropFilter,style.perspective].join('|');});}
   return {matrix,current};
  }
- function mount({target,frame,canvas,preset,onCommit,onEnd,onError,native=false,initialPointer=null,initialMove=null,initialReleased=false,pointerTarget=null,initialPoint=null}){
+ function mount({target,frame,canvas,preset,onCommit,onEnd,onError,native=false,initialPointer=null,initialMove=null,initialReleased=false,pointerTarget=null,initialPoint=null,onClick=null,tool=null}){
   const d=target.ownerDocument,w=d.defaultView,viewport=native?null:target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
   let space;try{space=native?nativeSpace(target):null;}catch(error){onError(error.message);onEnd();return null;}
   const matrix=()=>space?.matrix||target.getScreenCTM();
-  const surface=root.document.createElement('div');surface.className='svg-draw-surface';surface.dataset.shape=preset;surface.setAttribute('aria-label','Draw '+preset);surface.title='Hold Space to reposition while drawing. Shift constrains; Option/Alt draws from center.';surface.tabIndex=0;
+  const surface=root.document.createElement('div');surface.className='svg-draw-surface';surface.dataset.shape=preset;if(tool)surface.dataset.tool=tool;surface.setAttribute('aria-label',tool==='text'?'Draw text box':'Draw '+preset);surface.title='Hold Space to reposition while drawing. Shift constrains; Option/Alt draws from center.';surface.tabIndex=0;
   Object.assign(surface.style,{position:'fixed',zIndex:40,cursor:'crosshair',touchAction:'none'});
   const drawing=root.document.createElementNS(ns,'svg');Object.assign(drawing.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none',overflow:'hidden'});surface.append(drawing);
   const preview=root.document.createElementNS(ns,{rectangle:'rect',circle:'circle',ellipse:'ellipse',line:'line',arrow:'path',triangle:'polygon',star:'polygon'}[preset]);
-  preview.style.cssText='pointer-events:none!important;fill:#d9d9d9!important;stroke:var(--accent, #0d99ff)!important;stroke-width:1!important;opacity:.7!important;';preview.setAttribute('vector-effect','non-scaling-stroke');if(['line','arrow'].includes(preset))preview.style.setProperty('fill','none','important');
+  preview.style.cssText='pointer-events:none!important;fill:#d9d9d9!important;stroke:var(--accent, #0d99ff)!important;stroke-width:1!important;opacity:.7!important;';preview.setAttribute('vector-effect','non-scaling-stroke');if(tool==='text'||['line','arrow'].includes(preset))preview.style.setProperty('fill','none','important');
   let state=null,ended=false,spaceHeld=false;const cleanup=[];
   const current=()=>!space||space.current();
   if(native){let raf;const check=()=>{if(!current()){cancel();return;}raf=root.requestAnimationFrame(check);};raf=root.requestAnimationFrame(check);cleanup.push(()=>root.cancelAnimationFrame(raf));}
@@ -59,7 +59,7 @@
   const down=e=>{if(state||e.button!==0)return;e.preventDefault();e.stopImmediatePropagation();try{const a=point(e);state={id:e.pointerId,a,b:a,x:e.clientX,y:e.clientY,pointerX:e.clientX,pointerY:e.clientY,distance:0};surface.setAttribute('data-canvas-space-owner','');(pointerTarget||surface).setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}};
   listen(surface,'pointerdown',down);
   listen(surface,'pointermove',move);
-  const up=e=>{if(!state||e.pointerId!==state.id)return;e.preventDefault();move(e);if(!state||ended)return;const [a,b]=state.distance>=4?state.points:placement(preset,state.a,e);cancel();onCommit([a.x,a.y,b.x,b.y]);};
+  const up=e=>{if(!state||e.pointerId!==state.id)return;e.preventDefault();move(e);if(!state||ended)return;if(state.distance<4&&onClick){const p=state.a;cancel();onClick({x:p.x,y:p.y});return;}const [a,b]=state.distance>=4?state.points:placement(preset,state.a,e);cancel();onCommit([a.x,a.y,b.x,b.y]);};
   listen(surface,'pointerup',up);
   listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',cancel);
   listen(root,'keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();}},true);
