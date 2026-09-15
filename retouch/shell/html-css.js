@@ -305,6 +305,16 @@
     const parse=raw=>{if(property==='gap'&&raw.trim()==='normal')return {value:0,min:0,max:100000,format:value=>value+'px'};const match=/^(\d+(?:\.\d*)?|\.\d+)(px|em|rem|%|ex|ch|vw|vh|vmin|vmax|pt|pc|in|cm|mm)$/i.exec(raw.trim());return match&&CSS.supports(property,raw)&&valid(property,raw)?{value:Number(match[1]),min:0,max:100000,format:value=>value+match[2]}:null;};
     I.numericLabelDrag(input,parse);input.retouchNumericPreview=()=>{const parsed=parse(input.value),previews=elements.map(el=>RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true})),writingModes=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el).writingMode);return {current:()=>spacingActive()&&elements.every((el,i)=>el.ownerDocument.defaultView.getComputedStyle(el).writingMode===writingModes[i])&&previews.every(preview=>preview.current()),update:value=>previews.forEach(preview=>preview.update(parsed.format(value))),restore:()=>previews.forEach(preview=>preview.restore())};};
    }
+   if(property==='font-size'){
+    const sizes=()=>elements.map(el=>parseFloat(el.ownerDocument.defaultView.getComputedStyle(el).fontSize)),ready=()=>spacingActive()&&elements.every(el=>el.style.getPropertyPriority('font-size')!=='important');
+    input.retouchNumericInitialValue=()=>ready()?sizes()[0]:'';
+    I.numericLabelDrag(input,()=>{const initial=sizes(),base=initial[0];return {value:base,min:base-Math.min(...initial),max:base+2000-Math.max(...initial),format:value=>value+'px'};});
+    input.parentElement.querySelector('span').title='Drag to change each selected font size by the same amount. Escape cancels.';
+    input.retouchNumericPreview=()=>{
+     const initial=sizes(),previews=elements.map(el=>RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}));
+     return {current:()=>spacingActive()&&previews.every(preview=>preview.current()),update:value=>previews.forEach((preview,i)=>preview.update((initial[i]+value-initial[0])+'px')),restore:()=>previews.forEach(preview=>preview.restore()),commit:value=>{if(value===initial[0]){input.value=mixed?'':values[0];return;}if(ready())save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,{[property]:(initial[i]+value-initial[0])+'px'}])));}};
+    };
+   }
    if(['width','height'].includes(property)){
     const measurable=()=>spacingActive()&&elements.every(el=>{const css=el.ownerDocument.defaultView.getComputedStyle(el);return !['inline','contents','none'].includes(css.display)&&Number.isFinite(RetouchReactSelection.dimensionSize(css,property))&&!['width','height','inline-size','block-size','flex','flex-grow','flex-shrink','flex-basis'].some(key=>el.style.getPropertyPriority(key)==='important');});
     const sizes=()=>elements.map(el=>RetouchReactSelection.dimensionSize(el.ownerDocument.defaultView.getComputedStyle(el),property));

@@ -20580,3 +20580,31 @@ inherited important columns. Logs: `/tmp/retouch-adaptive-state-react.log`,
 This is targeted column-priority handling, not a universal cascade resolver.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete. No native rebuild or push.
+
+### Mixed font-size label dragging
+
+Shared React/Liquid font-size fields now start scrubbing when their value is
+Mixed. Each selected text layer receives the same pixel delta, preserving its
+size difference. The minimum and maximum clamp the whole selection together.
+HTML shared font-size fields now support label dragging using measured pixel
+sizes and the same delta behavior. Typing remains an absolute shared size.
+Previews restore on Escape, abort on foreign changes to the previewed property,
+and commit the selection in one source transaction. Existing inline/source
+restrictions in React/Liquid remain; this does not implement mixed leading or
+tracking drags.
+
+Validation: the new mixed-font-drag browser suite passed React/Chromium,
+Liquid/WebKit, HTML/Chromium and HTML/WebKit. It checks live preview before
+source writes, Escape, exact style restoration, floor clamping, responsive
+isolation, exact undo/redo and preservation of external important font edits.
+Final React and HTML/WebKit runs additionally verify no-op clicks and typed
+absolute 40px sizes. A WebKit label-bounds race in the test was fixed by waiting
+for visible bounds after inspector rebuilds. The existing React shared inline
+sizing suite passed, including mixed dimensions, flex sizing and cancellation.
+All 1,698 unit tests passed. Logs: `/tmp/retouch-mixed-font-units.log`,
+`/tmp/retouch-mixed-font-react-final.log`, `/tmp/retouch-mixed-font-liquid.log`,
+`/tmp/retouch-mixed-font-html.log`, `/tmp/retouch-mixed-font-html-webkit.log`,
+`/tmp/retouch-mixed-font-dimension-regression.log`.
+
+Full Figma fidelity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete. No native rebuild or push.
