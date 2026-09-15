@@ -104,7 +104,9 @@ let lockStorage;try{lockStorage=sessionStorage;}catch{}
 const layerLocks=RetouchLayerLocks.create({route:()=>currentPageRoute()||'',storage:lockStorage,scope:window.__RT_RENDERING?.stateScope});
 function pickLayer(node,x,y,{deep=false}={}){
  const picked=layerLocks.pick(node,x,y);if(!picked)return null;
- const target=picked.closest('[data-rt-boolean-result]')?.closest('[data-rt-boolean]')||layers.textOwner(picked);if(deep||!target)return target;
+ const target=picked.closest('[data-rt-boolean-result]')?.closest('[data-rt-boolean]')||layers.textOwner(picked);if(deep||!target)return target;return groupSelectionTarget(target);
+}
+function groupSelectionTarget(target){
  const selected=sel?matchingEls(activeId()).find(el=>el.ownerDocument===target.ownerDocument):null;
  let result=target;for(let group=target.closest('[data-rt-group][data-rt]');group;group=group.parentElement?.closest('[data-rt-group][data-rt]')){if(selected&&selected!==group&&group.contains(selected))continue;if(!layerLocks.locked(group))result=group;}
  return result;
@@ -584,7 +586,9 @@ function componentMarqueeTargets(d,rect,library){
   }
   return candidates.filter(group=>!candidates.some(parent=>parent!==group&&parent.elements.some(root=>root!==group.element&&root.contains(group.element)))).map(group=>group.element);
 }
-function textMarqueeTargets(nodes,rect){return [...new Set(nodes.map(node=>layers.textOwner(node)))].filter(node=>!layerLocks.locked(node)&&RetouchMarquee.enclosed(rect,node.getBoundingClientRect()));}
+function textMarqueeTargets(nodes,rect){
+ return [...new Set(nodes.map(node=>groupSelectionTarget(layers.textOwner(node))).filter(Boolean))].filter(node=>{if(layerLocks.locked(node))return false;const b=node.hasAttribute('data-rt-group')?RetouchComponentInstances.bounds([node]):node.getBoundingClientRect();return b&&RetouchMarquee.enclosed(rect,{...b,left:b.left,top:b.top,width:b.width,height:b.height,right:b.left+b.width,bottom:b.top+b.height});});
+}
 async function resolveMarqueeTargets(d,nodes,rect){
  if(sel?.info.kind!=='instance')return {nodes:textMarqueeTargets(nodes,rect),component:false};
  const selection=sel,serial=classificationSerial;

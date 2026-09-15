@@ -1,0 +1,11 @@
+'use strict';
+const assert=require('node:assert/strict');
+exports.run=async({page,app,read,wait,settled,kind})=>{
+ const original=read();await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Shift']});await settled();await app.locator('h1').click({button:'right'});await page.getByRole('menu',{name:'Canvas actions',exact:true}).locator('[data-action-id="layer-groupSelection"]').click();await wait(()=>read()!==original);await settled();const grouped=read();
+ const bounds=selector=>page.evaluate(selector=>RetouchComponentInstances.bounds([...document.querySelector('#app').contentDocument.querySelectorAll(selector)]),selector);
+ async function drag(b){const f=await page.locator('#app').boundingBox(),w=await app.locator('body').evaluate(()=>innerWidth),s=f.width/w;await page.mouse.move(f.x+(b.left-30)*s,f.y+(b.top-30)*s);await page.mouse.down();await page.mouse.move(f.x+(b.left+b.width+5)*s,f.y+(b.top+b.height+5)*s,{steps:6});await page.mouse.up();await settled();}
+ await page.evaluate(()=>clearSelection());await drag(await bounds('[data-rt-group]'));const group=page.getByRole('treeitem',{name:'div · Group',exact:true});assert.equal(await group.getAttribute('aria-selected'),'true');assert.equal(await page.getByRole('treeitem',{selected:true}).count(),1);assert.equal(read(),grouped);
+ await page.evaluate(()=>clearSelection());await drag(await bounds('h1'));assert.equal(await page.getByRole('treeitem',{selected:true}).count(),0,'A partial enclosure cannot split an unopened group');assert.equal(read(),grouped);
+ await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await settled();await drag(await bounds('h1'));assert.equal(await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).getAttribute('aria-selected'),'true');assert.equal(await page.getByRole('treeitem',{selected:true}).count(),1);assert.equal(read(),grouped);
+ await page.getByRole('treeitem',{name:'p · Named text',exact:true}).click();await settled();await drag(await bounds('[data-rt-group]'));assert.equal(await group.getAttribute('aria-selected'),'true');assert.equal(read(),grouped);console.log(kind+': PASS real marquee selects whole closed groups, refuses partial enclosure, selects entered children and preserves source');
+};
