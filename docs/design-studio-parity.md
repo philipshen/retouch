@@ -18955,3 +18955,29 @@ Logs: `/tmp/retouch-html-compact-layout-shared.log`,
 `/tmp/retouch-html-compact-layout-units.log`. No desktop rebuild or push.
 React/Liquid raw layout dropdown placement remains to be aligned. Full Figma
 parity, arbitrary-site support and trusted Homebrew distribution remain incomplete.
+
+
+### Compact shared React/Liquid layout controls — 2026-09-15
+
+Shared class-backed selections now keep Arrange children and Wrap children in
+Layout options alongside advanced alignment and distribution. Presets, visual
+alignment, gaps and padding remain prominent. Expanded options survive edits.
+Browser tests exposed raw direction/wrap utilities losing to ordinary authored
+CSS; these edits now emit important scoped utilities, consistent with presets,
+while retaining unrelated variants and exact reset/history behavior.
+
+React/Chromium and Liquid/WebKit passed preset geometry, raw reversed-direction
+and wrap edits, disclosure persistence, distribution/reset, keyboard controls,
+screen isolation and exact Undo/Redo. Liquid flow/flex/grid context checks and
+HTML context regression passed. Fixed the harness dispatch so class-backed
+context checks reach their own branch instead of the HTML-only helper; adapted
+HTML visibility assertions to the compact panel from the preceding increment.
+All 1,663 unit tests passed. Inspected the Liquid light-theme screenshot.
+
+Logs: `/tmp/retouch-class-compact-layout-react-verified.log`,
+`/tmp/retouch-class-compact-layout-liquid-verified.log`,
+`/tmp/retouch-class-compact-layout-context-verified.log`,
+`/tmp/retouch-compact-layout-html-context.log`, and
+`/tmp/retouch-class-compact-layout-final-units.log`. No desktop rebuild or push.
+Single React/Liquid layout dropdown placement remains to be aligned. Full Figma
+parity, arbitrary-site support and trusted Homebrew distribution remain incomplete.

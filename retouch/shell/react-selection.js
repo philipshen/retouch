@@ -120,7 +120,8 @@
   if(!containerRules[property])throw Error('Unknown container layout control');
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js'),active=R.project(classes,scope),inherited=R.inherited(classes,scope,document);
   const next=value===null?inspector().replace(active,token=>containerRules[property].test(token),''):property==='mode'?L.modeClasses(active,value,inherited):L.arrangementClasses(active,property,value,inherited);
-  return R.replaceScope(classes,next,scope);
+  const result=value!==null&&['mode','wrap'].includes(property)?next.split(/\s+/).map(token=>containerRules[property].test(inspector().base(token)||'')?'!'+token.replace(/^!|!$/g,''):token).join(' '):next;
+  return R.replaceScope(classes,result,scope);
  }
  function changeGap(classes,scope,axis,value,document=null,writingMode='horizontal-tb'){
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
@@ -162,7 +163,7 @@
    if(!computed.every(css=>arrangementApplies(property,css)))continue;
    const values=computed.map(read),mixed=values.some(value=>value!==values[0]),options=choices.map(choice=>Array.isArray(choice)?choice:[choice,({nowrap:'No wrap',wrap:'Wrap','wrap-reverse':'Wrap reversed',between:'Space between',around:'Space around',evenly:'Space evenly'})[choice]||choice[0].toUpperCase()+choice.slice(1)]);if(mixed)options.unshift(['','Mixed']);else if(!options.some(([value])=>value===values[0]))options.unshift([values[0],values[0]]);
    const blocked=el=>inline.some(key=>el.style.getPropertyValue(key)),write=value=>{try{const changes=Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el)||!arrangementApplies(property,el.ownerDocument.defaultView.getComputedStyle(el)))throw Error('Select compatible containers without inline layout overrides.');return [info.id,changeContainer(info.className,scope,property,value,el.ownerDocument)];}));save(changes);}catch(error){I.note(groups.layout,error.message,'refused');}};
-   const target=['align','justify'].includes(property)?layoutOptions:groups.layout,input=I.select(target,'Shared '+label,options,mixed?'':values[0],write);input.disabled=elements.some(blocked);if(mixed)input.options[0].disabled=true;
+   const target=layoutOptions,input=I.select(target,'Shared '+label,options,mixed?'':values[0],write);input.disabled=elements.some(blocked);if(mixed)input.options[0].disabled=true;
    const reset=I.button('Reset shared '+label.toLowerCase(),()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeContainer(info.className,scope,property,null)===info.className);target.append(reset);
   }
   if(computed.every(layout)){
