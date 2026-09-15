@@ -25,12 +25,15 @@
   }
   localDelta(result,{x:0,y:0});return result;
  }
- function measure(group,locked=()=>false){
-  if(!group?.isConnected||!group.hasAttribute('data-rt-group'))throw Error('Select a group in the current screen.');
-  const w=group.ownerDocument.defaultView,targets=[];
+ function measure(group,locked=()=>false){if(!group?.hasAttribute('data-rt-group'))throw Error('Select a group in the current screen.');return measureSelection([group],locked);}
+ function measureSelection(roots,locked=()=>false){
+  if(!Array.isArray(roots)||!roots.length||roots.length>100||roots.some(el=>!el?.isConnected||el.ownerDocument!==roots[0].ownerDocument))throw Error('Select layers in one current document.');
+  if(roots.some(locked))throw Error('Unlock the selected layers before moving them.');
+  const w=roots[0].ownerDocument.defaultView,targets=[];
   function visit(el){
    if(locked(el))throw Error('Unlock the group contents before moving them.');
    const css=w.getComputedStyle(el);
+   if(el.hasAttribute('data-rt-group')&&css.display!=='contents')throw Error('Choose layout-transparent groups.');
    if(css.display==='contents'){
     if([...el.childNodes].some(node=>node.nodeType===3&&node.textContent.trim()))throw Error('Wrap the group’s direct text in a layer before moving it.');
     for(const child of el.children)visit(child);return;
@@ -42,8 +45,7 @@
    const rect=el.getBoundingClientRect();if(rect.width<=0||rect.height<=0)throw Error('Group movement needs visible child bounds.');
    const translate=css.translate||'none';translation(translate,{x:0,y:0});targets.push({el,id:el.getAttribute('data-rt'),translate,rect,matrix:parentMatrix(el)});
   }
-  if(w.getComputedStyle(group).display!=='contents')throw Error('Choose a layout-transparent group.');
-  visit(group);if(!targets.length||targets.length>100||new Set(targets.map(item=>item.id)).size!==targets.length)throw Error('Choose a group with 1–100 distinct source children.');return targets;
+  for(const el of [...new Set(roots)].filter(el=>!roots.some(parent=>parent!==el&&parent.contains(el))))visit(el);if(!targets.length||targets.length>100||new Set(targets.map(item=>item.id)).size!==targets.length)throw Error('Choose a group with 1–100 distinct source children.');return targets;
  }
  function preview(members){
   const entries=members.map(member=>({...member,value:member.el.style.getPropertyValue('translate'),priority:member.el.style.getPropertyPriority('translate'),hadStyle:member.el.hasAttribute('style'),written:null}));
@@ -58,5 +60,5 @@
   const scoped=R.project(value,scope).split(/\s+/).filter(Boolean).filter(token=>!/^!?-?translate(?:-|\[)/.test(token)&&!/^!?\[translate:/.test(token));
   scoped.push('![translate:'+translate.replace(/ /g,'_')+']');return R.replaceScope(value,scoped.join(' '),scope);
  }
- const api={translation,measure,classes,multiply,localDelta,parentMatrix,preview};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupMove=api;
+ const api={translation,measure,measureSelection,classes,multiply,localDelta,parentMatrix,preview};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupMove=api;
 })(typeof window==='object'?window:globalThis);

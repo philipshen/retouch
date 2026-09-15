@@ -17865,3 +17865,25 @@ Logs: `/tmp/retouch-group-nudge-units.log`,
 This covers one selected group. Multi-selection containing groups, group
 resizing/rotation, other unsupported source/transform cases, full Figma parity and
 trusted desktop distribution remain incomplete. No desktop rebuild or push.
+
+
+### Mixed group and layer movement checkpoint
+
+Selections containing layout-transparent groups and ordinary layers now share
+canvas dragging and held-arrow nudging. Covered descendants are moved once, and
+undo/redo restores the full selection. Source writes remain one transaction per
+gesture with the existing transform, source identity and preview ownership guards.
+
+Validation: 1,649 unit tests pass. HTML/Chromium, transformed React/Chromium and
+transformed Liquid/WebKit workflows pass mixed-selection dragging, nudging,
+geometry at 390/768/1100 pixels, exact history and ancestor/child deduplication.
+Logs: `/tmp/retouch-group-multi-units.log`,
+`/tmp/retouch-group-multi-html-visual.log`,
+`/tmp/retouch-group-multi-react.log`, and
+`/tmp/retouch-group-multi-webkit.log`.
+
+Visually inspected `/tmp/retouch-group-multi-html.png`: the light inspector shows
+the mixed selection and movement action. Legacy position controls still refuse
+boxless group alignment; this remains a UI/geometry gap. Group resizing/rotation,
+full Figma parity and trusted desktop distribution remain incomplete. This
+checkpoint does not rebuild the desktop package.

@@ -29,3 +29,11 @@ test('container transform inversion maps screen movement through nested rotation
  for(const matrix of matrices){const d={x:13,y:-7},local=move.localDelta(matrix,d);assert.ok(Math.abs(matrix[0]*local.x+matrix[2]*local.y-d.x)<1e-8);assert.ok(Math.abs(matrix[1]*local.x+matrix[3]*local.y-d.y)<1e-8);}
  assert.throws(()=>move.localDelta([0,0,0,1],{x:1,y:2}),/singular/);assert.throws(()=>move.localDelta([Infinity,0,0,1],{x:1,y:2}),/singular/);
 });
+test('mixed group measurements flatten transparent groups and move covered descendants only once',()=>{
+ const d={defaultView:{DOMMatrixReadOnly:class{constructor(){Object.assign(this,{a:1,b:0,c:0,d:1,is2D:true});}},getComputedStyle:el=>({display:el.group?'contents':'block',transform:'none',rotate:'none',scale:'none',translate:'none',zoom:'1'})}};
+ const node=(id,group=false)=>({id,group,namespaceURI:'http://www.w3.org/1999/xhtml',isConnected:true,ownerDocument:d,parentElement:null,children:[],childNodes:[],hasAttribute:name=>name==='data-rt-group'&&group,getAttribute:name=>name==='data-rt'?id:null,getBoundingClientRect:()=>({x:0,y:0,width:10,height:10}),querySelectorAll(){return this.children.flatMap(child=>[child,...child.querySelectorAll()]);},contains(other){return other===this||this.children.some(child=>child.contains(other));}});
+ const group=node('group',true),nested=node('nested',true),a=node('a'),b=node('b'),c=node('c');group.children=group.childNodes=[a,nested];a.parentElement=nested.parentElement=group;nested.children=nested.childNodes=[b];b.parentElement=nested;
+ assert.deepEqual(move.measureSelection([group,a,c,group]).map(item=>item.id),['a','b','c']);
+ assert.throws(()=>move.measureSelection([group,c],el=>el===b),/Unlock/);
+ assert.throws(()=>move.measureSelection([group,node('a')]),/distinct/);
+});
