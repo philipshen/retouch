@@ -3472,7 +3472,19 @@ function groupMovementSection(info){
   }catch(error){I.note(section,error.message,'refused');}
 
  }
+ try{const fields=document.createElement('div');fields.className='property-pair';section.insertBefore(fields,section.querySelector('.inspector-field'));const measured=groupPositionMeasurement(roots);
+  for(const axis of ['x','y']){const input=I.number(fields,'Group '+axis.toUpperCase()+' (px)',measured[axis],-100000,100000,value=>void positionGroup(info,axis,value,input));input.parentElement.querySelector('span').textContent=axis.toUpperCase();input.title=measured.parent?'Selection position from the parent’s rendered bounds in screen pixels.':'Selection position on the page in pixels.';I.fieldDraft(input);
+   input.retouchNumericPreview=()=>{const selection=sel,scope=styleScope,hash=info.hash,start=groupPositionMeasurement(roots),preview=RetouchGroupMove.preview(start.members);let delta={x:0,y:0};return {current:()=>{try{return sel===selection&&info.hash===hash&&styleScope===scope&&!panelTasks&&!sourceRequests&&!undoBusy&&preview.current()&&start.members.every(item=>{const r=item.el.getBoundingClientRect();return ['x','y','width','height'].every(key=>Math.abs(r[key]-item.rect[key]-(key==='x'?delta.x:key==='y'?delta.y:0))<.1);});}catch{return false;}},update:value=>{delta={x:axis==='x'?value-start.x:0,y:axis==='y'?value-start.y:0};preview.update(delta);},restore:preview.restore};};
+  }
+ }catch(error){I.note(section,error.message,'refused');}
  const button=I.button(sel.multiple?.length?'Move selection on canvas':'Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag selected groups and layers on the canvas. Arrow keys move 1 px; Shift moves 10 px.';section.append(button);return section;
+}
+
+function groupPositionMeasurement(roots,members=RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el))){
+ const bounds=RetouchGroupMove.selectionBounds(roots,members),rect=RetouchCanvasMove.union(bounds),parent=RetouchGroupMove.parentBounds(roots),w=roots[0].ownerDocument.defaultView;return {members,parent,x:rect.left-(parent?.left??-w.scrollX),y:rect.top-(parent?.top??-w.scrollY)};
+}
+async function positionGroup(info,axis,value,input){
+ try{const context=await moveGroupOnCanvas(info,null,{prepareOnly:true});if(!context||!context.current())return;const before=groupPositionMeasurement(context.roots,context.members),amount=value-before[axis];if(Math.abs(amount)<1/32)return;if(document.activeElement===input)RetouchPanelFocus.queue(input);await writeGroupMove(context,{x:axis==='x'?amount:0,y:axis==='y'?amount:0});}catch(error){toast(error.message,'err');}
 }
 
 async function spaceGroupsOnCanvas(axis,opener){

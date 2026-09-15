@@ -18127,3 +18127,31 @@ Logs: `/tmp/retouch-group-unit-align-units.log`,
 Group resize/rotation, viewport handling for negative-position groups, full
 Figma parity and trusted public Homebrew distribution remain incomplete. No
 desktop rebuild or push for this checkpoint.
+
+### Group position fields checkpoint
+
+Single groups and mixed group selections now expose paired X/Y fields directly
+under the alignment toolbar. Coordinates refer to the shared parent's rendered
+bounds, falling back to page coordinates when there is no shared visible parent.
+They use screen axes rather than a rotated parent's local axes. Typed values and
+label scrubbing move all members together. Scrubbing previews rendered content,
+checks selection/scope/source/geometry/translation ownership, restores its inline
+properties before commit, and produces one source transaction on release.
+
+Validation: 1,651 unit tests pass. HTML/Chromium, transformed React/Chromium and
+transformed Liquid/WebKit verify both axes for single/mixed selections, typed
+values, live label scrubbing with no early source write, Escape geometry
+restoration, preserved dimensions, full selection and exact undo/redo. The same
+runs retain grouping geometry checks at 390/768/1100 pixels. HTML was rerun after
+placing the paired fields beneath the toolbar; the final screenshot was inspected
+at `/tmp/retouch-group-position-html.png`. The page-coordinate fallback for
+separate parent containers has not yet received dedicated browser coverage.
+
+Logs: `/tmp/retouch-group-position-units.log`,
+`/tmp/retouch-group-position-html-final.log`,
+`/tmp/retouch-group-position-react.log`, and
+`/tmp/retouch-group-position-webkit.log`.
+
+Group resize/rotation, viewport handling for negative-position groups, full
+Figma parity and trusted public Homebrew distribution remain incomplete. No
+desktop rebuild or push for this checkpoint.
