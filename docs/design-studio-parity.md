@@ -18857,3 +18857,33 @@ Logs: `/tmp/retouch-shared-spacing-context-react.log`,
 `/tmp/retouch-shared-spacing-context-units.log`. No desktop rebuild or push.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete.
+
+
+### Single-container padding scrubbing and screen-range parity — 2026-09-15
+
+Single-container React/Liquid padding fields now scrub from their labels, for
+both uniform padding and individual edges. Previews retain units, watch target
+and writing-mode continuity, restore on cancellation and commit one source
+transaction on release. Uniform padding uses one shorthand-aware property
+preview; this also replaces the shared inspector's four separate previews,
+which could leave an empty style attribute after cancellation.
+
+Single-container padding/gap inputs and resets disable outside the selected
+screen range and recheck the range before saving. Padding inputs also refuse
+scrubbing over authored inline padding.
+
+Chromium passed pixel padding preview/cancel/commit/exact history checks for
+uniform and all four edges, plus gap range guards and existing gap geometry.
+WebKit passed the same single-padding checks with rem values, and Liquid shared
+padding regression including modifier keys, relative units, resize cancellation
+and inactive edit ranges. Cancellation explicitly checks the original inline
+style attribute, including absent versus empty. All 1,663 unit tests passed.
+A WebKit test needed to wait for the inspector to reenable after screen resize,
+in addition to waiting for canvas geometry.
+
+Logs: `/tmp/retouch-single-padding-scrub-fixed.log`,
+`/tmp/retouch-single-padding-scrub-webkit-verified.log`,
+`/tmp/retouch-padding-preview-shared-regression.log`,
+`/tmp/retouch-single-gap-range.log`, `/tmp/retouch-padding-final-units.log`.
+No desktop rebuild or push. Full Figma parity, arbitrary-site support and trusted
+Homebrew distribution remain incomplete.

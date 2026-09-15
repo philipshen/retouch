@@ -234,6 +234,7 @@
     const css=el.ownerDocument.defaultView.getComputedStyle(el);
     const parentElement=I.layoutParent(el),parent=parentElement&&el.ownerDocument.defaultView.getComputedStyle(parentElement);
     const classes=info.className||'',inherited=info.styleScope?info.anchorInheritedClasses||'':'';
+    const spacingActive=()=>el.isConnected&&(!info.styleScope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false'),saveSpacing=next=>{if(spacingActive())save(next);};
     const flowControl=root.RetouchFlowResize?.control(el,sizes=>{const context={display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode,inheritedClasses:inherited};save(Object.entries(sizes).reduce((next,[axis,value])=>sizeClasses(next,axis,'fixed',root.RetouchReactSelection.dimensionValue(css,axis,value),context),classes));});if(flowControl)sec.append(flowControl);
     const mode=/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow';
     const verticalInline=layoutAxes({writingMode:css.writingMode}).inline==='height',rowLabel=verticalInline?'Vertical':'Horizontal',columnLabel=verticalInline?'Horizontal':'Vertical';
@@ -282,16 +283,16 @@
         I.select(sec,'Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(arrangementClasses(classes,'wrap',v,inherited)));
       }
       for(const [prop,label,axis] of [['columnGap',verticalInline?'Vertical gap':'Horizontal gap',verticalInline?'height':'width'],['rowGap',verticalInline?'Horizontal gap':'Vertical gap',verticalInline?'width':'height']]) {
-        const input=document.createElement('input');input.type='text';input.value=ownGap(classes,axis,css.writingMode,inherited)??css[prop].replace(/px$/,'');input.placeholder='0';input.title='Pixels by default; also accepts %, rem, em, vw, vh, ch or normal. Enter saves. Escape cancels.';const initial=input.value;
+        const input=document.createElement('input');input.type='text';input.value=ownGap(classes,axis,css.writingMode,inherited)??css[prop].replace(/px$/,'');input.disabled=!spacingActive();input.placeholder='0';input.title='Pixels by default; also accepts %, rem, em, vw, vh, ch or normal. Enter saves. Escape cancels.';const initial=input.value;
         input.oninput=()=>input.setCustomValidity('');
-        input.onchange=()=>{if(input.value===initial)return;try{save(gapClasses(classes,axis,input.value,css.writingMode,info.styleScope?info.anchorInheritedClasses||'':''));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+        input.onchange=()=>{if(input.value===initial)return;try{saveSpacing(gapClasses(classes,axis,input.value,css.writingMode,info.styleScope?info.anchorInheritedClasses||'':''));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
         input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};
         const row=document.createElement('div');row.className='property-row';sec.append(row);I.field(row,label,input);
         const property=prop==='columnGap'?'column-gap':'row-gap',writingMode=css.writingMode;
         I.numericLabelDrag(input,raw=>['gap',property].some(name=>el.style.getPropertyValue(name))?null:gapScrubValue(raw));
         input.retouchNumericPreview=()=>{const parsed=gapScrubValue(input.value),preview=root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true});return {current:()=>el.isConnected&&el.ownerDocument.defaultView.getComputedStyle(el).writingMode===writingMode&&preview.current(),update:value=>preview.update(gapValue(parsed.format(value))),restore:()=>preview.restore()};};
-        const resetLabel='Reset '+label.toLowerCase(),reset=I.button('↺',()=>save(gapClasses(classes,axis,null,css.writingMode)));reset.setAttribute('aria-label',resetLabel);reset.title=resetLabel;reset.classList.add('property-reset');
-        reset.disabled=gapClasses(classes,axis,null,css.writingMode)===classes;row.append(reset);
+        const resetLabel='Reset '+label.toLowerCase(),reset=I.button('↺',()=>saveSpacing(gapClasses(classes,axis,null,css.writingMode)));reset.setAttribute('aria-label',resetLabel);reset.title=resetLabel;reset.classList.add('property-reset');
+        reset.disabled=!spacingActive()||gapClasses(classes,axis,null,css.writingMode)===classes;row.append(reset);
       }
       {
         const values=root.RetouchHTMLCSSValues||require('./html-css-values.js');
@@ -329,18 +330,20 @@
       I.note(sec,'Choosing a span replaces line placement on that axis. Reset removes this scope’s axis override, retaining any shared grid area.');
     }
     const paddingEdges=['top','right','bottom','left'],paddingValues=paddingEdges.map(edge=>ownPadding(classes,edge,inherited,css)??css.getPropertyValue('padding-'+edge).replace(/px$/,''));
-    function paddingInput(label,value,change){
-      const input=document.createElement('input');input.type='text';input.value=value??'';input.placeholder=value===null?'Mixed':'0';I.field(sec,label,input);
-      const initial=input.value;input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(input.value===initial||input.value.trim()==='')return;try{change(paddingValue(input.value));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+    function paddingInput(label,value,change,edges=paddingEdges){
+      const input=document.createElement('input');input.type='text';input.value=value??'';input.disabled=!spacingActive()||Array.from(el.style).some(property=>property==='padding'||property.startsWith('padding-'));input.placeholder=value===null?'Mixed':'0';I.field(sec,label,input);
+      const initial=input.value;input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(input.value===initial||input.value.trim()==='')return;try{if(spacingActive())change(paddingValue(input.value));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+      I.numericLabelDrag(input,raw=>raw.trim()==='normal'?null:gapScrubValue(raw));
+      input.retouchNumericPreview=()=>{const parsed=gapScrubValue(input.value),writingMode=css.writingMode,previews=(edges.length===4?['padding']:edges.map(edge=>'padding-'+edge)).map(property=>root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}));return {current:()=>spacingActive()&&el.ownerDocument.defaultView.getComputedStyle(el).writingMode===writingMode&&previews.every(preview=>preview.current()),update:value=>previews.forEach(preview=>preview.update(paddingValue(parsed.format(value)))),restore:()=>previews.forEach(preview=>preview.restore())};};
       input.title='Pixels by default; also accepts %, rem, em, vw, vh or ch. Enter saves. Escape cancels.';input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};return input;
     }
-    paddingInput('Padding',paddingValues.every(value=>value===paddingValues[0])?paddingValues[0]:null,value=>save(paddingEdges.reduce((next,edge)=>paddingClasses(next,edge,value,inherited,css),classes)));
-    const resetPadding=I.button('Reset padding',()=>save(resetPaddingClasses(classes)));resetPadding.disabled=resetPaddingClasses(classes)===classes;resetPadding.title='Remove padding overrides at this edit range';sec.append(resetPadding);
+    paddingInput('Padding',paddingValues.every(value=>value===paddingValues[0])?paddingValues[0]:null,value=>saveSpacing(paddingEdges.reduce((next,edge)=>paddingClasses(next,edge,value,inherited,css),classes)));
+    const resetPadding=I.button('Reset padding',()=>saveSpacing(resetPaddingClasses(classes)));resetPadding.disabled=!spacingActive()||resetPaddingClasses(classes)===classes;resetPadding.title='Remove padding overrides at this edit range';sec.append(resetPadding);
     for(const side of ['Top','Right','Bottom','Left']) {
       const edge=side.toLowerCase();
-      paddingInput('Padding '+edge,paddingValues[paddingEdges.indexOf(edge)],v=>save(paddingClasses(classes,edge,v,inherited,css)));
-      const reset=I.button('Reset padding '+edge,()=>save(paddingClasses(classes,edge,null,'',css)));
-      reset.disabled=paddingClasses(classes,edge,null,'',css)===classes;sec.append(reset);
+      paddingInput('Padding '+edge,paddingValues[paddingEdges.indexOf(edge)],v=>saveSpacing(paddingClasses(classes,edge,v,inherited,css)),[edge]);
+      const reset=I.button('Reset padding '+edge,()=>saveSpacing(paddingClasses(classes,edge,null,'',css)));
+      reset.disabled=!spacingActive()||paddingClasses(classes,edge,null,'',css)===classes;sec.append(reset);
     }
     const geometry=root.RetouchReactSelection||require('./react-selection.js');
     const dims=Object.fromEntries(['width','height'].map(axis=>{const value=geometry.dimensionSize(css,axis);return [axis,Number.isFinite(value)?value:el[axis==='width'?'offsetWidth':'offsetHeight']];}));

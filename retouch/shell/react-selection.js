@@ -220,7 +220,7 @@
     input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=initial;input.setCustomValidity('');input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};
     const row=root.document.createElement('div');row.className='property-row';
     if(edge==='all')groups.layout.append(row);else{if(!edges.parentElement)groups.layout.append(edges);edges.append(row);}
-    I.field(row,edge==='all'?'Shared Padding':'Shared Padding '+edge,input);input.parentElement.querySelector('span').textContent=edge==='all'?'Padding':edge[0].toUpperCase()+edge.slice(1);lengthDrag(input,()=> (edge==='all'?sides:[edge]).map(side=>'padding-'+side));
+    I.field(row,edge==='all'?'Shared Padding':'Shared Padding '+edge,input);input.parentElement.querySelector('span').textContent=edge==='all'?'Padding':edge[0].toUpperCase()+edge.slice(1);lengthDrag(input,()=>edge==='all'?['padding']:['padding-'+edge]);
     const reset=I.button(edge==='all'?'Reset selected padding':'Reset selected padding '+edge,()=>write(edge,null,input));reset.disabled=blocked||infos.every((info,i)=>changePadding(info.className,scope,edge,null,elements[i].ownerDocument,computed[i])===info.className);reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');row.append(reset);
    }
   }
