@@ -19115,3 +19115,24 @@ Logs: `/tmp/retouch-armed-scale-react-verified.log`,
 This adds preselection activation for Scale; shape and pen tools still require
 a compatible selection. Full Figma parity, arbitrary-site support and trusted
 Homebrew distribution remain incomplete.
+
+
+### Armed Scale cancellation during target lookup — 2026-09-15
+
+Extended the Scale browser suite to hold the selected target's resolve request
+open after arming Scale with an empty selection. Escape, V and toggling the
+Scale toolbar button must each clear arming before the request is released.
+After release and settled frames, no scale surface may appear and source bytes
+must remain unchanged.
+
+HTML/Chromium, React/Chromium and Liquid/WebKit passed all three delayed-target
+cancellation paths, along with the existing Scale shortcut and activation suite.
+This increment changes browser coverage and this checkpoint only; production
+code remains at the preceding implementation. Its 1,664 unit tests passed in
+the preceding increment and were not rerun for this test-only extension.
+
+Logs: `/tmp/retouch-armed-scale-pending-html.log`,
+`/tmp/retouch-armed-scale-pending-react.log`, and
+`/tmp/retouch-armed-scale-pending-liquid.log`. No desktop rebuild or push.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete.
