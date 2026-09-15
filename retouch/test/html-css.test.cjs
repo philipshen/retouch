@@ -297,3 +297,16 @@ test('HTML text resizing accepts bounded white-space modes without accepting inj
  for(const value of ['normal','pre','nowrap','pre-wrap','pre-line','break-spaces']){const result=edit(original,0,value,'white-space');assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes('white-space:'+value));assert.ok(result.edits[0].after.includes('<h1 class="title">Second</h1>'));}
  for(const value of ['pre; color:red','pre-wrap extra']){const result=edit(original,0,value,'white-space');assert.equal(result.refused,true);assert.equal(result.edits,undefined);}
 });
+
+test('HTML sizing preserves logical inline values and refuses important logical conflicts',()=>{
+ for(const logical of ['inline-size','block-size'])for(const physical of ['width','height']){
+  const input=original.replace('class="title"',`class="title" style="${logical}:140px"`);
+  const edited=edit(input,768,'180px',physical).edits[0].after;
+  assert.ok(edited.includes(`style="${logical}:140px"`));
+  assert.ok(edited.includes(`${physical}:180px !important`));
+  const reset=edit(edited,768,null,physical).edits[0].after;
+  assert.ok(reset.includes(`style="${logical}:140px"`));
+  assert.equal(css.describe(resolve(reset)).cssRules[768]?.[physical],undefined);
+  assert.equal(edit(input.replace('140px"','140px !important"'),768,'180px',physical).refused,true);
+ }
+});

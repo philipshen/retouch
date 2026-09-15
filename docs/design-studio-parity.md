@@ -20095,3 +20095,27 @@ and rotation regression. Logs: `/tmp/retouch-inline-flow-units.log` and
 `/tmp/retouch-inline-flow-{react,html,liquid}.log`. These do not establish arbitrary
 site or full Figma parity. Native distribution is unchanged; no rebuild or push
 in this continuation.
+
+### Logical inline dimensions and vertical-writing layers
+
+Ordinary inline `inline-size` and `block-size` no longer disable flow resizing.
+The native sizing controls map these properties using the selected layer's
+writing mode, separately from the parent's flex/grid axes, and emit removable
+important physical dimension overrides. Authored logical styles remain intact.
+Inline important logical sizes still disable flow resize. HTML source validation
+now recognizes potential physical/logical dimension overlap, including matching
+minimum/maximum families, when refusing important inline conflicts.
+
+Validation: 1,684 unit tests passed, covering horizontal/vertical/sideways axis
+mapping and HTML source priority/reset behavior. Browser fixtures exercise
+logical sizes with affine transforms, padding/borders, own translation,
+constraints, sibling reflow, pointer/proportional/keyboard edits, cancellation,
+and exact source undo. HTML/Chromium used horizontal logical sizing;
+React/Chromium and Liquid/WebKit used vertical-writing children in horizontal
+parents. Native browser checks additionally reset height to its authored logical
+value and undo the reset. Logs: `/tmp/retouch-logical-flow-units.log`,
+`/tmp/retouch-logical-flow-html.log`, `/tmp/retouch-logical-flow-liquid.log`,
+`/tmp/retouch-logical-flow-react-reset.log`.
+
+Full arbitrary-site/Figma parity and trusted Homebrew distribution remain
+incomplete. No native rebuild or push in this continuation.

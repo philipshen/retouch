@@ -131,6 +131,10 @@
     const inline=/^(vertical|sideways)-/.test(parent.writingMode||'')?'height':'width',block=inline==='width'?'height':'width';
     return {inline,block,main:/^column/.test(parent.direction||'')?block:inline};
   }
+  function inlineDimensions(el,css){
+    const axes=layoutAxes(css);
+    return ['width','height'].filter(axis=>el.style.getPropertyValue(axis)||el.style.getPropertyValue(axis===axes.inline?'inline-size':'block-size'));
+  }
   function gapScrubValue(raw){
     if(raw.trim()==='normal')return {value:0,min:0,max:10000,format:String};
     const match=/^(\d+(?:\.\d*)?|\.\d+)(px|%|rem|em|vw|vh|ch)?$/.exec(raw.trim());
@@ -241,7 +245,7 @@
     const classes=info.className||'',inherited=info.styleScope?info.anchorInheritedClasses||'':'';
     const spacingActive=()=>el.isConnected&&(!info.styleScope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false'),saveSpacing=next=>{if(spacingActive())save(next);};
     const layoutSelect=(label,choices,value,change)=>{const input=I.select(sec,label,choices,value,next=>{if(spacingActive())change(next);});input.disabled=!spacingActive();if(input.disabled)input.title='Switch to a screen inside the selected edit range.';return input;};
-    const flowControl=root.RetouchFlowResize?.control(el,sizes=>{const context={inlineDimensions:['width','height'].filter(axis=>el.style.getPropertyValue(axis)),display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode,inheritedClasses:inherited};save(Object.entries(sizes).reduce((next,[axis,value])=>sizeClasses(next,axis,'fixed',root.RetouchReactSelection.dimensionValue(css,axis,value),context),classes));});if(flowControl)sec.append(flowControl);
+    const flowControl=root.RetouchFlowResize?.control(el,sizes=>{const context={inlineDimensions:inlineDimensions(el,css),display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode,inheritedClasses:inherited};save(Object.entries(sizes).reduce((next,[axis,value])=>sizeClasses(next,axis,'fixed',root.RetouchReactSelection.dimensionValue(css,axis,value),context),classes));});if(flowControl)sec.append(flowControl);
     const mode=/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow';
     const verticalInline=layoutAxes({writingMode:css.writingMode}).inline==='height',rowLabel=verticalInline?'Vertical':'Horizontal',columnLabel=verticalInline?'Horizontal':'Vertical';
     const modeSelect=layoutSelect('Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(explicitLayoutClasses(classes,'mode',value,inherited)));
@@ -357,7 +361,7 @@
       const title=axis[0].toUpperCase()+axis.slice(1),dim=axis==='width'?'w':'h';
       const sizingTokens=classes.split(/\s+/).filter(token=>I.base(token)!==null),ownToken=sizingTokens.find(token=>/^!|!$/.test(token)&&I.base(token).startsWith(dim+'-'))||sizingTokens.find(token=>/^!|!$/.test(token)&&I.base(token).startsWith('size-'))||sizingTokens.find(token=>I.base(token).startsWith(dim+'-'))||sizingTokens.find(token=>I.base(token).startsWith('size-'));
       const own=ownToken&&I.base(ownToken).replace(/^size-/,dim+'-');
-      const context={inlineDimensions:['width','height'].filter(axis=>el.style.getPropertyValue(axis)),display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode,inheritedClasses:info.styleScope?info.anchorInheritedClasses||'':''},axes=layoutAxes(context);
+      const context={inlineDimensions:inlineDimensions(el,css),display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode,inheritedClasses:info.styleScope?info.anchorInheritedClasses||'':''},axes=layoutAxes(context);
       const stretchFill=own===dim+'-auto'&&parent&&(/grid/.test(parent.display)?axis===axes.inline?css.justifySelf==='stretch':css.alignSelf==='stretch':/flex/.test(parent.display)&&axis!==axes.main&&css.alignSelf==='stretch');
       const sizing=own===dim+'-fit'?'hug':own===dim+'-full'||['-webkit-fill-available','-moz-available','stretch'].some(value=>own===dim+'-['+value+']')||stretchFill||/\bflex-1\b/.test(classes)&&parent&&/flex/.test(parent.display)&&axis===axes.main?'fill':own&&own!==dim+'-auto'?'fixed':'';
       const size=(mode,value)=>save(sizeClasses(classes,axis,mode,mode==='fixed'?geometry.dimensionValue(css,axis,value):value,context));
@@ -387,6 +391,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={explicitLayoutClasses,gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={inlineDimensions,explicitLayoutClasses,gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

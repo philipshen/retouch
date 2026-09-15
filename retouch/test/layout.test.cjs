@@ -393,3 +393,14 @@ test('inline dimensions use removable important sizing overrides',()=>{
  assert.equal(L.sizeClasses('!w-[160px] h-20','width','reset',0,{inlineDimensions:['width']}),'h-20');
  assert.equal(L.sizeClasses('','height','fixed',100,{inlineDimensions:['width']}),'h-[100px]');
 });
+
+test('inline logical dimensions follow the selected layer writing mode',()=>{
+ const el=values=>({style:{getPropertyValue:p=>values[p]||''}});
+ for(const writingMode of ['horizontal-tb','vertical-rl','vertical-lr','sideways-rl','sideways-lr']){
+  const vertical=writingMode!=='horizontal-tb',inline=vertical?'height':'width',block=vertical?'width':'height';
+  assert.deepEqual(L.inlineDimensions(el({'inline-size':'50%'}),{writingMode}),[inline]);
+  assert.deepEqual(L.inlineDimensions(el({'block-size':'80px'}),{writingMode}),[block]);
+  assert.deepEqual(L.inlineDimensions(el({'inline-size':'50%','block-size':'80px'}),{writingMode}),['width','height']);
+  assert.equal(L.sizeClasses('',inline,'fixed',120,{inlineDimensions:L.inlineDimensions(el({'inline-size':'50%'}),{writingMode})}),inline==='width'?'!w-[120px]':'!h-[120px]');
+ }
+});
