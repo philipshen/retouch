@@ -218,10 +218,20 @@ function hookFrame(d, w) {
    },
    prepare:async({target,action},current)=>{
     preparingShapeDrag=true;
-    try{const valid=()=>current()&&doc()===d&&armedCanvasTool===action&&mode==='edit'&&!canvasPan.active;await select(target,{current:valid});if(!valid()||!sel?.info.svgInsertion?.presets.includes(action.slice(5)))return null;return {target,action,info:sel.info};}
+    try{
+     const valid=()=>current()&&doc()===d&&armedCanvasTool===action&&mode==='edit'&&!canvasPan.active;
+     for(let candidate=target;candidate&&valid();candidate=candidate.parentElement?.closest('[data-rt]')){
+      if(layerLocks.locked(candidate))return null;
+      await select(candidate,{current:valid});if(!valid())return null;
+      const destination=renderedSelection?.element;
+      if(sel?.info.svgInsertion?.presets.includes(action.slice(5))&&destination?.isConnected&&destination.contains(target)&&!layerLocks.locked(destination))return {target:destination,pointerTarget:target,action,info:sel.info};
+     }
+     if(valid())toast('Choose an editable container to draw into.','err');
+     return null;
+    }
     finally{preparingShapeDrag=false;}
    },
-   onStart:({target,action,info},event,move,released)=>{if(armedCanvasTool!==action)return;setArmedCanvasTool(null);stopDrawing=RetouchSVGDraw.mount({target,frame:iframe,canvas:canvasSurface,preset:action.slice(5),native:info.svgInsertion.createsViewport,initialPointer:event,initialMove:move,initialReleased:released,pointerTarget:target,onCommit:points=>{if(sel?.info===info)insertLayer(action.slice(5),info,'insertSVG',{points,...(info.svgInsertion.createsViewport?{nativeCanvas:true}:{})});},onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});},
+   onStart:({target,pointerTarget,action,info},event,move,released)=>{if(armedCanvasTool!==action)return;setArmedCanvasTool(null);stopDrawing=RetouchSVGDraw.mount({target,frame:iframe,canvas:canvasSurface,preset:action.slice(5),native:info.svgInsertion.createsViewport,initialPointer:event,initialMove:move,initialReleased:released,pointerTarget,onCommit:points=>{if(sel?.info===info)insertLayer(action.slice(5),info,'insertSVG',{points,...(info.svgInsertion.createsViewport?{nativeCanvas:true}:{})});},onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});},
    onError:error=>toast(error.message,'err')});
   const vectorDragCandidate=node=>{
     if(armedCanvasTool||mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active)return null;

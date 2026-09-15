@@ -19209,3 +19209,26 @@ Pen still requires destination selection before placing points. Candidate
 selection does not search past a source-incompatible nearest container. This
 is not proof of arbitrary-site drawing, full Figma parity or trusted Homebrew
 distribution. No desktop rebuild or push for this checkpoint.
+
+### 2026-09-15 — Find a writable parent for direct shape drawing
+
+Direct shape preparation now checks successive source-mapped parents when the
+nearest container lacks insertion capability. A valid destination must contain
+the original pointer target and remain connected and unlocked. Locked layers
+stop the search. If no destination supports insertion, the editor gives a
+container-selection message instead of silently ending preparation. Pointer
+capture stays on the original gesture target even when the destination changes;
+transferring capture to the parent cancelled the initial HTML test and was fixed.
+
+Added a real source-incompatible child fixture: JSX spread props in React,
+and a client-template attribute in HTML/Liquid. Direct drags over its heading
+create the shape in the writable parent. Tests cover held/released pointers
+during delayed parent lookup, exact geometry, atomic undo and late-cancellation
+protection. HTML Chromium, React Chromium and Liquid WebKit passed. Final HTML
+also explicitly verifies the child has no insertion capability. All 1,664 unit
+tests passed. Logs: `/tmp/retouch-draw-parent-html-final.log`,
+`/tmp/retouch-draw-parent-react.log`, `/tmp/retouch-draw-parent-liquid.log`,
+and `/tmp/retouch-draw-parent-units.log`.
+
+No desktop rebuild or push. Direct Pen entry, arbitrary-site support, full
+Figma parity and trusted Homebrew distribution remain incomplete.
