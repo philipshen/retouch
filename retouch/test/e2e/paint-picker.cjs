@@ -7,7 +7,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
  try{
   await page.setContent('<input aria-label="Test color" value="#ff000080" style="position:absolute;right:20px;top:300px">');
   await page.addStyleTag({path:path.join(__dirname,'../../shell/shell.css')});
-  for(const file of ['inspector.js','palette-values.js','color-styles.js','html-css-values.js','paint-picker.js'])await page.addScriptTag({path:path.join(__dirname,'../../shell',file)});
+  for(const file of ['inspector.js','palette-values.js','color-styles.js','html-css-values.js','shadow-visibility.js','background-paint.js','background-paint-ui.js','paint-picker.js'])await page.addScriptTag({path:path.join(__dirname,'../../shell',file)});
   await page.evaluate(()=>{window.writes=[];document.querySelector('input').onchange=event=>writes.push(event.target.value);});
   const open=()=>page.evaluate(()=>RetouchPaintPicker.open(document.querySelector('input'))),picker=page.getByRole('dialog'),value=picker.getByLabel('Color value',{exact:true});
   await open();assert.equal(await picker.evaluate(el=>getComputedStyle(el,'::backdrop').backgroundColor),'rgba(0, 0, 0, 0)');const plane=picker.getByRole('slider',{name:'Saturation and brightness',exact:true}),box=await plane.boundingBox();await page.mouse.click(box.x+box.width/2,box.y+box.height/2);assert.equal(await value.inputValue(),'#80404080');assert.deepEqual(await page.evaluate(()=>writes),[]);
