@@ -19643,3 +19643,22 @@ These are sizing actions, without a persistent mode indicator. They reset wrap
 style to wrap/nowrap; existing min/max dimensions and flex constraints still
 apply. Full Figma parity and trusted Homebrew distribution remain incomplete.
 No native rebuild in this checkpoint.
+
+
+### Preserve wrapping style through text resizing
+
+Text resizing now retains computed Balance, Pretty or Stable styling while
+switching wrapping on or off. React/Liquid encode combined shorthand values as
+valid arbitrary utilities; HTML accepts the bounded mode/style combinations.
+This supersedes the preceding checkpoint's wrap-style reset limitation.
+
+Validation: all 1,671 unit tests passed. HTML/Chromium, React/Chromium and
+Liquid/WebKit Text-tool browser runs passed preserving Balance through Auto
+height, Auto width and Fixed size, rendered dimensions, and exact source undo.
+The browser test opens Typography options through their visible controls.
+Logs: `/tmp/retouch-wrap-preserve-{html,react,liquid}-final.log` and
+`/tmp/retouch-wrap-preserve-units.log`. Pretty and Stable encoding is unit-tested;
+this browser regression uses Balance.
+
+Full parity, unrestricted source compatibility and trusted Homebrew distribution
+remain incomplete. No push or native rebuild in this checkpoint.

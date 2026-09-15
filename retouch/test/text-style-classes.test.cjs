@@ -71,7 +71,7 @@ test('wrap style tokens and text styles preserve unrelated type and screen prope
  for(const token of ['text-blue-500','text-2xl','whitespace-pre-wrap'])assert.equal(I.textWrapToken(token),false);
  assert.equal(styles.compose('text-wrap text-lg md:text-nowrap md:tracking-wide hover:text-balance',{'text-wrap':'pretty'},'md:'),'text-wrap text-lg md:tracking-wide hover:text-balance md:![text-wrap:pretty]');
  assert.deepEqual(styles.overrides('text-balance',{'text-wrap':'wrap'}),['text-wrap']);
- for(const value of ['wrap','nowrap','balance','pretty'])assert.ok(styles.encode({'text-wrap':value}));
+ for(const value of ['wrap','nowrap','balance','pretty','wrap balance','nowrap balance','wrap pretty','nowrap stable'])assert.ok(styles.encode({'text-wrap':value}));
  for(const value of ['auto','balance;color:red','inherit'])assert.throws(()=>styles.encode({'text-wrap':value}));
  for(const property of ['text-wrap-mode','text-wrap-style'])assert.ok(css.overlaps('text-wrap',property));
 });
