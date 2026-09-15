@@ -20411,3 +20411,30 @@ and important-inline guards also passed. All 1,694 unit tests passed. Logs:
 Mixed-dimension dragging for the HTML authoring inspector and mixed typography
 fields remains separate work. Full Figma/arbitrary-site parity and trusted
 Homebrew distribution remain incomplete. No native rebuild or push.
+
+
+### HTML shared dimension dragging
+
+The HTML inspector now supports dragging shared Width and Height labels,
+including Mixed. Gestures measure each border box, apply a common delta, and
+write per-layer CSS dimensions through the existing batch writer. Flex main-axis
+changes also set grow/shrink/basis so the preview and saved dimensions agree.
+Typing CSS units retains the existing field behavior. Drags require a measurable
+layer, an active scope and no important inline dimension/flex override.
+
+Preview updates apply flex properties before dimensions and restore in reverse
+order. Full attribute restoration is used only when the entire current style
+still matches the preview; otherwise property-level rollback retains external
+changes. Initial tests caught partial width restoration and empty style
+attributes; the final suite covers both exact restoration and foreign changes.
+
+Validation: new `retouch/test/e2e/html-mixed-sizing.cjs` passed on Chromium and
+WebKit: 120/164-to-130/174 mixed flex widths, content/border box conversion,
+clamping to 0/44, Escape, committed preview equivalence, exact source undo,
+external width cancellation and unrelated external color preservation. All
+1,694 unit tests passed. Logs: `/tmp/retouch-html-mixed-size-webkit-owned.log`,
+`/tmp/retouch-html-mixed-size-chromium-owned.log`,
+`/tmp/retouch-html-mixed-size-units-final.log`.
+
+Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
+incomplete. No native rebuild or push.
