@@ -28,10 +28,10 @@
   function alignmentClasses(classes,x,y,context={},inherited=''){
     if(![0,1,2].includes(x)||![0,1,2].includes(y))throw Error('Choose an alignment point.');
     const values=root.RetouchHTMLCSSValues||require('./html-css-values.js');
-    const changes=values.flexAlignment(x,y,context);
+    const changes=values.childAlignment(x,y,context);
     for(const [property,value] of Object.entries(changes)){
-      const matches=token=>token.startsWith('['+property+':')||(property==='justify-content'?/^justify-(?!items-|self-)/.test(token):property==='align-items'?/^items-/.test(token):/^content-(normal|center|start|end|between|around|evenly|baseline|stretch)$/.test(token));
-      const shorthand=token=>property==='align-items'?/^place-items-|^\[place-items:/.test(token):/^place-content-|^\[place-content:/.test(token);
+      const matches=token=>token.startsWith('['+property+':')||(property==='justify-content'?/^justify-(?!items-|self-)/.test(token):property==='align-items'?/^items-/.test(token):property==='justify-items'?/^justify-items-/.test(token):/^content-(normal|center|start|end|between|around|evenly|baseline|stretch)$/.test(token));
+      const shorthand=token=>property.endsWith('-items')?/^place-items-|^\[place-items:/.test(token):/^place-content-|^\[place-content:/.test(token);
       let addition='['+property+':'+value+']';
       if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(matches(I.base(token)||'')||shorthand(I.base(token)||''))))addition='!'+addition;
       classes=I.replace(classes,matches,addition);
@@ -250,14 +250,15 @@
         const resetLabel='Reset '+label.toLowerCase(),reset=I.button('↺',()=>save(gapClasses(classes,axis,null,css.writingMode)));reset.setAttribute('aria-label',resetLabel);reset.title=resetLabel;reset.classList.add('property-reset');
         reset.disabled=gapClasses(classes,axis,null,css.writingMode)===classes;row.append(reset);
       }
-      if(mode!=='grid'){
+      {
         const values=root.RetouchHTMLCSSValues||require('./html-css-values.js');
         const picker=document.createElement('div');picker.className='layout-alignment';picker.setAttribute('role','group');picker.setAttribute('aria-label','Align children');
         for(let y=0;y<3;y++)for(let x=0;x<3;x++){
-          const changes=values.flexAlignment(x,y,css),label='Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x];
-          const button=I.button('•',()=>save(alignmentClasses(classes,x,y,css,inherited)));button.setAttribute('aria-label',label);button.title=label;
+          const changes=values.childAlignment(x,y,css),label='Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x];
+          const active=()=>!info.styleScope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',blocked=current=>['place-items',...(!/grid/.test(current.display)?['place-content']:[]),...Object.keys(values.childAlignment(x,y,current))].some(property=>el.style.getPropertyValue(property));
+          const button=I.button('•',()=>{if(!el.isConnected||!active())return;const current=el.ownerDocument.defaultView.getComputedStyle(el);if(['flex','inline-flex','grid','inline-grid'].includes(current.display)&&!blocked(current))save(alignmentClasses(classes,x,y,current,inherited));});button.setAttribute('aria-label',label);button.title=label;
           button.setAttribute('aria-pressed',String(Object.entries(changes).every(([property,value])=>css.getPropertyValue(property)===value)));
-          if(Object.keys(changes).some(property=>el.style.getPropertyValue(property)))button.disabled=true;
+          if(!active()||blocked(css))button.disabled=true;
           picker.append(button);
         }
         sec.append(picker);

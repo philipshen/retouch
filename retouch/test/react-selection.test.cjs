@@ -178,3 +178,9 @@ test('shared SVG stroke changes preserve paints, other scopes and priority',()=>
  assert.equal(change('[stroke-linecap:butt] [stroke-linejoin:miter]','','stroke-linecap','round'),'[stroke-linejoin:miter] [stroke-linecap:round]');
  for(const [property,value]of [['stroke-width','-1'],['stroke-linecap','invalid'],['stroke-dasharray','1;fill:red'],['vector-effect','bad']])assert.throws(()=>change('stroke-2','',property,value));
 });
+
+
+test('shared responsive grid alignment preserves other scopes and promotes inherited shorthand priority',()=>{
+ const {changeContainerAlignment}=require('../shell/react-selection.js');
+ assert.equal(changeContainerAlignment('grid !place-items-center md:justify-items-start hover:items-end','md:',0,2,{display:'grid',direction:'rtl'}),'grid !place-items-center hover:items-end md:![justify-items:end] md:![align-items:end]');
+});

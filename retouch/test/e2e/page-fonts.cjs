@@ -158,6 +158,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
  }
  if(process.env.RT_E2E_COMPONENT_REPARENT){assert.equal(kind,'react');const frame='<section aria-label="Destination frame"><p>Destination</p></section>',destination=process.env.RT_E2E_COMPONENT_REPARENT_CALLBACK?'{[1].map(() => ('+frame+'))}':frame;fs.writeFileSync(file,fs.readFileSync(file,'utf8').replace('</main>',destination+'</main>'));}
  if(process.env.RT_E2E_PICKER_MULTI)fs.writeFileSync(file,fs.readFileSync(file,'utf8').replace(kind==='html'?'.other-font{font-family:':kind==='react'?'className="other-font"':'class="other-font"',kind==='html'?'.other-font{color:#ff8800;font-family:':kind==='react'?'className="other-font text-[#ff8800]"':'class="other-font text-[#ff8800]"'));
+ if(process.env.RT_E2E_CLASS_GRID_ALIGNMENT){assert.ok(['react','liquid'].includes(kind));const attr=kind==='react'?'className':'class';fs.writeFileSync(file,fs.readFileSync(file,'utf8').replace('type-editorial font-bold','type-editorial font-bold !place-items-center').replace(attr+'="other-font"',attr+'="other-font !place-items-center"'));}
  if(process.env.RT_E2E_SHARED_GAPS){const source=fs.readFileSync(file,'utf8'),attribute=kind==='react'?'className':'class';fs.writeFileSync(file,source.replace('type-editorial font-bold','type-editorial font-bold flex gap-1').replace(attribute+'="other-font"',attribute+'="other-font grid grid-cols-2 gap-2 [writing-mode:vertical-rl]"').replace('>Headline</h1>','>Headline<span>A</span><span>B</span></h1>').replace('>Other text</p>','>Other text<span>A</span><span>B</span><span>C</span><span>D</span></p>'));}
  if(process.env.RT_E2E_SHARED_CLIP){assert.ok(process.env.RT_E2E_SHARED_GAPS);fs.writeFileSync(file,fs.readFileSync(file,'utf8').replace('other-font grid','other-font overflow-hidden grid'));}
  if(process.env.RT_E2E_SHARED_ALIGNMENT_GEOMETRY){
@@ -240,6 +241,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   if(process.env.RT_E2E_SHARED_COMPACT_PAINTS){await require('./shared-compact-paints.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_ADAPTIVE_GRID){await require('./shared-adaptive-grid.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_STACK_PRESETS){await require('./shared-stack-presets.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
+  if(process.env.RT_E2E_CLASS_GRID_ALIGNMENT){await require('./class-grid-alignment.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_FLEX_ALIGNMENT){await require('./shared-flex-alignment.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_LAYOUT_CONTEXT){await require('./shared-layout-context.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_HTML_SHARED_GROUPS){await require('./html-shared-groups.cjs').run({page,app,read,wait,settled});assert.deepEqual(errors,[]);return;}
@@ -929,6 +931,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   }
   if(process.env.RT_E2E_SHARED_ADAPTIVE_GRID){await require('./shared-adaptive-grid.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_STACK_PRESETS){await require('./shared-stack-presets.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
+  if(process.env.RT_E2E_CLASS_GRID_ALIGNMENT){await require('./class-grid-alignment.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_FLEX_ALIGNMENT){await require('./shared-flex-alignment.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_LAYOUT_CONTEXT){
    const before=read(),states=[before];await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await page.getByLabel('Style screen scope',{exact:true}).selectOption('md:');await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Meta']});await settled();

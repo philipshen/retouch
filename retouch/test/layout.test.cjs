@@ -342,3 +342,11 @@ test('flow Fill retains fallback through class merging and migrates previous dec
   assert.equal(L.sizeClasses(filled,axis,'reset',0,{display:'flow-root'}),'');
  }
 });
+
+
+test('grid alignment replaces item utilities with physical alignment while preserving track distribution',()=>{
+ const context={display:'grid',writingMode:'vertical-rl',direction:'rtl'};
+ assert.equal(L.alignmentClasses('grid-cols-2 justify-items-center items-stretch justify-between content-end hover:items-center',0,0,context),'grid-cols-2 justify-between content-end hover:items-center [justify-items:end] [align-items:end]');
+ assert.equal(L.alignmentClasses('!justify-items-start items-end',1,1,{display:'grid'},'!place-items-end'),'![justify-items:center] ![align-items:center]');
+ assert.equal(L.alignmentClasses('place-items-center md:justify-items-end',2,2,{display:'grid'}),'place-items-center md:justify-items-end [justify-items:end] [align-items:end]');
+});

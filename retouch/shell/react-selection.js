@@ -139,12 +139,12 @@
    const input=I.select(groups.layout,'Shared '+label,options,mixed?'':values[0],write);input.disabled=elements.some(blocked);if(mixed)input.options[0].disabled=true;
    const reset=I.button('Reset shared '+label.toLowerCase(),()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeContainer(info.className,scope,property,null)===info.className);groups.layout.append(reset);
   }
-  if(computed.every(css=>['flex','inline-flex'].includes(css.display))){
+  if(computed.every(layout)){
    const picker=root.document.createElement('div'),V=root.RetouchHTMLCSSValues;picker.className='layout-alignment';picker.setAttribute('role','group');picker.setAttribute('aria-label','Shared child alignment');groups.layout.append(picker);
-   const blocked=(el,css,x,y)=>['place-items','place-content',...Object.keys(V.flexAlignment(x,y,css))].some(key=>el.style.getPropertyValue(key));
+   const active=()=>!scope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',blocked=(el,css,x,y)=>['place-items',...(!/grid/.test(css.display)?['place-content']:[]),...Object.keys(V.childAlignment(x,y,css))].some(key=>el.style.getPropertyValue(key));
    for(let y=0;y<3;y++)for(let x=0;x<3;x++){
-    const label='Shared Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x],button=I.button('•',()=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i),css=el.ownerDocument.defaultView.getComputedStyle(el);if(!['flex','inline-flex'].includes(css.display)||blocked(el,css,x,y))throw Error('Select flex containers without inline alignment overrides.');return [info.id,changeContainerAlignment(info.className,scope,x,y,css,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}});
-    button.setAttribute('aria-label',label);button.title=label;button.disabled=elements.some((el,i)=>blocked(el,computed[i],x,y));button.setAttribute('aria-pressed',String(computed.every(css=>Object.entries(V.flexAlignment(x,y,css)).every(([property,value])=>css.getPropertyValue(property)===value))));picker.append(button);
+    const label='Shared Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x],button=I.button('•',()=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i),css=el.ownerDocument.defaultView.getComputedStyle(el);if(!active()||!layout(css)||blocked(el,css,x,y))throw Error('Preview the selected edit range and select flex or grid containers without inline alignment overrides.');return [info.id,changeContainerAlignment(info.className,scope,x,y,css,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}});
+    button.setAttribute('aria-label',label);button.title=label;button.disabled=!active()||elements.some((el,i)=>blocked(el,computed[i],x,y));button.setAttribute('aria-pressed',String(computed.every(css=>Object.entries(V.childAlignment(x,y,css)).every(([property,value])=>css.getPropertyValue(property)===value))));picker.append(button);
    }
   }
   if(computed.every(css=>['grid','inline-grid'].includes(css.display))){

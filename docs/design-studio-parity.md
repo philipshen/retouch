@@ -18605,3 +18605,33 @@ Logs: `/tmp/retouch-single-grid-html-final.log`,
 
 Full Figma fidelity, arbitrary-site editing and trusted public Homebrew distribution
 remain incomplete. No desktop rebuild or push for this increment.
+
+### Grid alignment through React and Liquid classes (2026-09-15)
+
+The class-based single and shared container pickers now support grids as well as
+flex layouts. Both use the physical child-alignment mapping already used by HTML
+CSS authoring. Grid edits replace justify-items/align-items utilities at the chosen
+scope while retaining grid tracks, content distribution, other variants and
+shorthand declarations. Longhand priority follows important own/inherited
+place-items declarations. Shared selections can map each flex/grid container using
+its own computed layout. Clicks recheck live layout, inline alignment overrides
+and active edit range; inactive-range controls disable.
+
+React/Chromium, Liquid/Chromium and Liquid/WebKit passed all nine single/shared
+positions in two-cell grids, RTL/vertical geometry, inherited important shorthand
+priority, desktop-only overrides, unchanged phone geometry, inactive-range guards,
+keyboard navigation and exact atomic source undo/redo. The existing Liquid shared
+flex geometry regression passed all nine positions across row/column, reversed
+axes and wrapping combinations. All 1,656 unit tests passed, including scoped class
+replacement, preservation of content distribution and important shorthand priority.
+Inspected `/tmp/retouch-class-grid-alignment-liquid.png`; its small fixed child
+boxes intentionally allow heading-text overflow in the geometry fixture.
+
+Logs: `/tmp/retouch-class-grid-react.log`, `/tmp/retouch-class-grid-liquid.log`,
+`/tmp/retouch-class-grid-webkit.log`,
+`/tmp/retouch-class-grid-flex-regression.log`, and
+`/tmp/retouch-class-grid-units.log`.
+
+This verifies literal-class React/Liquid editing through the supported adapters.
+Full Figma fidelity, arbitrary-site/framework support and trusted public Homebrew
+distribution remain incomplete. No desktop rebuild or push for this increment.
