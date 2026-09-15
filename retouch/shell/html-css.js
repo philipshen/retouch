@@ -203,7 +203,7 @@
 
   for(const [property,label] of [...fields,...(isGrid?[['justify-items','Align columns']]:[])]){
    const value=own[property]??css.getPropertyValue(property),input=document.createElement(options[property]?'select':'input');
-   const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),spacingActive=()=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth;
+   const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),rangeGuarded=spacing||['display','flex-direction','flex-wrap','align-items','align-content','justify-content','justify-items','grid-auto-flow'].includes(property),spacingActive=()=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth;
    if(options[property])for(const item of new Set([value,...options[property]])){const option=document.createElement('option');option.value=item;option.textContent=item;input.append(option);}
    else input.type='text';
    if(property==='font-family'){input.placeholder='Inter, sans-serif';input.title='Use a font loaded by this page or installed on your computer.';}
@@ -212,7 +212,7 @@
    input.value=value;input.oninput=()=>input.setCustomValidity('');
    if(property==='border-width'&&new Set(['top','right','bottom','left'].map(side=>css.getPropertyValue('border-'+side+'-width'))).size>1){input.value='';input.placeholder='Mixed';}
    if(property==='border-style'&&new Set(['top','right','bottom','left'].map(side=>css.getPropertyValue('border-'+side+'-style'))).size>1){const mixed=document.createElement('option');mixed.value='';mixed.textContent='Mixed';mixed.disabled=true;input.prepend(mixed);input.value='';for(const option of [...input.options])if(/\s/.test(option.value))option.remove();}
-   input.onchange=()=>{if(spacing&&!spacingActive())return;const value=input.value.trim();if(!CSS.supports(property,value)||!valid(property,value)){input.setCustomValidity('Use simple CSS lengths with units, keywords, or colors. Spacing accepts up to four values; gap accepts two.');input.reportValidity();return;}if(/^border(?:-(?:top|right|bottom|left))?-width$/.test(property)){
+   input.onchange=()=>{if(rangeGuarded&&!spacingActive())return;const value=input.value.trim();if(!CSS.supports(property,value)||!valid(property,value)){input.setCustomValidity('Use simple CSS lengths with units, keywords, or colors. Spacing accepts up to four values; gap accepts two.');input.reportValidity();return;}if(/^border(?:-(?:top|right|bottom|left))?-width$/.test(property)){
      const changes={[property]:value},sides=['top','right','bottom','left'],[a,b=a,c=a,d=b]=value.split(/\s+/),widths=[a,b,c,d];
      for(const [i,side]of sides.entries())if((property==='border-width'||property==='border-'+side+'-width')&&parseFloat(property==='border-width'?widths[i]:value)>0&&css.getPropertyValue('border-'+side+'-style')==='none')changes['border-'+side+'-style']='solid';
      save(changes,null,width);
@@ -223,7 +223,7 @@
     const expected=percent/100*parseFloat(css.fontSize),actual=parseFloat(css.getPropertyValue(property));
     if(percent!==null&&!el.style.getPropertyValue(property)&&Number.isFinite(actual)&&Math.abs(expected-actual)<.02)input.retouchSpacingPercent=percent;
    }
-   I.field(target,label+' (CSS)',input);if(spacing){I.fieldDraft(input);input.disabled=!spacingActive();if(input.disabled)input.title='Switch to a screen inside the selected edit range.';}
+   I.field(target,label+' (CSS)',input);if(spacing)I.fieldDraft(input);if(rangeGuarded){input.disabled=!spacingActive();if(input.disabled)input.title='Switch to a screen inside the selected edit range.';}
    if(['width','height'].includes(property))input.retouchDimension={target:el,axis:property,box:'css'};
    if(input.tagName==='INPUT'&&/^(?:font-size|font-weight|line-height|letter-spacing|text-indent|(?:min-|max-)?(?:width|height)|gap|(?:padding|margin)(?:-(?:top|right|bottom|left))?|border(?:-(?:top|right|bottom|left))?-width|border-(?:(?:top|bottom)-(?:left|right)-)?radius)$/.test(property)){
     let unit='';I.numericLabelDrag(input,raw=>{if(property==='gap'&&raw.trim()==='normal'){unit='px';return {value:0,min:0,max:100000,format:value=>value+'px'};}const match=/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(px|em|rem|%|ex|ch|vw|vh|vmin|vmax|pt|pc|in|cm|mm)?$/i.exec(raw.trim());if(!match||!CSS.supports(property,raw)||!valid(property,raw)||!match[2]&&!['font-weight','line-height'].includes(property))return null;unit=match[2]||'';return {value:Number(match[1]),format:value=>value+unit,min:property==='font-weight'?1:['letter-spacing','text-indent'].includes(property)||/^margin(?:-|$)/.test(property)?-100000:0,max:property==='font-weight'?1000:100000};});
@@ -233,7 +233,7 @@
    if(property==='background-color')RetouchBackgroundPaintUI.bind(info,el,input,changes=>save(changes,null,width),()=>RetouchBackgroundPaintUI.sourceState(info,width?'min-['+width+'px]:':''));
    if(['color','background-color','border-color'].includes(property)){I.fieldDraft(input);input.dataset.paintProperty=property;RetouchBackgroundPaintUI.bindSource(input,info,width?'min-['+width+'px]:':'',property,el);input.retouchPaintPreview??=()=>RetouchPaintPicker.propertyPreview({el,input,property});}
    if(property==='line-height')target.append(I.button('Automatic line height',()=>save(property,'normal',width)));
-   const reset=I.button('Reset '+label.toLowerCase(),()=>{if(!spacing||spacingActive())save(property,null,width);});reset.disabled=spacing&&!spacingActive()||!Object.hasOwn(own,property);target.append(reset);
+   const reset=I.button('Reset '+label.toLowerCase(),()=>{if(!rangeGuarded||spacingActive())save(property,null,width);});reset.disabled=rangeGuarded&&!spacingActive()||!Object.hasOwn(own,property);target.append(reset);
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
   const container=document.createElement('div'),textLayer=I.isTextLayer(info.tag);
@@ -287,16 +287,17 @@
    else if(['display','flex-direction','flex-wrap'].includes(property)||!hasFlex&&!hasGrid&&['align-items','align-content','justify-content','gap'].includes(property))target=details(groups.layout,'layout-options','Layout options');
 
    const values=infos.map((info,i)=>{const raw=info.cssRules?.[width]?.[property]??computed[i].getPropertyValue(property);return property==='rotate'?String(RetouchReactSelection.rotationDegrees(raw)):raw;}),mixed=values.some(value=>value!==values[0]),numeric=['opacity','rotate'].includes(property);
-   const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),spacingActive=()=>elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth);
+   const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),rangeGuarded=spacing||['display','flex-direction','flex-wrap','align-items','align-content','justify-content','justify-items','grid-auto-flow'].includes(property),spacingActive=()=>elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth);
    const input=document.createElement(options[property]?'select':'input');
    if(options[property]){if(mixed){const option=document.createElement('option');option.value='';option.textContent='Mixed';option.disabled=true;input.append(option);}for(const value of new Set([...values,...options[property]])){const option=document.createElement('option');option.value=value;option.textContent=value;input.append(option);}}
    else {input.type=numeric?'number':'text';input.placeholder=mixed?'Mixed':'';if(numeric){input.min=property==='opacity'?0:-360;input.max=property==='opacity'?100:360;input.step='any';}}
    input.value=mixed?'':property==='opacity'?Number(values[0])*100:property==='rotate'?(values[0]==='none'?0:parseFloat(values[0])):values[0];
-   input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(spacing&&!spacingActive()||!input.value.trim()||!input.checkValidity())return;const value=property==='opacity'?String(Number(input.value)/100):property==='rotate'?input.value+'deg':input.value.trim();if(!valid(property,value)||!CSS.supports(property,value)){input.setCustomValidity('Enter a supported CSS value.');input.reportValidity();return;}save(property,value,width);};
+   input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(rangeGuarded&&!spacingActive()||!input.value.trim()||!input.checkValidity())return;const value=property==='opacity'?String(Number(input.value)/100):property==='rotate'?input.value+'deg':input.value.trim();if(!valid(property,value)||!CSS.supports(property,value)){input.setCustomValidity('Enter a supported CSS value.');input.reportValidity();return;}save(property,value,width);};
    I.field(target,'Shared '+label,input);if(svgFields.some(([key])=>key===property)&&!['fill','stroke'].includes(property)){input.dataset.svgStroke=property;I.fieldDraft(input);if(property==='stroke-dasharray'){input.retouchPreviewDocument=elements[0].ownerDocument;input.retouchHasScopedValues=()=>infos.every(info=>info.cssRules?.[width]?.[property]!=null);input.retouchDashValues=()=>elements.map((el,i)=>infos[i].cssRules?.[width]?.[property]??el.ownerDocument.defaultView.getComputedStyle(el).strokeDasharray);input.retouchSetDashValues=values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,{[property]:values[i]}])));}}const field=input.closest('.inspector-field');field.querySelector(':scope > span').textContent=({'font-size':'Size','font-weight':'Weight','font-style':'Style','text-decoration-line':'Decoration','text-transform':'Case','text-align':'Alignment','background-color':'Color','border-color':'Color','border-width':'Width','border-style':'Style','border-radius':'Radius','mix-blend-mode':'Blend mode','isolation':'Blend group','opacity':'Opacity','rotate':'Rotation'})[property]||label;field.title='Shared '+label;
    if(['font-size','line-height','letter-spacing'].includes(property)){
     RetouchNumericExpression.calculation(input,{unit:property==='line-height'?'':'px'});I.fieldDraft(input);
    }
+   if(rangeGuarded){input.disabled=!spacingActive();if(input.disabled)input.title='Switch to a screen inside the selected edit range.';}
    if(spacing){
     I.fieldDraft(input);input.disabled=!spacingActive();
     if(input.disabled)input.title='Switch to a screen inside the selected edit range.';
@@ -309,7 +310,7 @@
     if(elements.some(el=>el.style.getPropertyValue(property))||property==='rotate'&&values.some(value=>!Number.isFinite(Number(value)))){input.disabled=true;input.title='Edit the selected layer’s inline or 3D property in its source first.';}
    }
    if(['color','background-color','border-color','fill','stroke'].includes(property))RetouchPaintPicker.mountSelectionField(input,elements,property,changes=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,changes[i]]))),values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,{[property]:values[i]}]))),i=>RetouchBackgroundPaintUI.sourceColor(infos[i],width?'min-['+width+'px]:':'',property),i=>RetouchBackgroundPaintUI.sourceState(infos[i],width?'min-['+width+'px]:':''));
-   const reset=I.button('Reset shared '+label.toLowerCase(),()=>{if(!spacing||spacingActive())save(property,null,width);});reset.disabled=spacing&&!spacingActive()||infos.every(info=>!Object.hasOwn(info.cssRules?.[width]||{},property));reset.setAttribute('aria-label','Reset shared '+label.toLowerCase());reset.title=reset.getAttribute('aria-label');reset.textContent='↺';reset.classList.add('property-reset');const row=document.createElement('div');row.className='property-row';field.before(row);row.append(field,reset);rows.set(property,row);
+   const reset=I.button('Reset shared '+label.toLowerCase(),()=>{if(!rangeGuarded||spacingActive())save(property,null,width);});reset.disabled=rangeGuarded&&!spacingActive()||infos.every(info=>!Object.hasOwn(info.cssRules?.[width]||{},property));reset.setAttribute('aria-label','Reset shared '+label.toLowerCase());reset.title=reset.getAttribute('aria-label');reset.textContent='↺';reset.classList.add('property-reset');const row=document.createElement('div');row.className='property-row';field.before(row);row.append(field,reset);rows.set(property,row);
   }
   if(computed.every(css=>['flex','inline-flex','grid','inline-grid'].includes(css.display))){
    const picker=document.createElement('div');picker.className='layout-alignment';picker.setAttribute('role','group');picker.setAttribute('aria-label','Shared child alignment');

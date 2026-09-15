@@ -19049,3 +19049,23 @@ Logs: `/tmp/retouch-layout-range-single.log`,
 `/tmp/retouch-layout-range-units.log`. No desktop rebuild or push.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete.
+
+
+### HTML advanced layout screen-range guards — 2026-09-15
+
+HTML single and shared Display, Direction, Wrap, alignment and distribution
+controls now disable outside the selected screen range. Reset buttons follow
+the same state, and change/reset handlers recheck connectivity and preview
+width before writing. Existing spacing preview rules remain in place.
+
+Chromium shared-grid and WebKit single-grid checks passed disabled controls and
+resets for all advanced layout fields at an inactive phone range, together with
+existing physical alignment, spacing scrubbing and exact history coverage.
+The single-grid suite covers six writing-direction combinations. All 1,664
+unit tests passed.
+
+Logs: `/tmp/retouch-html-advanced-range-shared.log`,
+`/tmp/retouch-html-advanced-range-single.log`, and
+`/tmp/retouch-html-advanced-range-units.log`. No desktop rebuild or push.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete.
