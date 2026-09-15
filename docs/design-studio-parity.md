@@ -18391,3 +18391,28 @@ Logs: `/tmp/retouch-scale-toolbar-html-verified.log`,
 Scale still requires an existing editable selection. Full Figma fidelity,
 arbitrary-site source support and trusted public Homebrew installation remain
 incomplete. No desktop rebuild or push for this checkpoint.
+
+### Scaling respects the visible responsive edit range (2026-09-15)
+
+Scale controls now disable when the selected edit range does not match the
+preview. Numeric scrubbing checks that range at setup and during preview;
+canvas/toolbar/Actions availability uses the same guard. The existing “Preview
+edit range” notice provides the route back to an applicable screen.
+
+A new browser workflow writes a 150-percent scale at the 1100-pixel breakpoint,
+checks unchanged geometry at 390 pixels, rejects disabled-label scrubbing and K
+activation there, undoes while viewing the phone, then verifies exact desktop
+undo/redo and re-enabled controls. HTML/Chromium and transformed React/Chromium
+passed, as did transformed Liquid/WebKit after the test was adjusted to scroll
+the current label during inspector rebuilding. The existing toolbar and shortcut
+regression also passed; 1,652 unit tests passed. Visually inspected `/tmp/retouch-scale-scope-html.png`, showing the
+phone preview, range notice and disabled inspector/toolbar scale controls.
+
+Logs: `/tmp/retouch-scale-scope-html-verified.log`,
+`/tmp/retouch-scale-scope-react-verified.log`,
+`/tmp/retouch-scale-scope-webkit-final.log`,
+`/tmp/retouch-scale-scope-toolbar-regression.log`, and
+`/tmp/retouch-scale-scope-units.log`.
+
+Full responsive/Figma parity, arbitrary-site source support and trusted public
+Homebrew installation remain incomplete. No desktop rebuild or push.

@@ -3482,10 +3482,12 @@ function groupMovementSection(info){
  const button=I.button(sel.multiple?.length?'Move selection on canvas':'Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag selected groups and layers on the canvas. Arrow keys move 1 px; Shift moves 10 px.';section.append(button);return section;
 }
 
+function selectionScaleRangeActive(){return !styleScope||document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='true';}
+
 function appendSelectionScaleControls(section,info,roots){
- const I=RetouchInspector;
- const scaling=I.number(section,'Scale selection (%)',100,1,10000,value=>void scaleGroup(info,value,scaling));scaling.title='Scale selected content proportionally from its top-left corner. Layout slots stay unchanged.';I.fieldDraft(scaling);scaling.retouchNumericPreview=()=>{const selection=sel,scope=styleScope,hash=info.hash,preview=RetouchGroupMove.scalePreview(RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el)));return {current:()=>sel===selection&&info.hash===hash&&styleScope===scope&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&preview.current(),update:value=>preview.update(value/100),restore:preview.restore};};
- const scaleCanvas=I.button('Scale selection on canvas',event=>void scaleGroupOnCanvas(info,event.currentTarget));scaleCanvas.dataset.canvasTool='scale';scaleCanvas.setAttribute('aria-keyshortcuts','K');scaleCanvas.title='Scale selection on canvas · K';section.append(scaleCanvas);
+ const I=RetouchInspector,active=selectionScaleRangeActive();
+ const scaling=I.number(section,'Scale selection (%)',100,1,10000,value=>void scaleGroup(info,value,scaling));scaling.disabled=!active;scaling.title=active?'Scale selected content proportionally from its top-left corner. Layout slots stay unchanged.':'Preview the selected edit range before scaling.';I.fieldDraft(scaling);scaling.retouchNumericPreview=()=>{if(!selectionScaleRangeActive())throw Error('Preview the selected edit range before scaling.');const selection=sel,scope=styleScope,hash=info.hash,preview=RetouchGroupMove.scalePreview(RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el)));return {current:()=>sel===selection&&info.hash===hash&&styleScope===scope&&selectionScaleRangeActive()&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&preview.current(),update:value=>preview.update(value/100),restore:preview.restore};};
+ const scaleCanvas=I.button('Scale selection on canvas',event=>void scaleGroupOnCanvas(info,event.currentTarget));scaleCanvas.disabled=!active;scaleCanvas.dataset.canvasTool='scale';scaleCanvas.setAttribute('aria-keyshortcuts','K');scaleCanvas.title=active?'Scale selection on canvas · K':'Preview the selected edit range before scaling.';section.append(scaleCanvas);
 }
 
 async function scaleGroupOnCanvas(info,opener){
@@ -4355,7 +4357,7 @@ window.RetouchShapeTools={
  commands(){
   const canMove=()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!historyRecoveryRequired;
   const move={id:'shape-move',action:'move',label:'Move tool',keywords:'select pointer canvas V',element:modeBtn,available:canMove,reason:'Finish the current edit and switch to Edit mode.',run(){if(canMove()){stopDrawing?.();canvasPan.cancel();}}};
-  const scaleInfo=sel?.info,scaleControl=panelBody.querySelector('[data-canvas-tool=scale]'),common=[move],canScale=()=>canMove()&&!!scaleInfo&&sel?.info===scaleInfo&&!stopDrawing&&!canvasPan.active;
+  const scaleInfo=sel?.info,scaleControl=panelBody.querySelector('[data-canvas-tool=scale]'),common=[move],canScale=()=>canMove()&&!!scaleInfo&&sel?.info===scaleInfo&&selectionScaleRangeActive()&&!scaleControl?.matches(':disabled')&&!stopDrawing&&!canvasPan.active;
   if(scaleControl&&scaleInfo)common.push({id:'shape-scale',action:'scale',label:'Scale tool',keywords:'resize proportional selection canvas K',element:scaleControl,available:canScale,reason:'Select editable layers and finish the current gesture.',run(opener=scaleControl){if(canScale())return scaleGroupOnCanvas(scaleInfo,opener);}});
   const info=sel?.info;if(!info||!info.svgInsertion&&!info.svgTransform?.editable||sel.multiple?.length>1||info.kind==='instance')return common;
   const owner=JSON.stringify([info.file,info.id,info.hash,sel.instanceId,sel.scope]);

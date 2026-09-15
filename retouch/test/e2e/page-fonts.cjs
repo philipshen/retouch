@@ -218,6 +218,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   if(process.env.RT_E2E_GROUP_MARQUEE){await require('./group-marquee.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_GROUP_PICKING){await require('./group-picking.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_GROUP_SHORTCUTS){await require('./group-shortcuts.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
+  if(process.env.RT_E2E_SCALE_SCOPE){await require('./scale-scope.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SCALE_SHORTCUTS){await require('./scale-shortcuts.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_LAYER_SCALE){await require('./layer-scale.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_GROUP_SELECTION){await require('./group-selection.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
