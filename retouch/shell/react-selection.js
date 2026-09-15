@@ -211,13 +211,7 @@
    if(!pair.children.length)pair.remove();
    else I.note(groups.layout,'Gaps space children in flex and grid layouts. Horizontal and vertical follow each container’s writing direction. Reset removes the selected axis override and reveals a shorthand or inherited gap.');
   }
-  for(const [property,label]of [['filter','Shared Layer blur (px)'],['backdrop-filter','Shared Backdrop blur (px)']]){
-   const sec=groups.effects;
-   const values=computed.map(css=>css.getPropertyValue(property).trim()),parsed=values.map(value=>root.RetouchHTMLCSSValues.parseFilters(value)),blurs=parsed.map(stack=>stack?.filter(item=>item.name==='blur')),amounts=blurs.map(stack=>stack?.length===1?parseFloat(stack[0].arg):stack?.length===0?0:NaN),mixed=amounts.some(amount=>amount!==amounts[0]);
-   const input=I.number(sec,label,mixed?NaN:amounts[0],0,1000,amount=>{try{const changes=Object.fromEntries(infos.map((info,i)=>[info.id,changeBlur(info.className,scope,property,values[i],amount)]));save(changes);}catch(error){I.note(sec,error.message,'refused');}});
-   input.placeholder=mixed?'Mixed':'';input.disabled=parsed.some((stack,i)=>!stack||blurs[i].length>1||elements[i].style.getPropertyPriority(property)==='important');
-   if(input.disabled)I.note(sec,'A selected filter cannot be adjusted with a single blur value.');
-  }
+  for(const property of ['filter','backdrop-filter'])root.RetouchFilterStack.mountSharedBlur(groups.effects,infos,elements,scope,property,values=>save(Object.fromEntries(infos.map((info,i)=>[info.id,root.RetouchResponsive.replaceScope(info.className,I.filterClasses(root.RetouchResponsive.project(info.className,scope),property,values[i]),scope)]))));
 
   if(saveColor)for(const [property,label]of [['color','Text color'],['background-color','Background color'],['border-color','Border color'],...(elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg')?[['fill','SVG fill'],['stroke','SVG stroke']]:[])]){
    const sec=property==='color'?groups.typography:['background-color','fill'].includes(property)?groups.fill:groups.stroke;

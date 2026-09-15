@@ -44,5 +44,13 @@
   if(disabled){for(const input of details.querySelectorAll('input,select,button'))input.disabled=true;I.note(details,'An inline important filter controls this layer.');}
   I.note(details,'Filters run in order. Moving an effect can change the result.');return details;
  }
- const api={change,dropShadow,amount,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchFilterStack=api;
+ const sharedCleanups=new Map();
+ function mountSharedBlur(parent,infos,elements,scope,property,save){
+  const I=root.RetouchInspector,B=root.RetouchBackgroundPaintUI,label='Shared '+(property==='filter'?'Layer':'Backdrop')+' blur (px)',own=()=>infos.map(info=>B.sourceEffect(info,scope,property)),values=()=>elements.map((el,i)=>own()[i]??el.ownerDocument.defaultView.getComputedStyle(el).getPropertyValue(property)),readable=()=>own().every(value=>value!==null)||B.rangeActive(input,elements[0]);
+  const input=I.number(parent,label,NaN,0,1000,amount=>{if(input.disabled||!readable())return;try{const current=values(),next=current.map(value=>V().withBlur(value,amount));if(next.some(value=>value===null))throw Error('A selected filter cannot be adjusted with a single blur value.');if(next.every((value,i)=>value===current[i]))return;Promise.resolve(save(next)).catch(error=>I.note(parent,error.message,'refused'));}catch(error){I.note(parent,error.message,'refused');}});
+  input.closest('.inspector-field').querySelector(':scope > span').textContent=property==='filter'?'Blur':'Background';
+  const sync=()=>{const parsed=values().map(value=>V().parseFilters(value)),blurs=parsed.map(stack=>stack?.filter(item=>item.name==='blur')),amounts=blurs.map(stack=>stack?.length===1?parseFloat(stack[0].arg):stack?.length===0?0:NaN),mixed=amounts.some(value=>!Number.isFinite(value)||value!==amounts[0]);input.disabled=!readable()||elements.some((el,i)=>!el.isConnected||!parsed[i]||blurs[i].length>1||el.style.getPropertyPriority(property)==='important');input.title=!readable()?'Preview this screen range to preserve each layer’s existing filters.':input.disabled?'A selected filter cannot be adjusted with a single blur value.':'Preserves each layer’s other filters.';input.placeholder=mixed?'Mixed':'';if(input.ownerDocument.activeElement!==input)input.value=mixed?'':String(amounts[0]);};
+  const w=elements[0].ownerDocument.defaultView,cleanup=()=>w.removeEventListener('resize',resize),resize=()=>{if(!input.isConnected){cleanup();return;}sync();};sharedCleanups.get(property)?.();sharedCleanups.set(property,cleanup);w.addEventListener('resize',resize);sync();return input;
+ }
+ const api={change,dropShadow,amount,mount,mountSharedBlur};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchFilterStack=api;
 })(typeof window==='object'?window:globalThis);
