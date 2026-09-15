@@ -19069,3 +19069,23 @@ Logs: `/tmp/retouch-html-advanced-range-shared.log`,
 `/tmp/retouch-html-advanced-range-units.log`. No desktop rebuild or push.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete.
+
+
+### Preview edit-range destination and round trip — 2026-09-15
+
+The existing inactive-range preview action now shows its destination dimensions
+on the button, while retaining the accessible name Preview edit range. Its
+hint explains that Undo preview size returns to the previous screen. This
+makes the action's effect visible before leaving the current canvas size.
+
+React single-selection, Liquid/WebKit shared-selection and HTML shared-selection
+browser tests passed the full round trip: jump from phone into the selected
+1100px range, reenable controls, retain selected source IDs and edit scope,
+leave source bytes unchanged, then Undo preview size back to phone and retain
+the source edit history. Existing preset/advanced-control checks remained green.
+All 1,664 unit tests passed.
+
+Logs: `/tmp/retouch-range-jump-react.log`, `/tmp/retouch-range-jump-liquid.log`,
+`/tmp/retouch-range-jump-html.log`, and `/tmp/retouch-range-jump-units.log`.
+No desktop rebuild or push. Full Figma parity, arbitrary-site support and trusted
+Homebrew distribution remain incomplete.
