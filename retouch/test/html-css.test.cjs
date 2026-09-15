@@ -292,3 +292,8 @@ test('background image framing changes atomically without rewriting the image or
  const reset=css.plan(resolve(source),{width:768,changes:Object.fromEntries(Object.keys(changes).map(key=>[key,null]))});assert.equal(reset.ok,true);assert.ok(!reset.edits[0].after.includes('data-rt-css='));
  assert.equal(css.plan(resolve(input.replace('no-repeat #abc','no-repeat #abc !important')),{width:768,changes}).refused,true);
 });
+
+test('HTML text resizing accepts bounded white-space modes without accepting injected declarations',()=>{
+ for(const value of ['normal','pre','nowrap','pre-wrap','pre-line','break-spaces']){const result=edit(original,0,value,'white-space');assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes('white-space:'+value));assert.ok(result.edits[0].after.includes('<h1 class="title">Second</h1>'));}
+ for(const value of ['pre; color:red','pre-wrap extra']){const result=edit(original,0,value,'white-space');assert.equal(result.refused,true);assert.equal(result.edits,undefined);}
+});

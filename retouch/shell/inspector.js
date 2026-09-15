@@ -304,6 +304,14 @@
     return input;
   }
   const fontPositionToken=t=>/^\[font-variant-position:.+\]$/.test(t);
+  function textResizing(parent,el,onChange){
+    if(!el||!isTextLayer(el.localName)||el.namespaceURI!=='http://www.w3.org/1999/xhtml')return;
+    const css=el.ownerDocument.defaultView.getComputedStyle(el);if(['inline','contents','none'].includes(css.display))return;
+    const row=document.createElement('div'),label=document.createElement('span'),group=document.createElement('div');row.className='text-resize-controls';label.className='hint';label.textContent='Resizing';group.className='layout-mode-segments';group.setAttribute('role','group');group.setAttribute('aria-label','Text resizing');row.append(label,group);parent.append(row);
+    for(const [mode,name,title]of [['width','Auto width','Fit width and height to text, preserving explicit line breaks.'],['height','Auto height','Keep the current width and fit height to wrapped text.'],['fixed','Fixed size','Keep the current width and height.']]){
+      const control=button(name,async()=>{if(!el.isConnected)return;const current=el.ownerDocument.defaultView.getComputedStyle(el),width=parseFloat(current.width),height=parseFloat(current.height);if(![width,height].every(value=>Number.isFinite(value)&&value>0&&value<=100000))return;root.RetouchPanelFocus?.queue(control);await onChange({width:mode==='width'?'max-content':width+'px',height:mode==='fixed'?height+'px':'auto','white-space':mode==='width'?'pre':'pre-wrap','text-wrap':mode==='width'?'nowrap':'wrap'});});control.setAttribute('aria-label',name);control.title=title;group.append(control);
+    }
+  }
   function wrapTypography(parent,css,onChange,onReset,canReset){
     const value=css.getPropertyValue('text-wrap'),choices=[['wrap','Auto'],['balance','Balance'],['pretty','Pretty'],['nowrap','No wrap']].filter(([key])=>CSS.supports('text-wrap',key));
     if(!choices.length)return;
@@ -921,6 +929,7 @@
     note(sec,`${css.fontFamily} · ${css.fontSize} / ${css.lineHeight} · ${css.fontWeight}`,'computed-value');
     typographyPreview(sec,el);
     if(!locked(sec,info)) {
+      textResizing(sec,el,changes=>{let next=replace(info.className,t=>/^(?:w|h|size)-/.test(t)||/^\[(?:width|height):/.test(t),'!w-'+(changes.width==='max-content'?'max':'['+changes.width+']')+' !h-'+(changes.height==='auto'?'auto':'['+changes.height+']'));next=replace(next,t=>/^whitespace-/.test(t)||/^\[white-space:/.test(t)||textWrapToken(t),(changes['white-space']==='pre'?'!whitespace-pre':'!whitespace-pre-wrap')+' ![text-wrap:'+changes['text-wrap']+']');return save(next);});
       const names=catalog(d), current=tokens(info.className).filter(t=>names.includes(t));
       if(names.length && !info.styleScope) {
         select(sec,'Typography class',[['','Choose a project style…'],...names.map(n=>[n,n])],current.length===1?current[0]:'',value=>{
@@ -1024,6 +1033,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={textResizing,textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

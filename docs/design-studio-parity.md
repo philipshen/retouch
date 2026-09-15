@@ -19623,3 +19623,23 @@ Logs: `/tmp/retouch-text-box-{html,react,liquid}-final.log`,
 
 Full Figma text behavior, arbitrary-site support and trusted Homebrew
 distribution remain incomplete. No push or native rebuild.
+
+
+### Text resizing actions beside dimensions
+
+Layout now offers Auto width, Auto height and Fixed size for supported HTML
+text layers. Each action writes dimensions and wrapping together, with exact
+undo, through the HTML CSS or React/Liquid utility adapter. Auto width preserves
+explicit line breaks; Auto height keeps the current width; Fixed size captures
+the current width and height. Controls support keyboard navigation.
+
+Validation: 1,671 unit tests passed, including bounded white-space value
+validation. HTML/Chromium, React/Chromium and Liquid/WebKit Text-tool suites
+passed mode switching, rendered dimensions, Layout placement and exact undo.
+Inspected `/tmp/retouch-text-resizing.png`. Logs:
+`/tmp/retouch-text-sizing-{html,react,liquid,units}-final.log`.
+
+These are sizing actions, without a persistent mode indicator. They reset wrap
+style to wrap/nowrap; existing min/max dimensions and flex constraints still
+apply. Full Figma parity and trusted Homebrew distribution remain incomplete.
+No native rebuild in this checkpoint.
