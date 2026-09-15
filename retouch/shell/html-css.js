@@ -18,7 +18,7 @@
     input.oninput=()=>input.setCustomValidity('');
     input.onchange=()=>{const value=input.value.trim();if(!valid(property,value)||!CSS.supports(property,value)){input.setCustomValidity('Use a supported SVG paint value.');input.reportValidity();return;}save(property,value,width);};
     I.field(paint,label,input);
-    if(['fill','stroke'].includes(property)){I.fieldDraft(input);input.dataset.paintProperty=property;input.retouchPaintPreview=()=>RetouchPaintPicker.propertyPreview({el,input,property});}
+    if(['fill','stroke'].includes(property)){I.fieldDraft(input);input.dataset.paintProperty=property;RetouchBackgroundPaintUI.bindSource(input,info,width?'min-['+width+'px]:':'',property,el);input.retouchPaintPreview=()=>RetouchPaintPicker.propertyPreview({el,input,property});}
     const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);paint.append(reset);
    }
    I.note(paint,'Paint follows the selected screen scope. Use none for no fill or stroke. Stroke width and dashes accept SVG units, px or %. Reset reveals the inherited CSS or original attribute.');
@@ -225,7 +225,7 @@
    }
 
    if(property==='background-color')RetouchBackgroundPaintUI.bind(info,el,input,changes=>save(changes,null,width),()=>RetouchBackgroundPaintUI.sourceState(info,width?'min-['+width+'px]:':''));
-   if(['color','background-color','border-color'].includes(property)){I.fieldDraft(input);input.dataset.paintProperty=property;input.retouchPaintPreview??=()=>RetouchPaintPicker.propertyPreview({el,input,property});}
+   if(['color','background-color','border-color'].includes(property)){I.fieldDraft(input);input.dataset.paintProperty=property;RetouchBackgroundPaintUI.bindSource(input,info,width?'min-['+width+'px]:':'',property,el);input.retouchPaintPreview??=()=>RetouchPaintPicker.propertyPreview({el,input,property});}
    if(property==='line-height')target.append(I.button('Automatic line height',()=>save(property,'normal',width)));
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
   }
