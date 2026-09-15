@@ -87,7 +87,7 @@
       // Computed origins can lose the reference-box offset. Recover the border
       // origin from the rendered bounds and affine axes without probing inside
       // the layer, which also works for replaced elements such as images.
-      const probe=root.RetouchSVGDraw||require('./svg-draw.js'),frame=probe.nativeSpace(parent).matrix,authored=new w.DOMMatrix(matrix||[1,0,0,1,0,0]);authored.e=authored.f=0;const local=new w.DOMMatrix().rotate(rotation).scale(scale[0],scale[1]).multiply(authored),screen=frame.multiply(local);screen.e=screen.f=0;
+      const probe=root.RetouchSVGDraw||require('./svg-draw.js'),frame=probe.stableNativeSpace(parent).matrix,authored=new w.DOMMatrix(matrix||[1,0,0,1,0,0]);authored.e=authored.f=0;const local=new w.DOMMatrix().rotate(rotation).scale(scale[0],scale[1]).multiply(authored),screen=frame.multiply(local);screen.e=screen.f=0;
       const offsets=[[0,0],[g.width,0],[g.width,g.height],[0,g.height]].map(([x,y])=>new w.DOMPoint(x,y).matrixTransform(screen)),rect=el.getBoundingClientRect(),origin=new w.DOMPoint(rect.left-Math.min(...offsets.map(p=>p.x)),rect.top-Math.min(...offsets.map(p=>p.y))).matrixTransform(frame.inverse());g.referenceTransform=[local.a,local.b,local.c,local.d,origin.x-g.x,origin.y-g.y];
     }
     if(matrix||rotation||scale.some(value=>value!==1)){if(matrix)g.transformMatrix=matrix;g.rotation=rotation;g.scaleX=scale[0];g.scaleY=scale[1];g.transformOrigin=css.transformOrigin;localPositionCorners(g);}

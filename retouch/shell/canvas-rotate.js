@@ -63,7 +63,7 @@
   const positions=[['nw',0,0],['n',.5,0],['ne',1,0],['e',1,.5],['se',1,1],['s',.5,1],['sw',0,1],['w',0,.5]].map(([handle,x,y])=>{const d=offset(x-.5,y-.5),angle=Math.atan2(d.y,d.x)*180/Math.PI,index=((Math.round(angle/45)%4)+4)%4;return {handle,x:points[0].x+u.x*x+v.x*y,y:points[0].y+u.y*x+v.y*y,cursor:['ew','nwse','ns','nesw'][index]+'-resize'};});return {corners,positions,rotation};
  }
  function localControls(target,scale=1,g=root.RetouchInspector.localPositionGeometry(target)){
-  const w=target.ownerDocument.defaultView,m=root.RetouchSVGDraw.nativeSpace(target.offsetParent).matrix,outline=root.RetouchInspector.localPositionCorners(g).map(p=>{const q=new w.DOMPoint(p.x,p.y).matrixTransform(m);return {x:q.x*scale,y:q.y*scale};});return {...affineControls(outline),outline,g};
+  const w=target.ownerDocument.defaultView,m=root.RetouchSVGDraw.stableNativeSpace(target.offsetParent).matrix,outline=root.RetouchInspector.localPositionCorners(g).map(p=>{const q=new w.DOMPoint(p.x,p.y).matrixTransform(m);return {x:q.x*scale,y:q.y*scale};});return {...affineControls(outline),outline,g};
  }
  function cornerControls({frame,canvas,onStart}){
   const doc=root.document,container=doc.createElement('div');container.className='canvas-rotation-corners';container.hidden=true;doc.body.append(container);let active=null;

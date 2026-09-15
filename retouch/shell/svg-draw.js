@@ -35,9 +35,13 @@
  function nativeSpace(target){
   const w=target.ownerDocument.defaultView,matrix=nativeMatrix(target);
   const nativeSnapshots=[];
-  for(let el=target;el;el=el.parentElement){const css=w.getComputedStyle(el);nativeSnapshots.push({el,rect:el.getBoundingClientRect(),metrics:[el.clientLeft,el.clientTop,el.clientWidth,el.clientHeight],css:[css.position,css.transform,css.rotate,css.scale,css.translate,css.zoom,css.contain,css.willChange,css.filter,css.backdropFilter,css.perspective].join('|')});}
-  function current(){return nativeSnapshots.every(({el,rect,metrics,css})=>{if(!el.isConnected)return false;const now=el.getBoundingClientRect(),style=w.getComputedStyle(el);return [el.clientLeft,el.clientTop,el.clientWidth,el.clientHeight].every((value,i)=>value===metrics[i])&&['x','y','width','height'].every(key=>Math.abs(now[key]-rect[key])<.1)&&css===[style.position,style.transform,style.rotate,style.scale,style.translate,style.zoom,style.contain,style.willChange,style.filter,style.backdropFilter,style.perspective].join('|');});}
+  for(let el=target;el;el=el.parentElement){const css=w.getComputedStyle(el);nativeSnapshots.push({el,parent:el.parentElement,rect:el.getBoundingClientRect(),metrics:[el.clientLeft,el.clientTop,el.clientWidth,el.clientHeight,el.scrollLeft,el.scrollTop],css:[css.position,css.transform,css.rotate,css.scale,css.translate,css.transformOrigin,css.transformBox,css.zoom,css.contain,css.willChange,css.filter,css.backdropFilter,css.perspective].join('|')});}
+  function current(){return nativeSnapshots.every(({el,parent,rect,metrics,css})=>{if(!el.isConnected||el.parentElement!==parent)return false;const now=el.getBoundingClientRect(),style=w.getComputedStyle(el);return [el.clientLeft,el.clientTop,el.clientWidth,el.clientHeight,el.scrollLeft,el.scrollTop].every((value,i)=>value===metrics[i])&&['x','y','width','height'].every(key=>Math.abs(now[key]-rect[key])<.1)&&css===[style.position,style.transform,style.rotate,style.scale,style.translate,style.transformOrigin,style.transformBox,style.zoom,style.contain,style.willChange,style.filter,style.backdropFilter,style.perspective].join('|');});}
   return {matrix,current};
+ }
+ const frameSpaces=new WeakMap();
+ function stableNativeSpace(target){
+  let space=frameSpaces.get(target);if(!space||!space.current()){space=nativeSpace(target);frameSpaces.set(target,space);}return space;
  }
  function mount({target,frame,canvas,preset,onCommit,onEnd,onError,native=false,initialPointer=null,initialMove=null,initialReleased=false,pointerTarget=null,initialPoint=null,onClick=null,tool=null}){
   const d=target.ownerDocument,w=d.defaultView,viewport=native?null:target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
@@ -82,5 +86,5 @@
   }catch(error){cancel();onError(error.message);}}
   return ended?null:cancel;
  }
- const api={mount,geometry,constrained,placement,viewportStyle,nativeSpace};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGDraw=api;
+ const api={mount,geometry,constrained,placement,viewportStyle,nativeSpace,stableNativeSpace};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGDraw=api;
 })(typeof window==='object'?window:globalThis);

@@ -19983,3 +19983,29 @@ This preserves authored inline declarations through scoped overrides; it does
 not implement direct rewriting of important or dynamic inline styles. Full
 Figma/arbitrary-site parity and trusted Homebrew distribution remain incomplete.
 No native rebuild or push.
+
+
+### Reuse stable frame measurements during idle redraws
+
+Persistent transformed handles and content-box geometry now reuse a cached
+containing-frame matrix while the frame remains unchanged. Validation includes
+ancestor identity, scroll offsets, transform origin/reference box, existing
+transform styles, client metrics and bounds. Changed measurements are replaced
+with fresh DOM probes. Gesture snapshots also now detect scroll and ancestry
+changes explicitly.
+
+An HTML baseline recorded 144 measurement-element insertions over 12 idle
+animation frames. After this change, HTML/Chromium, React/Chromium and
+Liquid/WebKit each recorded zero over the same interval. Browser tests verified
+reuse, invalidation after real scrolling, origin/transform changes, resizing,
+ancestor scaling and reparenting; refreshed matrices match fresh DOM probes.
+All existing transformed handle/rotation/resize/position/undo checks passed in
+those runs. The HTML Text tool regression and all 1,680 unit tests passed.
+
+Logs: `/tmp/retouch-frame-cache-baseline.log`,
+`/tmp/retouch-frame-cache-{html,react,liquid}.log`,
+`/tmp/retouch-frame-cache-text-regression.log`,
+`/tmp/retouch-frame-cache-units.log`. The measured improvement concerns idle
+probe insertions, not a general CPU or frame-rate benchmark. Full
+Figma/arbitrary-site parity and trusted Homebrew distribution remain incomplete.
+No native rebuild or push.
