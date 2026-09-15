@@ -20461,3 +20461,29 @@ size section before dragging after a panel rebuild. Logs:
 
 Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
 incomplete. No native rebuild or push.
+
+
+### Unified shared Layout inspector
+
+Compared the rendered light inspector with Figma's documented UI3 grouping:
+https://www.figma.com/blog/making-the-move-to-ui3-a-guide-to-figmas-next-chapter/
+The multi-selection inspector now places width/height directly above layout
+direction, alignment and spacing in one Layout section. Size limits and ratio
+controls follow the layout controls. The existing Layout disclosure retains its
+state and handlers; the separate Size header is removed. SVG-specific geometry
+grouping is unchanged. This improves grouping, not a claim of pixel-perfect
+Figma parity.
+
+Validation: inspected the final React screenshot at
+`/tmp/retouch-shared-stack-presets-react.png`. React/Chromium stack controls,
+responsive guards and exact undo/redo passed, with added keyboard collapse/open
+checks proving width and stack controls belong to the same section. Liquid/WebKit
+passed the combined-section check before the final control-order adjustment.
+HTML/WebKit mixed sizing and responsive tests passed on the final ordering. All
+1,694 unit tests passed. Logs: `/tmp/retouch-unified-layout-react-final.log`,
+`/tmp/retouch-unified-layout-liquid.log`,
+`/tmp/retouch-unified-layout-html-final.log`,
+`/tmp/retouch-unified-layout-units-final.log`.
+
+Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
+incomplete. No native rebuild or push.
