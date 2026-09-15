@@ -19379,3 +19379,22 @@ Logs: `/tmp/retouch-pen-space-{html,react,liquid,units,pan,svg}-final.log`.
 
 No desktop rebuild or push. Full Figma parity, arbitrary-site support and
 trusted Homebrew distribution remain incomplete.
+
+### 2026-09-15 — Reposition shapes with Space during drawing
+
+Shape drawing now translates both gesture endpoints while Space is held,
+preserving the drawn dimensions and modifier constraints. The active surface
+claims Space so ordinary canvas pan does not interrupt it. Releasing Space
+resumes sizing; releasing the pointer commits the repositioned geometry.
+The drawing surface tooltip and existing drawing hint explain the control.
+
+All 1,665 unit tests passed. HTML and React Chromium plus Liquid WebKit browser
+checks passed for normal and Alt-centered rectangle drags: live preview
+translation without resizing, unchanged canvas scroll, final source geometry
+and exact undo. Existing Pen and armed/direct-tool checks passed. Standalone
+pan and SVG drawing regressions also passed, covering ordinary Hand/Space
+behavior, shapes, curves, transforms, cancellation and history.
+Logs: `/tmp/retouch-shape-space-{html,react,liquid,units,pan,svg}-final.log`.
+
+No desktop rebuild or push. Full Figma parity, arbitrary-site support and
+trusted Homebrew distribution remain incomplete.

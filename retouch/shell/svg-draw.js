@@ -42,27 +42,27 @@
   const d=target.ownerDocument,w=d.defaultView,viewport=native?null:target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
   let space;try{space=native?nativeSpace(target):null;}catch(error){onError(error.message);onEnd();return null;}
   const matrix=()=>space?.matrix||target.getScreenCTM();
-  const surface=root.document.createElement('div');surface.className='svg-draw-surface';surface.dataset.shape=preset;surface.setAttribute('aria-label','Draw '+preset);surface.tabIndex=0;
+  const surface=root.document.createElement('div');surface.className='svg-draw-surface';surface.dataset.shape=preset;surface.setAttribute('aria-label','Draw '+preset);surface.title='Hold Space to reposition while drawing. Shift constrains; Option/Alt draws from center.';surface.tabIndex=0;
   Object.assign(surface.style,{position:'fixed',zIndex:40,cursor:'crosshair',touchAction:'none'});
   const drawing=root.document.createElementNS(ns,'svg');Object.assign(drawing.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none',overflow:'hidden'});surface.append(drawing);
   const preview=root.document.createElementNS(ns,{rectangle:'rect',circle:'circle',ellipse:'ellipse',line:'line',arrow:'path',triangle:'polygon',star:'polygon'}[preset]);
   preview.style.cssText='pointer-events:none!important;fill:#a5b4fc!important;stroke:#6366f1!important;stroke-width:1!important;opacity:.7!important;';preview.setAttribute('vector-effect','non-scaling-stroke');if(['line','arrow'].includes(preset))preview.style.setProperty('fill','none','important');
-  let state=null,ended=false;const cleanup=[];
+  let state=null,ended=false,spaceHeld=false;const cleanup=[];
   const current=()=>!space||space.current();
   if(native){let raf;const check=()=>{if(!current()){cancel();return;}raf=root.requestAnimationFrame(check);};raf=root.requestAnimationFrame(check);cleanup.push(()=>root.cancelAnimationFrame(raf));}
   function listen(el,event,fn,options){el.addEventListener(event,fn,options);cleanup.push(()=>el.removeEventListener(event,fn,options));}
   function cancel(){if(ended)return;ended=true;preview.remove();surface.remove();cleanup.forEach(f=>f());onEnd();}
   function point(e){const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth,m=matrix()?.inverse();if(!m)throw Error('This SVG transform cannot be drawn into.');const p=new w.DOMPoint((e.clientX-f.left)/scale,(e.clientY-f.top)/scale).matrixTransform(m);if(!Number.isFinite(p.x)||!Number.isFinite(p.y))throw Error('This SVG transform cannot be drawn into.');return p;}
   function paint(modifiers){state.points=constrained(preset,state.a,state.b,modifiers);const values=geometry(preset,...state.points),attributes=preset==='arrow'?{d:root.RetouchSVGParametric.arrowPath(values.points)||''}:values;for(const [key,value]of Object.entries(attributes))preview.setAttribute(key,String(value));const m=matrix(),f=frame.getBoundingClientRect(),r=surface.getBoundingClientRect(),scale=f.width/w.innerWidth;preview.setAttribute('transform',`matrix(${m.a*scale} ${m.b*scale} ${m.c*scale} ${m.d*scale} ${m.e*scale+f.left-r.left} ${m.f*scale+f.top-r.top})`);if(!preview.isConnected)drawing.append(preview);}
-  function move(e){if(ended||!state||e.pointerId!==state.id)return;if(!current()){cancel();return;}try{state.b=point(e);state.distance=Math.hypot(e.clientX-state.x,e.clientY-state.y);paint(e);}catch(error){cancel();onError(error.message);}}
-  const down=e=>{if(state||e.button!==0)return;e.preventDefault();e.stopImmediatePropagation();try{const a=point(e);state={id:e.pointerId,a,b:a,x:e.clientX,y:e.clientY,distance:0};(pointerTarget||surface).setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}};
+  function move(e){if(ended||!state||e.pointerId!==state.id)return;if(!current()){cancel();return;}try{const next=point(e);if(spaceHeld){state.a={x:state.a.x+next.x-state.b.x,y:state.a.y+next.y-state.b.y};state.x+=e.clientX-state.pointerX;state.y+=e.clientY-state.pointerY;}state.b=next;state.pointerX=e.clientX;state.pointerY=e.clientY;state.distance=Math.hypot(e.clientX-state.x,e.clientY-state.y);paint(e);}catch(error){cancel();onError(error.message);}}
+  const down=e=>{if(state||e.button!==0)return;e.preventDefault();e.stopImmediatePropagation();try{const a=point(e);state={id:e.pointerId,a,b:a,x:e.clientX,y:e.clientY,pointerX:e.clientX,pointerY:e.clientY,distance:0};surface.setAttribute('data-canvas-space-owner','');(pointerTarget||surface).setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}};
   listen(surface,'pointerdown',down);
   listen(surface,'pointermove',move);
   const up=e=>{if(!state||e.pointerId!==state.id)return;e.preventDefault();move(e);if(!state||ended)return;const {points:[a,b],distance}=state;cancel();if(distance>=4)onCommit([a.x,a.y,b.x,b.y]);};
   listen(surface,'pointerup',up);
   listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',cancel);
   listen(root,'keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();}},true);
-  for(const type of ['keydown','keyup'])listen(root,type,e=>{if(state&&['Shift','Alt'].includes(e.key)){e.preventDefault();e.stopImmediatePropagation();paint(e);}},true);
+  for(const host of [root,w])for(const type of ['keydown','keyup'])listen(host,type,e=>{if(state&&e.code==='Space'&&!e.isComposing){e.preventDefault();e.stopImmediatePropagation();spaceHeld=type==='keydown';return;}if(state&&['Shift','Alt'].includes(e.key)){e.preventDefault();e.stopImmediatePropagation();paint(e);}},true);
   for(const event of ['retouch:before-zoom','retouch:screen','retouch:viewport','resize','blur','pagehide'])listen(root,event,cancel);
   listen(w,'resize',cancel);listen(w,'scroll',cancel,true);listen(canvas,'scroll',cancel);
   const f=frame.getBoundingClientRect(),r=viewport?viewport.getBoundingClientRect():{left:0,top:0,right:w.innerWidth,bottom:w.innerHeight},c=canvas.getBoundingClientRect(),scale=f.width/w.innerWidth;
@@ -73,7 +73,7 @@
    const fromFrame=e=>{const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth;return {clientX:f.left+e.clientX*scale,clientY:f.top+e.clientY*scale,pointerId:e.pointerId,button:e.button,shiftKey:e.shiftKey,altKey:e.altKey,preventDefault:()=>e.preventDefault(),stopImmediatePropagation:()=>e.stopImmediatePropagation()};};
    // A released pointer cannot be captured, but its buffered gesture still commits.
    const first=fromFrame(initialPointer);
-   if(initialReleased){const a=point(first);state={id:first.pointerId,a,b:a,x:first.clientX,y:first.clientY,distance:0};}else down(first);
+   if(initialReleased){const a=point(first);state={id:first.pointerId,a,b:a,x:first.clientX,y:first.clientY,pointerX:first.clientX,pointerY:first.clientY,distance:0};}else down(first);
    if(initialMove)move(fromFrame(initialMove));
    if(initialReleased)up(fromFrame(initialMove||initialPointer));
    else if(!ended){listen(w,'pointermove',e=>move(fromFrame(e)),true);listen(w,'pointerup',e=>up(fromFrame(e)),true);listen(w,'pointercancel',cancel,true);listen(w,'lostpointercapture',cancel,true);}

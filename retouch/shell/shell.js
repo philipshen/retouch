@@ -4286,7 +4286,7 @@ async function drawShape(preset,info){
   stopDrawing=RetouchSVGDraw.mount({target,frame:iframe,canvas:canvasSurface,preset,native:info.svgInsertion.createsViewport,
     onCommit:points=>insertLayer(preset,info,'insertSVG',{points,...(info.svgInsertion.createsViewport?{nativeCanvas:true}:{})}),
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
-  if(stopDrawing)toast('Drag to draw '+preset+'. Shift constrains; Option/Alt draws from center. Escape cancels.','ok');
+  if(stopDrawing)toast('Drag to draw '+preset+'. Space repositions; Shift constrains; Option/Alt draws from center. Escape cancels.','ok');
 }
 async function insertLayer(preset,info,type='insertElement',extra={}){
   if(panelTasks||undoBusy||sourceRequests)return;
