@@ -19136,3 +19136,27 @@ Logs: `/tmp/retouch-armed-scale-pending-html.log`,
 `/tmp/retouch-armed-scale-pending-liquid.log`. No desktop rebuild or push.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete.
+
+### 2026-09-15 — Choose shape and Pen tools before selecting a container
+
+Generalized the armed Scale state into one active canvas-tool action. Empty
+selection now exposes rectangle, ellipse, circle, triangle, star, arrow, line,
+and Pen commands through the existing toolbar and Actions routes. Keyboard
+shortcuts can switch the armed tool. Toolbar icons and pressed states reflect
+arming; selecting a compatible container starts the existing drawing surface.
+Non-container selections retain the armed tool, and canvas clicks select rather
+than enter inline text while armed. Escape, Move, Hand and leaving Edit mode
+share the existing cancellation path. Activation does not write source files.
+
+Verification: all 1,664 unit tests passed. Expanded scale-shortcuts browser
+coverage passed for HTML and React in Chromium and Liquid in WebKit, including
+rectangle/Pen toolbar activation, iframe Escape, incompatible heading then valid
+container selection, Move cancellation, shortcut switching, and cancellation
+while a container lookup is delayed. Existing Scale regressions also passed.
+Logs: `/tmp/retouch-armed-drawing-units.log` and
+`/tmp/retouch-armed-drawing-{html,react,liquid}-verified.log`.
+
+This still requires selecting the destination before drawing; it does not yet
+implement a single drag that both chooses a destination and creates a shape.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete. No desktop rebuild or push for this checkpoint.
