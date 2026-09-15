@@ -253,3 +253,10 @@ test('local matrix translation and skew compose before individual scale and rota
  points.forEach((p,i)=>{assert.ok(Math.abs(p.x-expected[i][0])<1e-9);assert.ok(Math.abs(p.y-expected[i][1])<1e-9);});
  assert.throws(()=>localPositionCorners({x:0,y:0,width:10,height:20,transformMatrix:[1,0,0,1,NaN,0]}),/resolved/);
 });
+
+
+test('individual translation follows the element transform in frame coordinates',()=>{
+ const {localPositionCorners}=require('../shell/inspector.js'),g={x:10,y:20,width:100,height:80,rotation:90,scaleX:-1,scaleY:2,transformOrigin:'20px 10px',transformMatrix:[1,.5,.25,1,5,-3]},before=localPositionCorners(g),after=localPositionCorners({...g,translateX:30,translateY:-15});
+ after.forEach((p,i)=>{assert.ok(Math.abs(p.x-before[i].x-30)<1e-9);assert.ok(Math.abs(p.y-before[i].y+15)<1e-9);});
+ assert.deepEqual(localPositionCorners({x:10,y:20,width:100,height:80,referenceTransform:[2,0,0,3,5,-10]},[[0,0],[100,80]]),[{x:15,y:10},{x:215,y:250}]);
+});

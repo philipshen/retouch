@@ -63,16 +63,17 @@
   }
   function outlineGeometry(el){const g=geometry(el,{allowRotation:true,allowScale:true,layoutOnly:true});return {...scaledOutline(g),sourceScale:el.ownerDocument.defaultView.getComputedStyle(el).scale};}
   function localPositionCorners(g,points=[[0,0],[g.width,0],[g.width,g.height],[0,g.height]]){
+    if(g.referenceTransform){const m=g.referenceTransform;if(m.length!==6||!m.every(Number.isFinite))throw Error('Use a finite transform reference box.');return points.map(([x,y])=>({x:g.x+m[0]*x+m[2]*y+m[4],y:g.y+m[1]*x+m[3]*y+m[5]}));}
     const origin=(g.transformOrigin||'0px 0px').split(/\s+/);if(origin.length>2&&parseFloat(origin[2])!==0)throw Error('Use a two-dimensional transform origin.');
     const [ox,oy]=origin.slice(0,2).map(value=>/^-?(?:\d*\.)?\d+px$/.test(value)?parseFloat(value):NaN),matrix=g.transformMatrix||[1,0,0,1,0,0],angle=(g.rotation||0)*Math.PI/180,c=Math.cos(angle),s=Math.sin(angle),sx=g.scaleX??1,sy=g.scaleY??1;
     if(matrix.length!==6||![g.x,g.y,g.width,g.height,ox,oy,sx,sy,angle,...matrix].every(Number.isFinite))throw Error('Use resolved local bounds and transform origin.');
-    return points.map(([x,y])=>{const tx=matrix[0]*(x-ox)+matrix[2]*(y-oy)+matrix[4],ty=matrix[1]*(x-ox)+matrix[3]*(y-oy)+matrix[5];return {x:g.x+ox+tx*sx*c-ty*sy*s,y:g.y+oy+tx*sx*s+ty*sy*c};});
+    return points.map(([x,y])=>{const tx=matrix[0]*(x-ox)+matrix[2]*(y-oy)+matrix[4],ty=matrix[1]*(x-ox)+matrix[3]*(y-oy)+matrix[5];return {x:g.x+(g.translateX||0)+ox+tx*sx*c-ty*sy*s,y:g.y+(g.translateY||0)+oy+tx*sx*s+ty*sy*c};});
   }
   function positionGeometry(el){try{return geometry(el,{allowRotation:true,allowScale:true});}catch(error){return localPositionGeometry(el);}}
   function localPositionGeometry(el){
     const d=el.ownerDocument,w=d.defaultView,css=w.getComputedStyle(el),parent=el.offsetParent;
     if(el.namespaceURI!=='http://www.w3.org/1999/xhtml'||css.position!=='absolute'||!parent)throw Error('Local position requires an absolute HTML layer with a containing frame.');
-    if(css.translate&&css.translate!=='none'||css.zoom&&Number(css.zoom)!==1)throw Error('Local position for translation or zoom on the layer is not available yet.');
+    if(css.zoom&&Number(css.zoom)!==1)throw Error('Local position for zoom on the layer is not available yet.');
     let matrix;if(css.transform!=='none'){const m=new w.DOMMatrix(css.transform);if(!m.is2D||![m.a,m.b,m.c,m.d,m.e,m.f].every(Number.isFinite)||Math.abs(m.a*m.d-m.b*m.c)<1e-9)throw Error('Local positioning requires a nonzero two-dimensional transform matrix.');matrix=[m.a,m.b,m.c,m.d,m.e,m.f];}
     const rotation=(root.RetouchReactSelection||require('./react-selection.js')).rotationDegrees(css.rotate||'none'),scale=(root.RetouchFlip||require('./flip.js')).parse(css.scale||'none');
     if(!Number.isFinite(rotation)||!scale||scale.length!==2||scale.some(value=>value===0))throw Error('Local positioning requires a nonzero two-dimensional rotation and scale.');
@@ -80,6 +81,15 @@
     const pixel=property=>{const value=css.getPropertyValue(property);if(!/^-?(?:\d*\.)?\d+px$/.test(value))throw Error('Local position requires resolved pixel dimensions and insets.');return parseFloat(value);};
     const dimension=axis=>pixel(axis)+(css.boxSizing==='content-box'?(axis==='width'?['left','right']:['top','bottom']).reduce((sum,edge)=>sum+pixel('padding-'+edge)+pixel('border-'+edge+'-width'),0):0);
     const g={localCoordinates:true,x:pixel('left')+pixel('margin-left'),y:pixel('top')+pixel('margin-top'),width:dimension('width'),height:dimension('height'),parentWidth:parent.clientWidth,parentHeight:parent.clientHeight,parentLabel:'<'+parent.localName+'>'};
+    const contentReference=['content-box','fill-box'].includes(css.transformBox);
+    if(css.translate&&css.translate!=='none'){const values=(root.RetouchTranslateValues||require('./translate-values.js')).parse(css.translate),sizes=[g.width,g.height];if(contentReference)for(const [i,edges]of [[0,['left','right']],[1,['top','bottom']]])sizes[i]-=edges.reduce((sum,edge)=>sum+pixel('padding-'+edge)+pixel('border-'+edge+'-width'),0);g.translate=css.translate;[g.translateX,g.translateY]=values.map((value,i)=>value.pixels+value.percent*sizes[i]/100);}
+    if(contentReference){
+      // Computed origins can lose the reference-box offset. Recover the border
+      // origin from the rendered bounds and affine axes without probing inside
+      // the layer, which also works for replaced elements such as images.
+      const probe=root.RetouchSVGDraw||require('./svg-draw.js'),frame=probe.nativeSpace(parent).matrix,authored=new w.DOMMatrix(matrix||[1,0,0,1,0,0]);authored.e=authored.f=0;const local=new w.DOMMatrix().rotate(rotation).scale(scale[0],scale[1]).multiply(authored),screen=frame.multiply(local);screen.e=screen.f=0;
+      const offsets=[[0,0],[g.width,0],[g.width,g.height],[0,g.height]].map(([x,y])=>new w.DOMPoint(x,y).matrixTransform(screen)),rect=el.getBoundingClientRect(),origin=new w.DOMPoint(rect.left-Math.min(...offsets.map(p=>p.x)),rect.top-Math.min(...offsets.map(p=>p.y))).matrixTransform(frame.inverse());g.referenceTransform=[local.a,local.b,local.c,local.d,origin.x-g.x,origin.y-g.y];
+    }
     if(matrix||rotation||scale.some(value=>value!==1)){if(matrix)g.transformMatrix=matrix;g.rotation=rotation;g.scaleX=scale[0];g.scaleY=scale[1];g.transformOrigin=css.transformOrigin;localPositionCorners(g);}
     if(!['x','y','width','height','parentWidth','parentHeight'].every(key=>Number.isFinite(g[key])&&Math.abs(g[key])<=100000)||g.width<=0||g.height<=0)throw Error('The layer needs measurable bounds within 100,000 pixels.');return g;
   }

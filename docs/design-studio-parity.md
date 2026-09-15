@@ -19822,3 +19822,27 @@ This path does not yet provide snapping guides or complete parity for layout-
 dependent transform changes. Separate translate/zoom properties, 3D/singular
 transforms, full arbitrary-site/Figma parity and trusted Homebrew distribution
 remain incomplete. No push or native rebuild.
+
+
+### Authored translation and transform reference boxes
+
+Local canvas movement and resizing now preserve a separate CSS translate
+property, including percentage and calc values. Geometry resolves translation
+against the applicable border or content reference box. Content-box transforms
+recover the border origin from rendered bounds and affine axes without inserting
+probes inside the selected layer. Movement, resize and alignment retain the
+authored transform properties and exact source undo.
+
+Validation: all 1,677 unit tests passed. Fresh HTML/Chromium, React/Chromium and
+Liquid/WebKit runs passed movement, resizing, opposite-corner preservation,
+centered proportional resizing, keyboard input, size limits, cancellation,
+alignment and exact undo with percentage translation, nested matrices, rotation,
+reflection, content-box reference, padding and borders. Logs:
+`/tmp/retouch-prepush-reference-{html,react,liquid}.log` and
+`/tmp/retouch-translate-position-units-verified.log`. Earlier border-box
+translation fixtures also passed all three adapters.
+
+Numeric position-field previews still need additive translation preservation.
+Replaced elements have not received separate browser coverage for this change.
+Own zoom, 3D/singular transforms, full Figma/arbitrary-site parity and trusted
+Homebrew distribution remain incomplete. No native rebuild.
