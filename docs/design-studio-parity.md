@@ -18184,3 +18184,30 @@ This does not establish arbitrary cross-file, repeated-instance or unsupported
 3D-transform editing. Group resize/rotation, viewport handling for negative
 positions, full Figma parity and trusted Homebrew distribution remain incomplete.
 No desktop rebuild or push for this checkpoint.
+
+### Transparent group reveal verification
+
+Added explicit zoom-to-selection checks for single and mixed transparent groups
+after extreme canvas panning at 390/768/1100 pixels. HTML/Chromium, transformed
+React/Chromium and transformed Liquid/WebKit all pass: each selected child fits
+inside both the canvas and iframe clip, the result reports unclipped bounds,
+and source stays unchanged. Visually inspected the fully visible HTML selection
+at `/tmp/retouch-group-reveal-html.png`.
+
+The earlier clipped screenshots do not establish a failed explicit reveal. In
+the reproduced HTML sequence, adding the third layer retains the prior 142.7%
+group-fit zoom, making the new selection 1546.83 screen pixels wide in a 1080-pixel
+canvas. Layer-tree selection also invokes native nearest scrolling on the clicked
+layer. A subsequent explicit reveal fits the expanded selection at 93.73% and
+shows all children. The evidence narrows this issue to view changes after the
+selection expands; no zoom implementation change was made. This does not resolve
+content positioned beyond the page's own viewport, including negative positions.
+
+Logs: `/tmp/retouch-group-reveal-html-final.log`,
+`/tmp/retouch-group-reveal-react.log`, and
+`/tmp/retouch-group-reveal-webkit.log`. Unit tests were not repeated because only
+browser coverage and this checkpoint changed.
+
+Group resize/rotation, negative-position viewport handling, full Figma parity
+and trusted Homebrew distribution remain incomplete. No desktop rebuild or push
+for this checkpoint.
