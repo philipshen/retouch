@@ -1,5 +1,5 @@
 'use strict';
-const background=require('../shell/background-paint.js');
+const background=require('../shell/background-paint.js'),shadowVisibility=require('../shell/shadow-visibility.js');
 const parse5=require('parse5'),MagicString=require('magic-string'),html=require('./adapters/html.cjs');
 const {valid,families,overlaps,variableName,variableCycle}=require('../shell/html-css-values.js');
 const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
@@ -53,6 +53,9 @@ function plan(resolved,op){
    const replacement=colorChange[1]===null?background.reset():background.edit(effective['background-color'],effective[background.property],colorChange[1]);
    changes=changes.filter(([property])=>property!=='background-color').concat(Object.entries(replacement));
   }
+  const shadowChange=changes.find(([property])=>property==='box-shadow'),metadataChange=changes.find(([property])=>property===shadowVisibility.property);
+  if(metadataChange){if(!shadowChange)return refuse('Write shadow visibility with its shadow stack.');const css=shadowChange[1],metadata=metadataChange[1];if(css===null||metadata===null){if(css!==null||metadata!==null)return refuse('Reset the shadow stack and its visibility together.');}else shadowVisibility.read(css,metadata);}
+  else if(shadowChange&&state.blocks.some(block=>block.width<=op.width&&Object.hasOwn(block.values,shadowVisibility.property)))changes.push([shadowVisibility.property,shadowChange[1]===null?null:'none']);
   const inline=attr(resolved.element.node,'style')||'';
   // Reset must remain possible even if an external inline rule now wins.
   const important=[...inline.replace(/\/\*[\s\S]*?\*\//g,'').matchAll(/(?:^|;)\s*([a-z-]+)\s*:[^;]*!\s*important\s*(?=;|$)/gi)].map(m=>m[1].toLowerCase());

@@ -164,6 +164,7 @@
   const value='rtbc1-'+Array.from(new TextEncoder().encode(JSON.stringify({version:1,color})),byte=>byte.toString(16).padStart(2,'0')).join('');parseHiddenBackground(value);return value;
  }
  function valid(property,value,allowVariable=true){
+  if(property==='--rt-hidden-shadows'){if(value===null)return true;try{(typeof module==='object'&&module.exports?require('./shadow-visibility.js'):globalThis.RetouchShadowVisibility).metadata(value);return true;}catch{return false;}}
   if(property===hiddenBackgroundProperty){if(value===null)return true;try{parseHiddenBackground(value);return true;}catch{return false;}}
   if(property===paintVisibilityProperty){if(value===null)return true;try{parsePaintVisibility(value);return true;}catch{return false;}}
   if(property==='text-box'){if(value===null||value==='normal')return true;if(typeof value!=='string'||value.length>100)return false;return /^(?:(?:none|trim-start|trim-end|trim-both)(?: |$))?(?:(?:auto|text|cap|ex|ideographic|ideographic-ink)(?: (?:text|alphabetic|ideographic|ideographic-ink))?)?$/.test(value)&&value.trim()===value&&value!=='';}

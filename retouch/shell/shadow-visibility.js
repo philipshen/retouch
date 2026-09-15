@@ -34,5 +34,11 @@
   const shadows=read(css,metadata);if(!Number.isInteger(index)||index<0||index>=shadows.length||!changes||typeof changes!=='object'||Array.isArray(changes)||Object.keys(changes).some(key=>!keys.includes(key)&&key!=='hidden'))fail();
   const next=normalize({...shadows[index],...changes});if(JSON.stringify(next)===JSON.stringify(shadows[index]))return {};shadows[index]=next;return write(shadows);
  }
- const api={property,read,write,update};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchShadowVisibility=api;
+ function classes(source,scope,changes){
+  if(!changes||Object.keys(changes).sort().join(',')!==[property,'box-shadow'].sort().join(','))fail();
+  const css=changes['box-shadow'],metadata=changes[property];if(css===null||metadata===null){if(css!==null||metadata!==null)fail();}else read(css,metadata);
+  const I=typeof module==='object'&&module.exports?require('./inspector.js'):root.RetouchInspector,R=typeof module==='object'&&module.exports?require('./responsive.js'):root.RetouchResponsive;
+  const projected=R.project(source,scope),paint=I.shadowClasses(projected,css),next=I.replace(paint,token=>token.startsWith('['+property+':'),metadata===null?'':'!['+property+':'+metadata+']');return R.replaceScope(source,next,scope);
+ }
+ const api={property,read,write,update,classes,metadata:decode};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchShadowVisibility=api;
 })(typeof window==='object'?window:globalThis);
