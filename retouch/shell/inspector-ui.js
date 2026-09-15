@@ -670,5 +670,5 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   if(control.matches('select')){const field=control.closest('.vertical-text-modes, .text-align-modes');if(field)control=field.querySelector('.layout-mode-segments button[aria-pressed="true"]')||field.querySelector('.layout-mode-segments button')||control;}
   control.scrollIntoView({block:'nearest',inline:'nearest'});control.focus({preventScroll:true});if(typeof control.select==='function')try{control.select();}catch{}return true;
  }
- root.RetouchInspectorUI={organize,reveal};
+ root.RetouchInspectorUI={organize,reveal,keyboardToolbar};
 })(window);
