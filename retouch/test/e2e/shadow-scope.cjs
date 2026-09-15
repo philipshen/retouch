@@ -9,6 +9,14 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
   await page.getByRole('button',{name:'Hide Shadow 1',exact:true}).click();await record();assert.equal(await page.evaluate(shadows=>RetouchPaintPicker.parsePaint(shadows[0].color).alpha,await stack()),0);assert.ok(read().includes('oklch'));
   const secondX=page.getByLabel('Shadow 2 X (px)',{exact:true});await secondX.fill('23');await secondX.press('Enter');await record();assert.equal((await stack())[1].x,23);assert.ok(read().includes('oklch'));assert.equal(await page.getByRole('button',{name:'Show Shadow 1',exact:true}).count(),1);
   await page.getByRole('button',{name:'Show Shadow 1',exact:true}).click();await record();assert.ok(read().includes('oklch'));assert.equal((await stack())[1].x,23);
+  if(process.env.RT_E2E_CSS_SHADOW_VISIBILITY){
+   const visible=await stack();await page.getByRole('button',{name:'Hide Shadow 2',exact:true}).click();await record();assert.equal(await page.evaluate(shadows=>RetouchPaintPicker.parsePaint(shadows[1].color).alpha,await stack()),0);assert.equal(await second.inputValue(),'oklch(0.7 0.2 140 / 0.6)');
+   await secondX.fill('29');await secondX.press('Enter');await record();await page.getByRole('button',{name:'Show Shadow 2',exact:true}).click();await record();assert.deepEqual((await stack())[1],{...visible[1],x:29});
+   await second.fill('currentColor');await second.press('Enter');await record();await page.getByRole('button',{name:'Hide Shadow 2',exact:true}).click();await record();
+   const typography=page.getByRole('button',{name:'Expand Typography section',exact:true});if(await typography.isVisible())await typography.click();const text=page.getByLabel('Text color'+(kind==='html'?' (CSS)':' with alpha'),{exact:true});await text.fill('#abcdef');await text.press('Enter');await record();assert.equal(await page.evaluate(shadows=>RetouchPaintPicker.parsePaint(shadows[1].color).alpha,await stack()),0);
+   await page.getByRole('button',{name:'Show Shadow 2',exact:true}).click();await record();assert.ok(read().includes('currentColor'));assert.deepEqual(await page.evaluate(shadows=>RetouchPaintPicker.parsePaint(shadows[1].color).channels.map(n=>Math.round(n*255)),await stack()),[171,205,239]);
+   console.log(kind+': PASS hide/edit/show OKLCH and currentColor shadows with live text-color inheritance');
+  }
   console.log(kind+': PASS hidden literal shadow beside editable OKLCH shadow without color conversion');
  }
  await screen.focus();await screen.selectOption('768x1024');await settled();await scope.selectOption(kind==='html'?'min-[768px]:':'md:');await settled();await open();await page.getByRole('button',{name:'Remove shadow 2',exact:true}).click();await record();await edit('color','color(display-p3 0.2 0.4 0.6 / 0.75)');await edit('X (px)','11');const tablet=await stack();assert.equal(tablet.length,1);

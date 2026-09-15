@@ -31,7 +31,7 @@ test('malformed, duplicate, excessive and unknown metadata fields are rejected',
 });
 test('invalid edits and unsupported variable bindings fail without altering the input model',()=>{
  const model=[shadow()],before=structuredClone(model),values=S.write(model);
- for(const changes of [{blur:-1},{x:Infinity},{inset:'yes'},{hidden:1},{color:'var(--brand)'},{unknown:4}])assert.throws(()=>S.update(values['box-shadow'],values[S.property],0,changes));
+ for(const changes of [{blur:-1},{x:Infinity},{inset:'yes'},{hidden:1},{color:'var(--brand)'},{color:'inherit'},{color:'initial'},{color:'revert'},{unknown:4}])assert.throws(()=>S.update(values['box-shadow'],values[S.property],0,changes));
  for(const index of [-1,1,.5])assert.throws(()=>S.update(values['box-shadow'],values[S.property],index,{hidden:true}));assert.deepEqual(model,before);assert.throws(()=>S.write(Array.from({length:17},()=>shadow())));
 });
 test('sixteen hidden shadows survive a complete source metadata round trip',()=>{
@@ -42,11 +42,20 @@ test('visible CSS colors remain editable beside hidden literal shadows',()=>{
  for(const color of ['currentColor','rebeccapurple','hsl(210 50% 40% / .6)','oklch(.7 .2 140 / .6)','oklab(.7 .1 .2 / .8)']){
   const model=[shadow('#33669980',{hidden:true}),shadow(color,{x:11})],saved=S.write(model),roundtrip=read(saved);assert.equal(roundtrip[1].color,color);assert.equal(roundtrip[1].hidden,false);
   const edited=S.update(saved['box-shadow'],saved[S.property],1,{x:19}),next=read(edited);assert.equal(next[1].color,color);assert.equal(next[1].x,19);assert.deepEqual(next[0],roundtrip[0]);
-  assert.throws(()=>S.update(edited['box-shadow'],edited[S.property],1,{hidden:true}),/before hiding this shadow/);
+  const both=S.update(edited['box-shadow'],edited[S.property],1,{hidden:true});assert.equal(read(both)[1].hidden,true);assert.equal(read(both)[1].color,color);assert.deepEqual(S.update(both['box-shadow'],both[S.property],1,{hidden:false}),edited);
   const shown=S.update(edited['box-shadow'],edited[S.property],0,{hidden:false});assert.equal(read(shown)[1].color,color);assert.equal(shown[S.property],'none');
  }
 });
-test('hidden metadata cannot contain contextual or unsupported original colors',()=>{
+test('non-sRGB hidden metadata requires its matching neutral transparent placeholder',()=>{
  const values=S.write([shadow('#12345680',{hidden:true})]);
  for(const color of ['currentColor','rebeccapurple','oklch(.7 .2 140 / .6)'])assert.throws(()=>S.read(values['box-shadow'],encode({version:1,hidden:[{index:0,shadow:shadow(color)}]})));
+});
+
+test('hidden CSS colors survive geometry edits, duplication and reordering without conversion',()=>{
+ for(const color of ['currentColor','rebeccapurple','hsl(210 50% 40% / .6)','oklch(.7 .2 140 / .6)','oklab(.7 .1 .2 / .8)']){
+  const input=[shadow(color,{hidden:true})],saved=S.write(input);assert.equal(P.parse(V.parseShadows(saved['box-shadow'])[0].color).alpha,0);assert.equal(read(saved)[0].color,color);
+  const edited=S.update(saved['box-shadow'],saved[S.property],0,{x:19,inset:true}),model=read(edited);assert.equal(model[0].color,color);assert.equal(model[0].hidden,true);
+  assert.deepEqual(read(S.write([shadow('#ff000080',{hidden:false}),model[0],{...model[0]}])).slice(1),[model[0],model[0]]);
+  const shown=S.update(edited['box-shadow'],edited[S.property],0,{hidden:false});assert.equal(V.parseShadows(shown['box-shadow'])[0].color,color);assert.equal(shown[S.property],'none');
+ }
 });
