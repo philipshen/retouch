@@ -390,7 +390,10 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     const control=document.createElement('span');control.className='color-control';const value=document.createElement('span');value.textContent=input.value.replace('#','').toUpperCase();input.after(control);control.append(input,value);input.addEventListener('input',()=>value.textContent=input.value.replace('#','').toUpperCase());
    }
 
-   const help=disclosure('Details',name+'-help');for(const hint of [...section.children].filter(el=>(el.classList.contains('hint')||el.classList.contains('computed-value'))&&el.getAttribute('role')!=='alert'&&!el.classList.contains('gradient-scope')))help.append(hint);if(help.children.length>1)section.append(help);
+   const hints=[...section.children].filter(el=>(el.classList.contains('hint')||el.classList.contains('computed-value'))&&el.getAttribute('role')!=='alert'&&!el.classList.contains('gradient-scope'));
+   if(hints.length&&!section.querySelector('input,select,textarea,button,a,[role="button"]')){
+    const availability=document.createElement('div');availability.className='inspector-availability';availability.setAttribute('role','status');availability.setAttribute('aria-label',name+' availability');availability.append(...hints);section.append(availability);
+   }else{const help=disclosure('Details',name+'-help');help.append(...hints);if(help.children.length>1)section.append(help);}
    for(const button of [...section.querySelectorAll(':scope > .control-button, :scope > .radius-corners > .control-button, :scope > .border-edges > .control-button')])if(/^(Reset |Clear local (?:text|background|border) color$)/.test(button.textContent)){
     const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.textContent='↺';button.classList.add('property-reset');const previous=button.previousElementSibling;
     if(previous?.classList.contains('inspector-field')){const row=document.createElement('div');row.className='property-row';previous.parentElement.insertBefore(row,previous);row.append(previous,button);}
