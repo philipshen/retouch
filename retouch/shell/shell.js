@@ -1719,7 +1719,7 @@ function paintLoop() {
 }
 
 function syncLayerSelection() {
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent),selectionCanReparent:sharedComponentContainers(sel.multiple).length>0,selectionContainers:sharedComponentContainers(sel.multiple),selectionTargets:sharedComponentTargets(sel.multiple),selectionOrdering:sharedComponentOrdering(sel.multiple)}:sel?.multiple?.length>1&&sel.multiple.some(info=>info.svgBooleanOwner)&&sel.multiple.every(info=>info.svgBooleanOwner||info.svgTransform||info.svgGeometry)&&new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1?{...sel.info,selectionBooleanDelete:true}:sel?.multiple?.length>1?{...sel.info,selectionOrdering:sharedNativeOrdering(sel.multiple),selectionCanReparent:new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1&&sel.multiple.every(info=>info.kind==='host'&&info.structure?.canReparent),selectionCanDuplicate:new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1&&sel.multiple.every(info=>info.kind==='host'&&info.structure?.canDuplicate),selectionCanDelete:new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1&&sel.multiple.every(info=>info.kind==='host'&&info.structure?.canDelete)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent),selectionCanReparent:sharedComponentContainers(sel.multiple).length>0,selectionContainers:sharedComponentContainers(sel.multiple),selectionTargets:sharedComponentTargets(sel.multiple),selectionOrdering:sharedComponentOrdering(sel.multiple)}:sel?.multiple?.length>1&&sel.multiple.some(info=>info.svgBooleanOwner)&&sel.multiple.every(info=>info.svgBooleanOwner||info.svgTransform||info.svgGeometry)&&new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1?{...sel.info,selectionBooleanDelete:true}:sel?.multiple?.length>1?{...sel.info,selectionOrdering:sharedNativeOrdering(sel.multiple),selectionCanFrame:sharedNativeFraming(sel.multiple),selectionCanReparent:new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1&&sel.multiple.every(info=>info.kind==='host'&&info.structure?.canReparent),selectionCanDuplicate:new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1&&sel.multiple.every(info=>info.kind==='host'&&info.structure?.canDuplicate),selectionCanDelete:new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1&&sel.multiple.every(info=>info.kind==='host'&&info.structure?.canDelete)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
 }
 
 function inTextScope(el, info) {
@@ -3952,6 +3952,13 @@ function sharedComponentContainers(infos){
  const candidates=infos[0]?.componentMovement?.selectionContainers||infos[0]?.componentMovement?.containers||[];
  return candidates.filter(id=>infos.every(info=>(info.componentMovement?.selectionContainers||info.componentMovement?.containers||[]).includes(id)));
 }
+function sharedNativeFraming(infos){
+ if(infos.length<2||new Set(infos.map(info=>info.file+'#'+info.hash)).size!==1||infos.some(info=>info.kind!=='host'))return false;
+ const matches=infos.map(info=>matchingEls(info.id));if(matches.some(nodes=>nodes.length!==1))return false;
+ const all=matches.map(nodes=>nodes[0]),nodes=all.filter(node=>!all.some(other=>other!==node&&other.contains(node))),roots=nodes.map(node=>infos[all.indexOf(node)]),parent=nodes[0]?.parentElement;
+ if(!parent||nodes.some(node=>node.parentElement!==parent)||roots.some(info=>!info.structure?.canFrame||!info.structure?.parentId)||new Set(roots.map(info=>info.structure.parentId)).size!==1)return false;
+ const siblings=[...parent.children],indices=nodes.map(node=>siblings.indexOf(node)).sort((a,b)=>a-b);return indices.every((at,i)=>at===indices[0]+i);
+}
 function sharedNativeOrdering(infos){
  const unavailable={before:false,after:false,first:false,last:false};
  if(infos.length<2||new Set(infos.map(info=>info.file+'#'+info.hash)).size!==1||infos.some(info=>info.kind!=='host'))return unavailable;
@@ -4087,7 +4094,7 @@ async function restoreLayerSelection(ids){
   const infos=selected.map(result=>result.element),first=infos[0];sel={hostId:first.id,instanceId:first.kind==='instance'?first.id:null,scope:first.kind==='instance'?'instance':'host',info:first,multiple:infos.length>1?infos:undefined};
 }
 async function structureSelection(action,extra={}){
-  if(sel.multiple?.length>1&&!sel.info.cssAuthoring&&!['duplicateElement','deleteElement','moveSelection','reparentElement'].includes(action))return toast('This structural action is not available for these source layers yet.','err');
+  if(sel.multiple?.length>1&&!sel.info.cssAuthoring&&!['duplicateElement','deleteElement','moveSelection','reparentElement','frameSelection'].includes(action))return toast('This structural action is not available for these source layers yet.','err');
   const selection=sel.multiple||[sel.info],info=sel.info;busyPanel(true);
   try{
     const type=['frameSelection','removeFrame','moveSelection'].includes(action)?action:action==='duplicateElement'?'duplicateSelection':action==='deleteElement'?'deleteSelection':'reparentSelection';
