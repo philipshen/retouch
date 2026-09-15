@@ -19,6 +19,7 @@ if(window.__RT_RENDERING?.selectionStyling){const hint=document.createElement('p
 const SPACING_STEPS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20, 24, 28, 32];
 
 let historyRecoveryRequired=!!window.__RT_RENDERING?.historyRecoveryRequired;
+let scaleToolArmed=false;
 let mode = historyRecoveryRequired?'interact':'edit'; // 'edit' | 'interact'
 let renderedSelection=null; // Live DOM anchor for the explicitly chosen occurrence.
 let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
@@ -79,7 +80,7 @@ window.addEventListener('change',event=>{if(!panelBody.contains(event.target)||e
 // Metadata can rebuild an input after the source save has completed.
 new MutationObserver(restorePanelFocus).observe(panelBody,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','disabled']});
 
-const canvasPan=RetouchCanvasPan.mount({enabled:()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy,onActivate:()=>{window.dispatchEvent(new Event('retouch:before-zoom'));stopDrawing?.();hoverEl=null;}});
+const canvasPan=RetouchCanvasPan.mount({enabled:()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy,onActivate:()=>{setScaleToolArmed(false);window.dispatchEvent(new Event('retouch:before-zoom'));stopDrawing?.();hoverEl=null;}});
 function busyPanel(start) {
   if(start&&!panelTasks&&!pendingPanelFocus){
     const target=document.activeElement;
@@ -283,6 +284,7 @@ function hookFrame(d, w) {
     e.preventDefault();
     e.stopPropagation();
     const t = pickLayer(e.target,e.clientX,e.clientY);
+    if(scaleToolArmed){if(t&&!layerLocks.locked(t))await select(t);else clearSelection();return;}
     // Single click selects AND, when the element has editable literal text,
     // enters in-place editing directly (user decision, 2026-09-02).
     if (t&&!layerLocks.locked(t)) startInlineEdit(t, e, true);
@@ -354,6 +356,7 @@ function hookFrame(d, w) {
   d.addEventListener('pointerdown',breakTextHistoryGroup,true);
   d.addEventListener('pointerdown',cancelOpacityEntry,true);
   d.addEventListener('keydown', (e) => {
+    if(scaleToolArmed&&e.key==='Escape'&&!e.isComposing){setScaleToolArmed(false);e.preventDefault();e.stopPropagation();return;}
     if(e.key==='Escape'){vectorEntrySerial++;if(pendingVectorEntry){pendingVectorEntry=null;e.preventDefault();e.stopPropagation();return;}}
     if(mode==='edit'&&!editing&&window.RetouchActions?.shortcut(e)){cancelOpacityEntry();return;}
     if(groupNudgeShortcut(e)||vectorNudgeShortcut(e)||flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||layerNavigationShortcut(e)||canvasLayerShortcut(e))return;
@@ -1684,6 +1687,7 @@ const svgResizeCorners=RetouchSVGResize.controls({frame:iframe,canvas:canvasSurf
 const radiusCorners=RetouchSVGRadiusCanvas.controls({frame:iframe,canvas:canvasSurface,onStart:roundRectangleOnCanvas});
 const rotationCorners=RetouchCanvasRotate.cornerControls({frame:iframe,canvas:canvasSurface,onStart:rotateLayerOnCanvas});
 function paintLoop() {
+  advanceScaleTool();
   overlayLayer.textContent = '';
   const d = doc();
   let badge=null;
@@ -4352,13 +4356,24 @@ async function structureAction(action) {
   } finally {busyPanel(false);}
 }
 
+function setScaleToolArmed(value){
+ if(scaleToolArmed===value)return;scaleToolArmed=value;window.dispatchEvent(new Event('retouch:shape-tools'));
+}
+function advanceScaleTool(){
+ if(!scaleToolArmed)return;
+ if(mode!=='edit'||historyRecoveryRequired||canvasPan.active){setScaleToolArmed(false);return;}
+ if(!sel?.info||editing||panelTasks||sourceRequests||undoBusy||stopDrawing||document.querySelector('dialog[open]'))return;
+ const source=window.RetouchShapeTools?.get('scale');if(source?.available()){setScaleToolArmed(false);source.run(document.getElementById('canvasScale'));}
+}
+window.addEventListener('keydown',event=>{if(scaleToolArmed&&event.key==='Escape'&&!event.isComposing){setScaleToolArmed(false);event.preventDefault();}});
 // Shape commands belong to the canvas tools, independent of inspector markup.
 window.RetouchShapeTools={
+ scaleArmed:()=>scaleToolArmed,
  commands(){
   const canMove=()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!historyRecoveryRequired;
-  const move={id:'shape-move',action:'move',label:'Move tool',keywords:'select pointer canvas V',element:modeBtn,available:canMove,reason:'Finish the current edit and switch to Edit mode.',run(){if(canMove()){stopDrawing?.();canvasPan.cancel();}}};
+  const move={id:'shape-move',action:'move',label:'Move tool',keywords:'select pointer canvas V',element:modeBtn,available:()=>scaleToolArmed||canMove(),reason:'Finish the current edit and switch to Edit mode.',run(){setScaleToolArmed(false);if(canMove()){stopDrawing?.();canvasPan.cancel();}}};
   const scaleInfo=sel?.info,scaleControl=panelBody.querySelector('[data-canvas-tool=scale]'),common=[move],canScale=()=>canMove()&&!!scaleInfo&&sel?.info===scaleInfo&&selectionScaleRangeActive()&&!scaleControl?.matches(':disabled')&&!stopDrawing&&!canvasPan.active;
-  if(scaleControl&&scaleInfo)common.push({id:'shape-scale',action:'scale',label:'Scale tool',keywords:'resize proportional selection canvas K',element:scaleControl,available:canScale,reason:'Select editable layers and finish the current gesture.',run(opener=scaleControl){if(canScale())return scaleGroupOnCanvas(scaleInfo,opener);}});
+  common.push({id:'shape-scale',action:'scale',label:'Scale tool',keywords:'resize proportional selection canvas K',element:scaleControl||modeBtn,available:()=>!scaleInfo?canMove()&&!stopDrawing&&!canvasPan.active:!!scaleControl&&canScale(),reason:'Select editable layers and finish the current gesture.',run(opener=scaleControl){if(!scaleInfo&&canMove()&&!stopDrawing&&!canvasPan.active){setScaleToolArmed(true);return;}if(scaleControl&&canScale()){setScaleToolArmed(false);return scaleGroupOnCanvas(scaleInfo,opener);}}});
   const info=sel?.info;if(!info||!info.svgInsertion&&!info.svgTransform?.editable||sel.multiple?.length>1||info.kind==='instance')return common;
   const owner=JSON.stringify([info.file,info.id,info.hash,sel.instanceId,sel.scope]);
   const available=()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!historyRecoveryRequired&&!panelBody.inert&&!(sel?.multiple?.length>1)&&owner===JSON.stringify([sel?.info.file,sel?.info.id,sel?.info.hash,sel?.instanceId,sel?.scope]);

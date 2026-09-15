@@ -19089,3 +19089,29 @@ Logs: `/tmp/retouch-range-jump-react.log`, `/tmp/retouch-range-jump-liquid.log`,
 `/tmp/retouch-range-jump-html.log`, and `/tmp/retouch-range-jump-units.log`.
 No desktop rebuild or push. Full Figma parity, arbitrary-site support and trusted
 Homebrew distribution remain incomplete.
+
+
+### Choose Scale before selecting a target — 2026-09-15
+
+Scale is now available with an empty selection in Edit mode. The toolbar or K
+arms it, shows a pressed state and a target-selection hint, and the next
+editable selection opens the existing scale handles. Selection can come from
+the layer tree or directly from the canvas. Armed canvas clicks select text
+for scaling instead of entering inline text editing. Escape from either surface,
+Move/V, Hand and leaving Edit mode cancel arming. Busy/invalid selections wait
+without writing source; existing scale setup and gesture guards remain in place.
+
+React/Chromium, HTML/Chromium and Liquid/WebKit passed toolbar and keyboard
+arming, tree/canvas target selection, one scale surface, unchanged source,
+Escape/V/Hand/mode cancellation and the existing typing/composition/modifier,
+Actions/context-menu, repeated activation and delayed-lookup cancellation tests.
+All 1,664 unit tests passed. The first canvas-target runs exposed inline text
+editing taking precedence; routing armed clicks through selection fixed it.
+
+Logs: `/tmp/retouch-armed-scale-react-verified.log`,
+`/tmp/retouch-armed-scale-liquid-verified.log`,
+`/tmp/retouch-armed-scale-html-verified.log`, and
+`/tmp/retouch-armed-scale-final-units.log`. No desktop rebuild or push.
+This adds preselection activation for Scale; shape and pen tools still require
+a compatible selection. Full Figma parity, arbitrary-site support and trusted
+Homebrew distribution remain incomplete.
