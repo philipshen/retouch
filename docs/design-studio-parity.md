@@ -18834,3 +18834,26 @@ Logs: `/tmp/retouch-shared-padding-units-react.log`,
 `/tmp/retouch-shared-padding-units.log`. No desktop rebuild or push this increment.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete.
+
+
+### Shared spacing edit-range controls — 2026-09-15
+
+Shared React/Liquid padding and gap inputs and resets now visibly disable when
+the preview screen is outside the selected edit range. Their tooltips explain
+how to resume editing, and write handlers recheck the current range before
+saving. This makes their available actions consistent with layout presets and
+alignment controls, avoiding edits whose result cannot be seen on the canvas.
+
+Chromium/React passed padding context coverage: per-layer em previews, window
+resize cancellation, disabled uniform/edge/reset controls on phone, no source
+write from an inactive drag, and reenabled controls with original geometry on
+return to tablet. WebKit/Liquid passed shared gap axis/geometry/history checks
+and disabled gap/reset controls outside the edit range. All 1,663 units passed.
+The older context test expected an invisible phone drag to write a tablet
+style; it now verifies refusal and unchanged source, matching this behavior.
+
+Logs: `/tmp/retouch-shared-spacing-context-react.log`,
+`/tmp/retouch-shared-spacing-context-liquid.log`, and
+`/tmp/retouch-shared-spacing-context-units.log`. No desktop rebuild or push.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete.
