@@ -112,3 +112,11 @@ test('shared background visibility handles unchanged layers and refuses partial 
   for(const changes of [{[ids[0]]:{}},{[ids[0]]:hidden,[ids[1]]:{'background-color':'#fff'}},{[ids[0]]:hidden,[ids[1]]:null}]){const refused=planner.plan(r,{...op,changesById:changes},adapter);assert.equal(refused.ok,false);assert.equal(refused.edits,undefined);}
  }
 });
+test('per-layer color values keep mixed opacities and reject incomplete selection changes',()=>{
+ const C=require('../src/color-style-classes.cjs'),hidden=B.toggle('#33669980','none',true),first=C.composeBackground('',hidden),second='![background-color:#abcdef40]';
+ for(const kind of ['react','liquid']){
+  const adapter=require('../src/adapters/'+kind+'.cjs'),planner=require('../src/color-override-selection.cjs'),relPath=kind==='react'?'Page.jsx':'main.liquid',source=kind==='react'?'export default function Page(){return <main><h1 className="'+first+'">Title</h1><p className="'+second+'">Other</p></main>}':'<main><h1 class="'+first+'">Title</h1><p class="'+second+'">Other</p></main>',resolve=source=>{const elements=adapter.collect(source,relPath).elements;return {source,file:'/tmp/'+relPath,relPath,hash:adapter.contentHash(source),elements,element:elements.find(el=>kind==='react'?el.node.openingElement.name.name==='h1':el.tag==='h1')};},r=resolve(source),ids=r.elements.filter(el=>['h1','p'].includes(kind==='react'?el.node.openingElement.name.name:el.tag)).map(el=>el.id),op={ids,fileHash:r.hash,property:'background-color',scope:'',valuesById:{[ids[0]]:'#ff000080',[ids[1]]:'#ff000040'},contexts:Object.fromEntries(ids.map(id=>[id,{}]))};
+  const result=planner.plan(r,op,adapter);assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);assert.equal(result.edits[0].before,source);const next=resolve(result.edits[0].after),classes=ids.map(id=>adapter.describe({...next,element:next.elements.find(el=>el.id===id)}).className);assert.equal(C.overridden(classes[0],'background-color','#ff000080'),false);assert.equal(C.overridden(classes[1],'background-color','#ff000040'),false);
+  for(const valuesById of [{[ids[0]]:'#fff'},{[ids[0]]:'#fff',[ids[1]]:'not-a-color'}]){const invalid=planner.plan(r,{...op,valuesById},adapter);assert.equal(invalid.ok,false);assert.equal(invalid.edits,undefined);}
+ }
+});

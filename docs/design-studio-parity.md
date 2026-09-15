@@ -17291,3 +17291,11 @@ HTML multi-selection now reuses the existing shared inspector section builder: S
 Chromium and WebKit grouping workflows pass section placement, paired dimensions, closed advanced controls, opening and editing per-side padding, retained main/advanced collapse state, and exact grouped source undo/redo. The existing HTML mixed-background visibility/picker workflow and relative typography workflow also pass. The final WebKit panel was visually inspected. This presentation-only batch does not claim a fresh unit suite.
 
 This improves renderer consistency but does not establish exact Figma fidelity. Shared compact paint/opacity fields, more advanced layout controls, general site support and native/Homebrew distribution still have open work; the full goal remains incomplete.
+
+### Compact shared Fill and Stroke color controls — 2026-09-15
+
+Shared Fill and Stroke rows now reuse the compact hex/opacity presentation. Mixed colors and mixed alpha are represented separately. A bare hex change preserves each selected layer's alpha; opacity edits preserve each layer's channels and color space, including independent border-side colors. Per-layer values go through one validated React/Liquid class transaction or the existing HTML CSS transaction, with hidden backgrounds retaining their saved originals. Incomplete or invalid class selection values are refused without partial writes. Unchanged focused hex values preserve source, and unsupported shared paint drafts report a field error.
+
+All 1,571 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit browser flows verify mixed alpha, hex changes with per-layer opacity, hidden paint, mixed sRGB/P3 Stroke opacity, invalid drafts and exact grouped undo/redo. Existing HTML single-layer Fill/Stroke/mixed-side and Liquid/WebKit gradient-stop compact-control regressions pass. The compact shared rows were visually inspected.
+
+General out-of-range mixed-paint authoring, unsupported computed color recovery, broader SVG paint controls and full Figma/native/Homebrew parity remain incomplete.
