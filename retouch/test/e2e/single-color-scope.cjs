@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict');
+exports.run=async({page,app,read,wait,settled,kind})=>{
+ const target=app.locator('h1'),screen=page.getByLabel('Screen size',{exact:true}),scope=page.getByLabel('Style screen scope',{exact:true}),label=name=>name+(kind==='html'?' (CSS)':' with alpha'),stroke=page.getByLabel(label('Border color'),{exact:true}),text=page.getByLabel(label('Text color'),{exact:true}),alpha=page.getByLabel('Stroke opacity (%)',{exact:true}),states=[read()];
+ const record=async()=>{await wait(()=>read()!==states.at(-1));await settled();states.push(read());},edit=async(input,value)=>{await input.fill(value);await input.press('Enter');await record();},paint=property=>target.evaluate((el,p)=>parent.RetouchPaintPicker.parsePaint(getComputedStyle(el).getPropertyValue(p)),property);
+ await edit(stroke,'#33669980');await edit(text,'#abcdef40');
+ await screen.focus();await screen.selectOption('768x1024');await settled();await scope.selectOption(kind==='html'?'min-[768px]:':'md:');await settled();await edit(stroke,'#112233e0');await edit(text,'#998877cc');const tablet={stroke:await paint('border-top-color'),text:await paint('color')};
+ await scope.selectOption('');await settled();assert.ok(Math.abs(Number(await alpha.inputValue())-128/255*100)<1e-6);assert.equal(await text.inputValue(),'#abcdef40');const before=read();await text.focus();await text.press('Tab');await settled();assert.equal(read(),before);await edit(alpha,'25');assert.deepEqual({stroke:await paint('border-top-color'),text:await paint('color')},tablet);
+ await screen.focus();await screen.selectOption('390x844');await settled();let base=await paint('border-top-color');assert.equal(base.alpha,.25);assert.deepEqual(base.channels.map(n=>Math.round(n*255)),[51,102,153]);
+ await scope.selectOption(kind==='html'?'min-[768px]:':'md:');await settled();assert.ok(Math.abs(Number(await alpha.inputValue())-224/255*100)<1e-6);await edit(alpha,'60');assert.deepEqual(await paint('border-top-color'),base);await screen.focus();await screen.selectOption('768x1024');await settled();await wait(async()=>Math.abs((await paint('border-top-color')).alpha-.6)<1e-6);
+ for(const expected of states.slice(0,-1).reverse()){await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}
+ for(const expected of states.slice(1)){await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===expected);await settled();}
+ console.log(kind+': PASS single scoped text/border values, base edits under tablet overrides, inactive opacity, no-op focus and exact undo/redo');
+};
