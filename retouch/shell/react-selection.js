@@ -213,6 +213,8 @@
   }
   for(const property of ['filter','backdrop-filter'])root.RetouchFilterStack.mountSharedBlur(groups.effects,infos,elements,scope,property,values=>save(Object.fromEntries(infos.map((info,i)=>[info.id,root.RetouchResponsive.replaceScope(info.className,I.filterClasses(root.RetouchResponsive.project(info.className,scope),property,values[i]),scope)]))));
 
+  root.RetouchFilterStack.mountSharedShadows(groups.effects,infos,elements,scope,values=>save(Object.fromEntries(infos.map((info,i)=>[info.id,root.RetouchResponsive.replaceScope(info.className,I.shadowClasses(root.RetouchResponsive.project(info.className,scope),values[i]),scope)]))));
+
   if(saveColor)for(const [property,label]of [['color','Text color'],['background-color','Background color'],['border-color','Border color'],...(elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg')?[['fill','SVG fill'],['stroke','SVG stroke']]:[])]){
    const sec=property==='color'?groups.typography:['background-color','fill'].includes(property)?groups.fill:groups.stroke;
    const values=computed.map(css=>css.getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),input=root.document.createElement('input');input.type='text';input.spellcheck=false;input.placeholder=mixed?'Mixed · enter CSS color':'CSS color';input.disabled=elements.some(el=>el.style.getPropertyValue(property));

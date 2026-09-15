@@ -287,6 +287,7 @@
   }
   for(const [a,b]of [['width','height'],['min-width','min-height'],['max-width','max-height']]){const first=rows.get(a),second=rows.get(b);if(!first||!second)continue;const pair=document.createElement('div');pair.className='property-pair';first.before(pair);pair.append(first,second);for(const [property,row]of [[a,first],[b,second]])row.querySelector('.inspector-field > span').textContent=property.replace('min-','Min ').replace('max-','Max ').replace('width','W').replace('height','H');}
   for(const property of ['filter','backdrop-filter'])RetouchFilterStack.mountSharedBlur(groups.effects,infos,elements,width?'min-['+width+'px]:':'',property,values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,{[property]:values[i]}]))));
+  RetouchFilterStack.mountSharedShadows(groups.effects,infos,elements,width?'min-['+width+'px]:':'',values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,{'box-shadow':values[i]}]))));
   for(const body of Object.values(groups))if(!body.querySelector('.inspector-field'))body.parentElement.remove();
   return section;
  }
