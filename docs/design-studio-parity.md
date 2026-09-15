@@ -19006,3 +19006,25 @@ Logs: `/tmp/retouch-single-compact-layout-react-verified.log`,
 `/tmp/retouch-single-compact-layout-final-units.log`. No desktop rebuild or push.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete.
+
+
+### Single layout direction/wrap precedence — 2026-09-15
+
+Single-container advanced direction and wrap edits now use the same explicit
+scoped utility precedence as shared controls. Extracted `explicitLayoutClasses`
+so both paths generate important display/direction or wrap utilities while
+preserving other scopes, flex sizing and unrelated settings. Reset behavior
+continues through the existing scope-removal path.
+
+React/Chromium and Liquid/WebKit passed single advanced direction and wrap edits
+over ordinary authored stylesheet rules, exact Undo/Redo, persistent disclosure,
+preset geometry and responsive guards. Liquid shared-control regression passed
+after the common writer extraction. All 1,664 unit tests passed, including scope
+and unrelated-flex-setting preservation for the common writer.
+
+Logs: `/tmp/retouch-single-layout-precedence-react.log`,
+`/tmp/retouch-single-layout-precedence-liquid.log`,
+`/tmp/retouch-layout-precedence-shared-regression.log`, and
+`/tmp/retouch-single-layout-precedence-units.log`. No desktop rebuild or push.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete.

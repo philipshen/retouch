@@ -10,6 +10,11 @@
     if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(matches(I.base(token)||'')||/^\[flex-flow:/.test(I.base(token)||''))))addition=addition.split(' ').map(token=>'!'+token).join(' ');
     return I.replace(classes,matches,addition);
   }
+  function explicitLayoutClasses(classes,property,value,inherited=''){
+    if(!['mode','wrap'].includes(property))throw Error('Choose a layout mode or wrapping.');
+    const next=property==='mode'?modeClasses(classes,value,inherited):arrangementClasses(classes,property,value,inherited);
+    return next.split(/\s+/).map(token=>{const base=I.base(token)||'',matches=property==='mode'?display(base)||/^flex-(row|col)(-reverse)?$|^\[(?:display|flex-direction):/.test(base):/^flex-(wrap|wrap-reverse|nowrap)$|^\[flex-wrap:/.test(base);return matches?'!'+token.replace(/^!|!$/g,''):token;}).join(' ');
+  }
   function stackClasses(classes,axis,context={},inherited=''){
     if(!['flow','vertical','horizontal'].includes(axis))throw Error('Choose normal flow, a vertical stack or a horizontal stack.');
     if(axis==='flow')return I.replace(classes,token=>display(token)||token.startsWith('[display:'),'!block');
@@ -238,7 +243,7 @@
     const flowControl=root.RetouchFlowResize?.control(el,sizes=>{const context={display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode,inheritedClasses:inherited};save(Object.entries(sizes).reduce((next,[axis,value])=>sizeClasses(next,axis,'fixed',root.RetouchReactSelection.dimensionValue(css,axis,value),context),classes));});if(flowControl)sec.append(flowControl);
     const mode=/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow';
     const verticalInline=layoutAxes({writingMode:css.writingMode}).inline==='height',rowLabel=verticalInline?'Vertical':'Horizontal',columnLabel=verticalInline?'Horizontal':'Vertical';
-    const modeSelect=I.select(sec,'Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(modeClasses(classes,value,info.styleScope?info.anchorInheritedClasses||'':'')));
+    const modeSelect=I.select(sec,'Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(explicitLayoutClasses(classes,'mode',value,inherited)));
     modeSelect.dataset.inlineAxis=verticalInline?'vertical':'horizontal';
     modeSelect.retouchPreset={
       blocked:axis=>!el.isConnected||(info.styleScope&&root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')||(axis==='flow'?['display']:['display','flex-direction','flex-wrap','flex-flow']).some(property=>el.style.getPropertyValue(property)),
@@ -280,7 +285,7 @@
         I.select(sec,'Place grid items',[['row','Across rows'],['col','Down columns'],['row-dense','Across rows · fill gaps'],['col-dense','Down columns · fill gaps']],flow,v=>save(arrangementClasses(classes,'flow',v,inherited)));
         I.note(sec,'Fill gaps can move later items into earlier empty spaces.');
       } else {
-        I.select(sec,'Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(arrangementClasses(classes,'wrap',v,inherited)));
+        I.select(sec,'Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(explicitLayoutClasses(classes,'wrap',v,inherited)));
       }
       for(const [prop,label,axis] of [['columnGap',verticalInline?'Vertical gap':'Horizontal gap',verticalInline?'height':'width'],['rowGap',verticalInline?'Horizontal gap':'Vertical gap',verticalInline?'width':'height']]) {
         const input=document.createElement('input');input.type='text';input.value=ownGap(classes,axis,css.writingMode,inherited)??css[prop].replace(/px$/,'');input.disabled=!spacingActive();input.placeholder='0';input.title='Pixels by default; also accepts %, rem, em, vw, vh, ch or normal. Enter saves. Escape cancels.';const initial=input.value;
@@ -381,6 +386,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={explicitLayoutClasses,gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

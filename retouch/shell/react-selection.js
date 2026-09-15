@@ -119,9 +119,8 @@
  function changeContainer(classes,scope,property,value,document=null){
   if(!containerRules[property])throw Error('Unknown container layout control');
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js'),active=R.project(classes,scope),inherited=R.inherited(classes,scope,document);
-  const next=value===null?inspector().replace(active,token=>containerRules[property].test(token),''):property==='mode'?L.modeClasses(active,value,inherited):L.arrangementClasses(active,property,value,inherited);
-  const result=value!==null&&['mode','wrap'].includes(property)?next.split(/\s+/).map(token=>containerRules[property].test(inspector().base(token)||'')?'!'+token.replace(/^!|!$/g,''):token).join(' '):next;
-  return R.replaceScope(classes,result,scope);
+  const next=value===null?inspector().replace(active,token=>containerRules[property].test(token),''):['mode','wrap'].includes(property)?L.explicitLayoutClasses(active,property,value,inherited):L.arrangementClasses(active,property,value,inherited);
+  return R.replaceScope(classes,next,scope);
  }
  function changeGap(classes,scope,axis,value,document=null,writingMode='horizontal-tb'){
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');

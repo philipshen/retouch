@@ -380,3 +380,10 @@ test('gap scrubbing starts normal at zero and preserves supported units',()=>{
  for(const raw of ['normal','12','12px','1.5rem','10%','.5em','1vw','1vh','2ch']){const parsed=L.gapScrubValue(raw);assert.ok(parsed,raw);assert.equal(parsed.min,0);assert.equal(parsed.max,10000);assert.equal(L.gapValue(parsed.format(parsed.value)),raw==='normal'?'0px':raw==='12'?'12px':raw==='.5em'?'0.5em':raw);}
  for(const raw of ['Mixed','','-1','10001px','calc(10px + 2px)','var(--gap)','1px;display:none'])assert.equal(L.gapScrubValue(raw),null);
 });
+
+test('explicit layout controls override authored CSS without changing other scopes or flex settings',()=>{
+ assert.equal(L.explicitLayoutClasses('block flex-wrap flex-1 md:flex-col hover:grid','mode','row-reverse'),'flex-wrap flex-1 md:flex-col hover:grid !flex !flex-row-reverse');
+ assert.equal(L.explicitLayoutClasses('flex flex-col gap-2 md:flex-nowrap','wrap','wrap-reverse'),'flex flex-col gap-2 md:flex-nowrap !flex-wrap-reverse');
+ assert.equal(L.explicitLayoutClasses('flex !flex-wrap','wrap','nowrap'),'flex !flex-nowrap');
+ assert.throws(()=>L.explicitLayoutClasses('flex','align','center'));
+});
