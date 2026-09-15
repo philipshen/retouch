@@ -75,9 +75,9 @@
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   const active=R.project(classes,scope),next=L.resetAlignmentClasses(active,context);return next===active?classes:R.replaceScope(classes,next,scope);
  }
- function changeContainerAlignment(classes,scope,x,y,context={},document=null){
+ function changeContainerAlignment(classes,scope,x,y,context={},document=null,el=null){
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
-  return R.replaceScope(classes,L.alignmentClasses(R.project(classes,scope),x,y,context,R.inherited(classes,scope,document)),scope);
+  return R.replaceScope(classes,L.alignmentClasses(R.project(classes,scope),x,y,context,R.inherited(classes,scope,document),el),scope);
  }
  function changeSizeMode(classes,scope,axis,mode,value,parent={},document=null){
   if(!['fixed','hug','fill','auto','reset'].includes(mode))throw Error('Choose a supported sizing mode.');
@@ -176,9 +176,9 @@
   }
   if(computed.every(layout)){
    const picker=root.document.createElement('div'),V=root.RetouchHTMLCSSValues;picker.className='layout-alignment';picker.setAttribute('role','group');picker.setAttribute('aria-label','Shared child alignment');groups.layout.append(picker);
-   const active=()=>!scope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',blocked=(el,css,x,y)=>['place-items',...(!/grid/.test(css.display)?['place-content']:[]),...Object.keys(V.childAlignment(x,y,css))].some(key=>el.style.getPropertyValue(key));
+   const active=()=>!scope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',blocked=(el,css,x,y)=>['place-items',...(!/grid/.test(css.display)?['place-content']:[]),...Object.keys(V.childAlignment(x,y,css))].some(key=>el.style.getPropertyPriority(key)==='important');
    for(let y=0;y<3;y++)for(let x=0;x<3;x++){
-    const label='Shared Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x],button=I.button('•',()=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i),css=el.ownerDocument.defaultView.getComputedStyle(el);if(!active()||!layout(css)||blocked(el,css,x,y))throw Error('Preview the selected edit range and select flex or grid containers without inline alignment overrides.');return [info.id,changeContainerAlignment(info.className,scope,x,y,css,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}});
+    const label='Shared Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x],button=I.button('•',()=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i),css=el.ownerDocument.defaultView.getComputedStyle(el);if(!active()||!layout(css)||blocked(el,css,x,y))throw Error('Preview the selected edit range and select flex or grid containers without important inline alignment overrides.');return [info.id,changeContainerAlignment(info.className,scope,x,y,css,el.ownerDocument,el)];})));}catch(error){I.note(groups.layout,error.message,'refused');}});
     button.setAttribute('aria-label',label);button.title=label;button.disabled=!active()||elements.some((el,i)=>blocked(el,computed[i],x,y));button.setAttribute('aria-pressed',String(computed.every(css=>Object.entries(V.childAlignment(x,y,css)).every(([property,value])=>css.getPropertyValue(property)===value))));picker.append(button);
    }
    const reset=I.button('Reset shared child alignment',()=>{try{if(!active())throw Error('Preview the selected edit range before resetting alignment.');save(Object.fromEntries(infos.map((info,i)=>[info.id,resetContainerAlignment(info.className,scope,computed[i],liveElement(i).ownerDocument)])));}catch(error){I.note(groups.layout,error.message,'refused');}});reset.dataset.alignmentReset='true';reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');reset.disabled=!active()||infos.every((info,i)=>resetContainerAlignment(info.className,scope,computed[i])===info.className);groups.layout.append(reset);

@@ -20208,3 +20208,26 @@ intact. Logs: `/tmp/retouch-inline-clip-units.log`,
 HTML's existing overflow writer is unchanged. Other inline layout restrictions,
 full Figma/arbitrary-site parity and trusted Homebrew distribution remain
 incomplete. No native rebuild or push in this continuation.
+
+### Alignment picker over ordinary inline alignment
+
+The single-layer and shared nine-position child alignment pickers now work over
+ordinary inline align/justify properties and place-items/place-content
+shorthands. Each affected property receives a scoped important utility when
+needed; authored styles remain intact. Important inline alignment still blocks
+new picker edits. Reset removes managed alignment overrides.
+
+Validation: 1,691 unit tests passed. React/Chromium and Liquid/WebKit fixtures
+cover single/shared picker edits and exact reset/undo for a mixed horizontal
+flex and vertical grid selection with inline alignment. Geometry checks cover
+all nine points across row/nowrap, column/wrap, reversed row/reversed wrap and
+reversed column/wrap, measuring actual child bounds in horizontal and vertical
+containers. A test expectation was corrected to retain align-content for
+single-line flex, where the picker only changes item alignment and distribution.
+Logs: `/tmp/retouch-inline-alignment-units-final.log`,
+`/tmp/retouch-inline-alignment-react-final.log`,
+`/tmp/retouch-inline-alignment-liquid.log`.
+
+The separate alignment/distribution dropdowns still have inline-style parity
+gaps. Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
+incomplete. No native rebuild or push in this continuation.

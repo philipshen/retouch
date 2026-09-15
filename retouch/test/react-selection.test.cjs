@@ -245,3 +245,12 @@ test('inline overflow clipping uses scoped priority and permits reset over impor
   assert.equal(changeClip(clipped,'md:',null,null,el),'block');
  }
 });
+
+test('inline child alignment preserves shorthand source priority and scoped reset',()=>{
+ const {changeContainerAlignment,resetContainerAlignment}=require('../shell/react-selection.js'),el={style:{getPropertyValue:p=>['place-items','place-content'].includes(p)?'center':'',getPropertyPriority:()=>''}};
+ const context={display:'flex',flexDirection:'row',flexWrap:'wrap',writingMode:'horizontal-tb'},changed=changeContainerAlignment('flex','md:',2,2,context,null,el);
+ assert.match(changed,/md:!\[justify-content:flex-end\]/);assert.match(changed,/md:!\[align-items:flex-end\]/);assert.match(changed,/md:!\[align-content:flex-end\]/);
+ assert.equal(resetContainerAlignment(changed,'md:',context),'flex');
+ el.style.getPropertyPriority=p=>p==='place-items'?'important':'';
+ assert.throws(()=>changeContainerAlignment('flex','md:',2,2,context,null,el),/important inline/);
+});

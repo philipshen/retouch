@@ -43,15 +43,17 @@
     const V=root.RetouchHTMLCSSValues||require('./html-css-values.js');
     return I.replace(classes,token=>V.alignmentProperties(context).some(property=>alignmentMatch(property,token)),'');
   }
-  function alignmentClasses(classes,x,y,context={},inherited=''){
+  function inlineAlignment(el,property,important=false){return [property,property.endsWith('-items')?'place-items':'place-content'].some(key=>important?el.style.getPropertyPriority(key)==='important':!!el.style.getPropertyValue(key));}
+  function alignmentClasses(classes,x,y,context={},inherited='',el=null){
     if(![0,1,2].includes(x)||![0,1,2].includes(y))throw Error('Choose an alignment point.');
     const values=root.RetouchHTMLCSSValues||require('./html-css-values.js');
     const changes=values.childAlignment(x,y,context);
     for(const [property,value] of Object.entries(changes)){
+      if(el&&inlineAlignment(el,property,true))throw Error('An important inline rule controls child alignment.');
       const matches=token=>alignmentMatch(property,token);
       const shorthand=token=>property.endsWith('-items')?/^place-items-|^\[place-items:/.test(token):/^place-content-|^\[place-content:/.test(token);
       let addition='['+property+':'+value+']';
-      if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(matches(I.base(token)||'')||shorthand(I.base(token)||''))))addition='!'+addition;
+      if(el&&inlineAlignment(el,property)||[...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(matches(I.base(token)||'')||shorthand(I.base(token)||''))))addition='!'+addition;
       classes=I.replace(classes,matches,addition);
     }
     return classes;
@@ -318,8 +320,8 @@
         const picker=document.createElement('div');picker.className='layout-alignment';picker.setAttribute('role','group');picker.setAttribute('aria-label','Align children');
         for(let y=0;y<3;y++)for(let x=0;x<3;x++){
           const changes=values.childAlignment(x,y,css),label='Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x];
-          const active=()=>!info.styleScope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',blocked=current=>['place-items',...(!/grid/.test(current.display)?['place-content']:[]),...Object.keys(values.childAlignment(x,y,current))].some(property=>el.style.getPropertyValue(property));
-          const button=I.button('•',()=>{if(!el.isConnected||!active())return;const current=el.ownerDocument.defaultView.getComputedStyle(el);if(['flex','inline-flex','grid','inline-grid'].includes(current.display)&&!blocked(current))save(alignmentClasses(classes,x,y,current,inherited));});button.setAttribute('aria-label',label);button.title=label;
+          const active=()=>!info.styleScope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',blocked=current=>['place-items',...(!/grid/.test(current.display)?['place-content']:[]),...Object.keys(values.childAlignment(x,y,current))].some(property=>el.style.getPropertyPriority(property)==='important');
+          const button=I.button('•',()=>{if(!el.isConnected||!active())return;const current=el.ownerDocument.defaultView.getComputedStyle(el);if(['flex','inline-flex','grid','inline-grid'].includes(current.display)&&!blocked(current))save(alignmentClasses(classes,x,y,current,inherited,el));});button.setAttribute('aria-label',label);button.title=label;
           button.setAttribute('aria-pressed',String(Object.entries(changes).every(([property,value])=>css.getPropertyValue(property)===value)));
           if(!active()||blocked(css))button.disabled=true;
           picker.append(button);
@@ -400,6 +402,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={inlineOverflow,inlinePadding,paddingLogical,inlineDimensions,explicitLayoutClasses,gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={inlineAlignment,inlineOverflow,inlinePadding,paddingLogical,inlineDimensions,explicitLayoutClasses,gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);
