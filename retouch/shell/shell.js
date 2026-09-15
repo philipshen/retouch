@@ -27,7 +27,7 @@ let editing = null; // { el, id, info, original, originalHTML, snapshot, origina
 let inspectorTextCommit=null,inspectorSelectionSerial=0;
 let hoverEl = null;
 let measuring = false;
-let selectionMarquee=null,stopMarquee=null,stopDrawing=null,stopSVGDrag=null,frameRefreshDrawing=null;
+let selectionMarquee=null,stopMarquee=null,stopDrawing=null,stopSVGDrag=null,stopGroupDrag=null,frameRefreshDrawing=null;
 const marqueeSurface=document.createElement('div');marqueeSurface.className='selection-marquee-surface';document.body.append(marqueeSurface);
 const canvasSurface=document.getElementById('frameWrap');
 let sourceRequests = 0;
@@ -217,6 +217,14 @@ function hookFrame(d, w) {
   stopSVGDrag?.();stopSVGDrag=RetouchSVGDrag.mount({document:d,frame:iframe,candidate:vectorDragCandidate,
     prepare:async({target},current)=>{const selection=sel,valid=()=>current()&&sel===selection&&doc()===d&&!!vectorDragCandidate(target);await select(target,{current:valid});const result=current()&&vectorDragCandidate(target);return result?.info?result:null;},
     onStart:({info,target,infos},event,move,released)=>infos?moveSVGSelection({initialPointer:event,initialMove:move,pointerTarget:target}):resizeSVGOnCanvas(info,target,event,'se','move',{framePointer:true,initialMove:move,initialReleased:released}),onError:error=>toast(error.message,'err')});
+  const groupDragCandidate=node=>{
+   if(mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active||sel?.multiple?.length||!sel?.info)return null;
+   const matches=matchingEls(sel.info.id),target=matches.length===1?matches[0]:null;
+   return target?.hasAttribute('data-rt-group')&&target.contains(node)&&!layerLocks.locked(target)?{target,selectionInfo:sel.info}:null;
+  };
+  stopGroupDrag?.();stopGroupDrag=RetouchSVGDrag.mount({document:d,frame:iframe,candidate:groupDragCandidate,
+   prepare:async({target,selectionInfo},current)=>{const valid=()=>current()&&doc()===d&&groupDragCandidate(target)?.selectionInfo===selectionInfo;const prepared=await moveGroupOnCanvas(selectionInfo,null,{prepareOnly:true,valid});return prepared&&valid()?{target,selectionInfo,prepared}:null;},
+   onStart:({target,selectionInfo,prepared},event,move,released)=>void moveGroupOnCanvas(selectionInfo,null,{prepared,event,move,released,framePointer:true,target}),onError:error=>toast(error.message,'err')});
   stopMarquee?.();
   stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>window.__RT_RENDERING?.selectionStyling===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
     onChange:rect=>{selectionMarquee=rect?{document:d,rect}:null;},
@@ -1967,7 +1975,7 @@ function renderPanelContents(textEditing=false) {
   if(sel.multiple?.length>1){mountSelectionEffectStyles();mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchClassSiteVariables.mountSelection(sel.multiple,elements,styleScope,setReactClassesSelection,message=>toast(message,'err')),RetouchFlip.mountSelection(sel.multiple,elements,0,null,strategy),RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,(property,value,values)=>setSelectionColorOverride(property,value,undefined,values),id=>matchingEls(id)[0],changes=>setSelectionColorOverride('background-color',undefined,changes)));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchFlip.mountSelection(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes)),RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.svgMask?.canRelease||info.svgMask?.ownerId){const target=matchingEls(info.id)[0];panelBody.append(RetouchSVGMask.mount([info],[target],{current:()=>sel?.info===info&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&target?.isConnected&&!layerLocks.locked(target),save:writeSVGMask,edit:async ids=>{await restoreLayerSelection(ids);if(sel)renderPanel();await layers.refresh();}}));}
-  if(!sel.multiple?.length&&matchingEls(info.id)[0]?.hasAttribute('data-rt-group')){const section=RetouchInspector.section('Group');const button=RetouchInspector.button('Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';section.append(button);panelBody.append(section);}
+  if(!sel.multiple?.length&&matchingEls(info.id)[0]?.hasAttribute('data-rt-group')){const section=RetouchInspector.section('Group');const button=RetouchInspector.button('Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag the selected group directly on the canvas, or use this action for keyboard movement.';section.append(button);panelBody.append(section);}
   if(info.canCreateComponent)panelBody.append(createComponentSection(info));
 
   if(info.components?.length) {
@@ -3402,21 +3410,22 @@ async function refreshGroupMove(infos,before){
  else if(infos.every(info=>info.contextSelection&&info.classSourceLiteral))await refreshLiteralLiquidClasses(infos,before);
  else await refreshWrittenElement(infos[0],el=>classSelectionMatches(infos,el.ownerDocument));
 }
-async function moveGroupOnCanvas(info,opener){
+async function moveGroupOnCanvas(info,opener,gesture={}){
  stopDrawing?.();if(panelTasks||sourceRequests||undoBusy||editing||sel?.info!==info)return;
- const scope=styleScope,group=matchingEls(info.id)[0],current=()=>mode==='edit'&&sel?.info.id===info.id&&sel.info.hash===info.hash&&styleScope===scope&&!sel.multiple?.length&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!document.querySelector('dialog[open]');
+ const scope=styleScope,hash=info.hash,group=matchingEls(info.id)[0],current=()=>mode==='edit'&&sel?.info.id===info.id&&sel.info.hash===hash&&styleScope===scope&&!sel.multiple?.length&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!document.querySelector('dialog[open]');
  try{
   if(matchingEls(info.id).length!==1)throw Error('Select a group with one rendered occurrence.');
   const width=scope?Number(/^min-\[(\d+)px\]:$/.exec(scope)?.[1]):0;
   if(info.cssAuthoring?(!Number.isInteger(width)||width>doc().defaultView.innerWidth):(scope&&document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='true'))throw Error('Choose a screen where the group edit range is active.');
-  const members=RetouchGroupMove.measure(group,el=>layerLocks.locked(el)),responses=await Promise.all(members.map(item=>api('GET',resolveUrl(item.id))));
-  if(!current())return;
+  const members=gesture.prepared?.members||RetouchGroupMove.measure(group,el=>layerLocks.locked(el)),responses=gesture.prepared?gesture.prepared.infos.map(element=>({ok:true,element})):await Promise.all(members.map(item=>api('GET',resolveUrl(item.id))));
+  if(!current()||gesture.valid&&!gesture.valid())return;
   if(!responses.every(r=>r?.ok&&r.element.hash===info.hash&&r.element.file===info.file))throw Error('Re-select group contents from the same source file.');
   const infos=responses.map(r=>r.element),css=infos.every(item=>item.cssAuthoring);
   if(!css&&!infos.every(item=>item.classSelection&&!item.classNameDynamic))throw Error('Group movement needs editable child styles.');
   if(members.some(item=>matchingEls(item.id).length!==1))throw Error('Group movement needs one rendered occurrence of each child.');
+  if(gesture.prepareOnly)return {members,infos};
   canvasPan.cancel();
-  stopDrawing=RetouchCanvasMove.mount({target:members[0].el,targets:members.map(item=>item.el),selectionId:info.id,frame:iframe,canvas:canvasSurface,mode:'move',opener,
+  stopDrawing=RetouchCanvasMove.mount({initial:gesture.event?gesture:null,target:members[0].el,targets:members.map(item=>item.el),selectionId:info.id,frame:iframe,canvas:canvasSurface,mode:'move',opener,
    onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err'),onCommit:async delta=>{
     if(!current())return;
     try{

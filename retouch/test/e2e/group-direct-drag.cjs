@@ -1,0 +1,23 @@
+'use strict';
+const assert=require('node:assert/strict');
+exports.run=async({page,app,read,wait,settled,kind})=>{
+ const original=read(),measure=()=>app.locator('h1,p').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect();return [r.x,r.y,r.width,r.height];}));
+ const group=page.getByRole('treeitem',{name:'div · Group',exact:true});
+ async function begin(){
+  await page.evaluate(()=>RetouchZoom.toSelection(matchingEls(sel.info.id)));await settled();
+  await app.locator('body').evaluate(()=>window.__directGroupPointer=[]);
+  const r=await app.locator('h1').boundingBox();await page.mouse.move(r.x+r.width*.4,r.y+r.height*.5);await page.mouse.down();await page.keyboard.down('Alt');
+  return {x:r.x+r.width*.4,y:r.y+r.height*.5};
+ }
+ async function end(){await page.mouse.up();await page.keyboard.up('Alt');}
+ async function gate(){const ids=new Set(await app.locator('[data-rt-group] > [data-rt]').evaluateAll(nodes=>nodes.map(el=>el.getAttribute('data-rt'))));let release,entered=0,active=0;const ready=new Promise(resolve=>release=resolve),handler=async route=>{if(!ids.has(new URL(route.request().url()).searchParams.get('id')))return route.continue();entered++;active++;try{await ready;await route.continue();}finally{active--;}};await page.route('**/rt/__api/resolve?*',handler);return {wait:()=>wait(()=>entered>=2),release:async()=>{release();await wait(()=>active===0);await page.unroute('**/rt/__api/resolve?*',handler);}};}
+ const before=await measure(),held=await gate(),start=await begin();await page.mouse.move(start.x+36,start.y+18,{steps:5});await held.wait();await end();assert.equal(read(),original,'release while resolving cannot write early');await held.release();await wait(()=>read()!==original);await settled();
+ const saved=read(),events=await app.locator('body').evaluate(()=>window.__directGroupPointer),down=events.find(e=>e.type==='pointerdown'),up=events.find(e=>e.type==='pointerup');assert.ok(down&&up);const dx=up.x-down.x,dy=up.y-down.y;
+ await wait(async()=>Math.abs((await measure())[0][0]-before[0][0]-dx)<.1);const moved=await measure();for(let i=0;i<moved.length;i++)for(let j=0;j<4;j++)assert.ok(Math.abs(moved[i][j]-before[i][j]-(i<2&&j<2?(j?dy:dx):0))<.1,'direct drag geometry');assert.equal(await group.getAttribute('aria-selected'),'true');assert.equal(await page.locator('.canvas-move-surface').count(),0);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();assert.equal(await group.getAttribute('aria-selected'),'true');await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===saved);await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();
+ await app.locator('h1').click();await settled();assert.equal(read(),original,'a click does not move the group');assert.equal(await group.getAttribute('aria-selected'),'true');
+ const stale=await gate(),old=await begin();await page.mouse.move(old.x+40,old.y+10,{steps:5});await stale.wait();await end();await page.getByRole('treeitem',{name:'p · Named text',exact:true}).click();await settled();await stale.release();await settled();assert.equal(read(),original,'selection changes during resolution cancel the source transaction');assert.equal(await page.getByRole('treeitem',{name:'p · Named text',exact:true}).getAttribute('aria-selected'),'true');assert.equal(await page.locator('.canvas-move-surface').count(),0);await group.click();await settled();
+ const canceled=await gate(),next=await begin();await page.mouse.move(next.x+40,next.y+10,{steps:5});await canceled.wait();await page.keyboard.press('Escape');await end();await canceled.release();await settled();assert.equal(read(),original,'Escape during resolution cancels the source transaction');assert.equal(await page.locator('.canvas-move-surface').count(),0);
+ await group.click();await settled();const live=await begin();await page.mouse.move(live.x+20,live.y+10,{steps:4});await page.locator('.canvas-move-surface').waitFor();await page.mouse.move(live.x+40,live.y+20,{steps:4});await end();await wait(()=>read()!==original);await settled();assert.equal(await group.getAttribute('aria-selected'),'true');await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();
+ console.log(kind+': PASS direct group drag, release during delayed source lookup, live captured drag, Escape and selection-change cancellation, exact undo/redo and retained group selection');
+};

@@ -17783,3 +17783,34 @@ Remaining: perspective/3D and motion-path containers, nonliteral/ambiguous sourc
 ownership, hidden/direct-text/SVG children, group resize/rotation and full Figma
 parity. Native app rebuild, notarization and trusted distribution remain separate
 and were not performed in this checkpoint.
+
+### Direct canvas dragging for selected groups (2026-09-15)
+
+A selected group can now be dragged directly from its rendered children. The
+existing threshold detector distinguishes clicks from drags and prepares child
+source metadata asynchronously. Canvas movement accepts captured iframe pointer
+events and replays the last position when the pointer was released during lookup,
+so a fast drag commits one atomic transaction. Escape, selection changes, source
+revision changes, and viewport invalidation prevent stale work from committing.
+The inspector action remains available for keyboard movement and advertises the
+direct gesture in its tooltip.
+
+Validation: 1,644 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit
+workflows prove direct dragging, release while child resolution is deliberately
+held, continued captured dragging, ordinary clicks, Escape and selection-change
+cancellation while resolving, exact undo/redo and retained group selection. The
+React and WebKit fixtures include percentage offsets and transformed ancestors.
+Existing multi-layer movement passes at 50/100/200 percent zoom, and group picking,
+double-click text entry, tree navigation and right-click ungrouping still pass.
+
+Logs: `/tmp/retouch-group-direct-units-final.log`,
+`/tmp/retouch-group-direct-html-view.log`,
+`/tmp/retouch-group-direct-react-complete.log`,
+`/tmp/retouch-group-direct-webkit-complete.log`,
+`/tmp/retouch-group-direct-selection-regression.log`, and
+`/tmp/retouch-group-direct-picking-regression.log`.
+
+This gesture currently begins from an already selected group. Selecting and
+dragging an unselected group in one gesture, group resizing/rotation, the other
+remaining unsupported source/transform cases, full Figma parity, and notarized
+desktop distribution remain unfinished. No desktop build or push in this step.
