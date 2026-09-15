@@ -18490,3 +18490,28 @@ Logs: `/tmp/retouch-shared-flex-compact-html.log`,
 
 Full Figma visual/interaction parity, arbitrary-site editing and trusted public
 Homebrew installation remain incomplete. No desktop rebuild or push.
+
+### Shared physical stack presets (2026-09-15)
+
+Shared HTML layout now has compact Normal flow, Vertical stack and Horizontal
+stack buttons above alignment and gap. Stack presets map the requested physical
+orientation through each container's writing mode, set flex display and disable
+wrapping in one atomic per-layer edit. Normal flow sets block display. Pressed
+state reflects every selected container; mixed modes leave the buttons unselected.
+Keyboard arrows navigate the segmented control, and presets are disabled outside
+the selected pixel edit range.
+
+Chromium and WebKit verified child geometry in horizontal and vertical writing
+modes, all three presets, pressed state, keyboard navigation and exact source
+undo/redo. The shared alignment regression (nine physical positions, gap/reset,
+advanced distribution and keyboard navigation) and all 1,652 unit tests passed.
+Inspected `/tmp/retouch-shared-stack-presets-html.png` with the segmented presets
+above the compact alignment row.
+
+Logs: `/tmp/retouch-shared-stack-html.log`,
+`/tmp/retouch-shared-stack-webkit.log`,
+`/tmp/retouch-shared-stack-alignment-regression.log`, and
+`/tmp/retouch-shared-stack-units.log`.
+
+Full Figma fidelity, arbitrary-site support and trusted public Homebrew
+installation remain incomplete. No desktop rebuild or push.
