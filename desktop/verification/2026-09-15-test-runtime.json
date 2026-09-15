@@ -1,0 +1,56 @@
+{
+  "package": {
+    "sourceCommit": "e0f756038be2822e7d50580e8a2bb39a18de2422",
+    "sourceTreeDirty": false,
+    "sourceFiles": 249,
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "signature": "strict verification passed; trust and notarization are separate checks"
+  },
+  "runtime": {
+    "packagedFiles": 1299,
+    "packagedSymlinks": 2,
+    "addedDependencyRoots": [
+      "node_modules/.bin/liquid",
+      "node_modules/.bin/liquidjs",
+      "node_modules/commander",
+      "node_modules/liquidjs"
+    ],
+    "integrity": "Packaged bytes, modes, symlink targets and inventories match"
+  },
+  "description": "Automated preparation and post-test verification of a separate runtime copied from the extracted signed groups candidate.",
+  "tests": {
+    "desktop": 32,
+    "packagedRuntimeUnits": 1639,
+    "liquidWebKit": "PASS responsive grouping and ungrouping at 390/768/1100, geometry, exact undo/redo and selection"
+  },
+  "logs": {
+    "prepare": {
+      "path": "/tmp/retouch-test-runtime-prepare.json",
+      "sha256": "97374a84527ddef5e02f1b6862c562c4410fda6ffeea8d781fb6105815542738"
+    },
+    "finalIntegrity": {
+      "path": "/tmp/retouch-test-runtime-final.json",
+      "sha256": "97374a84527ddef5e02f1b6862c562c4410fda6ffeea8d781fb6105815542738"
+    },
+    "desktop": {
+      "path": "/tmp/retouch-test-runtime-desktop.log",
+      "sha256": "dc34ff6067e304b1de3fdfe2a11b5c576b781dbf9b6cf4178c93f65b01d6dd15"
+    },
+    "runtimeUnits": {
+      "path": "/tmp/retouch-test-runtime-units.log",
+      "sha256": "00ad14205019707c73fd3f1f8b8f2590cab18aae4d286439c42fe734be72a084"
+    },
+    "webkit": {
+      "path": "/tmp/retouch-test-runtime-webkit.log",
+      "sha256": "b738c2dc76de959ad03792ddf66a3a1d11dc3572b4e0250ce85ab34ec038b873"
+    }
+  },
+  "limitations": [
+    "Native app not launched.",
+    "No notarization or cask installation performed.",
+    "Tests cover selected workflows, not full Figma parity or arbitrary-site compatibility."
+  ]
+}

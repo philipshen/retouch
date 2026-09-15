@@ -17701,3 +17701,19 @@ Clean source commit e0f756038be2822e7d50580e8a2bb39a18de2422 is packaged as a un
 The extracted editor runtime passed 1,639 unit tests, React/Chromium nested-group navigation, and Liquid/WebKit responsive grouping/history. Installing the test-only Liquid dependency initially upgraded tailwind-merge; every bundled dependency entry was restored from the archive before the final reruns. All 1,050 bundled dependency files and source-manifest entries still matched after testing. Evidence is recorded in `desktop/verification/2026-09-15-groups-developer-id.json`.
 
 Gatekeeper rejected the candidate as Unnotarized Developer ID (exit 3). No GUI launch, notarization submission, cask installation, or public release was attempted. Trusted distribution still needs notarization credentials/profile and acceptance; Intel execution is unverified. This candidate update does not complete Figma or arbitrary-site parity.
+
+### Packaged test-runtime isolation (2026-09-15)
+
+Added `desktop/scripts/test-runtime.cjs`: installs lockfile test dependencies only
+in disposable staging, copies missing packages into a separate runtime, preserves
+packaged dependencies on collisions, and verifies the original app signature plus
+packaged file bytes, modes, symlinks and inventories before/after testing. Rejects
+existing/overlapping destinations and external symlinks; cleans failed preparation.
+
+Validation: 32 desktop tests pass, including simulated npm upgrades, scoped package
+collisions, executable symlinks, drift and failure cleanup. The automated copy of
+the signed e0f7560 candidate passed 1,639 units and Liquid/WebKit responsive group
+geometry/history at 390/768/1100px. Post-test verification confirms all 1,299
+packaged files and 2 symlinks unchanged. Receipt:
+`desktop/verification/2026-09-15-test-runtime.json`. No native launch, notarization,
+or cask installation performed. Full parity and trusted distribution remain open.

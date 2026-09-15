@@ -1,5 +1,30 @@
 # Retouch for macOS
 
+## Testing an extracted package without dependency drift
+
+Use a new directory outside the app bundle. This verifies the package signature,
+installs lockfile-pinned test dependencies in disposable staging, and copies only
+missing dependencies into a separate runtime. Packaged dependencies take precedence,
+including scoped packages and executable links. npm never runs inside the app or
+its runtime copy. Install scripts are disabled.
+
+```sh
+node desktop/scripts/test-runtime.cjs prepare /path/to/Retouch.app /path/to/new-runtime retouch/test
+cd /path/to/new-runtime
+node --test 'test/**/*.test.cjs'
+# Run the relevant browser workflows here as well.
+cd /path/to/retouch-checkout
+node desktop/scripts/test-runtime.cjs verify /path/to/Retouch.app /path/to/new-runtime
+```
+
+Both commands emit JSON evidence. The final verification checks the original app
+signature and compares packaged file bytes, permissions, symlink targets, and
+inventories against the tested copy. Extra files within a packaged dependency or
+source directory fail verification. Test files and additional test dependencies
+are permitted; they are not shipped. Use tests from the candidate source revision
+and retain the command outputs and test logs together. This verifies runtime
+integrity, not native launch, notarization, or complete feature coverage.
+
 ## Latest groups/editor candidate (2026-09-15, e0f7560)
 
 The universal Developer ID signed archive now includes native parent moves,
