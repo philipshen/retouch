@@ -18444,3 +18444,27 @@ Logs: `/tmp/retouch-shared-layout-context-html-final.log`,
 
 Full Figma visual/interaction parity, arbitrary-site editing and trusted public
 Homebrew installation remain incomplete. No desktop rebuild or push.
+
+### Shared HTML flex child-alignment grid (2026-09-15)
+
+Shared HTML flex selections now expose the compact 3-by-3 child-alignment picker.
+Each container resolves a physical position using its own writing mode, direction,
+flex direction and wrapping mode; one click writes the per-container CSS changes
+atomically. Pressed state requires every selected container to match. The picker
+uses the inspector organizer's existing keyboard grid navigation and focus
+restoration. Controls disable outside a pixel edit range, and the click handler
+rechecks the current viewport and container layout before writing.
+
+Chromium and WebKit verified all nine physical positions against measured child
+rectangles in containers combining RTL, row/column reversal, vertical-rl writing
+and wrap-reverse. Exact source undo/redo, pressed state and two-axis keyboard
+navigation passed. The contextual shared-layout regression and all 1,652 unit
+tests passed. Visually inspected `/tmp/retouch-shared-flex-alignment-html.png`.
+
+Logs: `/tmp/retouch-shared-flex-alignment-html-final.log`,
+`/tmp/retouch-shared-flex-alignment-webkit-verified.log`,
+`/tmp/retouch-shared-flex-alignment-layout-regression.log`, and
+`/tmp/retouch-shared-flex-alignment-units-final.log`.
+
+Full Figma fidelity, arbitrary-site editing and trusted public Homebrew
+installation remain incomplete. No desktop rebuild or push.
