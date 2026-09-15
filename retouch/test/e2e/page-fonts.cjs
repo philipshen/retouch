@@ -1352,10 +1352,18 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    const field=page.getByLabel('Shared Padding',{exact:true}),padding=()=>app.locator('h1,p.other-font').evaluateAll(nodes=>nodes.map(el=>['top','right','bottom','left'].map(side=>getComputedStyle(el).getPropertyValue('padding-'+side))));
    await field.fill('12');await field.press('Enter');await wait(()=>read()!==before);await settled();await wait(async()=>(await padding()).every(row=>row.every(v=>v==='12px')));const uniform=read();
    if(process.env.RT_E2E_SHARED_SPACING_SCRUB){
-    const label=field.locator('..').locator(':scope > span');await label.scrollIntoViewIfNeeded();
+    const label=field.locator('..').locator(':scope > span');await label.evaluate(el=>el.scrollIntoView({block:'nearest'}));
     const begin=async()=>{const b=await label.boundingBox();assert.ok(b);await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();return b;};
     let b=await begin();await page.keyboard.down('Shift');await page.mouse.move(b.x+b.width/2+1,b.y+b.height/2);await page.keyboard.up('Shift');await wait(async()=>(await padding()).every(row=>row.every(v=>v==='22px')));assert.equal(read(),uniform);await page.keyboard.press('Escape');await page.mouse.up();await wait(async()=>(await padding()).every(row=>row.every(v=>v==='12px')));
     b=await begin();await page.keyboard.down('Alt');await page.mouse.move(b.x+b.width/2+5,b.y+b.height/2);await page.keyboard.up('Alt');await page.mouse.up();await settled();await wait(async()=>(await padding()).every(row=>row.every(v=>v==='12.5px')));assert.notEqual(read(),uniform);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),uniform);await wait(async()=>(await padding()).every(row=>row.every(v=>v==='12px')));
+   }
+   if(process.env.RT_E2E_SHARED_SPACING_SCRUB){
+    for(const unit of ['rem','em']){
+     await field.fill('1'+unit);await field.press('Enter');await settled();const source=read();assert.notEqual(source,uniform);await wait(async()=>await field.inputValue()==='1'+unit);for(const side of ['top','right','bottom','left'])assert.equal(await page.getByLabel('Shared Padding '+side,{exact:true}).inputValue(),'1'+unit);
+     const expected=await app.locator('h1,p.other-font').evaluateAll((nodes,unit)=>nodes.map(el=>2*parseFloat(getComputedStyle(unit==='rem'?el.ownerDocument.documentElement:el).fontSize)),unit);
+     const label=field.locator('..').locator(':scope > span');await label.evaluate(el=>el.scrollIntoView({block:'nearest'}));const box=await label.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+1,box.y+box.height/2);await wait(async()=>(await padding()).every((row,i)=>row.every(v=>Math.abs(parseFloat(v)-expected[i])<.01)));assert.equal(read(),source);assert.equal(await field.inputValue(),'2'+unit);await page.mouse.up();await settled();await wait(()=>read()!==source);const dragged=read();assert.equal(await field.inputValue(),'2'+unit);
+     await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),source);await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();assert.equal(read(),dragged);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),uniform);
+    }
    }
    if(process.env.RT_E2E_SHARED_SPACING_CONTEXT){
     const label=field.locator('..').locator(':scope > span'),start=async()=>{await wait(async()=>{try{await label.scrollIntoViewIfNeeded();return true;}catch(error){if(/not attached/.test(error.message))return false;throw error;}});const b=await label.boundingBox();await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();return {x:b.x+b.width/2,y:b.y+b.height/2};};

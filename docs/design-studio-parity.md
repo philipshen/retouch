@@ -18813,3 +18813,24 @@ Logs: `/tmp/retouch-shared-gap-units-react.log`,
 `/tmp/retouch-shared-gap-units.log`. No desktop rebuild or push this increment.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete.
+
+
+### Shared padding units — 2026-09-15
+
+Shared React/Liquid padding fields now resolve authored physical-edge values
+with the same responsive scope, inherited priority and writing-direction
+context as the single-container inspector. Uniform and per-edge fields retain
+`rem` and `em`; differing computed pixel sizes no longer hide a common authored
+relative value behind Mixed or silently change its unit on the next drag.
+
+Chromium/React and WebKit/Liquid passed real pointer tests for uniform padding
+in rem and em, checking per-layer computed values during preview, unchanged
+source until release, retained units after rebuild, exact one-step Undo/Redo,
+Shift/Alt drag modifiers, Escape, per-edge mixed values, reset and phone scope
+isolation. All 1,663 unit tests passed.
+
+Logs: `/tmp/retouch-shared-padding-units-react.log`,
+`/tmp/retouch-shared-padding-units-liquid.log`, and
+`/tmp/retouch-shared-padding-units.log`. No desktop rebuild or push this increment.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete.
