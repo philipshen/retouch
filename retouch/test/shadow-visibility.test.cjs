@@ -29,11 +29,24 @@ test('malformed, duplicate, excessive and unknown metadata fields are rejected',
  const css=S.write([shadow('#12345680',{hidden:true})])['box-shadow'],entry={index:0,shadow:shadow('#12345680')};
  for(const value of ['','rtsh1-ff','rtsh1-0','rtsh1-'+ 'aa'.repeat(40000),encode({version:2,hidden:[]}),encode({version:1,hidden:[entry,entry]}),encode({version:1,hidden:[{...entry,index:16}]}),encode({version:1,hidden:[{...entry,unknown:true}]}),encode({version:1,hidden:[{...entry,shadow:{...entry.shadow,unknown:true}}]}),encode({version:1,hidden:[],unknown:true})])assert.throws(()=>S.read(css,value));
 });
-test('invalid edits and unsupported contextual colors fail without altering the input model',()=>{
+test('invalid edits and unsupported variable bindings fail without altering the input model',()=>{
  const model=[shadow()],before=structuredClone(model),values=S.write(model);
- for(const changes of [{blur:-1},{x:Infinity},{inset:'yes'},{hidden:1},{color:'var(--brand)'},{color:'currentColor'},{unknown:4}])assert.throws(()=>S.update(values['box-shadow'],values[S.property],0,changes));
+ for(const changes of [{blur:-1},{x:Infinity},{inset:'yes'},{hidden:1},{color:'var(--brand)'},{unknown:4}])assert.throws(()=>S.update(values['box-shadow'],values[S.property],0,changes));
  for(const index of [-1,1,.5])assert.throws(()=>S.update(values['box-shadow'],values[S.property],index,{hidden:true}));assert.deepEqual(model,before);assert.throws(()=>S.write(Array.from({length:17},()=>shadow())));
 });
 test('sixteen hidden shadows survive a complete source metadata round trip',()=>{
  const model=Array.from({length:16},(_,i)=>shadow('color(display-p3 0.1 0.2 0.3 / 0.45)',{x:i,inset:i%2===0,hidden:true})),values=S.write(model);assert.deepEqual(read(values),model);assert.ok(values[S.property].length<65536);
+});
+
+test('visible CSS colors remain editable beside hidden literal shadows',()=>{
+ for(const color of ['currentColor','rebeccapurple','hsl(210 50% 40% / .6)','oklch(.7 .2 140 / .6)','oklab(.7 .1 .2 / .8)']){
+  const model=[shadow('#33669980',{hidden:true}),shadow(color,{x:11})],saved=S.write(model),roundtrip=read(saved);assert.equal(roundtrip[1].color,color);assert.equal(roundtrip[1].hidden,false);
+  const edited=S.update(saved['box-shadow'],saved[S.property],1,{x:19}),next=read(edited);assert.equal(next[1].color,color);assert.equal(next[1].x,19);assert.deepEqual(next[0],roundtrip[0]);
+  assert.throws(()=>S.update(edited['box-shadow'],edited[S.property],1,{hidden:true}),/before hiding this shadow/);
+  const shown=S.update(edited['box-shadow'],edited[S.property],0,{hidden:false});assert.equal(read(shown)[1].color,color);assert.equal(shown[S.property],'none');
+ }
+});
+test('hidden metadata cannot contain contextual or unsupported original colors',()=>{
+ const values=S.write([shadow('#12345680',{hidden:true})]);
+ for(const color of ['currentColor','rebeccapurple','oklch(.7 .2 140 / .6)'])assert.throws(()=>S.read(values['box-shadow'],encode({version:1,hidden:[{index:0,shadow:shadow(color)}]})));
 });

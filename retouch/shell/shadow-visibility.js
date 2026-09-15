@@ -2,10 +2,11 @@
  'use strict';
  const V=typeof module==='object'&&module.exports?require('./html-css-values.js'):root.RetouchHTMLCSSValues,P=typeof module==='object'&&module.exports?require('./palette-values.js'):root.RetouchPaletteValues;
  const property='--rt-hidden-shadows',keys=['x','y','blur','spread','color','inset'],fail=()=>{throw Error('The hidden shadow settings changed outside Retouch. Restore or update their source first.');};
- function normalize(value){
+ function normalize(value,requireLiteral=value?.hidden===true){
   if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!keys.includes(key)&&key!=='hidden')||keys.some(key=>!Object.hasOwn(value,key))||typeof value.inset!=='boolean'||value.hidden!==undefined&&typeof value.hidden!=='boolean')fail();
   for(const key of ['x','y','blur','spread'])if(!Number.isFinite(value[key]))fail();
-  const color=P.fromComputed(value.color),shadow=Object.fromEntries(keys.map(key=>[key,key==='color'?color:value[key]]));
+  let color;try{color=P.fromComputed(value.color);}catch(error){if(requireLiteral)throw Error('Choose a hex, sRGB or Display P3 color before hiding this shadow.');if(typeof value.color!=='string'||!V.valid('color',value.color))fail();color=value.color;}
+  const shadow=Object.fromEntries(keys.map(key=>[key,key==='color'?color:value[key]]));
   if(V.parseShadows(V.serializeShadows([shadow]))?.length!==1)fail();return {...shadow,hidden:value.hidden??false};
  }
  function transparent(color){const paint=P.parse(color);return paint.space==='display-p3'?P.p3(paint.channels,0):P.srgb(paint.channels,0);}
@@ -14,10 +15,10 @@
   if(typeof value!=='string'||value.length>65536||!/^rtsh1-(?:[a-f\d]{2})+$/.test(value))fail();
   let data;try{const bytes=Uint8Array.from(value.slice(6).match(/../g),hex=>parseInt(hex,16));data=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{fail();}
   if(!data||Object.keys(data).sort().join(',')!=='hidden,version'||data.version!==1||!Array.isArray(data.hidden)||data.hidden.length>16)fail();
-  const seen=new Set();return data.hidden.map(entry=>{if(!entry||Object.keys(entry).sort().join(',')!=='index,shadow'||!Number.isInteger(entry.index)||entry.index<0||entry.index>=16||seen.has(entry.index)||!entry.shadow||Object.keys(entry.shadow).some(key=>!keys.includes(key)))fail();seen.add(entry.index);return {index:entry.index,shadow:normalize(entry.shadow)};});
+  const seen=new Set();return data.hidden.map(entry=>{if(!entry||Object.keys(entry).sort().join(',')!=='index,shadow'||!Number.isInteger(entry.index)||entry.index<0||entry.index>=16||seen.has(entry.index)||!entry.shadow||Object.keys(entry.shadow).some(key=>!keys.includes(key)))fail();seen.add(entry.index);return {index:entry.index,shadow:normalize(entry.shadow,true)};});
  }
  function read(css,metadata='none'){
-  const parsed=V.parseShadows(css);if(parsed===null)fail();const shadows=parsed.map(normalize);
+  const parsed=V.parseShadows(css);if(parsed===null)fail();const shadows=parsed.map(value=>normalize(value));
   for(const {index,shadow}of decode(metadata)){
    const current=shadows[index];if(!current||['x','y','blur','spread','inset'].some(key=>current[key]!==shadow[key]))fail();
    const actual=P.parse(current.color),expected=P.parse(shadow.color);if(actual.alpha!==0||actual.space!==expected.space||actual.channels.some((channel,i)=>Math.abs(channel-expected.channels[i])>1e-6))fail();
@@ -26,7 +27,7 @@
   return shadows;
  }
  function write(input){
-  if(!Array.isArray(input)||input.length>16)fail();const shadows=input.map(normalize),hidden=shadows.flatMap((shadow,index)=>shadow.hidden?[{index,shadow:Object.fromEntries(keys.map(key=>[key,shadow[key]]))}]:[]);
+  if(!Array.isArray(input)||input.length>16)fail();const shadows=input.map(value=>normalize(value)),hidden=shadows.flatMap((shadow,index)=>shadow.hidden?[{index,shadow:Object.fromEntries(keys.map(key=>[key,shadow[key]]))}]:[]);
   const metadata=hidden.length?'rtsh1-'+Array.from(new TextEncoder().encode(JSON.stringify({version:1,hidden})),byte=>byte.toString(16).padStart(2,'0')).join(''):'none';decode(metadata);
   const css=V.serializeShadows(shadows.map(shadow=>({...shadow,color:shadow.hidden?transparent(shadow.color):shadow.color})));if(V.parseShadows(css)===null)fail();return {'box-shadow':css,[property]:metadata};
  }
