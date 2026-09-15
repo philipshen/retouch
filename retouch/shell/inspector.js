@@ -62,6 +62,7 @@
     return {...g,layoutLeft:g.layoutLeft+x,layoutTop:g.layoutTop+y,width:Math.abs(g.width*sx),height:Math.abs(g.height*sy),sourceTransformOrigin:g.transformOrigin,transformOrigin:(origin[0]-x)+'px '+(origin[1]-y)+'px'};
   }
   function outlineGeometry(el){const g=geometry(el,{allowRotation:true,allowScale:true,layoutOnly:true});return {...scaledOutline(g),sourceScale:el.ownerDocument.defaultView.getComputedStyle(el).scale};}
+  function positionGeometry(el){try{return geometry(el,{allowRotation:true,allowScale:true});}catch(error){return localPositionGeometry(el);}}
   function localPositionGeometry(el){
     const d=el.ownerDocument,w=d.defaultView,css=w.getComputedStyle(el),parent=el.offsetParent;
     if(el.namespaceURI!=='http://www.w3.org/1999/xhtml'||css.position!=='absolute'||!parent)throw Error('Local position requires an absolute HTML layer with a containing frame.');
@@ -567,7 +568,7 @@
     const resetRotation=button('Reset rotation',()=>writeRotation(null));resetRotation.disabled=root.RetouchReactSelection.change(classes,'','rotate',null)===classes;sec.append(resetRotation);
     if(rotationBlocked()){rotation.disabled=true;resetRotation.disabled=true;rotation.title='Edit this layer’s inline or 3D rotation in its source first.';}
     const applyAnchor = (x, y) => {
-      try { const g=geometry(el,{allowRotation:true,allowScale:true});if(onAlign){onAlign(g,g,{x,y});return;}const next=anchorClasses(classes,g,x,y,info.anchorInheritedClasses);if(onGeometry)onGeometry(next,g);else save(next); } catch (e) { notify(e.message); }
+      try { const g=positionGeometry(el);if(onAlign){onAlign(g,g,{x,y});return;}const next=anchorClasses(classes,g,x,y,info.anchorInheritedClasses);if(onGeometry)onGeometry(next,g);else save(next); } catch (e) { notify(e.message); }
     };
     select(sec, 'Positioning', [['static','Auto / flow'],['relative','Relative'],['absolute','Absolute'],['fixed','Fixed'],['sticky','Sticky']], mode, value => {
       if (value === 'absolute' && mode !== 'absolute') {
@@ -578,9 +579,9 @@
     if (mode === 'absolute') {
       if(onAlign&&css.position==='absolute')try{sec.insertBefore(root.RetouchSelectionLayout.singlePosition(el,onAlign,notify),sec.children[1]);}catch(error){note(sec,error.message,'refused');}
       let g;
-      try { g = geometry(el,{allowRotation:true,allowScale:true}); } catch (e) { const coordinates=sec.querySelector('[aria-label="X"]');if(coordinates&&onTransform&&!coordinates.dataset.localCoordinates){for(const action of ['move','resize']){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));sec.append(control);}}note(sec,coordinates?'Anchor presets and canvas transforms for this coordinate system are not available yet.':e.message,coordinates?'':'refused'); return sec; }
+      try { g = positionGeometry(el); } catch (e) { const coordinates=sec.querySelector('[aria-label="X"]');if(coordinates&&onTransform&&!coordinates.dataset.localCoordinates){for(const action of ['move','resize']){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));sec.append(control);}}note(sec,coordinates?'Anchor presets and canvas transforms for this coordinate system are not available yet.':e.message,coordinates?'':'refused'); return sec; }
       note(sec, `Anchored to ${g.parentLabel}`);
-      if(onTransform){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));tools.append(control);}sec.append(tools);}
+      if(onTransform&&!g.localCoordinates){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));tools.append(control);}sec.append(tools);}
       const x = inferredAnchor(classes,'x',info.anchorInheritedClasses), y = inferredAnchor(classes,'y',info.anchorInheritedClasses);
       const horizontal=select(sec,'Horizontal anchor',[['start','Left'],['center','Center'],['end','Right'],['stretch','Left + right'],['scale','Scale']],x,v=>applyAnchor(v,y));
       const vertical=select(sec,'Vertical anchor',[['start','Top'],['center','Center'],['end','Bottom'],['stretch','Top + bottom'],['scale','Scale']],y,v=>applyAnchor(x,v));
@@ -1043,6 +1044,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={localPositionGeometry,textResizing,textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={positionGeometry,localPositionGeometry,textResizing,textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

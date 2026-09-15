@@ -19685,3 +19685,28 @@ Direct canvas transforms, anchor presets and layers with their own transforms
 inside these frames remain incomplete. The UI does not offer nonworking canvas
 buttons for this local-coordinate fallback. Full arbitrary-site/Figma parity
 and trusted Homebrew distribution remain incomplete. No push or native rebuild.
+
+
+### Responsive anchors inside transformed frames
+
+Anchor controls now share the local-position measurement path for absolute
+HTML layers inside transformed frames. Edge, center, stretch and proportional
+anchors use local frame dimensions and preserve the initial rendered placement.
+This supports HTML CSS and React/Liquid utility writes. Direct canvas transform
+buttons remain unavailable for this coordinate path.
+
+Validation: 1,672 unit tests passed. HTML/Chromium, React/Chromium and
+Liquid/WebKit Text-tool suites verify both axes with a rotated/scaled frame
+whose width and height respond to screen changes. They check edge distances,
+center offsets, stretch dimensions and proportional position/size between
+768x1024 and 1440x900 previews, with unchanged source during preview and exact
+undo afterward. The separate HTML positioning regression passed flow-to-absolute
+conversion, constraints, scope/reset and canvas pointer/keyboard gestures.
+Logs: `/tmp/retouch-local-anchors-{html,react,liquid}-verified.log`,
+`/tmp/retouch-local-anchors-units.log`, and
+`/tmp/retouch-local-anchors-position-regression.log`.
+
+The test skips anchor selections already active: selecting an unchanged anchor
+need not rewrite source. Layer-owned transforms within transformed frames,
+direct canvas movement/resizing there, arbitrary-site coverage and the trusted
+Homebrew release remain incomplete. No push or native rebuild.
