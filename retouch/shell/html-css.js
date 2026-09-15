@@ -270,7 +270,7 @@
     input.retouchNumericPreview=()=>{const previews=elements.map(el=>RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}));return {current:()=>elements.every(el=>el.isConnected),update:value=>previews.forEach(preview=>preview.update(property==='rotate'?value+'deg':String(value/100))),restore:()=>previews.forEach(preview=>preview.restore())};};
     if(elements.some(el=>el.style.getPropertyValue(property))||property==='rotate'&&values.some(value=>!Number.isFinite(Number(value)))){input.disabled=true;input.title='Edit the selected layer’s inline or 3D property in its source first.';}
    }
-   if(['color','background-color','border-color','fill','stroke'].includes(property))RetouchPaintPicker.mountSelectionField(input,elements,property);
+   if(['color','background-color','border-color','fill','stroke'].includes(property))RetouchPaintPicker.mountSelectionField(input,elements,property,changes=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,changes[i]]))));
    const reset=I.button('Reset shared '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=infos.every(info=>!Object.hasOwn(info.cssRules?.[width]||{},property));section.append(reset);
   }
   return section;
