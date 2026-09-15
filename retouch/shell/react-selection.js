@@ -113,7 +113,8 @@
  }
  const groupNames={size:'Size',layout:'Layout',item:'Layout item',appearance:'Appearance',typography:'Typography',fill:'Fill',stroke:'Stroke',effects:'Effects'};
  let groupState=null;
- function sharedGroups(parent){
+ function sharedGroups(parent,elements=[]){
+  if(elements.length&&elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg')){parent.dataset.sharedSvg='true';parent.dataset.sharedSvgText=String(elements.some(el=>el.matches('text,tspan,textPath')||el.querySelector('text,tspan,textPath')));}
   if(groupState===null){groupState={};try{const saved=JSON.parse(root.localStorage.getItem('retouch.shared-inspector-sections.v1')||'{}');for(const key of Object.keys(groupNames))if(typeof saved?.[key]==='boolean')groupState[key]=saved[key];}catch{}}
   return Object.fromEntries(Object.entries(groupNames).map(([key,title])=>{const details=root.document.createElement('details'),summary=root.document.createElement('summary'),body=root.document.createElement('div');details.className='advanced shared-inspector-group';details.dataset.sharedSection=key;details.setAttribute('aria-label','Shared '+title.toLowerCase()+' section');details.open=groupState[key]!==false;summary.textContent=title;body.className='shared-inspector-group-body';details.append(summary,body);parent.append(details);details.ontoggle=()=>{if(!details.isConnected)return;groupState[key]=details.open;try{root.localStorage.setItem('retouch.shared-inspector-sections.v1',JSON.stringify(groupState));}catch{}};return [key,body];}));
  }
@@ -122,7 +123,7 @@
   if(elements.some(el=>!el?.isConnected)||infos.some(info=>info.classNameDynamic||info.svgPaint?.reason)){I.note(sec,'Shared styles need literal class names without spread props on every selected layer.','refused');return sec;}
   I.note(sec,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Each edit updates these source layers and undoes together, including every rendered instance.');
   const liveElement=i=>{const el=resolveElement?resolveElement(infos[i].id):elements[i];if(!el?.isConnected||!el.ownerDocument.defaultView)throw Error('The preview changed. Select the layers again.');return el;};
-  const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el)),groups=sharedGroups(sec),flex=css=>['flex','inline-flex'].includes(css.display),layout=css=>flex(css)||['grid','inline-grid'].includes(css.display),arrangementApplies=(property,css)=>property==='mode'||(property==='wrap'?flex(css):layout(css));
+  const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el)),groups=sharedGroups(sec,elements),flex=css=>['flex','inline-flex'].includes(css.display),layout=css=>flex(css)||['grid','inline-grid'].includes(css.display),arrangementApplies=(property,css)=>property==='mode'||(property==='wrap'?flex(css):layout(css));
   for(const [property,label,choices,read,inline]of [
    ['mode','Arrange children',[['flow','Normal flow'],['row','Row'],['column','Column'],['row-reverse','Row reversed'],['column-reverse','Column reversed'],['grid','Grid']],css=>/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow',['display','flex-direction','flex-flow']],
    ['wrap','Wrap children',['nowrap','wrap','wrap-reverse'],css=>css.flexWrap,['flex-wrap','flex-flow']],

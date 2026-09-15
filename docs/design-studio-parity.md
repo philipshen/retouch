@@ -17307,3 +17307,9 @@ Multi-selected SVG layers now expose the shared design sections directly instead
 HTML/Chromium, React/Chromium and Liquid/WebKit browser flows verify fill and stroke alpha changes preserve distinct color channels/spaces, hex changes preserve alpha, unchanged hex focus does not write, unselected siblings remain unchanged, and grouped undo/redo restores exact source bytes. The light-theme layout was inspected. No source planner changed in this batch.
 
 The screenshot also exposes remaining inspector work: SVG shape selections still show irrelevant CSS box and typography fields. Context-sensitive shared SVG sections, gradient-reference editing, out-of-range mixed paint authoring, full Figma parity and trusted native/Homebrew distribution remain incomplete.
+
+### Context-sensitive shared SVG sections — 2026-09-15
+
+SVG multi-selection now keeps actual SVG Fill/Stroke and Appearance in the primary inspector. CSS sizing/layout, background/border, CSS rotation and box corners remain available under a collapsed CSS properties disclosure. Shape-only selections put inherited typography there too; selections containing SVG text or a group with text retain the primary Typography section. Existing controls, source handlers and reset actions are moved rather than recreated.
+
+HTML/Chromium and Liquid/WebKit verify primary SVG paint placement, collapsed CSS controls, opening/closing without source writes, paint edits and exact undo/redo. Browser DOM checks cover the context classification for shapes, SVG text/tspan, groups containing text, and HTML. The final light-theme screenshot was inspected. React SVG paint flow passed before the final CSS corner/rotation refinement; the ordinary React shared-paint regression is run on the final UI. Full SVG text authoring fidelity and shared SVG stroke geometry still need dedicated work, alongside the broader parity/distribution gaps above.

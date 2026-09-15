@@ -245,7 +245,7 @@
   I.note(section,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Mixed values stay unchanged until edited. Each shared edit is one undo step.');
   section.append(RetouchSiteVariables.mount(elements,width,save,infos.map(info=>info.cssRules?.[width]||{}),changes=>save(null,null,width,Object.fromEntries(infos.map((info,index)=>[info.id,changes[index]]))),infos.map(info=>inheritedVariables(info,width))));
   const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el));
-  const groups=RetouchReactSelection.sharedGroups(section),typography=groups.typography,disclosures=new Map(),rows=new Map();
+  const groups=RetouchReactSelection.sharedGroups(section,elements),typography=groups.typography,disclosures=new Map(),rows=new Map();
   const details=(parent,key,title)=>{if(disclosures.has(key))return disclosures.get(key);const group=document.createElement('details'),summary=document.createElement('summary');group.className='inspector-disclosure';group.setAttribute('aria-label','Shared '+title.toLowerCase());group.open=sharedDetailsOpen.has(key);summary.textContent=title;group.append(summary);group.ontoggle=()=>{if(group.isConnected){if(group.open)sharedDetailsOpen.add(key);else sharedDetailsOpen.delete(key);}};parent.append(group);disclosures.set(key,group);return group;};
   const families=computed.map(css=>css.fontFamily),mixedFamilies=families.some(value=>value!==families[0]);
   I.fontPicker(typography,elements[0].ownerDocument,mixedFamilies?'':families[0],value=>save('font-family',value,width),{mixed:mixedFamilies,label:'Shared Page font'});

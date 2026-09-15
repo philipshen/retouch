@@ -1,6 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 exports.run=async({page,app,read,wait,settled,kind})=>{
+ const contexts=await page.evaluate(()=>{const svg=tag=>document.createElementNS('http://www.w3.org/2000/svg',tag),group=svg('g');group.append(svg('text'));return [[svg('rect'),svg('circle')],[svg('text'),svg('tspan')],[group,svg('path')],[document.createElement('div')]].map(elements=>{const parent=document.createElement('section');RetouchReactSelection.sharedGroups(parent,elements);return [parent.dataset.sharedSvg||'',parent.dataset.sharedSvgText||''];});});assert.deepEqual(contexts,[['true','false'],['true','true'],['true','true'],['','']]);
  const select=async name=>{await page.getByRole('treeitem',{name,exact:true}).click();await settled();};
  const edit=async(input,value)=>{const before=read();await input.fill(value);await input.press('Enter');await wait(()=>read()!==before);await settled();};
  await select('rect');await edit(page.getByLabel('SVG fill',{exact:true}),'color(srgb 1 0 0 / 0.5)');await edit(page.getByLabel('SVG stroke',{exact:true}),'color(srgb 0 0 1 / 0.5)');
@@ -8,6 +9,7 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
  await select('rect');await page.getByRole('treeitem',{name:'circle',exact:true}).click({modifiers:['Shift']});await settled();
 
  const states=[read()],record=async()=>{await wait(()=>read()!==states.at(-1));await settled();states.push(read());},paints=property=>app.locator('main > svg > *').evaluateAll((els,p)=>els.map(el=>parent.RetouchPaintPicker.parsePaint(getComputedStyle(el).getPropertyValue(p))),property);
+ const css=page.getByLabel('Shared SVG CSS properties',{exact:true});assert.equal(await css.evaluate(el=>el.open),false);assert.equal(await page.locator('#panelBody > [data-shared-section=typography]').count(),0);for(const key of ['fill','stroke'])assert.equal(await page.locator('#panelBody > [data-shared-section='+key+'] input[data-paint-property='+key+']').count(),1);const source=read();await css.locator(':scope > summary').click();assert.equal(await css.evaluate(el=>el.open),true);await css.locator(':scope > summary').click();assert.equal(read(),source);
  const untouched={fill:(await paints('fill'))[2],stroke:(await paints('stroke'))[2]};
  for(const property of ['fill','stroke']){
   const alpha=page.getByLabel('Shared SVG '+property+' opacity (%)',{exact:true});assert.equal(await alpha.isEnabled(),true);assert.equal(await alpha.getAttribute('placeholder'),'Mixed');

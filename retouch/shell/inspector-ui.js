@@ -536,7 +536,24 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   for(const shared of [...panel.children].filter(el=>el.querySelector(':scope > .shared-inspector-group'))){
    const groups=[...shared.querySelectorAll(':scope > .shared-inspector-group')],notes=disclosure('Shared editing details','shared-editing-details');
    for(const child of [...shared.children])if(child.tagName!=='H3'&&!groups.includes(child))notes.append(child);
-   for(const group of groups){group.classList.add('sec');shared.before(group);for(const input of group.querySelectorAll('input[data-paint-property]'))if(['background-color','border-color','fill','stroke'].includes(input.dataset.paintProperty))compactPaint(group,input);}
+   const svg=shared.dataset.sharedSvg==='true',css=svg?disclosure('CSS properties','shared-svg-css'):null;
+   if(css){css.setAttribute('aria-label','Shared SVG CSS properties');root.RetouchInspector.note(css,'CSS box properties and inherited styles. Vector geometry and paints are above.');}
+   for(const group of groups){
+    const key=group.dataset.sharedSection;
+    if(svg&&(['size','layout','item'].includes(key)||(key==='typography'&&shared.dataset.sharedSvgText!=='true'))){css.append(group);continue;}
+    if(svg&&key==='appearance'){
+     const extra=disclosure('CSS transforms and corners','shared-svg-appearance');
+     for(const input of group.querySelectorAll('input,select'))if(/^Shared (?:Rotation|Corner radius|(?:Top|Bottom) (?:left|right) corner)/.test(input.getAttribute('aria-label')||'')){const field=input.closest('.inspector-field'),row=field?.closest('.property-row')||field,reset=row?.nextElementSibling;if(row)extra.append(row);if(reset?.matches('button')&&/^Reset shared /i.test(reset.textContent))extra.append(reset);}
+     for(const details of group.querySelectorAll('details'))if(!details.querySelector('input,select,button'))details.remove();
+     if(extra.querySelector('input,select'))css.append(extra);
+    }
+    if(svg&&['fill','stroke'].includes(key)){
+     const input=group.querySelector('input[data-paint-property="'+key+'"]'),field=input?.closest('.inspector-field');
+     if(field){const row=field.closest('.property-row')||field,body=group.querySelector('.shared-inspector-group-body'),extra=disclosure(key==='fill'?'CSS background':'CSS border','shared-svg-'+key);extra.append(...body.childNodes);body.append(row);const reset=[...extra.querySelectorAll('button')].find(button=>button.textContent==='Clear selected SVG '+key);if(reset)body.append(reset);if(extra.querySelector('input,select,button'))css.append(extra);}
+    }
+    group.classList.add('sec');shared.before(group);for(const input of group.querySelectorAll('input[data-paint-property]'))if(['background-color','border-color','fill','stroke'].includes(input.dataset.paintProperty))compactPaint(group,input);
+   }
+   if(css&&css.querySelector('input,select,button')){css.classList.add('shared-inspector-notes');shared.before(css);}
    if(notes.children.length>1){notes.classList.add('shared-inspector-notes');shared.before(notes);}
    shared.remove();
   }
