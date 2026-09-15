@@ -17213,3 +17213,13 @@ The shared compact formatter now recognizes byte colors within the precision of 
 All 1,559 unit tests pass. New HTML/Chromium, React/Chromium and Liquid/WebKit workflows verify hex selection, focus/no-write, explicit alpha, fractional opacity, alpha-preserving hex edits, unchanged neighboring paints/stops/geometry, readable row geometry, invalid-draft refusal/cancellation, P3 and exact undo/redo. The final HTML screenshot was visually inspected. The existing HTML compact Fill/Stroke/mixed-border workflow, full Liquid/WebKit gradient workflow and full HTML/Chromium site regression also pass. Picker assertions in the long gradient tests now inspect rendered color, since the focused UI separates hex from opacity.
 
 Full Figma parity, background-color-row visibility, broader whole-gradient opacity, advanced-section cleanup, arbitrary-site support and trusted native/Homebrew distribution remain incomplete. No native build or publication occurred.
+
+### Remove the empty legacy gradient disclosure — 2026-09-15
+
+When supported Fill rows provide the gradient controls, the redundant Gradient fills disclosure is hidden after its duplicate editors are hidden. Remaining source notes and refusals move outside that disclosure so they stay accessible. A disclosure with remaining interactive controls is retained, and stacks without row controls keep their existing path. Clear/reset remain in Fill options.
+
+React/Chromium and Liquid/WebKit paint-stack workflows pass editing, visibility, ordering, clear/reset, responsive isolation and exact undo. The WebKit run explicitly verifies retained source guidance is outside hidden ancestors. Its swatch check now waits for a connected, opaque control rather than reading a detached node during panel reconstruction. The React expanded advanced section was visually inspected.
+
+The standalone synchronous stack-refresh check also passes after adding the current mode button, layers panel and persistent panelBody to its minimal fixture; it previously failed before organizing the inspector because those shell elements were absent. This confirms the non-row fallback still opens its creation disclosure through synchronous source refresh. No fresh unit run is claimed for this UI-only batch.
+
+Full Figma parity, background-color visibility, whole-gradient opacity, arbitrary-site support and trusted native/Homebrew distribution remain incomplete.

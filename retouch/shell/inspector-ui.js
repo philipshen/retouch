@@ -560,6 +560,13 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     if(name==='Clear background images'&&imageSection.retouchClearPaints)button.onclick=imageSection.retouchClearPaints;
     if(name==='Reset gradient fills'&&imageSection.retouchResetPaints){button.onclick=imageSection.retouchResetPaints;button.disabled=!imageSection.retouchCanResetPaints;button.title='Restore this screen’s inherited paint stack, framing and visibility.';}
    }
+   if(stackControls)for(const details of advancedFills.querySelectorAll('details')){
+    if(details.querySelector(':scope > summary')?.textContent!=='Gradient fills')continue;
+    const remaining=[...details.children].filter(child=>child.tagName!=='SUMMARY'&&!child.hidden);
+    if(remaining.some(child=>child.matches('input,select,textarea,button')||child.querySelector('input,select,textarea,button')))continue;
+    // Keep source notes and refusals available after removing the redundant disclosure.
+    for(const child of remaining)details.before(child);details.hidden=true;
+   }
    for(const legacy of imageSection.querySelectorAll('[data-legacy-image-controls]'))advancedFills.append(legacy);
    imageSection.querySelector(':scope > h3')?.remove();imageSection.classList.remove('sec','inspector-section');imageSection.classList.add('paint-stack-fields');
    const addPaint=imageSection.querySelector(':scope > .section-add');if(addPaint)fillSection.append(addPaint);
