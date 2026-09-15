@@ -77,17 +77,17 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   }
   assert.equal(await page.locator('#panel').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
   assert.equal(await page.locator('#frameWrap').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(229, 229, 229)');
-  assert.deepEqual(await page.locator('#panelBody > .inspector-section > h3').allTextContents(),['Position','Layout','Appearance','Fill','Stroke','Effects']);
-  await page.getByRole('button',{name:'Horizontal layout',exact:true}).click();await settled();await wait(async()=>parent.evaluate(el=>getComputedStyle(el).display==='flex'&&getComputedStyle(el).flexDirection===(getComputedStyle(el).writingMode==='horizontal-tb'?'row':'column')));assert.equal(await page.getByRole('button',{name:'Horizontal layout',exact:true}).getAttribute('aria-pressed'),'true');
+  assert.deepEqual(await page.locator('#panelBody > .inspector-section > h3').allTextContents(),['Position','Layout','Scale','Appearance','Fill','Stroke','Effects']);
+  await page.getByRole('button',{name:'Horizontal stack',exact:true}).click();await settled();await wait(async()=>parent.evaluate(el=>getComputedStyle(el).display==='flex'&&getComputedStyle(el).flexDirection===(getComputedStyle(el).writingMode==='horizontal-tb'?'row':'column')));assert.equal(await page.getByRole('button',{name:'Horizontal stack',exact:true}).getAttribute('aria-pressed'),'true');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),originalSource);
   const clipping=page.getByLabel('Clip content',{exact:true});assert.equal(await clipping.evaluate(el=>el.indeterminate),true);
   await clipping.check();await settled();await wait(async()=>parent.evaluate(el=>getComputedStyle(el).overflowX==='clip'&&getComputedStyle(el).overflowY==='clip'));assert.match(read(),/md:!overflow-clip/);
   await clipping.uncheck();await settled();await wait(async()=>parent.evaluate(el=>getComputedStyle(el).overflowX==='visible'&&getComputedStyle(el).overflowY==='visible'));
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(await clipping.isChecked(),true);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),originalSource);assert.equal(await clipping.evaluate(el=>el.indeterminate),true);
-  await page.getByRole('button',{name:'Vertical layout',exact:true}).click();await settled();
+  await page.getByRole('button',{name:'Vertical stack',exact:true}).click();await settled();
   await wait(async()=>parent.evaluate(el=>getComputedStyle(el).display==='flex'&&getComputedStyle(el).flexDirection===(getComputedStyle(el).writingMode==='horizontal-tb'?'column':'row')));
-  assert.equal(await page.getByRole('button',{name:'Vertical layout',exact:true}).getAttribute('aria-pressed'),'true');
+  assert.equal(await page.getByRole('button',{name:'Vertical stack',exact:true}).getAttribute('aria-pressed'),'true');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),originalSource);
   for(const direction of ['row','column','row-reverse','column-reverse']){
    await page.getByLabel('Arrange children',{exact:true}).selectOption(direction);await settled();const beforeAlignment=read();
@@ -121,9 +121,11 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   const strokeWidth=page.getByLabel('Border width (px)',{exact:true});await strokeWidth.fill('6');await strokeWidth.press('Tab');await settled();await wait(async()=>textElement.evaluate(el=>getComputedStyle(el).borderTopWidth==='6px'&&getComputedStyle(el).borderTopStyle==='dashed'));
   await page.getByRole('button',{name:'Reset border width',exact:true}).click();await settled();await wait(async()=>textElement.evaluate(el=>getComputedStyle(el).borderTopWidth==='2px'));
   for(let i=0;i<2;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}assert.equal(read(),beforeStroke);
+  const openStroke=async()=>{const opener=page.locator('summary[aria-label="Advanced stroke settings"]');if(!await opener.evaluate(el=>el.parentElement.open))await opener.click();};await openStroke();
   await page.getByLabel('Border style',{exact:true}).selectOption('solid');await settled();await wait(async()=>textElement.evaluate(el=>getComputedStyle(el).borderTopStyle==='solid'&&getComputedStyle(el).borderTopWidth==='2px'));
-  await page.getByRole('button',{name:'Reset border style',exact:true}).click();await settled();await wait(async()=>textElement.evaluate(el=>getComputedStyle(el).borderTopStyle==='dashed'));
+  await openStroke();await page.getByRole('button',{name:'Reset border style',exact:true}).click();await settled();await wait(async()=>textElement.evaluate(el=>getComputedStyle(el).borderTopStyle==='dashed'));
   for(let i=0;i<2;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}assert.equal(read(),beforeStroke);
+  const closeStroke=page.getByRole('button',{name:'Close stroke settings',exact:true});if(await closeStroke.isVisible())await closeStroke.click();
   const type=page.locator('[data-section="typography"]');await type.waitFor();
   assert.equal(await type.locator('.type-preview').isVisible(),false);
   assert.equal(await page.getByRole('button',{name:'Apply text',exact:true}).isVisible(),false);

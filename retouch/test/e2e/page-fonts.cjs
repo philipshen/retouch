@@ -240,6 +240,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   if(process.env.RT_E2E_SHARED_SVG_PAINTS){await require('./shared-svg-paints.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_COMPACT_PAINTS){await require('./shared-compact-paints.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_ADAPTIVE_GRID){await require('./shared-adaptive-grid.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
+  if(process.env.RT_E2E_SINGLE_STACK_PRESETS){await require('./single-stack-presets.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_STACK_PRESETS){await require('./shared-stack-presets.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_CLASS_GRID_ALIGNMENT){await require('./class-grid-alignment.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_FLEX_ALIGNMENT){await require('./shared-flex-alignment.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
@@ -930,6 +931,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await wait(async()=>JSON.stringify(await positions())===JSON.stringify(['static','static']));await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await expect(originalBounds);await undo(before);await expect(originalBounds);assert.deepEqual(await positions(),['static','static']);await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===absolute);await expect(originalBounds);assert.deepEqual(await positions(),['absolute','absolute']);await undo(before);assert.deepEqual(errors,[]);console.log('SHARED ABSOLUTE POSITIONING PASS',kind,engine);return;
   }
   if(process.env.RT_E2E_SHARED_ADAPTIVE_GRID){await require('./shared-adaptive-grid.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
+  if(process.env.RT_E2E_SINGLE_STACK_PRESETS){await require('./single-stack-presets.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_STACK_PRESETS){await require('./shared-stack-presets.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_CLASS_GRID_ALIGNMENT){await require('./class-grid-alignment.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_FLEX_ALIGNMENT){await require('./shared-flex-alignment.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}

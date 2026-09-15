@@ -18699,3 +18699,39 @@ Logs: `/tmp/retouch-class-stacks-react-verified.log`,
 
 Full Figma fidelity, arbitrary-site/framework support and trusted public Homebrew
 distribution remain incomplete. No desktop rebuild or push for this increment.
+
+### Consistent single-selection stack presets (2026-09-15)
+
+The single React/Liquid inspector now routes its Normal flow, Vertical stack and
+Horizontal stack segments through the same preset writer as shared selections.
+Explicit stacks override authored stylesheet layout, use the container's current
+writing mode and disable wrapping. Normal flow retains existing flex settings.
+Pressed state reflects the complete preset instead of treating a reversed or
+wrapped layout as identical. The layout menu still exposes individual modes.
+Controls recheck the live layer, inline overrides and responsive edit range.
+HTML single-container flow/stack/adaptive presets now use matching active-range
+guards, including the minimum-column field.
+
+React/Chromium, Liquid/Chromium and Liquid/WebKit passed physical geometry in both
+writing modes, all three presets, desktop-only edits, preserved phone layout,
+disabled controls, keyboard navigation and exact undo/redo. The expanded HTML
+six-writing-direction grid workflow passed the additional preset guards. All
+1,660 unit tests passed. Inspected `/tmp/retouch-single-stack-presets-liquid.png`.
+The existing light inspector test uses the unified stack labels and includes the
+already-present Scale section in its section-order expectation.
+
+Logs: `/tmp/retouch-single-stacks-react.log`,
+`/tmp/retouch-single-stacks-liquid.log`, `/tmp/retouch-single-stacks-webkit.log`,
+`/tmp/retouch-single-stacks-html-regression.log`, and
+`/tmp/retouch-single-stacks-units.log`.
+
+Full Figma fidelity, arbitrary-site/framework support and trusted public Homebrew
+distribution remain incomplete. No desktop rebuild or push for this increment.
+
+The full light-inspector regression also passed after updating its border-style
+interaction to open the existing Stroke settings popover. It verified workspace
+colors, section order, presets, physical alignment, clipping, opacity, corners,
+border editing/reset, typography, layer actions and exact history. Log:
+`/tmp/retouch-single-stacks-light-verified.log`. The preceding failures were outdated
+test expectations (the existing Scale section and closed stroke popover), not
+removed coverage.
