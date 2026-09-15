@@ -20255,3 +20255,35 @@ Logs: `/tmp/retouch-inline-alignment-options-units-final.log`,
 
 Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
 incomplete. No native rebuild or push in this continuation.
+
+### Stack presets, direction and wrapping over ordinary inline layout
+
+Single/shared stack presets now accept ordinary inline display, direction,
+wrapping and flex-flow declarations. The existing explicit important layout
+utilities preserve those source rules while applying the requested mode.
+Direction/wrapping dropdowns likewise accept ordinary inline layout and guard
+important declarations. Shared reset can remove overrides even when an important
+inline rule now wins.
+
+Validation: 1,693 unit tests passed. Single-layer React/Chromium and shared
+Liquid/WebKit browser checks cover horizontal/vertical/normal-flow presets,
+physical child placement in horizontal and vertical writing modes, direction
+and wrapping menus, keyboard navigation, custom 1100px edit ranges, inactive
+range guards, preview-range navigation and exact source undo/redo. Shared reset
+restores the authored flex flow. Final inline style strings match the original
+strings. Inspected `/tmp/retouch-shared-stack-presets-liquid.png`.
+Passing logs: `/tmp/retouch-inline-stacks-units.log`,
+`/tmp/retouch-inline-stacks-single-react-complete.log`,
+`/tmp/retouch-inline-stacks-shared-liquid-complete.log`.
+
+Fixture fixes ensure the single-layer test has two children and both selected
+layers actually receive inline styles despite their aria-label attributes.
+An earlier run whose second layer lacked inline styles ended with an empty DOM
+style attribute instead of an absent one, although source undo was exact. That
+separate DOM cleanup case remains to investigate; the corrected inline-style
+fixtures do not establish its resolution. Earlier failure logs:
+`/tmp/retouch-inline-stacks-single-react-final.log` and
+`/tmp/retouch-inline-stacks-shared-liquid.log`.
+
+Grid-track inline restrictions, full Figma/arbitrary-site parity and trusted
+Homebrew distribution remain incomplete. No native rebuild or push.

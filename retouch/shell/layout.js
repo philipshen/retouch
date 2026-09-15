@@ -258,10 +258,11 @@
     const flowControl=root.RetouchFlowResize?.control(el,sizes=>{const context={inlineFlex:['flex','flex-grow','flex-shrink','flex-basis'].some(property=>el.style.getPropertyValue(property)),inlineDimensions:inlineDimensions(el,css),display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode,inheritedClasses:inherited};save(Object.entries(sizes).reduce((next,[axis,value])=>sizeClasses(next,axis,'fixed',root.RetouchReactSelection.dimensionValue(css,axis,value),context),classes));});if(flowControl)sec.append(flowControl);
     const mode=/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow';
     const verticalInline=layoutAxes({writingMode:css.writingMode}).inline==='height',rowLabel=verticalInline?'Vertical':'Horizontal',columnLabel=verticalInline?'Horizontal':'Vertical';
-    const modeSelect=layoutSelect('Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(explicitLayoutClasses(classes,'mode',value,inherited)));
+    const modeBlocked=()=>['display','flex-direction','flex-flow'].some(property=>el.style.getPropertyPriority(property)==='important');
+    const modeSelect=layoutSelect('Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>{if(!modeBlocked())save(explicitLayoutClasses(classes,'mode',value,inherited));});modeSelect.disabled||=modeBlocked();
     modeSelect.dataset.inlineAxis=verticalInline?'vertical':'horizontal';
     modeSelect.retouchPreset={
-      blocked:axis=>!el.isConnected||(info.styleScope&&root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')||(axis==='flow'?['display']:['display','flex-direction','flex-wrap','flex-flow']).some(property=>el.style.getPropertyValue(property)),
+      blocked:axis=>!el.isConnected||(info.styleScope&&root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')||(axis==='flow'?['display']:['display','flex-direction','flex-wrap','flex-flow']).some(property=>el.style.getPropertyPriority(property)==='important'),
       pressed:axis=>axis==='flow'?['block','inline','inline-block','flow-root','list-item'].includes(css.display):Object.entries(root.RetouchHTMLCSSValues.stackLayout(axis,css.writingMode)).every(([property,value])=>css.getPropertyValue(property)===value),
       apply:axis=>{if(!modeSelect.retouchPreset.blocked(axis))save(stackClasses(classes,axis,el.ownerDocument.defaultView.getComputedStyle(el),inherited));}
     };
@@ -300,7 +301,7 @@
         layoutSelect('Place grid items',[['row','Across rows'],['col','Down columns'],['row-dense','Across rows · fill gaps'],['col-dense','Down columns · fill gaps']],flow,v=>save(arrangementClasses(classes,'flow',v,inherited)));
         I.note(sec,'Fill gaps can move later items into earlier empty spaces.');
       } else {
-        layoutSelect('Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(explicitLayoutClasses(classes,'wrap',v,inherited)));
+        const wrapBlocked=()=>['flex-wrap','flex-flow'].some(property=>el.style.getPropertyPriority(property)==='important'),wrapInput=layoutSelect('Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>{if(!wrapBlocked())save(explicitLayoutClasses(classes,'wrap',v,inherited));});wrapInput.disabled||=wrapBlocked();
       }
       for(const [prop,label,axis] of [['columnGap',verticalInline?'Vertical gap':'Horizontal gap',verticalInline?'height':'width'],['rowGap',verticalInline?'Horizontal gap':'Vertical gap',verticalInline?'width':'height']]) {
         const inlineGap=()=>['gap',prop==='columnGap'?'column-gap':'row-gap'].some(property=>el.style.getPropertyValue(property)),importantGap=()=>['gap',prop==='columnGap'?'column-gap':'row-gap'].some(property=>el.style.getPropertyPriority(property)==='important');

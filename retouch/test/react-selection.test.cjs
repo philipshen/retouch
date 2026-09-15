@@ -265,3 +265,16 @@ test('alignment menus override inline shorthands per property and leave reset av
  assert.throws(()=>changeContainer('flex','md:','justify','between',null,el),/important inline/);
  assert.equal(changeContainer('flex md:!justify-evenly','md:','justify',null,null,el),'flex');
 });
+
+test('inline layout controls allow ordinary declarations, guard priority and retain reset',()=>{
+ const {changeStack,changeContainer}=require('../shell/react-selection.js'),el={style:{getPropertyValue:p=>p==='flex-flow'?'column wrap':'',getPropertyPriority:()=>''}};
+ assert.equal(changeStack('p-2','md:','horizontal',{writingMode:'vertical-rl'},null,el),'p-2 md:!flex md:!flex-col md:!flex-nowrap');
+ assert.equal(changeContainer('p-2','md:','mode','row',null,el),'p-2 md:!flex md:!flex-row');
+ assert.equal(changeContainer('p-2','md:','wrap','wrap-reverse',null,el),'p-2 md:!flex-wrap-reverse');
+ el.style.getPropertyPriority=p=>p==='flex-flow'?'important':'';
+ assert.throws(()=>changeStack('p-2','md:','horizontal',{},null,el),/important inline/);
+ assert.throws(()=>changeContainer('p-2','md:','mode','row',null,el),/important inline/);
+ assert.throws(()=>changeContainer('p-2','md:','wrap','wrap',null,el),/important inline/);
+ assert.equal(changeStack('p-2','md:','flow',{},null,el),'p-2 md:!block');
+ assert.equal(changeContainer('p-2 md:!flex-row md:!flex','md:','mode',null,null,el),'p-2');
+});
