@@ -146,7 +146,25 @@
   if(!paints.length)return 'none';
   const value='rtpv1-'+Array.from(new TextEncoder().encode(JSON.stringify({version:1,paints})),byte=>byte.toString(16).padStart(2,'0')).join('');parsePaintVisibility(value);return value;
  }
+ const hiddenBackgroundProperty='--rt-hidden-background-color';
+ function parseHiddenBackground(value){
+  if(value==='none')return null;
+  const invalid=()=>{throw Error('The stored background color is invalid.');};
+  if(typeof value!=='string'||value.length>4096||!/^rtbc1-(?:[a-f0-9]{2})+$/.test(value))return invalid();
+  let data;try{data=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Uint8Array.from(value.slice(6).match(/../g),pair=>parseInt(pair,16))));}catch{return invalid();}
+  if(!data||Object.keys(data).sort().join(',')!=='color,version'||data.version!==1||typeof data.color!=='string'||! /^(?:#[a-f0-9]{8}|color\((?:srgb|display-p3) [^()]+\))$/i.test(data.color)||!valid('color',data.color,false))return invalid();
+  if(/^color\(/i.test(data.color)){
+   const parts=data.color.slice(data.color.indexOf(' ')+1,-1).split('/'),channels=parts[0].trim().split(/\s+/),numbers=[...channels,(parts[1]??'1').trim()];
+   if(parts.length>2||channels.length!==3||numbers.some(value=>! /^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value)||!Number.isFinite(Number(value))||Number(value)<0||Number(value)>1))return invalid();
+  }
+  return data.color;
+ }
+ function serializeHiddenBackground(color){
+  if(color===null)return 'none';
+  const value='rtbc1-'+Array.from(new TextEncoder().encode(JSON.stringify({version:1,color})),byte=>byte.toString(16).padStart(2,'0')).join('');parseHiddenBackground(value);return value;
+ }
  function valid(property,value,allowVariable=true){
+  if(property===hiddenBackgroundProperty){if(value===null)return true;try{parseHiddenBackground(value);return true;}catch{return false;}}
   if(property===paintVisibilityProperty){if(value===null)return true;try{parsePaintVisibility(value);return true;}catch{return false;}}
   if(property==='text-box'){if(value===null||value==='normal')return true;if(typeof value!=='string'||value.length>100)return false;return /^(?:(?:none|trim-start|trim-end|trim-both)(?: |$))?(?:(?:auto|text|cap|ex|ideographic|ideographic-ink)(?: (?:text|alphabetic|ideographic|ideographic-ink))?)?$/.test(value)&&value.trim()===value&&value!=='';}
   if(property==='line-clamp')return value===null||value==='none'||typeof value==='string'&&/^[1-9]\d{0,3}$/.test(value)&&Number(value)<=1000;
@@ -370,5 +388,5 @@
   return families[property]||[property];
  }
  function overlaps(a,b){if(a==='line-clamp'&&['display','overflow','overflow-x','overflow-y','-webkit-line-clamp','-webkit-box-orient'].includes(b)||b==='line-clamp'&&['display','overflow','overflow-x','overflow-y','-webkit-line-clamp','-webkit-box-orient'].includes(a))return true;if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(a)&&sides.includes(b)||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(b)&&sides.includes(a)||a==='background'&&b.startsWith('background-')||b==='background'&&a.startsWith('background-')||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')&&!b.endsWith('radius')||b==='border'&&a.startsWith('border-')&&!a.endsWith('radius')||['font','font-variant'].includes(a)&&['font-variant-numeric','font-variant-ligatures','font-variant-caps','font-variant-position'].includes(b)||['font','font-variant'].includes(b)&&['font-variant-numeric','font-variant-ligatures','font-variant-caps','font-variant-position'].includes(a)||a==='font'&&['font-family','font-weight','font-style','font-size','line-height','font-variation-settings','font-optical-sizing'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
- return {paintVisibilityProperty,parsePaintVisibility,serializePaintVisibility,imageURL,imageLayers,splitLayers,ligatureGroups,ligatureValid,ligatureChange,parseBorderColors,variableCycle,variableName,variableValue,parseVariations,serializeVariations,numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients,gradientColorSpaces};
+ return {hiddenBackgroundProperty,parseHiddenBackground,serializeHiddenBackground,paintVisibilityProperty,parsePaintVisibility,serializePaintVisibility,imageURL,imageLayers,splitLayers,ligatureGroups,ligatureValid,ligatureChange,parseBorderColors,variableCycle,variableName,variableValue,parseVariations,serializeVariations,numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients,gradientColorSpaces};
 });

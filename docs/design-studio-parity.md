@@ -17223,3 +17223,11 @@ React/Chromium and Liquid/WebKit paint-stack workflows pass editing, visibility,
 The standalone synchronous stack-refresh check also passes after adding the current mode button, layers panel and persistent panelBody to its minimal fixture; it previously failed before organizing the inspector because those shell elements were absent. This confirms the non-row fallback still opens its creation disclosure through synchronous source refresh. No fresh unit run is claimed for this UI-only batch.
 
 Full Figma parity, background-color visibility, whole-gradient opacity, arbitrary-site support and trusted native/Homebrew distribution remain incomplete.
+
+### Background-color visibility persistence foundation — 2026-09-15
+
+Added a source-backed background-color visibility model. A bounded, versioned `--rt-hidden-background-color` CSS identifier retains the canonical original color/alpha while the actual background color keeps its channels at zero alpha. Hidden color/opacity edits update both values together. Showing restores the stored color; clear removes the hidden record, and reset removes both scoped overrides. Malformed metadata, unsupported/contextual colors and changed hidden color identity are refused. Channel comparison accounts for browser CSSOM rounding, and the caller must supply element-owned metadata rather than an inherited custom property.
+
+All 1,563 unit tests pass, including atomic responsive HTML writes and React/Liquid class-source round trips. Chromium and WebKit rendering checks cover sRGB, byte alpha, fully transparent colors and Display P3: image paint/framing remains unchanged, hiding reveals the expected underlying pixels, hidden edits remain hidden, and reconstructing the serialized document before showing restores exact prior pixels.
+
+**Inspector integration remains pending.** The new module is not loaded by the shell and no background-color eye control invokes it yet. Integration must identify element-owned metadata, preserve responsive scope and saved-color links, display the saved color/opacity while hidden, keep picker previews hidden, and route clear/reset and every background color mutation through atomic updates with exact undo. This is model/source/rendering evidence, not a finished user-visible feature. Full Figma parity and trusted native/Homebrew distribution remain incomplete.
