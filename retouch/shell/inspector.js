@@ -574,19 +574,14 @@
     const mode = tokens(classes).map(base).find(positionToken) || css.position;
     sec.append(root.RetouchFlip.mount(el,value=>{const important=el.style.getPropertyValue('scale')||tokens(info.anchorInheritedClasses).some(word=>/^!|!$/.test(word)&&root.RetouchFlip.token(base(word)||''));save(replace(classes,root.RetouchFlip.token,(important?'!':'')+'[scale:'+value.replaceAll(' ','_')+']'));}));
     const rotationValue=()=>root.RetouchReactSelection.rotationDegrees(el.ownerDocument.defaultView.getComputedStyle(el).rotate);
-    const rotationBlocked=()=>!el.isConnected||el.style.getPropertyValue('rotate')||!Number.isFinite(rotationValue());
+    const rotationBlocked=()=>!el.isConnected||el.style.getPropertyPriority('rotate')==='important'||!Number.isFinite(rotationValue());
     const writeRotation=value=>{
-      if(rotationBlocked()){notify('Edit this layer’s inline or 3D rotation in its source first.');return;}
-      try{
-        let next=root.RetouchReactSelection.change(classes,'','rotate',value,el.ownerDocument);
-        const matches=token=>/^-?rotate-(?![xyz]-)|^\[rotate:/.test(token);
-        if(value!==null&&tokens(info.anchorInheritedClasses).some(token=>/^!|!$/.test(token)&&matches(base(token)||'')))next=replace(next,matches,'![rotate:'+value+'deg]');
-        save(next);
-      }catch(error){notify(error.message);}
+      if(!el.isConnected||value!==null&&rotationBlocked()){notify('Edit this layer’s important inline or 3D rotation in its source first.');return;}
+      try{save(root.RetouchReactSelection.changeRotation(classes,'',value,el,info.anchorInheritedClasses));}catch(error){notify(error.message);}
     };
     const rotation=number(sec,'Rotation (°)',rotationValue(),-360,360,writeRotation);fieldDraft(rotation);numericPreview(rotation,el,'rotate',value=>value+'deg');
     const resetRotation=button('Reset rotation',()=>writeRotation(null));resetRotation.disabled=root.RetouchReactSelection.change(classes,'','rotate',null)===classes;sec.append(resetRotation);
-    if(rotationBlocked()){rotation.disabled=true;resetRotation.disabled=true;rotation.title='Edit this layer’s inline or 3D rotation in its source first.';}
+    if(rotationBlocked()){rotation.disabled=true;rotation.title='Edit this layer’s important inline or 3D rotation in its source first.';}
     const applyAnchor = (x, y) => {
       try { const g=positionGeometry(el);if(onAlign){onAlign(g,g,{x,y});return;}const next=anchorClasses(classes,g,x,y,info.anchorInheritedClasses);if(onGeometry)onGeometry(next,g);else save(next); } catch (e) { notify(e.message); }
     };

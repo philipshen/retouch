@@ -80,7 +80,7 @@
    input.onchange=()=>{if(input.value!==''&&input.checkValidity()){const value=property==='opacity'?String(Number(input.value)/100):input.value+unit;if(valid(property,value)&&CSS.supports(property,value))save(property,value,width);}};
    I.numericLabelDrag(I.field(host,label,input));I.fieldDraft(input);I.numericPreview(input,el,property,value=>property==='opacity'?String(value/100):value+unit);
    const reset=I.button('Reset '+property,()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);host.append(reset);
-   if(property==='rotate'&&(el.style.getPropertyValue('rotate')||!Number.isFinite(value))){input.disabled=true;reset.disabled=true;input.title='Edit this layer’s inline or 3D rotation in its source first.';}
+   if(property==='rotate'&&(el.style.getPropertyPriority('rotate')==='important'||!Number.isFinite(value))){input.disabled=true;input.title='Edit this layer’s important inline or 3D rotation in its source first.';}
   }
   if(position&&el)position.append(RetouchFlip.mount(el,value=>save('scale',value,width)));
   if(css.transform!=='none')I.note(appearance,'Rotation combines with the page’s existing transform.');
@@ -308,7 +308,7 @@
    if(numeric){
     I.fieldDraft(input);I.numericLabelDrag(input);
     input.retouchNumericPreview=()=>{const previews=elements.map(el=>RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}));return {current:()=>elements.every(el=>el.isConnected),update:value=>previews.forEach(preview=>preview.update(property==='rotate'?value+'deg':String(value/100))),restore:()=>previews.forEach(preview=>preview.restore())};};
-    if(elements.some(el=>el.style.getPropertyValue(property))||property==='rotate'&&values.some(value=>!Number.isFinite(Number(value)))){input.disabled=true;input.title='Edit the selected layer’s inline or 3D property in its source first.';}
+    if(elements.some(el=>property==='rotate'?el.style.getPropertyPriority(property)==='important':el.style.getPropertyValue(property))||property==='rotate'&&values.some(value=>!Number.isFinite(Number(value)))){input.disabled=true;input.title='Edit the selected layer’s inline or 3D property in its source first.';}
    }
    if(['color','background-color','border-color','fill','stroke'].includes(property))RetouchPaintPicker.mountSelectionField(input,elements,property,changes=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,changes[i]]))),values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,{[property]:values[i]}]))),i=>RetouchBackgroundPaintUI.sourceColor(infos[i],width?'min-['+width+'px]:':'',property),i=>RetouchBackgroundPaintUI.sourceState(infos[i],width?'min-['+width+'px]:':''));
    const reset=I.button('Reset shared '+label.toLowerCase(),()=>{if(!rangeGuarded||spacingActive())save(property,null,width);});reset.disabled=rangeGuarded&&!spacingActive()||infos.every(info=>!Object.hasOwn(info.cssRules?.[width]||{},property));reset.setAttribute('aria-label','Reset shared '+label.toLowerCase());reset.title=reset.getAttribute('aria-label');reset.textContent='↺';reset.classList.add('property-reset');const row=document.createElement('div');row.className='property-row';field.before(row);row.append(field,reset);rows.set(property,row);

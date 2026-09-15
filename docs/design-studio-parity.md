@@ -19954,3 +19954,32 @@ follow the skewed reflected image border. Logs:
 Inline rotation source restrictions, unsupported flow/3D coordinate systems,
 transformed resize snapping guides, full arbitrary-site/Figma parity and trusted
 Homebrew distribution remain incomplete. No native rebuild or push.
+
+
+### Rotation over ordinary inline declarations
+
+Rotation fields and canvas controls now work when a layer has an ordinary inline
+rotate declaration. Native React/Liquid edits add an important rotation utility
+in the selected scope; HTML edits use the existing important scoped rule. The
+original inline declaration remains untouched, and reset removes the editor's
+override to reveal it again. Shared rotation fields use the same behavior.
+Important inline declarations and 3D rotation remain blocked; reset can still
+remove existing editor overrides.
+
+All 1,680 unit tests passed, including scoped rotation priority, reset and
+important-inline refusal. HTML/Chromium, React/Chromium and Liquid/WebKit
+fixtures passed direct handles, canvas rotation, reset revealing the original
+inline angle, shared rotation across differently rotated layers, preserved
+inline declarations and exact undo. Existing movement, resizing, alignment and
+position-field tests also passed in those runs. Logs:
+`/tmp/retouch-inline-rotate-{html,react,liquid}.log` and
+`/tmp/retouch-inline-rotate-units.log`.
+The existing React rotation/corner regression passed with its inset reflected-
+scale fixture: `/tmp/retouch-inline-rotate-regression-scaled.log`. The initial
+full-width fixture timed out waiting for visible corner handles before editing;
+the inset fixture supplies reachable handles.
+
+This preserves authored inline declarations through scoped overrides; it does
+not implement direct rewriting of important or dynamic inline styles. Full
+Figma/arbitrary-site parity and trusted Homebrew distribution remain incomplete.
+No native rebuild or push.

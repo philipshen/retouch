@@ -206,3 +206,13 @@ test('alignment reset clears only its own responsive scope and keeps no-op sourc
  assert.equal(resetContainerAlignment(source,'md:',{display:'grid'}),'grid hover:items-end md:!place-items-center');
  const unchanged='md:!place-items-center grid hover:items-end';assert.equal(resetContainerAlignment(unchanged,'md:',{display:'grid'}),unchanged);
 });
+
+test('inline rotation overrides are important and scoped while reset reveals the source',()=>{
+ const {changeRotation}=require('../shell/react-selection.js'),el={style:{getPropertyValue:()=> '25deg',getPropertyPriority:()=>''},ownerDocument:null};
+ assert.equal(changeRotation('p-4','',45,el),'p-4 ![rotate:45deg]');
+ assert.equal(changeRotation('p-4 rotate-12 md:rotate-30','md:',45,el),'p-4 rotate-12 md:![rotate:45deg]');
+ assert.equal(changeRotation('p-4 rotate-12 md:![rotate:45deg]','md:',null,el),'p-4 rotate-12');
+ const important={...el,style:{...el.style,getPropertyPriority:()=> 'important'}};
+ assert.throws(()=>changeRotation('p-4','',45,important),/important inline/);
+ assert.equal(changeRotation('p-4 ![rotate:45deg]','',null,important),'p-4');
+});
