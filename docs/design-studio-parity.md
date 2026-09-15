@@ -19160,3 +19160,24 @@ This still requires selecting the destination before drawing; it does not yet
 implement a single drag that both chooses a destination and creates a shape.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete. No desktop rebuild or push for this checkpoint.
+
+### 2026-09-15 — Keep drawing tools available on incompatible selections
+
+Shape and Pen selection now remains available when the current layer is not a
+valid drawing container. Previously a heading left the tool armed but disabled
+the Shape menu and Pen button. Users can now start or switch these tools from
+that selection and then choose a compatible container. Waiting commands carry
+an explicit target requirement so the animation loop cannot consume and rearm
+them every frame. Existing editing, source-request, history and Hand guards
+remain in force; waiting does not create a drawing surface or change source.
+
+All 1,664 unit tests passed. HTML and React Chromium plus Liquid WebKit browser
+checks passed, including heading-first activation, rectangle-to-ellipse-to-Pen
+switching, toolbar hints/pressed states and Escape cancellation. A final HTML
+run additionally counted shape-tool events across animation frames and verified
+zero repeated rearming. Logs: `/tmp/retouch-drawing-incompatible-units.log`,
+`/tmp/retouch-drawing-incompatible-{html,react,liquid}.log`, and
+`/tmp/retouch-drawing-incompatible-html-final.log`.
+
+No desktop rebuild or push. Direct drag-to-create, full Figma parity,
+arbitrary-site support and trusted Homebrew distribution remain incomplete.

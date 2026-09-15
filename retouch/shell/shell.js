@@ -4363,7 +4363,7 @@ function advanceArmedCanvasTool(){
  if(!armedCanvasTool)return;
  if(mode!=='edit'||historyRecoveryRequired||canvasPan.active){setArmedCanvasTool(null);return;}
  if(!sel?.info||editing||panelTasks||sourceRequests||undoBusy||stopDrawing||document.querySelector('dialog[open]'))return;
- const action=armedCanvasTool,source=window.RetouchShapeTools?.get(action);if(source?.available()){setArmedCanvasTool(null);source.run(action==='scale'?document.getElementById('canvasScale'):undefined);}
+ const action=armedCanvasTool,source=window.RetouchShapeTools?.get(action);if(source?.available()&&!source.requiresTarget){setArmedCanvasTool(null);source.run(action==='scale'?document.getElementById('canvasScale'):undefined);}
 }
 window.addEventListener('keydown',event=>{if(armedCanvasTool&&event.key==='Escape'&&!event.isComposing){setArmedCanvasTool(null);event.preventDefault();}});
 // Shape commands belong to the canvas tools, independent of inspector markup.
@@ -4375,9 +4375,10 @@ window.RetouchShapeTools={
   const move={id:'shape-move',action:'move',label:'Move tool',keywords:'select pointer canvas V',element:modeBtn,available:()=>armedCanvasTool||canMove(),reason:'Finish the current edit and switch to Edit mode.',run(){setArmedCanvasTool(null);if(canMove()){stopDrawing?.();canvasPan.cancel();}}};
   const scaleInfo=sel?.info,scaleControl=panelBody.querySelector('[data-canvas-tool=scale]'),common=[move],canScale=()=>canMove()&&!!scaleInfo&&sel?.info===scaleInfo&&selectionScaleRangeActive()&&!scaleControl?.matches(':disabled')&&!stopDrawing&&!canvasPan.active;
   common.push({id:'shape-scale',action:'scale',label:'Scale tool',keywords:'resize proportional selection canvas K',element:scaleControl||modeBtn,available:()=>!scaleInfo?canMove()&&!stopDrawing&&!canvasPan.active:!!scaleControl&&canScale(),reason:'Select editable layers and finish the current gesture.',run(opener=scaleControl){if(!scaleInfo&&canMove()&&!stopDrawing&&!canvasPan.active){setArmedCanvasTool('scale');return;}if(scaleControl&&canScale()){setArmedCanvasTool(null);return scaleGroupOnCanvas(scaleInfo,opener);}}});
-  if(!sel?.info){
-   const available=()=>canMove()&&!sel?.info&&!stopDrawing&&!canvasPan.active;
-   for(const action of ['draw-rectangle','draw-ellipse','draw-circle','draw-triangle','draw-star','draw-arrow','draw-line','pen'])common.push({id:'shape-'+action,action,label:action==='pen'?'Pen':'Draw '+action.slice(5),owner:'unselected',element:modeBtn,available,keywords:'shape vector canvas',reason:'Switch to Edit mode and finish the current gesture.',run(){if(available())setArmedCanvasTool(action);}});
+  const hasDrawingTarget=()=>!!sel?.info?.svgInsertion&&!(sel.multiple?.length>1)&&sel.info.kind!=='instance';
+  if(!hasDrawingTarget()){
+   const available=()=>canMove()&&!hasDrawingTarget()&&!stopDrawing&&!canvasPan.active;
+   for(const action of ['draw-rectangle','draw-ellipse','draw-circle','draw-triangle','draw-star','draw-arrow','draw-line','pen'])common.push({id:'shape-'+action,action,label:action==='pen'?'Pen':'Draw '+action.slice(5),owner:'awaiting-container',requiresTarget:true,element:modeBtn,available,keywords:'shape vector canvas',reason:'Switch to Edit mode and finish the current gesture.',run(){if(available())setArmedCanvasTool(action);}});
   }
   const info=sel?.info;if(!info||!info.svgInsertion&&!info.svgTransform?.editable||sel.multiple?.length>1||info.kind==='instance')return common;
   const owner=JSON.stringify([info.file,info.id,info.hash,sel.instanceId,sel.scope]);
