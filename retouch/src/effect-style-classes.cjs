@@ -1,6 +1,6 @@
 'use strict';
 const catalog=require('./effect-styles.cjs'),responsive=require('../shell/responsive.js'),inspector=require('../shell/inspector.js'),tokens=require('./class-tokens.cjs');
-const {properties}=catalog;
+const {properties}=catalog,shadowVisibility=require('../shell/shadow-visibility.js').property;
 function encode(values){
  const validated=catalog.validate({version:1,styles:[{id:'11111111-1111-4111-8111-111111111111',name:'Effects',properties:values}]}).styles[0].properties;
  return Object.fromEntries(Object.entries(validated).map(([property,value])=>{
@@ -11,7 +11,7 @@ function encode(values){
 }
 function related(plain,property){
  if(/^\[all:/.test(plain)||plain.startsWith('['+property+':'))return true;
- if(property==='box-shadow')return /^(?:shadow|inset-shadow|ring|inset-ring)(?:-|$)/.test(plain);
+ if(property==='box-shadow')return /^(?:shadow|inset-shadow|ring|inset-ring)(?:-|$)/.test(plain)||plain.startsWith('['+shadowVisibility+':')&&plain!=='['+shadowVisibility+':none]';
  if(property==='backdrop-filter')return /^backdrop-/.test(plain)||/^\[-webkit-backdrop-filter:/.test(plain);
  return /^(?:filter|blur|brightness|contrast|drop-shadow|grayscale|hue-rotate|invert|saturate|sepia)(?:-|$)/.test(plain)||/^-hue-rotate-/.test(plain);
 }
@@ -24,12 +24,15 @@ function compose(className,values,scope='',remove=[]){
   if(!tokens.valid(token))throw Error('The source contains unsupported class syntax.');
   const part=responsive.split(token),plain=inspector.base(part.value);
   if(part.prefix!==scope){kept.push(token);continue;}
+  if(keys.includes('box-shadow')&&plain.startsWith('['+shadowVisibility+':'))continue;
   if(keys.some(property=>plain.startsWith('['+property+':')||property==='box-shadow'&&/^shadow-(?:none|2?xs|sm|md|lg|xl|2xl|inner|\[(?:inset_|[-.\d])[^\]]*\])$/.test(plain)))continue;
   // Utility families can share Tailwind custom properties. Keep their source,
   // and refuse important conflicts rather than discard unrelated declarations.
   if(/^!|!$/.test(part.value)&&keys.some(property=>related(plain,property)))throw Error('Resolve the important effect utility before linking this style.');
   kept.push(token);
  }
+ // A replacement shadow must mask hidden metadata inherited from smaller ranges.
+ if(Object.hasOwn(encoded,'box-shadow')&&className.includes('['+shadowVisibility+':'))kept.push(scope+'!['+shadowVisibility+':none]');
  return kept.concat(Object.values(encoded).map(token=>scope+token)).join(' ');
 }
 function overrides(className,baseline,scope=''){
