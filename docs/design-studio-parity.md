@@ -17916,3 +17916,30 @@ Logs: `/tmp/retouch-group-align-units-final.log`,
 Containing-frame/key-layer alignment, group resize/rotation, full Figma parity
 and trusted public Homebrew distribution remain incomplete. No desktop rebuild
 or push for this checkpoint.
+
+### Reference-layer group alignment checkpoint
+
+The Group inspector now provides an Align to selector with selection bounds and
+individual outer selected layers/groups. Reference alignment pins the chosen
+root exactly, including all of its children, and writes only members with nonzero
+offsets. This avoids creating translation overrides on unchanged reference
+layers. Distribution remains a selection-bounds operation. The reference choice
+is checked again after asynchronous source resolution; changed choices cancel
+the pending alignment. Selection changes reset the choice.
+
+Validation: 1,650 unit tests pass. HTML/Chromium, transformed React/Chromium and
+transformed Liquid/WebKit workflows verify ordinary-layer and group references,
+rendered geometry, exact undo/redo, full selection restoration, and operation
+payloads excluding the reference source IDs. These runs also cover the six
+alignment controls and existing group/mixed-selection movement regressions.
+Visually inspected `/tmp/retouch-group-multi-html.png`: the Align to selector sits
+below the alignment toolbar in the light Group section.
+
+Logs: `/tmp/retouch-group-reference-units-final.log`,
+`/tmp/retouch-group-reference-html-final.log`,
+`/tmp/retouch-group-reference-react-final.log`, and
+`/tmp/retouch-group-reference-webkit-final.log`.
+
+Containing-frame alignment, group resize/rotation, browser verification of
+three-root distribution, full Figma parity and trusted public Homebrew
+distribution remain incomplete. No desktop rebuild or push for this checkpoint.

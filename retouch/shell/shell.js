@@ -96,6 +96,7 @@ function busyPanel(start) {
 }
 let lastAppPath = null;
 let styleScope = '';
+let groupAlignmentKey='',groupAlignmentTarget='selection';
 const svgExportNames=new WeakMap();
 let svgExportScale=1,svgEmbedImages=true,svgExportFormat='svg',jpegQuality=92,jpegBackground='#ffffff';
 function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:RetouchResponsive.inherited(info.className,styleScope,doc()),className:RetouchResponsive.project(info.className,styleScope)}; }
@@ -1952,7 +1953,7 @@ function renderPanelContents(textEditing=false) {
   if(info.kind==='instance'&&sel.multiple?.length>1){panelBody.append(head,componentSelectionSection(sel.multiple));return;}
   if(!info.svgBooleanOwner&&!(sel.multiple||[]).some(i=>i.svgBooleanOwner))head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
-  if(groupMovementRoots()){const section=RetouchInspector.section('Group');const button=RetouchInspector.button(sel.multiple?.length?'Move selection on canvas':'Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag selected groups and layers on the canvas. Arrow keys move 1 px; Shift moves 10 px.';section.append(button);if(sel.multiple?.length>1){const roots=groupMovementRoots(),count=roots.filter(el=>!roots.some(parent=>parent!==el&&parent.contains(el))).length;if(count>1){const toolbar=RetouchSelectionLayout.alignmentToolbar((mode,event,control)=>void alignGroupSelection(mode,control),true);for(const control of toolbar.querySelectorAll('button')){control.title=control.getAttribute('aria-label');if(control.dataset.distribution)control.disabled=count<3;}section.insertBefore(toolbar,button);}}panelBody.append(section);}
+  if(groupMovementRoots())panelBody.append(groupMovementSection(info));
   if(info.svgBooleanOwner||(sel.multiple||[]).some(i=>i.svgBooleanOwner)){
    if(sel.multiple?.length>1){
     const infos=sel.multiple,elements=infos.map(item=>matchingEls(item.id).length===1?matchingEls(item.id)[0]:null),current=()=>sel?.multiple===infos&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&elements.every(el=>el&&!layerLocks.locked(el));
@@ -3455,9 +3456,22 @@ async function moveGroupOnCanvas(info,opener,gesture={}){
  }catch(error){toast(error.message,'err');}
 }
 
+function groupMovementSection(info){
+ const I=RetouchInspector,section=I.section('Group'),roots=groupMovementRoots(),outer=roots.filter(el=>!roots.some(parent=>parent!==el&&parent.contains(el))),key=roots.map(el=>el.getAttribute('data-rt')).sort().join(',');
+ if(key!==groupAlignmentKey){groupAlignmentKey=key;groupAlignmentTarget='selection';}
+ if(outer.length>1){
+  const choices=[['selection','Selection bounds'],...outer.map((el,i)=>{const id=el.getAttribute('data-rt'),item=(sel.multiple||[info]).find(item=>item.id===id);return ['layer:'+id,'Layer: '+(i+1)+'. '+(item?.layerName||el.getAttribute('aria-label')||item?.text?.trim().slice(0,32)||item?.tag||'Layer')];})];
+  if(!choices.some(([value])=>value===groupAlignmentTarget))groupAlignmentTarget='selection';
+  const toolbar=RetouchSelectionLayout.alignmentToolbar((mode,event,control)=>void alignGroupSelection(mode,control),true);
+  const update=()=>{for(const control of toolbar.querySelectorAll('button')){control.title=control.getAttribute('aria-label');if(control.dataset.distribution)control.disabled=outer.length<3||groupAlignmentTarget!=='selection';}};
+  section.append(toolbar);I.select(section,'Align to',choices,groupAlignmentTarget,value=>{groupAlignmentTarget=value;update();});update();
+ }
+ const button=I.button(sel.multiple?.length?'Move selection on canvas':'Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag selected groups and layers on the canvas. Arrow keys move 1 px; Shift moves 10 px.';section.append(button);return section;
+}
+
 async function alignGroupSelection(mode,control){
- const info=sel?.info;if(!info)return;
- try{const context=await moveGroupOnCanvas(info,null,{prepareOnly:true});if(!context||!context.current())return;const bounds=RetouchGroupMove.selectionBounds(context.roots,context.members),deltas=RetouchSelectionLayout.arrange(bounds,mode);if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;if(document.activeElement===control)RetouchPanelFocus.queue(control);await writeGroupMove(context,RetouchGroupMove.memberDeltas(bounds,context.members,deltas));}catch(error){toast(error.message,'err');}
+ const info=sel?.info,targetChoice=groupAlignmentTarget;if(!info)return;
+ try{const context=await moveGroupOnCanvas(info,null,{prepareOnly:true});if(!context||!context.current()||groupAlignmentTarget!==targetChoice)return;const bounds=RetouchGroupMove.selectionBounds(context.roots,context.members),target=targetChoice==='selection'?null:bounds.find(bound=>'layer:'+bound.el.getAttribute('data-rt')===targetChoice);if(targetChoice!=='selection'&&!target)throw Error('Choose a selected reference layer.');if(target&&mode.startsWith('gap-'))throw Error('Use selection bounds to distribute spacing.');const deltas=RetouchSelectionLayout.arrange(bounds,mode,target);if(target)deltas[bounds.indexOf(target)]={x:0,y:0};if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;if(document.activeElement===control)RetouchPanelFocus.queue(control);await writeGroupMove(context,RetouchGroupMove.memberDeltas(bounds,context.members,deltas));}catch(error){toast(error.message,'err');}
 }
 
 async function writeGroupMove({info,roots,selectionIds,members,infos,scope,width,css,current},delta){
@@ -3465,12 +3479,12 @@ async function writeGroupMove({info,roots,selectionIds,members,infos,scope,width
     try{
      const fresh=RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el));
      if(fresh.length!==members.length||fresh.some((item,i)=>item.el!==members[i].el||item.translate!==members[i].translate||item.matrix.some((n,j)=>Math.abs(n-members[i].matrix[j])>1e-9)||['x','y','width','height'].some(key=>Math.abs(item.rect[key]-members[i].rect[key])>.1)))throw Error('The group changed during movement. Re-select it.');
-     const deltas=Array.isArray(delta)?delta:members.map(()=>delta);if(deltas.length!==members.length)throw Error('Resolve every layer offset.');const changesById=Object.fromEntries(members.map((item,i)=>[item.id,{translate:RetouchGroupMove.translation(item.translate,RetouchGroupMove.localDelta(item.matrix,deltas[i]))}])),classesById=Object.fromEntries(infos.map(item=>[item.id,RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate)])),first=infos[0],multi=infos.length>1;
+     const deltas=Array.isArray(delta)?delta:members.map(()=>delta);if(deltas.length!==members.length)throw Error('Resolve every layer offset.');const moving=members.map((item,i)=>({item,delta:deltas[i],info:infos[i]})).filter(({delta})=>delta.x!==0||delta.y!==0);if(!moving.length)return;const writeInfos=moving.map(entry=>entry.info),changesById=Object.fromEntries(moving.map(({item,delta})=>[item.id,{translate:RetouchGroupMove.translation(item.translate,RetouchGroupMove.localDelta(item.matrix,delta))}])),classesById=Object.fromEntries(writeInfos.map(item=>[item.id,RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate)])),first=writeInfos[0],multi=writeInfos.length>1;
      busyPanel(true);
-     const result=await api('POST','/rt/__api/op',{type:css?(multi?'setCSSSelection':'setCSS'):(multi?'setClassesSelection':'setClasses'),id:first.id,fileHash:first.hash,...(multi?{ids:infos.map(item=>item.id)}:{}),...(css?{width,...(multi?{changesById}:{changes:changesById[first.id]})}:multi?{classesById,...selectionSourceContexts(infos)}:{classes:classesById[first.id],context:first.context})});
+     const result=await api('POST','/rt/__api/op',{type:css?(multi?'setCSSSelection':'setCSS'):(multi?'setClassesSelection':'setClasses'),id:first.id,fileHash:first.hash,...(multi?{ids:writeInfos.map(item=>item.id)}:{}),...(css?{width,...(multi?{changesById}:{changes:changesById[first.id]})}:multi?{classesById,...selectionSourceContexts(writeInfos)}:{classes:classesById[first.id],context:first.context})});
      if(!result?.ok)throw Error(result?.reason||result?.error||'Could not move group.');
-     const updated=result.selection||[result.element],before=Object.fromEntries(infos.map(item=>[item.id,item.className])),after=Object.fromEntries(updated.map(item=>[item.id,item.className]));
-     if(result.undoId)editorHistory.record({type:'moveGroup',id:first.id,groupId:info.id,selectionIds,childIds:infos.map(item=>item.id),classesBefore:before,classesAfter:after,undoId:result.undoId});
+     const updated=result.selection||[result.element],before=Object.fromEntries(writeInfos.map(item=>[item.id,item.className])),after=Object.fromEntries(updated.map(item=>[item.id,item.className]));
+     if(result.undoId)editorHistory.record({type:'moveGroup',id:first.id,groupId:info.id,selectionIds,childIds:writeInfos.map(item=>item.id),classesBefore:before,classesAfter:after,undoId:result.undoId});
      await refreshGroupMove(updated,before);await restoreLayerSelection(selectionIds);if(sel)renderPanel();let settled=false;for(let attempt=0;attempt<50;attempt++){settled=members.every((item,i)=>{const el=matchingEls(item.id)[0],r=el?.getBoundingClientRect();return r&&Math.abs(r.x-item.rect.x-deltas[i].x)<.6&&Math.abs(r.y-item.rect.y-deltas[i].y)<.6&&Math.abs(r.width-item.rect.width)<.6&&Math.abs(r.height-item.rect.height)<.6;});if(settled)break;await new Promise(resolve=>setTimeout(resolve,100));}if(!settled)throw Error('Group offsets saved, but the canvas did not match. Check style overrides.');toast('Group moved','ok');
     }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
