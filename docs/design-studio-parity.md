@@ -17717,3 +17717,30 @@ geometry/history at 390/768/1100px. Post-test verification confirms all 1,299
 packaged files and 2 symlinks unchanged. Receipt:
 `desktop/verification/2026-09-15-test-runtime.json`. No native launch, notarization,
 or cask installation performed. Full parity and trusted distribution remain open.
+
+### Move responsive groups without removing their layout slots (2026-09-15)
+
+Added a visible Group inspector action, Move group on canvas. It flattens nested
+layout-transparent groups into rendered source children, uses the existing canvas
+gesture/snap controls, and composes each child's pixel translation in one atomic
+CSS or class transaction. Children retain their normal flow/flex/grid slots.
+Existing pixel translations accumulate; the selected group is restored after the
+write and exact undo/redo. The current pixel screen scope is retained. Saved
+geometry is checked against the requested movement before reporting success.
+
+Validation: 1,642 unit tests; HTML/Chromium and React/Chromium group browser
+workflows; Liquid/WebKit group workflow. Browser checks cover keyboard and pointer
+movement, unchanged sibling bounds and child sizes, moved geometry across
+390/768/1100px column-flex/row-flex/grid layouts, group selection, exact undo/redo,
+Escape cancellation, and subsequent ungrouping. Inspected the light-theme HTML
+screenshot at `/tmp/retouch-group-move-html.png`. Logs:
+`/tmp/retouch-group-move-{html,react,webkit}-final.log` and
+`/tmp/retouch-group-move-units-final.log`.
+
+Remaining group-transform gaps: transformed ancestors, percentage/3D translations,
+SVG children, unwrapped direct text, hidden children, repeated source occurrences,
+nonliteral style ownership, group resizing and rotation. Unsupported measurements
+refuse before a source write. Cascade overrides can still prevent a saved offset
+from rendering; the post-write geometry check reports that discrepancy. Full
+Figma parity and universal site support remain incomplete. No desktop rebuild or
+notarization is claimed for these editor changes.

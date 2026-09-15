@@ -1967,6 +1967,7 @@ function renderPanelContents(textEditing=false) {
   if(sel.multiple?.length>1){mountSelectionEffectStyles();mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchClassSiteVariables.mountSelection(sel.multiple,elements,styleScope,setReactClassesSelection,message=>toast(message,'err')),RetouchFlip.mountSelection(sel.multiple,elements,0,null,strategy),RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,(property,value,values)=>setSelectionColorOverride(property,value,undefined,values),id=>matchingEls(id)[0],changes=>setSelectionColorOverride('background-color',undefined,changes)));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchFlip.mountSelection(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes)),RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.svgMask?.canRelease||info.svgMask?.ownerId){const target=matchingEls(info.id)[0];panelBody.append(RetouchSVGMask.mount([info],[target],{current:()=>sel?.info===info&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&target?.isConnected&&!layerLocks.locked(target),save:writeSVGMask,edit:async ids=>{await restoreLayerSelection(ids);if(sel)renderPanel();await layers.refresh();}}));}
+  if(!sel.multiple?.length&&matchingEls(info.id)[0]?.hasAttribute('data-rt-group')){const section=RetouchInspector.section('Group');const button=RetouchInspector.button('Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';section.append(button);panelBody.append(section);}
   if(info.canCreateComponent)panelBody.append(createComponentSection(info));
 
   if(info.components?.length) {
@@ -3396,6 +3397,43 @@ function transformReactLayer(info,target,action,opener,initial=null){
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
 }
 
+async function refreshGroupMove(infos,before){
+ if(infos.every(info=>info.cssAuthoring)){await RetouchRenderSync.syncCSS({frame:iframe,entries:infos.map(info=>({id:info.id,rules:info.cssRules,texts:info.cssRuleTexts}))});await window.RetouchComparisons?.syncCSS(infos);}
+ else if(infos.every(info=>info.contextSelection&&info.classSourceLiteral))await refreshLiteralLiquidClasses(infos,before);
+ else await refreshWrittenElement(infos[0],el=>classSelectionMatches(infos,el.ownerDocument));
+}
+async function moveGroupOnCanvas(info,opener){
+ stopDrawing?.();if(panelTasks||sourceRequests||undoBusy||editing||sel?.info!==info)return;
+ const scope=styleScope,group=matchingEls(info.id)[0],current=()=>mode==='edit'&&sel?.info.id===info.id&&sel.info.hash===info.hash&&styleScope===scope&&!sel.multiple?.length&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!document.querySelector('dialog[open]');
+ try{
+  if(matchingEls(info.id).length!==1)throw Error('Select a group with one rendered occurrence.');
+  const width=scope?Number(/^min-\[(\d+)px\]:$/.exec(scope)?.[1]):0;
+  if(!Number.isInteger(width)||width>doc().defaultView.innerWidth)throw Error('Choose an active pixel screen scope for group movement.');
+  const members=RetouchGroupMove.measure(group,el=>layerLocks.locked(el)),responses=await Promise.all(members.map(item=>api('GET',resolveUrl(item.id))));
+  if(!current())return;
+  if(!responses.every(r=>r?.ok&&r.element.hash===info.hash&&r.element.file===info.file))throw Error('Re-select group contents from the same source file.');
+  const infos=responses.map(r=>r.element),css=infos.every(item=>item.cssAuthoring);
+  if(!css&&!infos.every(item=>item.classSelection&&!item.classNameDynamic))throw Error('Group movement needs editable child styles.');
+  if(members.some(item=>matchingEls(item.id).length!==1))throw Error('Group movement needs one rendered occurrence of each child.');
+  canvasPan.cancel();
+  stopDrawing=RetouchCanvasMove.mount({target:members[0].el,targets:members.map(item=>item.el),selectionId:info.id,frame:iframe,canvas:canvasSurface,mode:'move',opener,
+   onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err'),onCommit:async delta=>{
+    if(!current())return;
+    try{
+     const fresh=RetouchGroupMove.measure(group,el=>layerLocks.locked(el));
+     if(fresh.length!==members.length||fresh.some((item,i)=>item.el!==members[i].el||item.translate!==members[i].translate||['x','y','width','height'].some(key=>Math.abs(item.rect[key]-members[i].rect[key])>.1)))throw Error('The group changed during movement. Re-select it.');
+     const changesById=Object.fromEntries(members.map(item=>[item.id,{translate:RetouchGroupMove.translation(item.translate,delta)}])),classesById=Object.fromEntries(infos.map(item=>[item.id,RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate)])),first=infos[0],multi=infos.length>1;
+     busyPanel(true);
+     const result=await api('POST','/rt/__api/op',{type:css?(multi?'setCSSSelection':'setCSS'):(multi?'setClassesSelection':'setClasses'),id:first.id,fileHash:first.hash,...(multi?{ids:infos.map(item=>item.id)}:{}),...(css?{width,...(multi?{changesById}:{changes:changesById[first.id]})}:multi?{classesById,...selectionSourceContexts(infos)}:{classes:classesById[first.id],context:first.context})});
+     if(!result?.ok)throw Error(result?.reason||result?.error||'Could not move group.');
+     const updated=result.selection||[result.element],before=Object.fromEntries(infos.map(item=>[item.id,item.className])),after=Object.fromEntries(updated.map(item=>[item.id,item.className]));
+     if(result.undoId)editorHistory.record({type:'moveGroup',id:first.id,groupId:info.id,childIds:infos.map(item=>item.id),classesBefore:before,classesAfter:after,undoId:result.undoId});
+     await refreshGroupMove(updated,before);await restoreLayerSelection([info.id]);if(sel)renderPanel();let settled=false;for(let attempt=0;attempt<50;attempt++){settled=members.every(item=>{const el=matchingEls(item.id)[0],r=el?.getBoundingClientRect();return r&&Math.abs(r.x-item.rect.x-delta.x)<.6&&Math.abs(r.y-item.rect.y-delta.y)<.6&&Math.abs(r.width-item.rect.width)<.6&&Math.abs(r.height-item.rect.height)<.6;});if(settled)break;await new Promise(resolve=>setTimeout(resolve,100));}if(!settled)throw Error('Group offsets saved, but the canvas did not match. Check style overrides.');toast('Group moved','ok');
+    }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+   }});
+ }catch(error){toast(error.message,'err');}
+}
+
 function transformLayerSelection(elements,commit,opener,action='move',spacing=null){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!sel?.multiple?.length)return;
   const hash=sel.info.hash,scope=styleScope,key=sel.multiple.map(info=>info.id).sort().join(',');
@@ -3670,6 +3708,7 @@ async function restoreHistory(direction,op) {
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentPropSelection'){await refreshComponentSelection(op.selectionIds);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='moveGroup'){const results=await Promise.all(op.childIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(r=>r?.ok))throw Error('The group contents no longer resolve.');await refreshGroupMove(results.map(r=>r.element),direction==='undo'?op.classesAfter:op.classesBefore);await restoreLayerSelection([op.groupId]);if(sel)renderPanel();return result;}
     if(op.type==='setLiquidClassesSelection'){const results=await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(item=>item?.ok&&item.element.classSourceLiteral))throw Error('The literal class selection no longer resolves.');await refreshLiteralLiquidClasses(results.map(item=>item.element),direction==='undo'?op.classesAfter:op.classesBefore);await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='collectionSelection'){await reloadFrame();await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     const fresh = await api('GET', resolveUrl(op.id, op.context));
