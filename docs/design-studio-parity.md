@@ -18242,3 +18242,30 @@ Live scale preview, canvas scaling handles, layout-box group resizing, rotation,
 complex fixed-position descendant behavior, full Figma parity and trusted public
 Homebrew distribution remain incomplete. No desktop rebuild or push for this
 checkpoint.
+
+### Live proportional scale preview checkpoint
+
+The scale field now previews rendered child scale and translation while its label
+is scrubbed. Each update restores the owned baseline properties, computes the
+new absolute gesture ratio, then applies the next preview; repeated pointer
+moves do not compound ratios. The preview checks source selection, edit scope,
+ancestor matrices, geometry and both inline properties. Escape restores owned
+properties only, preserving external scale/color changes. Release restores the
+preview before the existing single source transaction.
+
+Validation: 1,652 unit tests pass. HTML/Chromium, transformed React/Chromium and
+transformed Liquid/WebKit run both single and mixed scaling workflows. Added
+checks assert live geometry after multiple pointer moves, unchanged source until
+release, Escape restoration, exact release/undo/redo geometry and temporary-style
+cleanup. An external important scale and independent color change cancel the
+preview and survive restoration. Existing 50/150/200 percent scaling and
+responsive grouping checks remain green. Visually inspected
+`/tmp/retouch-group-scale-preview-html.png` with the scale field at 130 percent.
+
+Logs: `/tmp/retouch-scale-preview-units.log`,
+`/tmp/retouch-scale-preview-html.log`, `/tmp/retouch-scale-preview-react.log`,
+and `/tmp/retouch-scale-preview-webkit.log`.
+
+Canvas scaling handles, group layout resizing/rotation, complex fixed-position
+descendant behavior, full Figma parity and trusted public Homebrew distribution
+remain incomplete. No desktop rebuild or push for this checkpoint.

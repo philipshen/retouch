@@ -78,6 +78,13 @@
   finally{for(const entry of entries){const style=entry.item.el.style;if(entry.value)style.setProperty('scale',entry.value,entry.priority);else style.removeProperty('scale');if(!entry.hadStyle&&!entry.item.el.getAttribute('style'))entry.item.el.removeAttribute('style');}}
   return {deltas,expected,scales:Object.fromEntries(entries.map(entry=>[entry.item.id,entry.scale]))};
  }
+ function scalePreview(members){
+  const entries=members.map(item=>({item,hadStyle:item.el.hasAttribute('style'),properties:['scale','translate'].map(property=>({property,value:item.el.style.getPropertyValue(property),priority:item.el.style.getPropertyPriority(property),written:null}))}));let expected=members.map(item=>item.rect);
+  const owned=(entry,property)=>property.written!==null&&entry.item.el.style.getPropertyValue(property.property)===property.written&&entry.item.el.style.getPropertyPriority(property.property)==='important';
+  function current(){try{return entries.every((entry,i)=>{const {item}=entry,r=item.el.getBoundingClientRect();return item.el.isConnected&&entry.properties.every(property=>property.written===null?item.el.style.getPropertyValue(property.property)===property.value&&item.el.style.getPropertyPriority(property.property)===property.priority:owned(entry,property))&&parentMatrix(item.el).every((value,i)=>Math.abs(value-item.matrix[i])<1e-9)&&['x','y','width','height'].every(key=>Math.abs(r[key]-expected[i][key])<.1);});}catch{return false;}}
+  function restore(){for(const entry of entries){for(const property of entry.properties){if(!owned(entry,property))continue;const style=entry.item.el.style;if(property.value)style.setProperty(property.property,property.value,property.priority);else style.removeProperty(property.property);property.written=null;}if(!entry.hadStyle&&!entry.item.el.getAttribute('style'))entry.item.el.removeAttribute('style');}expected=members.map(item=>item.rect);}
+  return {current,restore,update:factor=>{if(!current())throw Error('The selection changed during scaling.');restore();const plan=scalePlan(members,factor),values=members.map((item,i)=>({scale:plan.scales[item.id],translate:translation(item.translate,localDelta(item.matrix,plan.deltas[i]))}));for(const [i,entry]of entries.entries())for(const property of entry.properties){entry.item.el.style.setProperty(property.property,values[i][property.property],'important');property.written=entry.item.el.style.getPropertyValue(property.property);}expected=plan.expected;}};
+ }
  function scaleClasses(value,scope,scale){
   const R=root.RetouchResponsive||require('./responsive.js'),token=root.RetouchFlip?.token||require('./flip.js').token;
   const active=R.project(value,scope).split(/\s+/).filter(Boolean).filter(word=>!token(word.replace(/^!/,'')));active.push('![scale:'+scale.replace(/ /g,'_')+']');return R.replaceScope(value,active.join(' '),scope);
@@ -87,5 +94,5 @@
   const scoped=R.project(value,scope).split(/\s+/).filter(Boolean).filter(token=>!/^!?-?translate(?:-|\[)/.test(token)&&!/^!?\[translate:/.test(token));
   scoped.push('![translate:'+translate.replace(/ /g,'_')+']');return R.replaceScope(value,scoped.join(' '),scope);
  }
- const api={translation,measure,measureSelection,selectionBounds,parentBounds,memberDeltas,scalePlan,scaleClasses,classes,multiply,localDelta,parentMatrix,preview};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupMove=api;
+ const api={translation,measure,measureSelection,selectionBounds,parentBounds,memberDeltas,scalePlan,scalePreview,scaleClasses,classes,multiply,localDelta,parentMatrix,preview};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupMove=api;
 })(typeof window==='object'?window:globalThis);
