@@ -3465,13 +3465,17 @@ function groupMovementSection(info){
   const toolbar=RetouchSelectionLayout.alignmentToolbar((mode,event,control)=>void alignGroupSelection(mode,control),true);
   const update=()=>{for(const control of toolbar.querySelectorAll('button')){control.title=control.getAttribute('aria-label');if(control.dataset.distribution)control.disabled=outer.length<3||groupAlignmentTarget!=='selection';}};
   section.append(toolbar);I.select(section,'Align to',choices,groupAlignmentTarget,value=>{groupAlignmentTarget=value;update();});update();
+  try{const bounds=RetouchGroupMove.selectionBounds(roots,RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el)));
+   for(const [axis,label]of [['x','Horizontal gap (px)'],['y','Vertical gap (px)']]){const values=RetouchSelectionLayout.gaps(bounds,axis).values,mixed=values.some(value=>Math.abs(value-values[0])>=1/32),input=I.number(section,label,mixed?NaN:values[0],-100000,100000,value=>void alignGroupSelection('spacing-'+axis,input,value));input.placeholder=mixed?'Mixed':'';input.title='Space the selected groups and layers without changing their internal layout. The first layer stays fixed, or the chosen reference layer.';I.fieldDraft(input);}
+  }catch(error){I.note(section,error.message,'refused');}
+
  }
  const button=I.button(sel.multiple?.length?'Move selection on canvas':'Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag selected groups and layers on the canvas. Arrow keys move 1 px; Shift moves 10 px.';section.append(button);return section;
 }
 
-async function alignGroupSelection(mode,control){
+async function alignGroupSelection(mode,control,gap){
  const info=sel?.info,targetChoice=groupAlignmentTarget;if(!info)return;
- try{const context=await moveGroupOnCanvas(info,null,{prepareOnly:true});if(!context||!context.current()||groupAlignmentTarget!==targetChoice)return;const bounds=RetouchGroupMove.selectionBounds(context.roots,context.members),target=targetChoice==='selection'?null:bounds.find(bound=>'layer:'+bound.el.getAttribute('data-rt')===targetChoice);if(targetChoice!=='selection'&&!target)throw Error('Choose a selected reference layer.');if(target&&mode.startsWith('gap-'))throw Error('Use selection bounds to distribute spacing.');const deltas=RetouchSelectionLayout.arrange(bounds,mode,target);if(target)deltas[bounds.indexOf(target)]={x:0,y:0};if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;if(document.activeElement===control)RetouchPanelFocus.queue(control);await writeGroupMove(context,RetouchGroupMove.memberDeltas(bounds,context.members,deltas));}catch(error){toast(error.message,'err');}
+ try{const context=await moveGroupOnCanvas(info,null,{prepareOnly:true});if(!context||!context.current()||groupAlignmentTarget!==targetChoice)return;const bounds=RetouchGroupMove.selectionBounds(context.roots,context.members),target=targetChoice==='selection'?null:bounds.find(bound=>'layer:'+bound.el.getAttribute('data-rt')===targetChoice);if(targetChoice!=='selection'&&!target)throw Error('Choose a selected reference layer.');if(target&&mode.startsWith('gap-'))throw Error('Use selection bounds to distribute spacing.');const deltas=mode.startsWith('spacing-')?RetouchSelectionLayout.setSpacing(bounds,mode.slice(-1),gap,{anchor:target?bounds.indexOf(target):null}):RetouchSelectionLayout.arrange(bounds,mode,target);if(target)deltas[bounds.indexOf(target)]={x:0,y:0};if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;if(document.activeElement===control)RetouchPanelFocus.queue(control);await writeGroupMove(context,RetouchGroupMove.memberDeltas(bounds,context.members,deltas));}catch(error){toast(error.message,'err');}
 }
 
 async function writeGroupMove({info,roots,selectionIds,members,infos,scope,width,css,current},delta){

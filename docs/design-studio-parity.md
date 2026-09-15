@@ -17943,3 +17943,31 @@ Logs: `/tmp/retouch-group-reference-units-final.log`,
 Containing-frame alignment, group resize/rotation, browser verification of
 three-root distribution, full Figma parity and trusted public Homebrew
 distribution remain incomplete. No desktop rebuild or push for this checkpoint.
+
+### Exact group spacing checkpoint
+
+Mixed group selections now expose horizontal and vertical gap fields with Mixed
+values where appropriate. Positive values separate outer selection bounds;
+negative values overlap them without reversing their order. A chosen reference
+layer stays fixed; otherwise the first layer along the edited axis stays fixed.
+Children of each group share one displacement and retain internal geometry.
+The existing screen scope, source checks and atomic movement history apply.
+
+Validation: 1,650 unit tests pass. New three-root browser workflows pass in
+HTML/Chromium, transformed React/Chromium and transformed Liquid/WebKit. They
+exercise both distribution buttons, exact positive and negative gaps on both
+axes, a fixed reference, equal rendered gaps, unchanged child dimensions and
+relative positions, and exact undo/redo. Grouping/ungrouping still preserves
+geometry at 390/768/1100 pixels. The existing HTML mixed movement, six alignment
+controls and reference-source-exclusion regression workflow also passes.
+Visually inspected `/tmp/retouch-group-spacing-html.png`; the three-layer light
+inspector exposes enabled distribution controls and Mixed gap fields.
+
+Logs: `/tmp/retouch-group-spacing-units.log`,
+`/tmp/retouch-group-spacing-html.log`, `/tmp/retouch-group-spacing-react.log`,
+`/tmp/retouch-group-spacing-webkit.log`, and
+`/tmp/retouch-group-spacing-regression.log`.
+
+Containing-frame alignment, direct canvas gap handles for groups, group
+resize/rotation, full Figma parity and trusted public Homebrew distribution
+remain incomplete. No desktop rebuild or push for this checkpoint.
