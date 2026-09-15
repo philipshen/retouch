@@ -221,3 +221,16 @@ test('vertical text alignment follows block and flex axes without changing displ
  for(const [direction,wrap,property,reverse]of [['row','nowrap','align-items',false],['row','wrap','align-content',false],['row','wrap-reverse','align-content',true],['column','nowrap','justify-content',false],['column-reverse','nowrap','justify-content',true]])assert.deepEqual(textVerticalLayout({...base,display:'flex',flexDirection:direction,flexWrap:wrap}),{property,reverse});
  assert.equal(textVerticalLayout({...base,display:'inline'}),null);assert.equal(textVerticalLayout({...base,writingMode:'vertical-rl'}),null);
 });
+
+
+test('local position retains fractional insets, margins and content-box dimensions',()=>{
+ const {localPositionGeometry}=require('../shell/inspector.js'),ns='http://www.w3.org/1999/xhtml';
+ const values={left:'20.25px',top:'30.125px',width:'100.5px',height:'40.25px','margin-left':'-2.5px','margin-top':'3.25px','padding-left':'4.5px','padding-right':'5.25px','padding-top':'2px','padding-bottom':'3px','border-left-width':'1px','border-right-width':'1px','border-top-width':'1px','border-bottom-width':'1px'};
+ const css={position:'absolute',transform:'none',rotate:'none',scale:'none',translate:'none',zoom:'1',boxSizing:'content-box',getPropertyValue:key=>values[key]};
+ const parent={namespaceURI:ns,localName:'main',clientWidth:800,clientHeight:600},el={namespaceURI:ns,offsetParent:parent,parentElement:parent,ownerDocument:{defaultView:{getComputedStyle:()=>css}}};
+ assert.deepEqual(localPositionGeometry(el),{localCoordinates:true,x:17.75,y:33.375,width:112.25,height:47.25,parentWidth:800,parentHeight:600,parentLabel:'<main>'});
+ css.boxSizing='border-box';assert.equal(localPositionGeometry(el).width,100.5);
+ values.left='auto';assert.throws(()=>localPositionGeometry(el),/resolved pixel/);values.left='20.25px';
+ css.transform='matrix(1,0,0,1,10,0)';assert.throws(()=>localPositionGeometry(el),/transformed layers/);css.transform='none';
+ parent.namespaceURI='http://www.w3.org/2000/svg';assert.throws(()=>localPositionGeometry(el),/inside SVG/);
+});

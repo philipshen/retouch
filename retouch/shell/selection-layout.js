@@ -85,18 +85,18 @@
   }
  function singlePosition(el,save,report){
   const I=root.RetouchInspector,group=root.document.createElement('div'),fields=root.document.createElement('div');fields.className='property-pair';
-  function measure(){if(!el?.isConnected||el.ownerDocument.defaultView.getComputedStyle(el).position!=='absolute')throw Error('Choose an absolute layer in the current screen.');return I.geometry(el,{allowRotation:true,allowScale:true});}
+  function measure(){if(!el?.isConnected||el.ownerDocument.defaultView.getComputedStyle(el).position!=='absolute')throw Error('Choose an absolute layer in the current screen.');try{return I.geometry(el,{allowRotation:true,allowScale:true});}catch(error){return I.localPositionGeometry(el);}}
   function write(next,before,control){
    if(!['x','y','width','height'].every(key=>Number.isFinite(next[key])&&Math.abs(next[key])<=100000))throw Error('Keep layer bounds within 100,000 pixels.');
    if(['x','y'].every(key=>Math.abs(next[key]-before[key])<1/32))return;
    if(root.document.activeElement===control)root.RetouchPanelFocus?.queue(control);return save(next,before);
   }
   group.append(alignmentToolbar((mode,event,button)=>{try{
-   const before=measure(),delta=arrange([el.getBoundingClientRect()],mode,frameBounds(el))[0];write({...before,x:before.x+delta.x,y:before.y+delta.y},before,button);
+   const before=measure(),delta=before.localCoordinates?arrange([{left:before.x,top:before.y,width:before.width,height:before.height}],mode,{left:0,top:0,width:before.parentWidth,height:before.parentHeight})[0]:arrange([el.getBoundingClientRect()],mode,frameBounds(el))[0];write({...before,x:before.x+delta.x,y:before.y+delta.y},before,button);
   }catch(error){report(error.message);}}),fields);
   const initial=measure();
   for(const [axis,label]of [['x','X'],['y','Y']]){
-   const input=I.number(fields,label,initial[axis],-100000,100000,value=>{try{const before=measure();write({...before,[axis]:value},before,input);}catch(error){report(error.message);}});I.fieldDraft(input);input.title='Position from the containing frame in pixels. '+input.title;
+   const input=I.number(fields,label,initial[axis],-100000,100000,value=>{try{const before=measure();write({...before,[axis]:value},before,input);}catch(error){report(error.message);}});I.fieldDraft(input);if(initial.localCoordinates)input.dataset.localCoordinates='true';input.title='Position from the containing frame in pixels. '+input.title;
    input.retouchNumericPreview=()=>{
     let before;try{before=measure();}catch(error){report(error.message);return {current:()=>false,update(){},restore(){}};}
     const preview=root.RetouchPaintPicker.propertyPreview({el,input,property:'translate'});

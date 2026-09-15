@@ -19662,3 +19662,26 @@ this browser regression uses Balance.
 
 Full parity, unrestricted source compatibility and trusted Homebrew distribution
 remain incomplete. No push or native rebuild in this checkpoint.
+
+
+### Local position edits inside transformed frames
+
+Absolute HTML layers inside transformed ancestors now expose working X/Y and
+frame-alignment controls when the layer itself has no transform. The fallback
+reads resolved local insets, margins and border-box dimensions, avoiding page
+coordinate distortion. Alignment uses the containing frame's local bounds.
+React/Liquid verify saved geometry using the same coordinate system. Existing
+source ownership, responsive scope and unique-instance guards remain in place.
+
+Validation: all 1,672 unit tests passed, including fractional insets, negative
+margins, content-box borders/padding, and unresolved/SVG/own-transform refusals.
+HTML/Chromium, React/Chromium and Liquid/WebKit Text-tool suites passed X/Y
+edits and left-frame alignment inside the rotated/scaled fixture, followed by
+exact source undo. Existing text placement, resizing, wrapping and undo checks
+also passed. Logs: `/tmp/retouch-local-position-{html,react,liquid}-final.log`
+and `/tmp/retouch-local-position-units-final.log`.
+
+Direct canvas transforms, anchor presets and layers with their own transforms
+inside these frames remain incomplete. The UI does not offer nonworking canvas
+buttons for this local-coordinate fallback. Full arbitrary-site/Figma parity
+and trusted Homebrew distribution remain incomplete. No push or native rebuild.
