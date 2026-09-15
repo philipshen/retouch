@@ -20558,3 +20558,25 @@ Logs: `/tmp/retouch-adaptive-inline-react.log`,
 This verifies the preset and minimum field against the inline-grid fixture;
 it does not prove arbitrary cascade/layout compatibility or full Figma parity.
 Trusted Homebrew distribution remains incomplete. No native rebuild or push.
+
+### Adaptive-grid readout follows inline column priority
+
+Adaptive minimum detection now considers the selected element's inline columns.
+Ordinary inline columns hide ordinary adaptive utilities; important inline
+columns take precedence over editor utilities. Recognized inline adaptive values
+can supply the minimum directly. Inherited important column utilities also take
+precedence over ordinary local utilities. Single and shared inspectors use this
+readout so an overridden adaptive grid is not shown as active.
+
+Validation: React/Chromium single selection and Liquid/WebKit shared selection
+passed an external important-inline override and restoration while an adaptive
+grid was active. The button clears, the minimum field disappears, removing the
+override restores the 180px field, and source remains unchanged. Existing scope,
+rendered columns and exact undo checks also passed. All 1,698 unit tests passed;
+an older assertion was corrected because ordinary local columns do not defeat
+inherited important columns. Logs: `/tmp/retouch-adaptive-state-react.log`,
+`/tmp/retouch-adaptive-state-liquid.log`, `/tmp/retouch-adaptive-state-units.log`.
+
+This is targeted column-priority handling, not a universal cascade resolver.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete. No native rebuild or push.

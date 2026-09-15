@@ -355,7 +355,7 @@ test('grid alignment replaces item utilities with physical alignment while prese
 test('adaptive grid classes retain unrelated styles and override authored layout declarations',()=>{
  const next=L.adaptiveGridClasses('flex flex-row grid-cols-3 grid-rows-2 hover:grid-cols-4 p-4',240);
  assert.equal(next,'hover:grid-cols-4 p-4 !grid !grid-cols-[repeat(auto-fit,_minmax(min(100%,_240px),_1fr))] !grid-rows-[none]');
- assert.equal(L.adaptiveMinimum(next),240);assert.equal(L.adaptiveMinimum('',next),240);assert.equal(L.adaptiveMinimum('grid-cols-2',next),null);assert.equal(L.adaptiveMinimum('grid-cols-[80px_1fr]',next),null);
+ assert.equal(L.adaptiveMinimum(next),240);assert.equal(L.adaptiveMinimum('',next),240);assert.equal(L.adaptiveMinimum('grid-cols-2',next),240);assert.equal(L.adaptiveMinimum('grid-cols-[80px_1fr]',next),240);assert.equal(L.adaptiveMinimum('!grid-cols-2',next),null);
  for(const value of [0,2001,1.5,NaN])assert.throws(()=>L.adaptiveGridClasses('',value));
 });
 
@@ -433,4 +433,15 @@ test('inline padding maps logical edges and prioritizes only matching physical o
  assert.equal(L.paddingClasses('p-2','bottom',12,'',css,true),'p-2 !pb-[12px]');
  assert.equal(L.ownPadding('pb-[12px]','bottom','',css,true),null);
  assert.equal(L.ownPadding('!pb-[12px]','bottom','',css,true),'12');
+});
+
+test('adaptive minimum follows inline priority and inherited important columns',()=>{
+ const normal='grid-cols-[repeat(auto-fit,_minmax(min(100%,_240px),_1fr))]',strong='!'+normal;
+ const el=(value,priority='')=>({style:{getPropertyValue:()=>value,getPropertyPriority:()=>priority}});
+ assert.equal(L.adaptiveMinimum(normal,'',el('30px 50px')),null);
+ assert.equal(L.adaptiveMinimum(strong,'',el('30px 50px')),240);
+ assert.equal(L.adaptiveMinimum(strong,'',el('30px 50px','important')),null);
+ assert.equal(L.adaptiveMinimum('grid-cols-2',strong,el('30px 50px')),240);
+ assert.equal(L.adaptiveMinimum('!grid-cols-2',strong,el('30px 50px')),null);
+ assert.equal(L.adaptiveMinimum(normal,'',el('repeat(auto-fit, minmax(min(100%, 180px), 1fr))')),180);
 });

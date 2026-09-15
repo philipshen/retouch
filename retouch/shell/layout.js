@@ -85,10 +85,13 @@
     return token.slice(token.startsWith(prefix)?prefix.length:property.length,-1).replace(/\\_|_/g,t=>t==='\\_'?'_':' ');
   }
 
-  function adaptiveMinimum(classes,inherited=''){
+  function adaptiveMinimum(classes,inherited='',el=null){
     const V=root.RetouchHTMLCSSValues||require('./html-css-values.js');
-    const own=classes.split(/\s+/).some(token=>/^(?:grid-cols-|\[grid-template-columns:)/.test(I.base(token)||''));
-    return V.parseAdaptiveColumns(ownGridTemplate(own?classes:inherited,'columns'));
+    const columns=token=>/^(?:grid-cols-|\[grid-template-columns:)/.test(I.base(token)||''),important=token=>columns(token)&&/^!|!$/.test(token);
+    const own=classes.split(/\s+/),fallback=inherited.split(/\s+/),selected=own.some(important)?classes:fallback.some(important)?inherited:own.some(columns)?classes:inherited;
+    const inline=el?.style.getPropertyValue('grid-template-columns');
+    if(inline&&(el.style.getPropertyPriority('grid-template-columns')==='important'||!selected.split(/\s+/).some(important)))return V.parseAdaptiveColumns(inline);
+    return V.parseAdaptiveColumns(ownGridTemplate(selected,'columns'));
   }
   function adaptiveGridClasses(classes,size=240,inherited=''){
     const V=root.RetouchHTMLCSSValues||require('./html-css-values.js'),columns=V.adaptiveColumns(size);
@@ -267,7 +270,7 @@
       apply:axis=>{if(!modeSelect.retouchPreset.blocked(axis))save(stackClasses(classes,axis,el.ownerDocument.defaultView.getComputedStyle(el),inherited));}
     };
 
-    const adaptiveSize=adaptiveMinimum(classes,inherited),adaptiveActive=mode==='grid'&&adaptiveSize!==null,adaptiveRange=()=>!info.styleScope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',adaptiveBlocked=()=>!el.isConnected||!adaptiveRange()||['display','grid','grid-template','grid-template-columns','grid-template-rows'].some(property=>el.style.getPropertyPriority(property)==='important');
+    const adaptiveSize=adaptiveMinimum(classes,inherited,el),adaptiveActive=mode==='grid'&&adaptiveSize!==null,adaptiveRange=()=>!info.styleScope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',adaptiveBlocked=()=>!el.isConnected||!adaptiveRange()||['display','grid','grid-template','grid-template-columns','grid-template-rows'].some(property=>el.style.getPropertyPriority(property)==='important');
     const adaptive=I.button('Adaptive grid',()=>{if(!adaptiveBlocked())save(adaptiveGridClasses(classes,adaptiveSize||240,inherited));});adaptive.setAttribute('aria-label','Adaptive grid');adaptive.setAttribute('aria-pressed',String(adaptiveActive));adaptive.disabled=adaptiveBlocked();adaptive.title=adaptive.disabled?'Preview this edit range and remove important inline grid overrides to arrange children.':'Fit columns automatically to the available space.';sec.append(adaptive);
     if(adaptiveActive){const minimum=I.number(sec,'Minimum column size (px)',adaptiveSize,1,2000,value=>{const columns=(root.RetouchHTMLCSSValues||require('./html-css-values.js')).adaptiveColumns(value);if(columns&&!adaptiveBlocked())save(gridTemplateClasses(classes,'columns',columns,inherited,true));});minimum.step='1';minimum.disabled=adaptiveBlocked();minimum.closest('.inspector-field').querySelector('span').textContent='Min column';}
 
