@@ -19338,3 +19338,24 @@ history. Logs: `/tmp/retouch-pen-independent-{html,react,liquid,units}-final.log
 
 No desktop rebuild or push. Full Figma parity, arbitrary-site support and
 trusted Homebrew distribution remain incomplete.
+
+### 2026-09-15 — Local anchor undo/redo while drawing with Pen
+
+An unfinished Pen path now owns Undo and Redo. Main toolbar buttons and existing
+Cmd/Ctrl shortcuts step through anchors without cancelling Pen or reaching
+older source history. Redo restores the entire anchor, including its curve
+handles; adding another anchor clears redo. Held drags expose no intermediate
+history step. The Pen surface publishes local availability and history actions,
+and removing it restores source-history routing. Backspace/Remove last point
+also records the removed anchor for redo. The hint documents the shortcuts.
+
+All 1,665 unit tests passed. HTML and React Chromium plus Liquid WebKit browser
+checks passed for toolbar Undo/Redo, Ctrl+Z, Cmd+Z/Shift+Cmd+Z, empty local
+history protection, curve-handle restoration, new-anchor redo invalidation,
+unchanged source during local history and exact source undo after Finish. A
+held-pointer check confirms undo cannot expose a partial handle gesture.
+Existing direct/armed-tool checks and the HTML SVG drawing regression passed.
+Logs: `/tmp/retouch-pen-history-{html,react,liquid,units,svg}-final.log`.
+
+No desktop rebuild or push. Full Figma parity, arbitrary-site support and
+trusted Homebrew distribution remain incomplete.

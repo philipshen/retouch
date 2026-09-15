@@ -125,6 +125,8 @@ function syncHistoryControls() {
   const textChanged=!!editing&&editing.el.innerHTML!==editing.historyBaselineHTML;
   undoBtn.disabled = busy || historyRecoveryRequired || !(canStepInlineHistory(false)||(!textChanged||!ownsNativeTextHistory())&&(textChanged||editorHistory.canUndo));
   redoBtn.disabled = busy || historyRecoveryRequired || !(canStepInlineHistory(true)||!textChanged&&editorHistory.canRedo);
+  const toolHistory=document.querySelector('.svg-pen-surface')?.retouchHistory;
+  if(toolHistory){undoBtn.disabled=busy||!toolHistory.canUndo;redoBtn.disabled=busy||!toolHistory.canRedo;}
   undoBtn.setAttribute('aria-busy',String(busy));
   redoBtn.setAttribute('aria-busy',String(busy));
   pagePicker.disabled = busy;routeInput.disabled = busy;
@@ -3776,9 +3778,12 @@ function optimisticText(text) {
   for (const el of matchingEls(sel.info.id)) el.textContent = text;
 }
 
+window.addEventListener('retouch:tool-history',syncHistoryControls);
 async function undo() { return restoreDirection('undo'); }
 async function redo() { return restoreDirection('redo'); }
 async function restoreDirection(direction) {
+  const toolHistory=document.querySelector('.svg-pen-surface')?.retouchHistory;
+  if(toolHistory){if(!undoBusy&&!panelTasks&&!sourceRequests)toolHistory[direction]();return;}
   stopDrawing?.();
   if(undoBusy || panelTasks || sourceRequests)return;
   if(caretHistoryStep(direction==='redo'))return;

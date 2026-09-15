@@ -14,13 +14,14 @@
     const toolbar=root.document.createElement('div');toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','Pen actions');toolbar.setAttribute('aria-controls',surface.id);
     Object.assign(toolbar.style,{position:'fixed',left:'12px',bottom:'12px',maxWidth:'calc(100% - 24px)',display:'flex',flexWrap:'wrap',gap:'8px',alignItems:'center',padding:'8px',background:'#ffffff',border:'1px solid var(--line, #e6e6e6)',borderRadius:'8px',boxShadow:'0 4px 16px #0002',zIndex:41,cursor:'default'});
     const status=root.document.createElement('span');status.setAttribute('role','status');status.style.cssText='font:12px Inter,system-ui;color:var(--ink, #1e1e1e);';toolbar.append(status);
-    const points=[],dots=[],cleanup=[],initial=space?.matrix||target.getScreenCTM(),revision=target.getAttribute('data-rt-revision');let hover=null,ended=false,raf,drag=null;
+    const points=[],redoPoints=[],dots=[],cleanup=[],initial=space?.matrix||target.getScreenCTM(),revision=target.getAttribute('data-rt-revision');let hover=null,ended=false,raf,drag=null;
     function listen(el,type,fn,options){el.addEventListener(type,fn,options);cleanup.push(()=>el.removeEventListener(type,fn,options));}
-    function cancel(){if(ended)return;ended=true;root.cancelAnimationFrame(raf);cleanup.forEach(fn=>fn());clearHint();toolbar.remove();surface.remove();onEnd();}
+    function cancel(){if(ended)return;ended=true;root.cancelAnimationFrame(raf);cleanup.forEach(fn=>fn());clearHint();toolbar.remove();surface.remove();onEnd();root.dispatchEvent(new Event('retouch:tool-history'));}
     function current(){const m=space?.matrix||target.getScreenCTM();return (!space||space.current())&&isCurrent()&&target.isConnected&&target.getAttribute('data-rt-revision')===revision&&m&&initial&&['a','b','c','d','e','f'].every(key=>Math.abs(m[key]-initial[key])<1e-6);}
     function verify(){if(current())return true;cancel();onError(native?'The container changed while drawing. Select it again.':'The SVG canvas changed while drawing. Select it again.');return false;}
     function action(label,fn){const b=root.document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;Object.assign(b.style,{padding:'0 8px',minHeight:'28px',border:'1px solid var(--line, #e6e6e6)',borderRadius:'4px',background:'var(--control, #f5f5f5)',color:'var(--ink, #1e1e1e)',font:'12px Inter,system-ui',cursor:'pointer'});toolbar.append(b);return b;}
     const finishButton=action('Finish line',()=>finish(false)),closeButton=action('Close shape',()=>finish(true)),backButton=action('Remove last point',back);action('Cancel',cancel);
+    surface.retouchHistory={get canUndo(){return !drag&&points.length>0;},get canRedo(){return !drag&&redoPoints.length>0;},undo:back,redo:forward};
     function update(){
       status.textContent=points.length+' points · Click or drag';
       finishButton.textContent=root.RetouchSVGPath.curved(points)?'Finish path':'Finish line';
@@ -29,7 +30,7 @@
       points.forEach((_,i)=>{const dot=root.document.createElement(i?'span':'button');
         if(!i){dot.type='button';dot.setAttribute('aria-label','Close vector at first point');dot.title='Close the shape';dot.disabled=!root.RetouchSVGPath.serialize(points,true);dot.onclick=()=>finish(true);}
         Object.assign(dot.style,{position:'absolute',width:'12px',height:'12px',padding:'0',boxSizing:'border-box',border:'2px solid var(--accent, #0d99ff)',background:'white',borderRadius:'50%',pointerEvents:i?'none':'auto',cursor:'crosshair'});surface.append(dot);dots.push(dot);
-      });paint();if(toolbar.isConnected)placeToolbar();
+      });paint();if(toolbar.isConnected)placeToolbar();root.dispatchEvent(new Event('retouch:tool-history'));
     }
     function point(event,last=points.at(-1)){
       const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth;
@@ -56,12 +57,13 @@
       if(!root.RetouchSVGPath.serialize(points,closed)){status.textContent=closed?'Place at least three different points.':'Place at least two different points.';return;}
       const value=points.flatMap(p=>[p.x,p.y]),nodes=root.RetouchSVGPath.curved(points)?points.map(p=>({...p})):null;cancel();onCommit(value,closed,nodes);
     }
-    function back(){if(drag||!points.length||!verify())return;points.pop();hover=null;update();surface.focus({preventScroll:true});}
+    function back(){if(drag||!points.length||!verify())return;redoPoints.push(points.pop());hover=null;update();surface.focus({preventScroll:true});}
+    function forward(){if(drag||!redoPoints.length||!verify())return;points.push(redoPoints.pop());hover=null;update();surface.focus({preventScroll:true});}
     listen(surface,'pointerdown',event=>{
       if(event.target.closest('button')||toolbar.contains(event.target)||event.button!==0||drag)return;
       event.preventDefault();event.stopImmediatePropagation();if(!inside(event)||!verify())return;
       if(points.length>=maxPoints){status.textContent='Finish this vector before adding more points.';return;}
-      try{const p=point(event),last=points.at(-1);if(last&&Math.hypot(p.x-last.x,p.y-last.y)<1e-6)return;points.push(p);drag={id:event.pointerId,x:event.clientX,y:event.clientY,curved:false};hover=null;surface.setPointerCapture(event.pointerId);update();surface.focus({preventScroll:true});}catch(error){onError(error.message);}
+      try{const p=point(event),last=points.at(-1);if(last&&Math.hypot(p.x-last.x,p.y-last.y)<1e-6)return;redoPoints.length=0;points.push(p);drag={id:event.pointerId,x:event.clientX,y:event.clientY,curved:false};hover=null;surface.setPointerCapture(event.pointerId);update();surface.focus({preventScroll:true});}catch(error){onError(error.message);}
     });
     function move(event){
       if(ended)return;
@@ -75,7 +77,7 @@
     }
     listen(surface,'pointermove',move);
     for(const host of [root,w])for(const type of ['keydown','keyup'])listen(host,type,event=>{if(drag?.pointer&&['Shift','Alt'].includes(event.key)&&!event.isComposing){event.preventDefault();event.stopImmediatePropagation();move({...drag.pointer,shiftKey:event.shiftKey,altKey:event.altKey});}},true);
-    const up=event=>{if(!drag||event.pointerId!==drag.id)return;event.preventDefault();event.stopImmediatePropagation();move(event);if(ended)return;drag=null;hover=null;for(const owner of [surface,pointerTarget])if(owner?.hasPointerCapture(event.pointerId))owner.releasePointerCapture(event.pointerId);paint();};
+    const up=event=>{if(!drag||event.pointerId!==drag.id)return;event.preventDefault();event.stopImmediatePropagation();move(event);if(ended)return;drag=null;hover=null;for(const owner of [surface,pointerTarget])if(owner?.hasPointerCapture(event.pointerId))owner.releasePointerCapture(event.pointerId);update();};
     listen(surface,'pointerup',up);
     listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',()=>{if(drag)cancel();});
     listen(surface,'dblclick',event=>{if(event.target.closest('button')||toolbar.contains(event.target))return;event.preventDefault();event.stopImmediatePropagation();finish(false);});
@@ -96,7 +98,7 @@
     function placeToolbar(){const dock=root.document.querySelector('.design-tool-dock')?.getBoundingClientRect();toolbar.style.maxWidth=Math.max(0,c.width-24)+'px';toolbar.style.bottom=Math.max(12,dock?root.innerHeight-dock.top+12:root.innerHeight-c.bottom+12)+'px';toolbar.style.left=Math.max(c.left+12,c.left+(c.width-toolbar.offsetWidth)/2)+'px';}
     if(initialPoint){try{const event={clientX:f.left+initialPoint.x*scale,clientY:f.top+initialPoint.y*scale};if(!inside(event))throw Error('Place the first point inside the drawing canvas.');points.push(point(event));}catch(error){cancel();onError(error.message);return null;}}
     root.document.body.append(surface,toolbar);update();surface.focus({preventScroll:true});
-    clearHint=root.RetouchCanvasHint?.show('Pen · Click for corners, drag for curves · Enter to finish','Shift constrains direction; Option/Alt creates an independent outgoing handle. Click the first point to close. Enter finishes; Backspace removes the last point; Escape cancels.')||(()=>{});
+    clearHint=root.RetouchCanvasHint?.show('Pen · Click for corners, drag for curves · Enter to finish','Shift constrains direction; Option/Alt creates an independent outgoing handle. Click the first point to close. Enter finishes; Cmd/Ctrl+Z undoes points, Shift+Cmd/Ctrl+Z restores them; Backspace removes the last point; Escape cancels.')||(()=>{});
     function watch(){if(!ended&&verify())raf=root.requestAnimationFrame(watch);}raf=root.requestAnimationFrame(watch);
     if(initialPointer){try{
       const fromFrame=e=>{const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth;return {clientX:f.left+e.clientX*scale,clientY:f.top+e.clientY*scale,pointerId:e.pointerId,target:e.target,shiftKey:e.shiftKey,altKey:e.altKey,preventDefault:()=>e.preventDefault(),stopImmediatePropagation:()=>e.stopImmediatePropagation()};};
