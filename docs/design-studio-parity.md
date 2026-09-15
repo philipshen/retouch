@@ -17203,3 +17203,13 @@ The HTML harness now waits for panel tasks, source requests and undo work in add
 Fresh complete `html-site.cjs` runs pass on Chromium and WebKit, covering the migrated gradient sequence along with responsive CSS, shorthand/edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo. The WebKit gradient dialog screenshot was visually inspected. This batch changes tests only; the prior unit result is not claimed as a fresh run.
 
 The two previously identified long gradient workflows are migrated. Broader Figma fidelity/features, advanced-section cleanup, arbitrary-site support and trusted native/Homebrew distribution remain incomplete.
+
+### Gradient stop hex and opacity rows — 2026-09-15
+
+CSS gradient stop rows now use the shared compact paint control: swatch, editable hex and separate opacity alongside stop position and removal. Bare hex preserves the separate alpha; explicit eight-digit hex sets alpha. Display P3 retains its color model when opacity changes. The row grid explicitly assigns the converted color field to its color column, keeping position, six-digit color and opacity readable without wrapping.
+
+The shared compact formatter now recognizes byte colors within the precision of browser-rounded sRGB channels. It retains the original CSS value when an unchanged formatted hex leaves focus, avoiding a source rewrite or channel rounding on focus/blur. Colors outside that tolerance keep RGB/P3 notation. Browser-computed alpha can be rounded; the eight-digit test separately verifies the exact authored hex, while rendered-alpha comparisons account for CSS serialization precision.
+
+All 1,559 unit tests pass. New HTML/Chromium, React/Chromium and Liquid/WebKit workflows verify hex selection, focus/no-write, explicit alpha, fractional opacity, alpha-preserving hex edits, unchanged neighboring paints/stops/geometry, readable row geometry, invalid-draft refusal/cancellation, P3 and exact undo/redo. The final HTML screenshot was visually inspected. The existing HTML compact Fill/Stroke/mixed-border workflow, full Liquid/WebKit gradient workflow and full HTML/Chromium site regression also pass. Picker assertions in the long gradient tests now inspect rendered color, since the focused UI separates hex from opacity.
+
+Full Figma parity, background-color-row visibility, broader whole-gradient opacity, advanced-section cleanup, arbitrary-site support and trusted native/Homebrew distribution remain incomplete. No native build or publication occurred.

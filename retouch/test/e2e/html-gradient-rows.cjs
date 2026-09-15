@@ -37,7 +37,7 @@ const open=async index=>{const button=page.getByRole('button',{name:'Edit gradie
   await picker.getByLabel('Hue (deg)',{exact:true}).fill('120');if(process.env.RT_E2E_PICKER_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_PICKER_SCREENSHOT});
   await picker.getByLabel('Color value',{exact:true}).press('Enter');
   await wait(()=>read()!==beforePicker);
-  await settled();const savedPickerColor=await page.getByLabel('Paint 1 stop 1 color',{exact:true}).evaluate(el=>RetouchPaletteValues.parse(RetouchColorStyles.fromComputed(el.value)));assert.equal(savedPickerColor.space,'srgb');assert.deepEqual(savedPickerColor.channels.map(value=>Math.round(value*255)),[90,153,90]);assert.equal(savedPickerColor.alpha,.5);
+  await settled();const savedPickerColor=await page.getByLabel('Paint 1 stop 1 color',{exact:true}).evaluate(el=>RetouchPaintPicker.parsePaint(RetouchHTMLCSSValues.parseGradients(getComputedStyle(document.querySelector('#app').contentDocument.querySelector('h1')).backgroundImage)[0].stops[0].color));assert.equal(savedPickerColor.space,'srgb');assert.deepEqual(savedPickerColor.channels.map(value=>Math.round(value*255)),[90,153,90]);assert.equal(savedPickerColor.alpha,.5);
   await page.getByRole('button',{name:'Undo',exact:true}).click();
   await wait(()=>read()===beforePicker);
   await settled();
