@@ -17167,3 +17167,11 @@ An empty image/gradient stack now uses the same compact Fill section and Add pai
 All 1,559 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit workflows pass removing the final paint, uploading an orange image from the empty stack, checking its rendered pixels, removing it, adding a solid paint and exact source undo. The React pixel check waits for the expected compiled image URL before sampling. The existing HTML legacy-upload regression also passes, and the compact empty state was visually inspected.
 
 Full Figma parity and trusted native/Homebrew distribution remain incomplete. No native app was rebuilt or published.
+
+### Consolidated advanced gradient controls — 2026-09-15
+
+When a supported paint stack has row editors, More fill controls now hides its duplicate gradient fieldsets and Add gradient actions. Paint rows and the Add paint menu remain the editing path; clear/reset and other advanced controls remain available. Unsupported stacks without row controls retain their existing controls.
+
+All 1,559 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit stack workflows pass editing, visibility, responsive scope, ordering, clear/reset and exact undo. An additional HTML run verifies duplicate-control exclusion for a visible single solid paint and an enabled reset action; its expanded advanced section was visually inspected.
+
+Validation is not complete: older gradient workflows in `retouch/test/e2e/html-site.cjs` and `retouch/test/e2e/page-fonts.cjs` still address the legacy Add gradient / Fill N / Gradient N controls. Migrate those workflows to Add paint and Paint N row dialogs, preserving their picker, numeric gestures, stop geometry, focus, responsive and exact-undo assertions, then run them. The new stack checks do not replace that coverage. Full Figma parity and trusted native/Homebrew distribution remain incomplete.
