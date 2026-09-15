@@ -14,6 +14,7 @@
   function keydown(e){
    if(e.key==='Escape'&&(held||toggled||drag)){e.preventDefault();e.stopImmediatePropagation();cancel();return;}
    if(e.code!=='Space'||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey||e.target?.isContentEditable||e.target?.closest?.('input,textarea,select,summary,button:not([role="treeitem"]),[contenteditable]')||d.querySelector('dialog[open]'))return;
+   if(d.querySelector('[data-canvas-space-owner]'))return;
    if(!held&&!activate())return;e.preventDefault();e.stopImmediatePropagation();held=true;paint();
   }
   function keyup(e){if(e.code==='Space'&&held){e.preventDefault();e.stopImmediatePropagation();held=false;paint();}}

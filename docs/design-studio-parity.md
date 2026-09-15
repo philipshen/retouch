@@ -19359,3 +19359,23 @@ Logs: `/tmp/retouch-pen-history-{html,react,liquid,units,svg}-final.log`.
 
 No desktop rebuild or push. Full Figma parity, arbitrary-site support and
 trusted Homebrew distribution remain incomplete.
+
+### 2026-09-15 — Reposition a Pen anchor with Space during its drag
+
+Holding Space during an active Pen drag translates the anchor and its incoming
+and outgoing handles together. Releasing Space resumes handle drawing. The
+active drag claims Space explicitly so canvas pan does not cancel it; that
+claim ends with pointer release or surface cleanup. Pointerdown initializes
+the movement basis, and translated points/handles retain coordinate bounds.
+The Pen hint documents repositioning.
+
+All 1,665 unit tests passed. HTML and React Chromium plus Liquid WebKit checks
+passed for anchor/handle movement, unchanged canvas scroll, continued modifier
+controls, moved anchor persistence in the finished path and exact undo.
+Existing local history, direct/armed entry and cancellation checks also passed.
+The standalone pan regression passed for ordinary Space/Hand behavior, and the
+SVG drawing regression passed for shapes, curves, transforms and history.
+Logs: `/tmp/retouch-pen-space-{html,react,liquid,units,pan,svg}-final.log`.
+
+No desktop rebuild or push. Full Figma parity, arbitrary-site support and
+trusted Homebrew distribution remain incomplete.

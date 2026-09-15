@@ -14,7 +14,7 @@
     const toolbar=root.document.createElement('div');toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','Pen actions');toolbar.setAttribute('aria-controls',surface.id);
     Object.assign(toolbar.style,{position:'fixed',left:'12px',bottom:'12px',maxWidth:'calc(100% - 24px)',display:'flex',flexWrap:'wrap',gap:'8px',alignItems:'center',padding:'8px',background:'#ffffff',border:'1px solid var(--line, #e6e6e6)',borderRadius:'8px',boxShadow:'0 4px 16px #0002',zIndex:41,cursor:'default'});
     const status=root.document.createElement('span');status.setAttribute('role','status');status.style.cssText='font:12px Inter,system-ui;color:var(--ink, #1e1e1e);';toolbar.append(status);
-    const points=[],redoPoints=[],dots=[],cleanup=[],initial=space?.matrix||target.getScreenCTM(),revision=target.getAttribute('data-rt-revision');let hover=null,ended=false,raf,drag=null;
+    const points=[],redoPoints=[],dots=[],cleanup=[],initial=space?.matrix||target.getScreenCTM(),revision=target.getAttribute('data-rt-revision');let hover=null,ended=false,raf,drag=null,spaceHeld=false;
     function listen(el,type,fn,options){el.addEventListener(type,fn,options);cleanup.push(()=>el.removeEventListener(type,fn,options));}
     function cancel(){if(ended)return;ended=true;root.cancelAnimationFrame(raf);cleanup.forEach(fn=>fn());clearHint();toolbar.remove();surface.remove();onEnd();root.dispatchEvent(new Event('retouch:tool-history'));}
     function current(){const m=space?.matrix||target.getScreenCTM();return (!space||space.current())&&isCurrent()&&target.isConnected&&target.getAttribute('data-rt-revision')===revision&&m&&initial&&['a','b','c','d','e','f'].every(key=>Math.abs(m[key]-initial[key])<1e-6);}
@@ -63,21 +63,23 @@
       if(event.target.closest('button')||toolbar.contains(event.target)||event.button!==0||drag)return;
       event.preventDefault();event.stopImmediatePropagation();if(!inside(event)||!verify())return;
       if(points.length>=maxPoints){status.textContent='Finish this vector before adding more points.';return;}
-      try{const p=point(event),last=points.at(-1);if(last&&Math.hypot(p.x-last.x,p.y-last.y)<1e-6)return;redoPoints.length=0;points.push(p);drag={id:event.pointerId,x:event.clientX,y:event.clientY,curved:false};hover=null;surface.setPointerCapture(event.pointerId);update();surface.focus({preventScroll:true});}catch(error){onError(error.message);}
+      try{const p=point(event),last=points.at(-1);if(last&&Math.hypot(p.x-last.x,p.y-last.y)<1e-6)return;redoPoints.length=0;points.push(p);drag={id:event.pointerId,x:event.clientX,y:event.clientY,curved:false,pointer:{clientX:event.clientX,clientY:event.clientY,pointerId:event.pointerId,target:event.target}};surface.setAttribute('data-canvas-space-owner','');hover=null;surface.setPointerCapture(event.pointerId);update();surface.focus({preventScroll:true});}catch(error){onError(error.message);}
     });
     function move(event){
       if(ended)return;
       if(drag){
         if(event.pointerId!==drag.id||!verify())return;
-        try{drag.pointer={clientX:event.clientX,clientY:event.clientY,pointerId:event.pointerId,target:event.target};const anchor=points.at(-1),p=point(event,anchor);drag.curved ||= Math.hypot(event.clientX-drag.x,event.clientY-drag.y)>=3;
+        try{const previous=drag.pointer;drag.pointer={clientX:event.clientX,clientY:event.clientY,pointerId:event.pointerId,target:event.target};const anchor=points.at(-1);
+          if(spaceHeld&&previous){const a=point(previous,null),b=point(event,null),dx=b.x-a.x,dy=b.y-a.y,values=[anchor,anchor.in,anchor.out].filter(Boolean);if(values.some(p=>Math.abs(p.x+dx)>100000||Math.abs(p.y+dy)>100000))throw Error('Keep points and handles within supported SVG coordinates.');for(const p of values){p.x+=dx;p.y+=dy;}drag.x+=event.clientX-previous.clientX;drag.y+=event.clientY-previous.clientY;update();return;}
+          const p=point(event,anchor);drag.curved ||= Math.hypot(event.clientX-drag.x,event.clientY-drag.y)>=3;
           if(drag.curved){const incoming={x:2*anchor.x-p.x,y:2*anchor.y-p.y};if(Math.abs(incoming.x)>100000||Math.abs(incoming.y)>100000)throw Error('Keep curve handles within supported SVG coordinates.');anchor.out=p;if(event.altKey)delete anchor.in;else anchor.in=incoming;update();}
         }catch(error){cancel();onError(error.message);}return;
       }
       if(toolbar.contains(event.target))return;if(!inside(event)){hover=null;paint();return;}try{hover=point(event);paint();}catch{hover=null;}
     }
     listen(surface,'pointermove',move);
-    for(const host of [root,w])for(const type of ['keydown','keyup'])listen(host,type,event=>{if(drag?.pointer&&['Shift','Alt'].includes(event.key)&&!event.isComposing){event.preventDefault();event.stopImmediatePropagation();move({...drag.pointer,shiftKey:event.shiftKey,altKey:event.altKey});}},true);
-    const up=event=>{if(!drag||event.pointerId!==drag.id)return;event.preventDefault();event.stopImmediatePropagation();move(event);if(ended)return;drag=null;hover=null;for(const owner of [surface,pointerTarget])if(owner?.hasPointerCapture(event.pointerId))owner.releasePointerCapture(event.pointerId);update();};
+    for(const host of [root,w])for(const type of ['keydown','keyup'])listen(host,type,event=>{if(drag&&event.code==='Space'&&!event.isComposing){event.preventDefault();event.stopImmediatePropagation();spaceHeld=type==='keydown';return;}if(drag?.pointer&&['Shift','Alt'].includes(event.key)&&!event.isComposing){event.preventDefault();event.stopImmediatePropagation();move({...drag.pointer,shiftKey:event.shiftKey,altKey:event.altKey});}},true);
+    const up=event=>{if(!drag||event.pointerId!==drag.id)return;event.preventDefault();event.stopImmediatePropagation();move(event);if(ended)return;drag=null;spaceHeld=false;surface.removeAttribute('data-canvas-space-owner');hover=null;for(const owner of [surface,pointerTarget])if(owner?.hasPointerCapture(event.pointerId))owner.releasePointerCapture(event.pointerId);update();};
     listen(surface,'pointerup',up);
     listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',()=>{if(drag)cancel();});
     listen(surface,'dblclick',event=>{if(event.target.closest('button')||toolbar.contains(event.target))return;event.preventDefault();event.stopImmediatePropagation();finish(false);});
@@ -98,12 +100,12 @@
     function placeToolbar(){const dock=root.document.querySelector('.design-tool-dock')?.getBoundingClientRect();toolbar.style.maxWidth=Math.max(0,c.width-24)+'px';toolbar.style.bottom=Math.max(12,dock?root.innerHeight-dock.top+12:root.innerHeight-c.bottom+12)+'px';toolbar.style.left=Math.max(c.left+12,c.left+(c.width-toolbar.offsetWidth)/2)+'px';}
     if(initialPoint){try{const event={clientX:f.left+initialPoint.x*scale,clientY:f.top+initialPoint.y*scale};if(!inside(event))throw Error('Place the first point inside the drawing canvas.');points.push(point(event));}catch(error){cancel();onError(error.message);return null;}}
     root.document.body.append(surface,toolbar);update();surface.focus({preventScroll:true});
-    clearHint=root.RetouchCanvasHint?.show('Pen · Click for corners, drag for curves · Enter to finish','Shift constrains direction; Option/Alt creates an independent outgoing handle. Click the first point to close. Enter finishes; Cmd/Ctrl+Z undoes points, Shift+Cmd/Ctrl+Z restores them; Backspace removes the last point; Escape cancels.')||(()=>{});
+    clearHint=root.RetouchCanvasHint?.show('Pen · Click for corners, drag for curves · Enter to finish','Space repositions the anchor while dragging; Shift constrains direction; Option/Alt creates an independent outgoing handle. Click the first point to close. Enter finishes; Cmd/Ctrl+Z undoes points, Shift+Cmd/Ctrl+Z restores them; Backspace removes the last point; Escape cancels.')||(()=>{});
     function watch(){if(!ended&&verify())raf=root.requestAnimationFrame(watch);}raf=root.requestAnimationFrame(watch);
     if(initialPointer){try{
       const fromFrame=e=>{const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth;return {clientX:f.left+e.clientX*scale,clientY:f.top+e.clientY*scale,pointerId:e.pointerId,target:e.target,shiftKey:e.shiftKey,altKey:e.altKey,preventDefault:()=>e.preventDefault(),stopImmediatePropagation:()=>e.stopImmediatePropagation()};};
       const first=fromFrame(initialPointer);if(!inside(first)||!verify())throw Error('Place the first point inside the drawing canvas.');
-      points.push(point(first));drag={id:first.pointerId,x:first.clientX,y:first.clientY,curved:false};
+      points.push(point(first));drag={id:first.pointerId,x:first.clientX,y:first.clientY,curved:false};surface.setAttribute('data-canvas-space-owner','');
       if(!initialReleased)pointerTarget.setPointerCapture(first.pointerId);update();
       if(initialMove)move(fromFrame(initialMove));
       if(initialReleased)up(fromFrame(initialMove||initialPointer));
