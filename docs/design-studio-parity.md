@@ -18887,3 +18887,28 @@ Logs: `/tmp/retouch-single-padding-scrub-fixed.log`,
 `/tmp/retouch-single-gap-range.log`, `/tmp/retouch-padding-final-units.log`.
 No desktop rebuild or push. Full Figma parity, arbitrary-site support and trusted
 Homebrew distribution remain incomplete.
+
+
+### Shared HTML spacing scrubbing — 2026-09-15
+
+Plain HTML shared selections now support label drags for padding, individual
+padding edges and gap. Simple CSS lengths retain their units; normal gaps start
+at zero pixels. Multi-value shorthands retain text editing. Preview ownership,
+writing-mode continuity and screen-range checks cancel stale gestures, and
+inactive ranges disable spacing fields and resets with a screen-switch hint.
+
+Chromium and WebKit passed real pointer checks for normal gaps and rem padding,
+unchanged source during previews, exact inline-style restoration on Escape and
+one-step source Undo/Redo. Chromium grid coverage also verified disabled spacing
+fields and resets at an inactive phone range. The first grid guard assertion
+looked for hidden per-edge reset buttons as visible roles; including hidden
+roles verifies the collapsed disclosure controls without opening them.
+Existing nine-point alignment geometry and keyboard checks passed, and all
+1,663 unit tests passed. Inspected the HTML light-theme screenshot.
+
+Logs: `/tmp/retouch-html-spacing-scrub-verify.log`,
+`/tmp/retouch-html-spacing-scrub-webkit.log`,
+`/tmp/retouch-html-spacing-scope-verified.log`, and
+`/tmp/retouch-html-spacing-scrub-units.log`. No desktop rebuild or push.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete.
