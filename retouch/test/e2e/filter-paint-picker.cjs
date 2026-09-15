@@ -1,0 +1,24 @@
+'use strict';
+const assert=require('node:assert/strict');
+exports.run=async({page,app,read,wait,settled,kind})=>{
+ const states=[read()],open=async()=>{const button=page.getByRole('button',{name:'Expand Effects section',exact:true});if(await button.isVisible())await button.click();},record=async()=>{await wait(()=>read()!==states.at(-1));await settled();await open();states.push(read());},action=async name=>{await page.getByRole('button',{name,exact:true}).click();await record();},actual=property=>app.locator('h1').evaluate((el,p)=>getComputedStyle(el).getPropertyValue(p),property);
+ await open();
+ for(const [prefix,property]of [['Layer','filter'],['Backdrop','backdrop-filter']]){
+  const summary=page.getByText(prefix+' filter stack',{exact:true});if(!await summary.evaluate(el=>el.parentElement.open))await summary.click();
+  await page.getByLabel('New '+prefix.toLowerCase()+' effect',{exact:true}).selectOption('drop-shadow');await action('Add '+prefix.toLowerCase()+' effect');
+  const label=prefix+' effect 1 Shadow color',dialog=page.getByRole('dialog',{name:'Edit '+label,exact:true}),swatch=page.getByRole('button',{name:'Edit '+label,exact:true});
+  const before=await actual(property),source=read(),style=await app.locator('h1').getAttribute('style');
+  await swatch.click();await dialog.getByLabel('Color value',{exact:true}).fill('#ff000080');await wait(async()=>(await actual(property)).includes('255, 0, 0'));assert.equal(read(),source);await page.keyboard.press('Escape');await dialog.waitFor({state:'detached'});assert.equal(await actual(property),before);assert.equal(await app.locator('h1').getAttribute('style'),style);
+  await action('Hide '+prefix+' effect 1');assert.equal(await actual(property),'none');const hiddenSource=read();
+  await swatch.click();await dialog.getByLabel('Color value',{exact:true}).fill('color(display-p3 1 0.2 0.1 / 0.4)');assert.equal(await actual(property),'none');assert.equal(read(),hiddenSource);await dialog.getByRole('button',{name:'Apply color',exact:true}).click();await record();assert.equal(await actual(property),'none');assert.match(await page.getByLabel(label,{exact:true}).inputValue(),/display-p3/);
+  await action('Show '+prefix+' effect 1');assert.match(await actual(property),/color\(display-p3 1 0.2 0.1 \/ 0.4\)/);
+  if(process.env.RT_E2E_FILTER_PAINT_SCREENSHOT&&prefix==='Layer'){await swatch.click();await page.screenshot({path:process.env.RT_E2E_FILTER_PAINT_SCREENSHOT});await page.keyboard.press('Escape');await dialog.waitFor({state:'detached'});}
+ }
+ const screen=page.getByLabel('Screen size',{exact:true}),scope=page.getByLabel('Style screen scope',{exact:true}),swatch=page.getByRole('button',{name:'Edit Layer effect 1 Shadow color',exact:true}),dialog=page.getByRole('dialog',{name:'Edit Layer effect 1 Shadow color',exact:true});
+ await screen.selectOption('768x1024');await settled();await scope.selectOption(kind==='html'?'min-[768px]:':'md:');await screen.selectOption('390x844');await settled();await wait(()=>swatch.isDisabled());const scopedSource=read();await swatch.evaluate(el=>el.click());assert.equal(await dialog.count(),0);assert.equal(read(),scopedSource);
+ await page.getByRole('button',{name:'Preview edit range',exact:true}).click();await settled();await wait(async()=>!await swatch.isDisabled());await swatch.click();await dialog.getByLabel('Color value',{exact:true}).fill('#008844');await dialog.getByRole('button',{name:'Apply color',exact:true}).click();await record();assert.match(await actual('filter'),/0, 136, 68/);
+ await screen.selectOption('390x844');await settled();await wait(async()=>(await actual('filter')).includes('display-p3'));const base=await actual('filter');await swatch.click();await dialog.getByLabel('Color value',{exact:true}).fill('#ff0000');assert.equal(await actual('filter'),base);await page.keyboard.press('Escape');await dialog.waitFor({state:'detached'});assert.equal(await actual('filter'),base);assert.equal(read(),states.at(-1));
+ for(const expected of states.slice(0,-1).reverse()){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),expected);}
+ for(const expected of states.slice(1)){await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();assert.equal(read(),expected);}
+ console.log(kind+': PASS filter drop-shadow picker preview/cancel, hidden P3 edits, restore, responsive guard/off-range preview, and exact undo/redo');
+};
