@@ -197,3 +197,11 @@ test('shared stack presets write only the selected scope using each container wr
  const source='grid grid-cols-2 md:flex-wrap hover:block',changed=changeStack(source,'md:','vertical',{writingMode:'vertical-rl'});
  assert.equal(R.project(changed,''),'grid grid-cols-2');assert.ok(changed.includes('hover:block'));assert.equal(R.project(changed,'md:'),'!flex !flex-row !flex-nowrap');
 });
+
+
+test('alignment reset clears only its own responsive scope and keeps no-op source order',()=>{
+ const {resetContainerAlignment}=require('../shell/react-selection.js');
+ const source='grid md:!place-items-center md:![align-items:start] hover:items-end md:justify-items-end';
+ assert.equal(resetContainerAlignment(source,'md:',{display:'grid'}),'grid hover:items-end md:!place-items-center');
+ const unchanged='md:!place-items-center grid hover:items-end';assert.equal(resetContainerAlignment(unchanged,'md:',{display:'grid'}),unchanged);
+});

@@ -502,6 +502,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     const picker=section.querySelector(':scope > .layout-alignment'),gaps=section.querySelector('[aria-label="Horizontal gap"]')?.closest('.property-pair');
     if(picker&&gaps&&gaps.parentElement===section){const group=document.createElement('div');group.className='layout-alignment-spacing';section.insertBefore(group,gaps);group.append(picker,gaps);}
 
+    const alignmentReset=section.querySelector('[data-alignment-reset]'),alignmentSpacing=section.querySelector('.layout-alignment-spacing');if(alignmentReset&&alignmentSpacing)alignmentSpacing.append(alignmentReset);
     const select=section.querySelector('[aria-label="Arrange children"]');
     if(select){const row=select.closest('.inspector-field');row.classList.add('layout-modes');row.querySelector('span').textContent='';
 

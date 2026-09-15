@@ -65,6 +65,10 @@
   return R.replaceScope(classes,active,scope);
  }
  const containerRules={columns:/^grid-cols-|^\[grid-template-columns:/,rows:/^grid-rows-|^\[grid-template-rows:/,flow:/^grid-flow-|^\[grid-auto-flow:/,mode:/^(?:block|inline|inline-block|flex|inline-flex|grid|inline-grid|hidden|contents|flow-root)$|^flex-(?:row|col)(?:-reverse)?$|^\[(?:display|flex-direction):/,wrap:/^flex-(?:wrap|wrap-reverse|nowrap)$|^\[flex-wrap:/,align:/^items-|^\[align-items:/,justify:/^justify-(?!items-|self-)|^\[justify-content:/};
+ function resetContainerAlignment(classes,scope,context={},document=null){
+  const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
+  const active=R.project(classes,scope),next=L.resetAlignmentClasses(active,context);return next===active?classes:R.replaceScope(classes,next,scope);
+ }
  function changeContainerAlignment(classes,scope,x,y,context={},document=null){
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   return R.replaceScope(classes,L.alignmentClasses(R.project(classes,scope),x,y,context,R.inherited(classes,scope,document)),scope);
@@ -168,6 +172,7 @@
     const label='Shared Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x],button=I.button('•',()=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i),css=el.ownerDocument.defaultView.getComputedStyle(el);if(!active()||!layout(css)||blocked(el,css,x,y))throw Error('Preview the selected edit range and select flex or grid containers without inline alignment overrides.');return [info.id,changeContainerAlignment(info.className,scope,x,y,css,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}});
     button.setAttribute('aria-label',label);button.title=label;button.disabled=!active()||elements.some((el,i)=>blocked(el,computed[i],x,y));button.setAttribute('aria-pressed',String(computed.every(css=>Object.entries(V.childAlignment(x,y,css)).every(([property,value])=>css.getPropertyValue(property)===value))));picker.append(button);
    }
+   const reset=I.button('Reset shared child alignment',()=>{try{if(!active())throw Error('Preview the selected edit range before resetting alignment.');save(Object.fromEntries(infos.map((info,i)=>[info.id,resetContainerAlignment(info.className,scope,computed[i],liveElement(i).ownerDocument)])));}catch(error){I.note(groups.layout,error.message,'refused');}});reset.dataset.alignmentReset='true';reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');reset.disabled=!active()||infos.every((info,i)=>resetContainerAlignment(info.className,scope,computed[i])===info.className);groups.layout.append(reset);
   }
   if(computed.every(css=>['grid','inline-grid'].includes(css.display))){
    const L=root.RetouchLayout,write=(property,value,inline)=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(!['grid','inline-grid'].includes(el.ownerDocument.defaultView.getComputedStyle(el).display)||inline.some(key=>el.style.getPropertyValue(key)))throw Error('Select grid containers without inline grid overrides.');return [info.id,changeContainer(info.className,scope,property,value,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}};
@@ -357,5 +362,5 @@
   if(layoutOptions.children.length>1)groups.layout.append(layoutOptions);
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={changeStack,changeAdaptiveGrid,sharedGroups,rotationDegrees,changeSizeMode,changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={resetContainerAlignment,changeStack,changeAdaptiveGrid,sharedGroups,rotationDegrees,changeSizeMode,changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);

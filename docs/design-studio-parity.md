@@ -18735,3 +18735,39 @@ border editing/reset, typography, layer actions and exact history. Log:
 `/tmp/retouch-single-stacks-light-verified.log`. The preceding failures were outdated
 test expectations (the existing Scale section and closed stroke popover), not
 removed coverage.
+
+### One-step child-alignment reset (2026-09-15)
+
+Single and shared container alignment now has a compact reset icon across HTML,
+React and Liquid. It removes the active scope's alignment longhands in one source
+transaction. Grid reset removes item alignment while retaining track distribution;
+flex reset also clears line alignment from earlier wrapping edits. Authored
+shorthands, other variants and inherited styles remain. Reset is disabled when the
+scope has no matching overrides or the edit range is inactive. The reset icon sits
+beside the alignment/gap row and has an accessible label and tooltip.
+
+React/Chromium and Liquid/WebKit verified single/shared grid reset, original class
+sets and geometry, disabled no-op reset, exact undo/redo snapshots and the existing
+nine-position, responsive and keyboard workflows. HTML/Chromium verified shared
+grid and flex reset plus the six-writing-direction single-grid workflow. All 1,662
+unit tests passed, including scoped reset, no-op source ordering, preserved
+shorthands and grid content distribution. Inspected
+`/tmp/retouch-class-grid-alignment-liquid.png` after replacing an oversized text
+reset button that initially crowded the gap fields.
+
+Reset and Undo intentionally differ: HTML reset retains style identifiers, and
+React/Liquid class writes can retain canonical source ordering/escaping metadata.
+Tests verify cleared overrides and restored classes/geometry after reset, then
+exact source snapshots after Undo/Redo. Initial tests incorrectly expected reset
+itself to reproduce the pre-edit source bytes; the corrected checks retain exact
+history coverage rather than changing source cleanup behavior.
+
+Logs: `/tmp/retouch-alignment-reset-react-verified.log`,
+`/tmp/retouch-alignment-reset-liquid-webkit-verified.log`,
+`/tmp/retouch-alignment-reset-html-shared-verified.log`,
+`/tmp/retouch-alignment-reset-html-flex-verified.log`,
+`/tmp/retouch-alignment-reset-html-single-final.log`, and
+`/tmp/retouch-alignment-reset-units-verified.log`.
+
+Full Figma fidelity, arbitrary-site/framework support and trusted public Homebrew
+distribution remain incomplete. No desktop rebuild or push for this increment.

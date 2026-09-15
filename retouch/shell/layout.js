@@ -33,12 +33,17 @@
     if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(rule.match(I.base(token)||'')||rule.shorthand(I.base(token)||''))))addition='!'+addition;
     return I.replace(classes,rule.match,addition);
   }
+  function alignmentMatch(property,token){return token.startsWith('['+property+':')||(property==='justify-content'?/^justify-(?!items-|self-)/.test(token):property==='align-items'?/^items-/.test(token):property==='justify-items'?/^justify-items-/.test(token):/^content-(normal|center|start|end|between|around|evenly|baseline|stretch)$/.test(token));}
+  function resetAlignmentClasses(classes,context={}){
+    const V=root.RetouchHTMLCSSValues||require('./html-css-values.js');
+    return I.replace(classes,token=>V.alignmentProperties(context).some(property=>alignmentMatch(property,token)),'');
+  }
   function alignmentClasses(classes,x,y,context={},inherited=''){
     if(![0,1,2].includes(x)||![0,1,2].includes(y))throw Error('Choose an alignment point.');
     const values=root.RetouchHTMLCSSValues||require('./html-css-values.js');
     const changes=values.childAlignment(x,y,context);
     for(const [property,value] of Object.entries(changes)){
-      const matches=token=>token.startsWith('['+property+':')||(property==='justify-content'?/^justify-(?!items-|self-)/.test(token):property==='align-items'?/^items-/.test(token):property==='justify-items'?/^justify-items-/.test(token):/^content-(normal|center|start|end|between|around|evenly|baseline|stretch)$/.test(token));
+      const matches=token=>alignmentMatch(property,token);
       const shorthand=token=>property.endsWith('-items')?/^place-items-|^\[place-items:/.test(token):/^place-content-|^\[place-content:/.test(token);
       let addition='['+property+':'+value+']';
       if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(matches(I.base(token)||'')||shorthand(I.base(token)||''))))addition='!'+addition;
@@ -292,6 +297,7 @@
           picker.append(button);
         }
         sec.append(picker);
+        const reset=I.button('Reset child alignment',()=>{if(!el.isConnected||info.styleScope&&root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')return;save(resetAlignmentClasses(classes,css));});reset.dataset.alignmentReset='true';reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');reset.disabled=resetAlignmentClasses(classes,css)===classes||!!info.styleScope&&root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false';sec.append(reset);
       }
       I.select(sec,'Align children',[['start','Start'],['center','Center'],['end','End'],['stretch','Stretch'],['baseline','Baseline']],(css.alignItems==='normal'?'stretch':css.alignItems.replace('flex-','')),v=>save(arrangementClasses(classes,'align',v,inherited)));
       const justify=css.justifyContent==='normal'?'start':css.justifyContent.replace('flex-','').replace('space-','');
@@ -364,6 +370,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

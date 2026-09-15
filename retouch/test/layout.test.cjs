@@ -366,3 +366,11 @@ test('stack presets map physical axes and override existing layout without chang
  assert.equal(L.stackClasses('','vertical',{writingMode:'vertical-lr'}),'!flex !flex-row !flex-nowrap');
  assert.throws(()=>L.stackClasses('','diagonal'));
 });
+
+
+test('alignment reset removes item longhands while preserving grid distribution and authored shorthands',()=>{
+ const source='!place-items-end justify-items-center !items-start [align-items:end] justify-between content-center md:items-start';
+ assert.equal(L.resetAlignmentClasses(source,{display:'grid'}),'!place-items-end justify-between content-center md:items-start');
+ assert.equal(L.resetAlignmentClasses(source,{display:'flex'}),'!place-items-end justify-items-center md:items-start');
+ assert.equal(L.resetAlignmentClasses('before:content-[a] content-end [align-content:center] place-content-start',{display:'flex'}),'before:content-[a] place-content-start');
+});
