@@ -18912,3 +18912,23 @@ Logs: `/tmp/retouch-html-spacing-scrub-verify.log`,
 `/tmp/retouch-html-spacing-scrub-units.log`. No desktop rebuild or push.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete.
+
+
+### Single HTML spacing consistency — 2026-09-15
+
+Single-container HTML gap fields now scrub normal spacing from zero pixels.
+Padding and gap previews check ownership, writing-mode continuity and the
+current screen range, and their fields and resets disable outside that range.
+Typed edits and resets also recheck the range before saving.
+
+Chromium and WebKit passed normal-gap and rem-padding pointer previews,
+exact original inline-style restoration on Escape, atomic release and exact
+Undo/Redo. Both runs also passed disabled spacing/reset checks at the phone
+range and existing grid geometry across six writing-direction combinations.
+All 1,663 unit tests passed.
+
+Logs: `/tmp/retouch-html-single-spacing.log`,
+`/tmp/retouch-html-single-spacing-webkit.log`, and
+`/tmp/retouch-html-single-spacing-units.log`. No desktop rebuild or push.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete.

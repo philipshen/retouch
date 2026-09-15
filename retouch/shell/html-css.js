@@ -203,6 +203,7 @@
 
   for(const [property,label] of [...fields,...(isGrid?[['justify-items','Align columns']]:[])]){
    const value=own[property]??css.getPropertyValue(property),input=document.createElement(options[property]?'select':'input');
+   const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),spacingActive=()=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth;
    if(options[property])for(const item of new Set([value,...options[property]])){const option=document.createElement('option');option.value=item;option.textContent=item;input.append(option);}
    else input.type='text';
    if(property==='font-family'){input.placeholder='Inter, sans-serif';input.title='Use a font loaded by this page or installed on your computer.';}
@@ -211,7 +212,7 @@
    input.value=value;input.oninput=()=>input.setCustomValidity('');
    if(property==='border-width'&&new Set(['top','right','bottom','left'].map(side=>css.getPropertyValue('border-'+side+'-width'))).size>1){input.value='';input.placeholder='Mixed';}
    if(property==='border-style'&&new Set(['top','right','bottom','left'].map(side=>css.getPropertyValue('border-'+side+'-style'))).size>1){const mixed=document.createElement('option');mixed.value='';mixed.textContent='Mixed';mixed.disabled=true;input.prepend(mixed);input.value='';for(const option of [...input.options])if(/\s/.test(option.value))option.remove();}
-   input.onchange=()=>{const value=input.value.trim();if(!CSS.supports(property,value)||!valid(property,value)){input.setCustomValidity('Use simple CSS lengths with units, keywords, or colors. Spacing accepts up to four values; gap accepts two.');input.reportValidity();return;}if(/^border(?:-(?:top|right|bottom|left))?-width$/.test(property)){
+   input.onchange=()=>{if(spacing&&!spacingActive())return;const value=input.value.trim();if(!CSS.supports(property,value)||!valid(property,value)){input.setCustomValidity('Use simple CSS lengths with units, keywords, or colors. Spacing accepts up to four values; gap accepts two.');input.reportValidity();return;}if(/^border(?:-(?:top|right|bottom|left))?-width$/.test(property)){
      const changes={[property]:value},sides=['top','right','bottom','left'],[a,b=a,c=a,d=b]=value.split(/\s+/),widths=[a,b,c,d];
      for(const [i,side]of sides.entries())if((property==='border-width'||property==='border-'+side+'-width')&&parseFloat(property==='border-width'?widths[i]:value)>0&&css.getPropertyValue('border-'+side+'-style')==='none')changes['border-'+side+'-style']='solid';
      save(changes,null,width);
@@ -222,17 +223,17 @@
     const expected=percent/100*parseFloat(css.fontSize),actual=parseFloat(css.getPropertyValue(property));
     if(percent!==null&&!el.style.getPropertyValue(property)&&Number.isFinite(actual)&&Math.abs(expected-actual)<.02)input.retouchSpacingPercent=percent;
    }
-   I.field(target,label+' (CSS)',input);
+   I.field(target,label+' (CSS)',input);if(spacing){I.fieldDraft(input);input.disabled=!spacingActive();if(input.disabled)input.title='Switch to a screen inside the selected edit range.';}
    if(['width','height'].includes(property))input.retouchDimension={target:el,axis:property,box:'css'};
    if(input.tagName==='INPUT'&&/^(?:font-size|font-weight|line-height|letter-spacing|text-indent|(?:min-|max-)?(?:width|height)|gap|(?:padding|margin)(?:-(?:top|right|bottom|left))?|border(?:-(?:top|right|bottom|left))?-width|border-(?:(?:top|bottom)-(?:left|right)-)?radius)$/.test(property)){
-    let unit='';I.numericLabelDrag(input,raw=>{const match=/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(px|em|rem|%|ex|ch|vw|vh|vmin|vmax|pt|pc|in|cm|mm)?$/i.exec(raw.trim());if(!match||!CSS.supports(property,raw)||!valid(property,raw)||!match[2]&&!['font-weight','line-height'].includes(property))return null;unit=match[2]||'';return {value:Number(match[1]),format:value=>value+unit,min:property==='font-weight'?1:['letter-spacing','text-indent'].includes(property)||/^margin(?:-|$)/.test(property)?-100000:0,max:property==='font-weight'?1000:100000};});
-    I.numericPreview(input,el,property,value=>value+unit);
+    let unit='';I.numericLabelDrag(input,raw=>{if(property==='gap'&&raw.trim()==='normal'){unit='px';return {value:0,min:0,max:100000,format:value=>value+'px'};}const match=/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(px|em|rem|%|ex|ch|vw|vh|vmin|vmax|pt|pc|in|cm|mm)?$/i.exec(raw.trim());if(!match||!CSS.supports(property,raw)||!valid(property,raw)||!match[2]&&!['font-weight','line-height'].includes(property))return null;unit=match[2]||'';return {value:Number(match[1]),format:value=>value+unit,min:property==='font-weight'?1:['letter-spacing','text-indent'].includes(property)||/^margin(?:-|$)/.test(property)?-100000:0,max:property==='font-weight'?1000:100000};});
+    if(spacing)input.retouchNumericPreview=()=>{const preview=RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}),writingMode=el.ownerDocument.defaultView.getComputedStyle(el).writingMode;return {current:()=>spacingActive()&&el.ownerDocument.defaultView.getComputedStyle(el).writingMode===writingMode&&preview.current(),update:value=>preview.update(value+unit),restore:()=>preview.restore()};};else I.numericPreview(input,el,property,value=>value+unit);
    }
 
    if(property==='background-color')RetouchBackgroundPaintUI.bind(info,el,input,changes=>save(changes,null,width),()=>RetouchBackgroundPaintUI.sourceState(info,width?'min-['+width+'px]:':''));
    if(['color','background-color','border-color'].includes(property)){I.fieldDraft(input);input.dataset.paintProperty=property;RetouchBackgroundPaintUI.bindSource(input,info,width?'min-['+width+'px]:':'',property,el);input.retouchPaintPreview??=()=>RetouchPaintPicker.propertyPreview({el,input,property});}
    if(property==='line-height')target.append(I.button('Automatic line height',()=>save(property,'normal',width)));
-   const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
+   const reset=I.button('Reset '+label.toLowerCase(),()=>{if(!spacing||spacingActive())save(property,null,width);});reset.disabled=spacing&&!spacingActive()||!Object.hasOwn(own,property);target.append(reset);
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
   const container=document.createElement('div'),textLayer=I.isTextLayer(info.tag);
