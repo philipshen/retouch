@@ -19503,3 +19503,20 @@ Logs: `/tmp/retouch-image-mode-{html,react,liquid,units}.log` and
 
 No push or native rebuild. Full Figma parity, arbitrary-site support and trusted
 Homebrew distribution remain incomplete.
+
+
+### Tile scale preserves image position
+
+Changing a paint's tile scale previously reused the full Tile-mode patch,
+resetting its position to 0% 0%. Scale now writes only background-size.
+The mixed-stack browser test now sets X/Y before changing scale; this failed
+on the prior implementation (25% 75% became 0% 0%) and passes after the fix.
+
+Fresh HTML/Chromium, React/Chromium and Liquid/WebKit mixed-stack runs passed
+with image replacement, per-paint modes/scale/position/blending, neighboring
+paint preservation, responsive inheritance, exact undo and retained state.
+All 1,666 unit tests passed. Logs:
+`/tmp/retouch-tile-position-{before,html,react,liquid,units}.log`.
+
+No push or native rebuild. Full Figma parity, arbitrary-site support and trusted
+Homebrew distribution remain incomplete.

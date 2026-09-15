@@ -45,7 +45,7 @@ await pixels([0,255,0]);if(process.env.RT_E2E_IMAGE_STACK_SCREENSHOT){await page
   await openPaint(2);await page.getByLabel('Paint 2 image mode',{exact:true}).selectOption('fill');await record();assert.deepEqual(await property('background-size'),['cover','cover','200% 200%']);
   await page.getByLabel('Paint 2 image mode',{exact:true}).selectOption('fit');await record();assert.deepEqual(await property('background-size'),['cover','contain','200% 200%']);
   await page.getByLabel('Paint 2 image mode',{exact:true}).selectOption('tile');await record();assert.deepEqual(await property('background-size'),['cover','40px 20px','200% 200%']);
-  for(const [label,value]of [['tile scale (%)','200'],['position X (%)','25'],['position Y (%)','75']]){const input=page.getByLabel('Paint 2 '+label,{exact:true});await input.fill(value);await input.press('Tab');await record();}
+  for(const [label,value]of [['position X (%)','25'],['position Y (%)','75'],['tile scale (%)','200']]){const input=page.getByLabel('Paint 2 '+label,{exact:true});await input.fill(value);await input.press('Tab');await record();}
   assert.deepEqual(await property('background-size'),['cover','80px 40px','200% 200%']);assert.deepEqual(await property('background-position'),['0% 0%','25% 75%','100% 50%']);
   await page.getByLabel('Paint 2 blend mode',{exact:true}).selectOption('multiply');await record();await pixels([0,0,0]);assert.deepEqual(await property('background-blend-mode'),['normal','multiply','screen']);
   if(process.env.RT_E2E_PAINT_FRAME_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_PAINT_FRAME_SCREENSHOT});
