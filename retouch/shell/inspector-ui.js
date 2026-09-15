@@ -55,14 +55,14 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   for(const [input,key]of [[dash,'dash'],[gap,'gap']]){input.type='text';input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(input.disabled)return;const values=raw.retouchDashValues().map(value=>P.dashPair(value,{[key]:input.value.trim()}));if(values.some(value=>value===null)){input.setCustomValidity('Enter a nonnegative dash length in pixels or percent.');input.reportValidity();return;}root.RetouchPanelFocus?.queue(input);write(values);};}
   row.before(group);group.append(row);sync();for(const input of [dash,gap])I.fieldDraft(input);
  }
- function strokeIconControls(settings){
+ function strokeIconControls(settings,shared=false){
   const configurations=[['SVG line ends','Stroke caps',[['butt','No caps','M3 6h10v12H3 M13 3v18'],['square','Square caps','M3 6h15v12H3 M13 3v18'],['round','Round caps','M3 6h10a6 6 0 0 1 0 12H3 M13 3v18']]],['SVG line joins','Stroke joins',[['miter','Miter join','M4 4h16v16 M4 10h10v10'],['bevel','Bevel join','M4 4h10l6 6v10 M4 10h10v10'],['round','Round join','M4 4h10a6 6 0 0 1 6 6v10 M4 10h10v10']]]];
   for(const [label,name,choices]of configurations){
-   const select=settings.querySelector('[aria-label="'+label+'"]');if(!select||!choices.some(([value])=>value===select.value))continue;
+   const select=settings.querySelector('[aria-label="'+(shared?'Shared ':'')+label+'"]');if(!select||!choices.some(([value])=>value===select.value)&&!(shared&&select.value===''))continue;
    const previous=select.closest('.inspector-field'),field=document.createElement('div');field.className=previous.className+' stroke-icon-field';field.append(...previous.childNodes);previous.replaceWith(field);
    const group=document.createElement('div');group.className='layout-mode-segments stroke-icon-controls';
-   for(const [value,title,path]of choices){const button=document.createElement('button');button.type='button';button.disabled=select.disabled;button.title=select.disabled?select.title:title;button.setAttribute('aria-label',title);button.setAttribute('aria-pressed',String(select.value===value));button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+path+'"/></svg>';button.onclick=()=>{if(select.disabled||select.value===value)return;select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);}
-   select.hidden=true;select.setAttribute('aria-hidden','true');select.tabIndex=-1;field.append(group);keyboardToolbar(group,name);
+   for(const [value,title,path]of choices){const button=document.createElement('button');button.type='button';button.disabled=select.disabled;button.title=select.disabled?select.title:title;button.setAttribute('aria-label',(shared?'Shared ':'')+title);button.setAttribute('aria-pressed',String(select.value===value));button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+path+'"/></svg>';button.onclick=()=>{if(select.disabled||select.value===value)return;root.RetouchPanelFocus?.queue(button);select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);}
+   select.hidden=true;select.setAttribute('aria-hidden','true');select.tabIndex=-1;field.append(group);keyboardToolbar(group,(shared?'Shared ':'')+name);if(shared&&select.value==='')group.title='Mixed values';
   }
  }
  function strokePopover(settings,weight,key='svg-stroke-settings',dialogTitle='Stroke settings',openerLabel='Advanced stroke settings'){
@@ -564,7 +564,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     }
     group.classList.add('sec');shared.before(group);for(const input of group.querySelectorAll('input[data-paint-property]'))if(['background-color','border-color','fill','stroke'].includes(input.dataset.paintProperty))compactPaint(group,input);
    }
-   if(svg){const stroke=groups.find(group=>group.dataset.sharedSection==='stroke');if(stroke)sharedStrokePattern(stroke);}
+   if(svg){const stroke=groups.find(group=>group.dataset.sharedSection==='stroke');if(stroke){sharedStrokePattern(stroke);strokeIconControls(stroke,true);}}
    if(css&&css.querySelector('input,select,button')){css.classList.add('shared-inspector-notes');shared.before(css);}
    if(notes.children.length>1){notes.classList.add('shared-inspector-notes');shared.before(notes);}
    shared.remove();

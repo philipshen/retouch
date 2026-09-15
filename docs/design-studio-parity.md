@@ -17329,3 +17329,9 @@ Shared SVG strokes now offer Solid, Dashed and Custom styles, with separate Dash
 HTML/Chromium, React/Chromium and Liquid/WebKit flows verify differing initial patterns, per-layer gap preservation, common gap edits, invalid draft cancellation, Solid/Dashed transitions and exact source undo/redo. The existing HTML stroke-property and responsive-width browser regression passes through the new Custom mode. The light-theme layout was inspected.
 
 Out-of-range per-layer dash authoring, richer multi-segment pattern editing, stroke alignment and the broader Figma/native/Homebrew parity requirements remain open.
+
+### Shared visual stroke caps and joins — 2026-09-15
+
+Shared SVG caps and joins now use the existing single-layer icon controls. Mixed selections show no pressed icon, and each choice retains a descriptive accessible label. Arrow/Home/End navigation and Space/Enter activation use the existing toolbar keyboard behavior. A successful edit restores focus to the chosen icon after the panel rebuild. Clicking the current common value does not write source. Unsupported custom values retain their select field.
+
+HTML/Chromium, React/Chromium and Liquid/WebKit browser flows verify mixed caps/joins, pointer and keyboard updates, focus restoration, unselected sibling preservation, no-op clicks and exact grouped undo/redo. The light-theme screenshot was inspected. The existing HTML single-layer stroke regression also passes compact layout, scoped values, screen fallback, reset and exact undo/redo. The shared source planners are unchanged; remaining full-parity and native distribution gaps above still apply.
