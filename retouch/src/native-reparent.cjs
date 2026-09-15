@@ -33,6 +33,7 @@ function plan(resolved,op,language){
   if(parentOf(destination))structure.ranges({...resolved,element:destination},language);
   if(react){let unsafe=false;require('@babel/traverse').default(require('./id.cjs').parseSource(resolved.source),{JSXElement(p){if(p.node.start!==start(destination))return;for(let a=p.parentPath;a;a=a.parentPath)if(a.type==='JSXExpressionContainer')unsafe=true;}});if(unsafe)return refuse('The destination is rendered by an expression.');}
   const ranges=roots.map(element=>{const range=structure.ranges({...resolved,element},language).find(r=>r.selected);if(!range)throw Error('A selected source range is incomplete.');return {...range,element};});
+  require('./native-parent-proof.cjs').prove(resolved,roots,destination,language);
   const selfClosing=position==='inside'&&react&&destination.node.openingElement.selfClosing;
   let offset;
   if(position==='inside')offset=react?(selfClosing?destination.node.openingElement.end-2:destination.node.closingElement.start):destination.closeStart;
