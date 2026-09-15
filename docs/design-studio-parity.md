@@ -17151,3 +17151,11 @@ While a stack has hidden solid/gradient paints, the duplicate advanced gradient 
 All 1,559 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit regressions cover clearing a hidden stack, adding a visible replacement, hiding that replacement, scoped reset, duplicate-editor exclusion and exact undo, alongside the preceding visibility workflows. The existing HTML browser regression also passes responsive CSS, isolated styling, standalone export, reset, text/image edits, upload/search, navigation and exact undo. The screen-size test now waits for the reclassified inspector row before asserting its visibility state.
 
 Background-color-row visibility, broader gradient opacity, unified advanced-editor cleanup, full Figma fidelity/features, arbitrary-site support and trusted native/Homebrew distribution remain incomplete. No native app was rebuilt or published.
+
+### Compact color entry on focus — 2026-09-15
+
+Byte-exact sRGB colors in compact Fill, Stroke and SVG paint fields now remain six-digit hex when focused, with the value selected for replacement. Merely focusing and leaving the field does not write source; blur restores a valid internal CSS value for the picker and opacity control. P3 and mixed border paints retain their full notation. Bare four-digit hex now sets explicit alpha, alongside existing eight-digit input. Bare three/six-digit edits preserve separate opacity; CSS-prefixed input retains its existing CSS semantics. Incomplete focused drafts retain the prior opacity display.
+
+A Chromium reproduction caught focus formatting resetting the selection and causing input to append; selecting the formatted value fixes that interaction. All 1,559 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit compact-paint workflows pass focus/no-write behavior, shorthand alpha, opacity preservation, mixed border channels, cancellation and exact undo/redo. The HTML SVG stroke/settings regression passes as well. The final focused field was visually inspected, and the HTML run asserts its selected six-character range.
+
+Background-color-row visibility, broader gradient opacity, empty-Fill legacy form cleanup, the broader Figma fidelity/features, arbitrary-site support and trusted native/Homebrew distribution remain unfinished. No native app was rebuilt or published.
