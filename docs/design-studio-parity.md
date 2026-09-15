@@ -19710,3 +19710,32 @@ The test skips anchor selections already active: selecting an unchanged anchor
 need not rewrite source. Layer-owned transforms within transformed frames,
 direct canvas movement/resizing there, arbitrary-site coverage and the trusted
 Homebrew release remain incomplete. No push or native rebuild.
+
+
+### Canvas movement inside transformed frames
+
+Move on canvas now works for absolute, untransformed HTML layers inside
+transformed frames. Pointer and keyboard movement is converted from screen
+distance to the containing frame's local coordinates. The content follows the
+pointer using a temporary translation, with a blue outline along its transformed
+corners. The ordinary selection rectangle is hidden during that preview.
+
+Release writes one source edit through the HTML or React/Liquid adapter. Escape,
+screen changes and changes to the containing frame cancel the gesture and restore
+temporary styles. Inspector rebuilding waits until the gesture ends so temporary
+translations do not invalidate its controls; deferred refresh runs afterward.
+
+Validation: all 1,672 unit tests passed. HTML/Chromium, React/Chromium and
+Liquid/WebKit Text-tool suites verify live pointer movement, screen-axis keyboard
+nudging, exact undo, Escape restoration, cancellation when the frame transform
+changes, and screen-change cancellation. Their anchor/text checks also pass.
+The standalone HTML positioning suite passed existing constraints, responsive
+scopes/reset and pointer/keyboard movement/resizing. Inspected
+`/tmp/retouch-transformed-move.png` after the final preview changes. Logs:
+`/tmp/retouch-local-move-{html,react,liquid}-verified.log`,
+`/tmp/retouch-local-move-units-verified.log`,
+`/tmp/retouch-local-move-position-final.log`.
+
+Canvas resizing and layer-owned transforms within transformed frames remain
+incomplete. Full arbitrary-site/Figma parity and trusted Homebrew distribution
+remain incomplete. No push or native rebuild.

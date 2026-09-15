@@ -1792,6 +1792,7 @@ function inTextScope(el, info) {
   return Object.entries(info.renderScope || {}).every(([name,value])=>el.getAttribute(name)===value);
 }
 function drawBox(el, cls, kind) {
+  if(cls==='sel'&&document.querySelector('.canvas-move-surface[data-local-move]')?.dataset.localMove===el.getAttribute('data-rt'))return;
   const css=el.ownerDocument.defaultView.getComputedStyle(el);
   if(css.display==='contents'){const bounds=RetouchComponentInstances.bounds([el]);if(bounds)drawBounds(bounds,cls,kind);return;}
   if(css.rotate&&css.rotate!=='none'&&css.rotate!=='0deg'||css.scale&&css.scale!=='none')try{const g=RetouchInspector.outlineGeometry(el);if(g.rotation||g.scaleX!==1||g.scaleY!==1){drawBounds({left:g.layoutLeft,top:g.layoutTop,width:g.width,height:g.height},cls,kind,{rotation:g.rotation,origin:g.transformOrigin});return;}}catch{}
@@ -1954,7 +1955,7 @@ function renderPanel(textEditing=false) {
   const panel=document.getElementById('panel');
   const key=JSON.stringify([sel.info.file,sel.scope,sel.instanceId,(sel.multiple||[sel.info]).map(info=>info.id).sort()]);
   const focusedDraft=panelPaintDraftFocused()||panelInteractionFocused()&&document.activeElement.matches('input,textarea')&&(document.activeElement.matches('.component-props-search')||!panelTasks&&!sourceRequests&&!undoBusy);
-  if((panelPointer||focusedDraft||document.querySelector('.svg-vertex-surface, .canvas-rotate-surface, .canvas-flow-resize-surface'))&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
+  if((panelPointer||focusedDraft||document.querySelector('.svg-vertex-surface, .canvas-rotate-surface, .canvas-flow-resize-surface, .canvas-move-surface'))&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
   panelRenderDeferred=false;
   const top=key===renderedPanelSelection?panel.scrollTop:0;
   const focusedScope=key===renderedPanelSelection&&document.activeElement?.getAttribute('aria-label')==='Style screen scope';
@@ -3455,14 +3456,24 @@ function rotateLayerOnCanvas(target,input,initialPointer=null){
   stopDrawing=RetouchCanvasRotate.mount({target,frame:iframe,canvas:canvasSurface,input,current,initialPointer,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
 
+function layerMovementSpace(target,g,action,opener){
+ if(!g.localCoordinates)return {current:()=>true,convert:delta=>delta};
+ if(action!=='move')throw Error('Canvas resizing inside transformed frames is not available yet.');
+ const space=RetouchSVGDraw.nativeSpace(target.offsetParent),m=space.matrix,inverse=m.inverse(),w=target.ownerDocument.defaultView;
+ const outlinePoints=[[g.x,g.y],[g.x+g.width,g.y],[g.x+g.width,g.y+g.height],[g.x,g.y+g.height]].map(([x,y])=>new w.DOMPoint(x,y).matrixTransform(m));
+ const convert=delta=>({...delta,x:inverse.a*delta.x+inverse.c*delta.y,y:inverse.b*delta.x+inverse.d*delta.y});let preview;
+ const contentPreview={current:()=>!preview||preview.current(),update:delta=>{preview??=RetouchPaintPicker.propertyPreview({el:target,input:opener||document.body,property:'translate'});const local=convert(delta);preview.update(local.x+'px '+local.y+'px');},restore:()=>preview?.restore()};
+ return {current:space.current,outlinePoints,convert,contentPreview};
+}
+
 function transformReactLayer(info,target,action,opener,initial=null){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!target?.isConnected||info.classNameDynamic)return;
-  let g;try{if(info.classSelection)classGeometryStrategy(info,target).validate();const reason=reactGeometryReason(info,target);if(reason)throw Error(reason);if(target.ownerDocument.defaultView.getComputedStyle(target).position!=='absolute')throw Error('Choose a screen where this layer is absolute before transforming it.');g=RetouchInspector.geometry(target,{allowRotation:true,allowScale:true});}catch(error){toast(error.message,'err');return;}
+  let g,space;try{if(info.classSelection)classGeometryStrategy(info,target).validate();const reason=reactGeometryReason(info,target);if(reason)throw Error(reason);if(target.ownerDocument.defaultView.getComputedStyle(target).position!=='absolute')throw Error('Choose a screen where this layer is absolute before transforming it.');g=action==='move'?RetouchInspector.positionGeometry(target):RetouchInspector.geometry(target,{allowRotation:true,allowScale:true});space=layerMovementSpace(target,g,action,opener);}catch(error){toast(error.message,'err');return;}
   const scope=styleScope,hash=info.hash,classes=RetouchResponsive.project(info.className,scope),base=RetouchResponsive.inherited(info.className,scope,doc()),x=RetouchInspector.inferredAnchor(classes,'x',base),y=RetouchInspector.inferredAnchor(classes,'y',base);
   canvasPan.cancel();
-  stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,preserveBox:!!info.classSelection,opener,initial,
-    onCommit:async(delta,options)=>{if(sel?.info.id!==info.id||sel?.info.hash!==hash||styleScope!==scope)return;try{const current=RetouchInspector.geometry(target,{allowRotation:true,allowScale:true});if(['x','y','width','height','parentWidth','parentHeight','rotation','scaleX','scaleY'].some(key=>Math.abs((current[key]??0)-(g[key]??0))>(key.startsWith('scale')?1e-9:.5)))throw Error('The layer changed during the gesture. Re-select it and try again.');const geometry={...g,...(action==='resize'?{width:delta.width,height:delta.height}:{}),x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y,geometry.width,geometry.height].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Keep layer bounds within 100,000 pixels.');if(await (info.classSelection?writeClassLayerGeometry(info,target,geometry,g):writeReactBounds(info,RetouchInspector.anchorClasses(classes,geometry,x,y,base),geometry))){if(options?.keyboard)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});}}catch(error){toast(error.message,'err');}},
-    onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
+  stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,preserveBox:!!info.classSelection,opener,initial,current:space.current,outlinePoints:space.outlinePoints,contentPreview:space.contentPreview,
+    onCommit:async(delta,options)=>{if(sel?.info.id!==info.id||sel?.info.hash!==hash||styleScope!==scope)return;try{if(!space.current())throw Error('The containing frame changed during the gesture.');delta=space.convert(delta);const current=action==='move'?RetouchInspector.positionGeometry(target):RetouchInspector.geometry(target,{allowRotation:true,allowScale:true});if(['x','y','width','height','parentWidth','parentHeight','rotation','scaleX','scaleY'].some(key=>Math.abs((current[key]??0)-(g[key]??0))>(key.startsWith('scale')?1e-9:.5)))throw Error('The layer changed during the gesture. Re-select it and try again.');const geometry={...g,...(action==='resize'?{width:delta.width,height:delta.height}:{}),x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y,geometry.width,geometry.height].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Keep layer bounds within 100,000 pixels.');if(await (info.classSelection?writeClassLayerGeometry(info,target,geometry,g):writeReactBounds(info,RetouchInspector.anchorClasses(classes,geometry,x,y,base),geometry))){if(options?.keyboard)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});}}catch(error){toast(error.message,'err');}},
+    onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
 
 async function refreshGroupMove(infos,before){
@@ -3598,13 +3609,13 @@ function transformLayerSelection(elements,commit,opener,action='move',spacing=nu
 
 function moveHTMLLayer(info,target,width,g,action='move',opener,initial=null){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!target?.isConnected)return;
-  const scope=styleScope;
-  try{if(!Number.isInteger(width)||width>target.ownerDocument.defaultView.innerWidth)throw Error('Choose a screen where this scope is active.');if(target.ownerDocument.defaultView.getComputedStyle(target).position!=='absolute')throw Error('Choose an absolute layer in the current screen.');g=RetouchInspector.geometry(target,{allowRotation:true,allowScale:true});}catch(error){toast(error.message,'err');return;}
+  const scope=styleScope;let space;
+  try{if(!Number.isInteger(width)||width>target.ownerDocument.defaultView.innerWidth)throw Error('Choose a screen where this scope is active.');if(target.ownerDocument.defaultView.getComputedStyle(target).position!=='absolute')throw Error('Choose an absolute layer in the current screen.');g=action==='move'?RetouchInspector.positionGeometry(target):RetouchInspector.geometry(target,{allowRotation:true,allowScale:true});space=layerMovementSpace(target,g,action,opener);}catch(error){toast(error.message,'err');return;}
   const inherited=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=target.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{});
   canvasPan.cancel();
-  stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,preserveBox:true,opener,initial,
-    onCommit:(delta,options)=>{if(sel?.info.id!==info.id||sel?.info.hash!==info.hash||styleScope!==scope)return;try{const current=RetouchInspector.geometry(target,{allowRotation:true,allowScale:true});if(['x','y','width','height','parentWidth','parentHeight','rotation','scaleX','scaleY'].some(key=>Math.abs((current[key]??0)-(g[key]??0))>(key.startsWith('scale')?1e-9:.5)))throw Error('The layer changed during the gesture. Re-select it and try again.');const geometry={...g,...(action==='resize'?{width:delta.width,height:delta.height}:{}),x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y,geometry.width,geometry.height].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Move within 100,000 pixels of the container.');setHTMLCSS(RetouchSelectionLayout.preserveBox(RetouchHTMLPosition.placement(geometry,inherited),geometry,target.ownerDocument.defaultView.getComputedStyle(target)),null,width).then(()=>{if(options?.keyboard&&sel?.info.id===info.id)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});});}catch(error){toast(error.message,'err');}},
-    onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
+  stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,preserveBox:true,opener,initial,current:space.current,outlinePoints:space.outlinePoints,contentPreview:space.contentPreview,
+    onCommit:(delta,options)=>{if(sel?.info.id!==info.id||sel?.info.hash!==info.hash||styleScope!==scope)return;try{if(!space.current())throw Error('The containing frame changed during the gesture.');delta=space.convert(delta);const current=action==='move'?RetouchInspector.positionGeometry(target):RetouchInspector.geometry(target,{allowRotation:true,allowScale:true});if(['x','y','width','height','parentWidth','parentHeight','rotation','scaleX','scaleY'].some(key=>Math.abs((current[key]??0)-(g[key]??0))>(key.startsWith('scale')?1e-9:.5)))throw Error('The layer changed during the gesture. Re-select it and try again.');const geometry={...g,...(action==='resize'?{width:delta.width,height:delta.height}:{}),x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y,geometry.width,geometry.height].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Move within 100,000 pixels of the container.');setHTMLCSS(RetouchSelectionLayout.preserveBox(RetouchHTMLPosition.placement(geometry,inherited),geometry,target.ownerDocument.defaultView.getComputedStyle(target)),null,width).then(()=>{if(options?.keyboard&&sel?.info.id===info.id)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});});}catch(error){toast(error.message,'err');}},
+    onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
 
 window.RetouchVariableModePreview=async request=>{const result=await api('POST','/rt/__api/variables/resolve',request);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not preview variable modes.');return result;};

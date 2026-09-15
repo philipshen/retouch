@@ -581,7 +581,7 @@
       let g;
       try { g = positionGeometry(el); } catch (e) { const coordinates=sec.querySelector('[aria-label="X"]');if(coordinates&&onTransform&&!coordinates.dataset.localCoordinates){for(const action of ['move','resize']){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));sec.append(control);}}note(sec,coordinates?'Anchor presets and canvas transforms for this coordinate system are not available yet.':e.message,coordinates?'':'refused'); return sec; }
       note(sec, `Anchored to ${g.parentLabel}`);
-      if(onTransform&&!g.localCoordinates){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));tools.append(control);}sec.append(tools);}
+      if(onTransform){const tools=document.createElement('div');tools.className='stack-presets';for(const action of (g.localCoordinates?['move']:['move','resize'])){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));tools.append(control);}sec.append(tools);}
       const x = inferredAnchor(classes,'x',info.anchorInheritedClasses), y = inferredAnchor(classes,'y',info.anchorInheritedClasses);
       const horizontal=select(sec,'Horizontal anchor',[['start','Left'],['center','Center'],['end','Right'],['stretch','Left + right'],['scale','Scale']],x,v=>applyAnchor(v,y));
       const vertical=select(sec,'Vertical anchor',[['start','Top'],['center','Center'],['end','Bottom'],['stretch','Top + bottom'],['scale','Scale']],y,v=>applyAnchor(x,v));
