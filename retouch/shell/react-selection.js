@@ -105,9 +105,10 @@
   const inline=[axis,'inline-size','block-size','min-inline-size','min-block-size','max-inline-size','max-block-size',...(flex&&axis===axes.main?['flex','flex-grow','flex-shrink','flex-basis']:flex||grid?['place-self',grid&&axis===axes.inline?'justify-self':'align-self']:[])];
   return {css,context,blocked:inline.some(property=>el.style.getPropertyValue(property))};
  }
- function changeClip(classes,scope,value,document=null){
+ function changeClip(classes,scope,value,document=null,el=null){
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
-  return R.replaceScope(classes,L.clipClasses(R.project(classes,scope),value,R.inherited(classes,scope,document)),scope);
+  if(value!==null&&el&&L.inlineOverflow(el,true))throw Error('An important inline rule controls clipping.');
+  return R.replaceScope(classes,L.clipClasses(R.project(classes,scope),value,R.inherited(classes,scope,document),!!el&&L.inlineOverflow(el)),scope);
  }
  function changeGridTracks(classes,scope,axis,value,document=null){
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
@@ -201,10 +202,10 @@
    I.note(groups.layout,'Track counts replace the selected axis with equal fractions. Content can create additional implicit tracks. Grid flow controls placement of children without explicit positions.');
   }
   {
-   const state=css=>['hidden','clip'].includes(css.overflowX)&&['hidden','clip'].includes(css.overflowY)?true:css.overflowX==='visible'&&css.overflowY==='visible'?false:null,values=computed.map(state),input=root.document.createElement('input'),blocked=el=>['overflow','overflow-x','overflow-y','overflow-inline','overflow-block'].some(property=>el.style.getPropertyValue(property));
-   const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el))throw Error('A selected layer has inline overflow. Edit that source style first.');return [info.id,changeClip(info.className,scope,value,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}};
-   input.type='checkbox';input.checked=values.every(value=>value===true);input.indeterminate=!values.every(value=>value===true)&&!values.every(value=>value===false);input.disabled=elements.some(blocked);input.title=input.disabled?'Inline overflow controls clipping on a selected layer.':'Hide content outside the selected layers without adding scrollbars.';input.onchange=()=>write(input.checked);I.field(groups.layout,'Shared Clip content',input);
-   const reset=I.button('Reset shared clip content',()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeClip(info.className,scope,null)===info.className);groups.layout.append(reset);
+   const state=css=>['hidden','clip'].includes(css.overflowX)&&['hidden','clip'].includes(css.overflowY)?true:css.overflowX==='visible'&&css.overflowY==='visible'?false:null,values=computed.map(state),input=root.document.createElement('input'),active=()=>!scope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',blocked=el=>root.RetouchLayout.inlineOverflow(el,true);
+   const write=value=>{try{if(!active())throw Error('Switch to a screen inside the selected edit range.');save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);return [info.id,changeClip(info.className,scope,value,el.ownerDocument,el)];})));}catch(error){I.note(groups.layout,error.message,'refused');}};
+   input.type='checkbox';input.checked=values.every(value=>value===true);input.indeterminate=!values.every(value=>value===true)&&!values.every(value=>value===false);input.disabled=!active()||elements.some(blocked);input.title=!active()?'Switch to a screen inside the selected edit range.':input.disabled?'An important inline rule controls clipping on a selected layer.':'Hide content outside the selected layers without adding scrollbars.';input.onchange=()=>write(input.checked);I.field(groups.layout,'Shared Clip content',input);
+   const reset=I.button('Reset shared clip content',()=>write(null));reset.disabled=!active()||infos.every(info=>changeClip(info.className,scope,null)===info.className);groups.layout.append(reset);
   }
   I.note(groups.layout,'Row and column follow each container’s writing direction. Flex supports wrapping; flex and grid support child alignment. Reset reveals inherited layout styles.');
   const lengthDrag=(input,properties,normal=false)=>{

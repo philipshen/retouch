@@ -20187,3 +20187,24 @@ inactive-range drag guards. Logs: `/tmp/retouch-inline-padding-units.log`,
 HTML's existing padding writer is unchanged. Other inline layout restrictions,
 full Figma/arbitrary-site parity, and trusted Homebrew distribution remain
 incomplete. No native rebuild or push in this continuation.
+
+### Clip content over ordinary inline overflow
+
+Single-layer and shared native Clip content controls now override ordinary
+inline overflow with removable scoped important utilities. Reset exposes the
+authored overflow rules and remains available if an important inline rule blocks
+new edits. Clipping writes and resets also respect the active screen edit range.
+
+Validation: 1,690 unit tests passed, including physical/logical inline overflow
+priority and reset coverage. React/Chromium and Liquid/WebKit browser fixtures
+cover inline auto overflow and separate hidden axes. The single-layer check uses
+real overflowing content: programmatic scrolling works before the edit, stops
+under overflow:clip, and works again after reset. Shared checks cover mixed
+checkbox state, mouse/keyboard toggles, unchanged unselected layers, breakpoint
+isolation, reset and exact source undo. Original inline style strings remain
+intact. Logs: `/tmp/retouch-inline-clip-units.log`,
+`/tmp/retouch-inline-clip-react.log`, `/tmp/retouch-inline-clip-liquid.log`.
+
+HTML's existing overflow writer is unchanged. Other inline layout restrictions,
+full Figma/arbitrary-site parity and trusted Homebrew distribution remain
+incomplete. No native rebuild or push in this continuation.

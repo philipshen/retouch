@@ -233,3 +233,15 @@ test('shared inline padding preserves source priority and supports reset',()=>{
  assert.throws(()=>changePadding('block','md:','left',12,null,{},el),/important inline/);
  assert.equal(changePadding('block md:!pl-[12px]','md:','all',null,null,{},el),'block');
 });
+
+test('inline overflow clipping uses scoped priority and permits reset over important source styles',()=>{
+ const {changeClip}=require('../shell/react-selection.js');
+ for(const property of ['overflow','overflow-x','overflow-y','overflow-inline','overflow-block']){
+  const el={style:{getPropertyValue:p=>p===property?'auto':'',getPropertyPriority:()=>''}};
+  const clipped=changeClip('block','md:',true,null,el);assert.equal(clipped,'block md:!overflow-clip');
+  assert.equal(changeClip(clipped,'md:',false,null,el),'block md:!overflow-visible');
+  el.style.getPropertyPriority=p=>p===property?'important':'';
+  assert.throws(()=>changeClip('block','md:',true,null,el),/important inline/);
+  assert.equal(changeClip(clipped,'md:',null,null,el),'block');
+ }
+});

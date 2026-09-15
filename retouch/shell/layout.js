@@ -56,11 +56,12 @@
     }
     return classes;
   }
-  function clipClasses(classes,value,inherited=''){
+  function inlineOverflow(el,important=false){return ['overflow','overflow-x','overflow-y','overflow-inline','overflow-block'].some(property=>important?el.style.getPropertyPriority(property)==='important':!!el.style.getPropertyValue(property));}
+  function clipClasses(classes,value,inherited='',inlineOverride=false){
     if(value!==null&&typeof value!=='boolean')throw Error('Choose whether to clip content.');
     const matches=t=>/^overflow-(?:(?:x|y)-)?(?:auto|hidden|clip|visible|scroll)$|^\[overflow(?:-(?:[xy]|inline|block))?:/.test(t);
     let addition=value===null?'':value?'overflow-clip':'overflow-visible';
-    if(addition&&inherited.split(/\s+/).some(token=>/^!|!$/.test(token)&&matches(I.base(token)||'')))addition='!'+addition;
+    if(addition&&(inlineOverride||inherited.split(/\s+/).some(token=>/^!|!$/.test(token)&&matches(I.base(token)||''))))addition='!'+addition;
     return I.replace(classes,matches,addition);
   }
   function gridTemplateClasses(classes,axis,value,inherited=''){
@@ -379,9 +380,9 @@
     const clipping=document.createElement('input');clipping.type='checkbox';
     clipping.checked=['hidden','clip'].includes(css.overflowX)&&['hidden','clip'].includes(css.overflowY);
     clipping.indeterminate=!clipping.checked&&!(css.overflowX==='visible'&&css.overflowY==='visible');
-    clipping.onchange=()=>save(clipClasses(classes,clipping.checked,inherited));I.field(sec,'Clip content',clipping);
-    const resetClipping=I.button('Reset clipping',()=>save(clipClasses(classes,null)));resetClipping.disabled=clipClasses(classes,null)===classes;sec.append(resetClipping);
-    if(['overflow','overflow-x','overflow-y','overflow-inline','overflow-block'].some(property=>el.style.getPropertyValue(property))){clipping.disabled=true;resetClipping.disabled=true;I.note(sec,'Inline overflow controls clipping on this layer.');}
+    clipping.onchange=()=>{if(spacingActive()&&!inlineOverflow(el,true))save(clipClasses(classes,clipping.checked,inherited,inlineOverflow(el)));};I.field(sec,'Clip content',clipping);
+    const resetClipping=I.button('Reset clipping',()=>{if(spacingActive())save(clipClasses(classes,null));});resetClipping.disabled=!spacingActive()||clipClasses(classes,null)===classes;sec.append(resetClipping);
+    clipping.disabled=!spacingActive()||inlineOverflow(el,true);if(inlineOverflow(el,true))I.note(sec,'An important inline rule controls clipping on this layer.');
     I.note(sec,'Pixel sizes include padding and borders, before transforms.');
     const limits=document.createElement('details');limits.className='advanced';limits.open=limitsOpen;
     limits.ontoggle=()=>{limitsOpen=limits.open;};
@@ -399,6 +400,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={inlinePadding,paddingLogical,inlineDimensions,explicitLayoutClasses,gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={inlineOverflow,inlinePadding,paddingLogical,inlineDimensions,explicitLayoutClasses,gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);
