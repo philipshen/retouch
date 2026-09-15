@@ -1,7 +1,7 @@
 (function(root){
   'use strict';
   const ns='http://www.w3.org/2000/svg';
-  function mount({target,frame,canvas,onCommit,onEnd,onError,maxPoints=512,isCurrent=()=>true,contextPath=null,native=false}){
+  function mount({target,frame,canvas,onCommit,onEnd,onError,maxPoints=512,isCurrent=()=>true,contextPath=null,native=false,initialPoint=null}){
     let clearHint=()=>{};
     const w=target.ownerDocument.defaultView,viewport=native?null:target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
     let space;try{space=native?root.RetouchSVGDraw.nativeSpace(target):null;}catch(error){onError(error.message);onEnd();return null;}
@@ -91,6 +91,7 @@
     if(right<=left||bottom<=top||area.right<=area.left||area.bottom<=area.top){cancel();onError('Bring the SVG canvas into view before drawing.');return null;}
     Object.assign(surface.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});
     function placeToolbar(){const dock=root.document.querySelector('.design-tool-dock')?.getBoundingClientRect();toolbar.style.maxWidth=Math.max(0,c.width-24)+'px';toolbar.style.bottom=Math.max(12,dock?root.innerHeight-dock.top+12:root.innerHeight-c.bottom+12)+'px';toolbar.style.left=Math.max(c.left+12,c.left+(c.width-toolbar.offsetWidth)/2)+'px';}
+    if(initialPoint){try{const event={clientX:f.left+initialPoint.x*scale,clientY:f.top+initialPoint.y*scale};if(!inside(event))throw Error('Place the first point inside the drawing canvas.');points.push(point(event));}catch(error){cancel();onError(error.message);return null;}}
     root.document.body.append(surface,toolbar);update();surface.focus({preventScroll:true});
     clearHint=root.RetouchCanvasHint?.show('Pen · Click for corners, drag for curves · Enter to finish','Shift constrains direction. Click the first point to close. Enter finishes; Backspace removes the last point; Escape cancels.')||(()=>{});
     function watch(){if(!ended&&verify())raf=root.requestAnimationFrame(watch);}raf=root.requestAnimationFrame(watch);

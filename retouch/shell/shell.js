@@ -20,7 +20,7 @@ const SPACING_STEPS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11,
 
 let historyRecoveryRequired=!!window.__RT_RENDERING?.historyRecoveryRequired;
 let armedCanvasTool=null;
-let stopShapeDrag=null,preparingShapeDrag=false;
+let stopShapeDrag=null,preparingShapeDrag=false,penEntrySerial=0;
 let mode = historyRecoveryRequired?'interact':'edit'; // 'edit' | 'interact'
 let renderedSelection=null; // Live DOM anchor for the explicitly chosen occurrence.
 let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
@@ -308,7 +308,7 @@ function hookFrame(d, w) {
     e.preventDefault();
     e.stopPropagation();
     const t = pickLayer(e.target,e.clientX,e.clientY);
-    if(armedCanvasTool){if(t&&!layerLocks.locked(t))await select(t);else clearSelection();return;}
+    if(armedCanvasTool){if(t&&!layerLocks.locked(t)){if(armedCanvasTool==='pen')await startPenAt(t,{x:e.clientX,y:e.clientY});else await select(t);}else clearSelection();return;}
     // Single click selects AND, when the element has editable literal text,
     // enters in-place editing directly (user decision, 2026-09-02).
     if (t&&!layerLocks.locked(t)) startInlineEdit(t, e, true);
@@ -4249,12 +4249,26 @@ async function editSVGPoints(info){
     onCommit:value=>{if(sel?.info===info)setSVGGeometry(field.name,value);},
     onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
-async function drawVector(info){
+async function startPenAt(target,point){
+ const serial=++penEntrySerial,documentBefore=doc(),valid=()=>serial===penEntrySerial&&armedCanvasTool==='pen'&&doc()===documentBefore&&target.isConnected&&mode==='edit'&&!canvasPan.active;
+ preparingShapeDrag=true;
+ try{
+  for(let candidate=target;candidate&&valid();candidate=candidate.parentElement?.closest('[data-rt]')){
+   if(layerLocks.locked(candidate))return;
+   await select(candidate,{current:valid});if(!valid())return;
+   if(sel?.info.svgInsertion?.pen&&renderedSelection?.element?.contains(target)&&!layerLocks.locked(renderedSelection.element)){
+    const info=sel.info;setArmedCanvasTool(null);await drawVector(info,point);return;
+   }
+  }
+  if(valid())toast('Choose an editable container to draw into.','err');
+ }finally{preparingShapeDrag=false;}
+}
+async function drawVector(info,initialPoint=null){
   if(panelTasks||undoBusy||sourceRequests||editing)return;
   stopDrawing?.();const targets=matchingEls(info.id);
   if(targets.length!==1)return toast('Select a container rendered once to draw into.','err');
   if(!await prepareVectorCanvas(info,targets[0]))return;
-  stopDrawing=RetouchSVGPen.mount({target:targets[0],frame:iframe,canvas:canvasSurface,native:info.svgInsertion.createsViewport,
+  stopDrawing=RetouchSVGPen.mount({target:targets[0],frame:iframe,canvas:canvasSurface,native:info.svgInsertion.createsViewport,initialPoint,
     onCommit:(points,closed,nodes)=>insertLayer(nodes?'path':closed?'polygon':'polyline',info,'insertSVG',{...(nodes?{nodes,closed}:{points}),...(info.svgInsertion.createsViewport?{nativeCanvas:true}:{})}),
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
 }

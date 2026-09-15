@@ -19251,3 +19251,27 @@ and `/tmp/retouch-direct-modifiers-units.log`.
 
 No desktop rebuild or push. Direct Pen entry, arbitrary-site support, full
 Figma parity and trusted Homebrew distribution remain incomplete.
+
+### 2026-09-15 — Place the first Pen anchor on the first canvas click
+
+Clicking site content with Pen armed now resolves a writable ancestor and
+carries the original iframe point into the Pen surface. The first click places
+an anchor rather than only selecting a destination. Source stays unchanged
+until the vector is finished. The pending entry checks tool state, document,
+selection resolution, connectivity and locks; Escape during lookup prevents
+late entry. Existing toolbar/tree destination selection still opens an empty
+Pen surface normally.
+
+All 1,665 unit tests passed. HTML and React Chromium and Liquid WebKit browser
+checks passed with source-incompatible child/writable-parent fixtures. Coverage
+includes delayed first-click lookup, original anchor location, two-click line
+endpoints in screen coordinates, exact source undo, and pending Escape without
+late surfaces. An initial bounds check included SVG stroke extent; it was
+replaced with transformed endpoint checks. Existing armed and direct shape
+checks passed in the same runs. Logs:
+`/tmp/retouch-pen-first-{html,react,liquid}-final.log` and
+`/tmp/retouch-pen-first-units-verified.log`.
+
+The initial Pen click creates a corner anchor; direct first-anchor curve
+handles are not implemented. Full Figma parity, arbitrary-site support and
+trusted Homebrew distribution remain incomplete. No desktop rebuild or push.
