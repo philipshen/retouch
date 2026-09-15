@@ -68,10 +68,24 @@
    restore:()=>{for(const item of entries){if(!owned(item))continue;if(item.value)item.el.style.setProperty('translate',item.value,item.priority);else item.el.style.removeProperty('translate');if(!item.hadStyle&&!item.el.getAttribute('style'))item.el.removeAttribute('style');}}
   };
  }
+ function scalePlan(members,factor){
+  if(!Number.isFinite(factor)||factor<.01||factor>100)throw Error('Choose a scale from 1 to 10,000 percent.');
+  if(!Array.isArray(members)||!members.length||members.length>100)throw Error('Choose between 1 and 100 source layers to scale.');
+  const parse=root.RetouchFlip?.parse||require('./flip.js').parse,left=Math.min(...members.map(item=>item.rect.x)),top=Math.min(...members.map(item=>item.rect.y));
+  const entries=members.map(item=>{const style=item.el.style,values=parse(item.el.ownerDocument.defaultView.getComputedStyle(item.el).scale||'none');if(!values||values.length!==2||values.some(value=>value===0||Math.abs(value*factor)>10000)||style.getPropertyPriority('scale')==='important')throw Error('Choose editable two-dimensional child scales.');return {item,scale:values.map(value=>String(value*factor)).join(' '),value:style.getPropertyValue('scale'),priority:style.getPropertyPriority('scale'),hadStyle:item.el.hasAttribute('style')};});
+  const expected=members.map(item=>({x:left+(item.rect.x-left)*factor,y:top+(item.rect.y-top)*factor,width:item.rect.width*factor,height:item.rect.height*factor}));let deltas;
+  try{for(const entry of entries)entry.item.el.style.setProperty('scale',entry.scale,'important');deltas=entries.map(({item},i)=>{const r=item.el.getBoundingClientRect(),next=expected[i];if(Math.abs(r.width-next.width)>.1||Math.abs(r.height-next.height)>.1)throw Error('Child transforms did not scale proportionally.');return {x:next.x-r.x,y:next.y-r.y};});}
+  finally{for(const entry of entries){const style=entry.item.el.style;if(entry.value)style.setProperty('scale',entry.value,entry.priority);else style.removeProperty('scale');if(!entry.hadStyle&&!entry.item.el.getAttribute('style'))entry.item.el.removeAttribute('style');}}
+  return {deltas,expected,scales:Object.fromEntries(entries.map(entry=>[entry.item.id,entry.scale]))};
+ }
+ function scaleClasses(value,scope,scale){
+  const R=root.RetouchResponsive||require('./responsive.js'),token=root.RetouchFlip?.token||require('./flip.js').token;
+  const active=R.project(value,scope).split(/\s+/).filter(Boolean).filter(word=>!token(word.replace(/^!/,'')));active.push('![scale:'+scale.replace(/ /g,'_')+']');return R.replaceScope(value,active.join(' '),scope);
+ }
  function classes(value,scope,translate){
   const R=root.RetouchResponsive||require('./responsive.js');
   const scoped=R.project(value,scope).split(/\s+/).filter(Boolean).filter(token=>!/^!?-?translate(?:-|\[)/.test(token)&&!/^!?\[translate:/.test(token));
   scoped.push('![translate:'+translate.replace(/ /g,'_')+']');return R.replaceScope(value,scoped.join(' '),scope);
  }
- const api={translation,measure,measureSelection,selectionBounds,parentBounds,memberDeltas,classes,multiply,localDelta,parentMatrix,preview};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupMove=api;
+ const api={translation,measure,measureSelection,selectionBounds,parentBounds,memberDeltas,scalePlan,scaleClasses,classes,multiply,localDelta,parentMatrix,preview};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupMove=api;
 })(typeof window==='object'?window:globalThis);

@@ -18211,3 +18211,34 @@ browser coverage and this checkpoint changed.
 Group resize/rotation, negative-position viewport handling, full Figma parity
 and trusted Homebrew distribution remain incomplete. No desktop rebuild or push
 for this checkpoint.
+
+### Proportional group scaling checkpoint
+
+The Group inspector now has a Scale selection (%) operation, applied relative
+to current rendered content from the selection's top-left corner. Child scale
+values are multiplied by the ratio. A synchronous measurement pass computes
+translation compensation for each child's transform origin and ancestor matrix,
+then restores temporary styles before the atomic scale/translate source write.
+Layout slots remain unchanged; this scales text/content visually rather than
+resizing layout boxes or reflowing text. Active-scope scale utilities are replaced
+while other scopes and unrelated transforms are retained. The shared movement
+history restores the complete selection and exact source for scale operations.
+
+Validation: 1,652 unit tests pass, including ratio bounds and active-scope scale
+class handling. HTML/Chromium, transformed React/Chromium and transformed
+Liquid/WebKit verify 50/150/200 percent scaling for single and mixed selections,
+reflected/nonuniformly scaled and rotated children with custom origins, expected
+rendered geometry, unchanged unselected sibling positions, temporary-style
+cleanup, and exact undo/redo. HTML movement/alignment/nudge regressions also pass.
+HTML and units were rerun after final bounds validation and status wording.
+Visually inspected `/tmp/retouch-group-scale-html.png`.
+
+Logs: `/tmp/retouch-group-scale-units-final.log`,
+`/tmp/retouch-group-scale-html-final.log`, `/tmp/retouch-group-scale-react.log`,
+`/tmp/retouch-group-scale-webkit.log`, and
+`/tmp/retouch-group-scale-move-regression.log`.
+
+Live scale preview, canvas scaling handles, layout-box group resizing, rotation,
+complex fixed-position descendant behavior, full Figma parity and trusted public
+Homebrew distribution remain incomplete. No desktop rebuild or push for this
+checkpoint.
