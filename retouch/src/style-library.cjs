@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {applyPlan}=require('./transactions.cjs');
-module.exports=function createStyleLibrary({filename,label,properties,valid,propertyLabel=label}){
+module.exports=function createStyleLibrary({filename,label,properties,valid,validateValues=()=>{},propertyLabel=label}){
 const title=label[0].toUpperCase()+label.slice(1);
 const LIMIT=512*1024,MAX_STYLES=100;
 const object=value=>value&&typeof value==='object'&&!Array.isArray(value);
@@ -9,7 +9,7 @@ function fail(reason,statusCode=422){throw Object.assign(new Error(reason),{stat
 function name(value){if(typeof value!=='string')fail(`Give the ${label} a name.`);const normalized=value.trim().replace(/\s+/g,' ');if(!normalized||normalized.length>80||/[\u0000-\u001f\u007f]/.test(normalized))fail(`Use a ${label} name between 1 and 80 characters.`);return normalized;}
 function values(input){
  if(!object(input)||!Object.keys(input).length||Object.keys(input).some(key=>!properties.includes(key)))fail(`${title}s must contain supported ${propertyLabel} properties.`);
- const result={};for(const property of properties)if(Object.hasOwn(input,property)){if(typeof input[property]!=='string'||!valid(property,input[property]))fail(`Unsupported ${label} value for `+property+'.');result[property]=input[property];}return result;
+ const result={};for(const property of properties)if(Object.hasOwn(input,property)){if(typeof input[property]!=='string'||!valid(property,input[property]))fail(`Unsupported ${label} value for `+property+'.');result[property]=input[property];}try{validateValues(result);}catch(error){fail(error.message);}return result;
 }
 function validate(input){
  if(!object(input)||input.version!==1||Object.keys(input).some(key=>!['version','styles'].includes(key))||!Array.isArray(input.styles)||input.styles.length>MAX_STYLES)fail(`Invalid ${label} library.`);

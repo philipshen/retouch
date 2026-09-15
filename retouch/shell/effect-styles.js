@@ -24,6 +24,8 @@
    if(!element?.isConnected)throw Error('Select the layer again before saving its effects.');
    const css=element.ownerDocument.defaultView.getComputedStyle(element),values={};
    for(const property of properties){const value=css.getPropertyValue(property).trim();if(!root.RetouchHTMLCSSValues.valid(property,value))throw Error('This layer uses an unsupported '+property+' value: '+value);values[property]=value;}
+   const shadows=root.RetouchBackgroundPaintUI.readShadows(options.info||{},element);
+   if(shadows?.some(shadow=>shadow.hidden))Object.assign(values,root.RetouchShadowVisibility.write(shadows));
    return values;
   }
   function render(){
@@ -77,7 +79,7 @@
    if(style){
     if(options.apply)controls.append(I.button('Apply effect style',()=>run(()=>options.apply(style.id,library.revision),'Effect style applied.')));
     if(options.update){controls.append(I.button('Update style from this layer',()=>run(()=>options.update(style.id,library.revision,style.name,capture()),'Effect style updated.')));I.note(controls,'Updates linked layers across project source files. Local overrides are preserved.');}
-    const propertiesDetails=document.createElement('details'),propertiesTitle=document.createElement('summary');propertiesTitle.textContent='Style properties';propertiesDetails.append(propertiesTitle);const labels=['Shadow','Layer filter','Backdrop filter'];const preview=document.createElement('dl');preview.className='text-style-properties';for(const [property,value]of Object.entries(style.properties)){const term=document.createElement('dt'),description=document.createElement('dd');term.textContent=labels[properties.indexOf(property)];description.textContent=value;preview.append(term,description);}propertiesDetails.append(preview);controls.append(propertiesDetails);
+    const propertiesDetails=document.createElement('details'),propertiesTitle=document.createElement('summary');propertiesTitle.textContent='Style properties';propertiesDetails.append(propertiesTitle);const labels=['Shadow','Layer filter','Backdrop filter'];const preview=document.createElement('dl');preview.className='text-style-properties';for(const [property,value]of Object.entries(style.properties)){if(property===root.RetouchShadowVisibility.property)continue;const term=document.createElement('dt'),description=document.createElement('dd');term.textContent=labels[properties.indexOf(property)];description.textContent=value+(property==='box-shadow'&&style.properties[root.RetouchShadowVisibility.property]&&style.properties[root.RetouchShadowVisibility.property]!=='none'?' · Includes hidden shadows':'');preview.append(term,description);}propertiesDetails.append(preview);controls.append(propertiesDetails);
     controls.append(I.button('Rename effect style',()=>{const title=label();if(!title)return;run(async()=>{library=await request({type:'update',revision:library.revision,id:style.id,name:title,properties:style.properties});},'Effect style renamed.');}));
     const remove=I.button('Delete effect style',()=>{
      const confirm=I.button('Confirm delete '+style.name,()=>run(async()=>{library=await request({type:'delete',revision:library.revision,id:style.id});selected='';preferredStyle='';},'Effect style deleted.'));
