@@ -19764,3 +19764,29 @@ Layer-owned matrix transforms, translation, zoom, 3D transforms and canvas
 resizing in transformed frames remain incomplete. Full arbitrary-site/Figma
 parity and trusted Homebrew distribution remain incomplete. No push or native
 rebuild.
+
+
+### Authored CSS matrices in local positioning
+
+Local positioning now supports invertible two-dimensional CSS transform
+matrices, preserving the authored matrix while moving or aligning a layer.
+Corner geometry composes matrix translation/skew with separate rotation/scale
+around the authored transform origin. Source writes continue to change geometry
+without replacing the transform. Singular and three-dimensional matrices remain
+explicitly unsupported.
+
+Validation: all 1,674 unit tests passed, including a matrix with translation and
+skew composed with rotation, reflection and a noncentral origin. HTML/Chromium,
+React/Chromium and Liquid/WebKit browser fixtures passed live pointer movement,
+keyboard nudging, cancellation, visual left-frame alignment and exact undo for
+an authored matrix combined with rotation/reflection inside a transformed frame.
+The alignment check measures actual DOM coordinate probes, and each edit keeps
+the computed transform/origin/rotation/scale unchanged. Inspected
+`/tmp/retouch-matrix-position.png`. Logs:
+`/tmp/retouch-matrix-position-{html,react,liquid}.log` and
+`/tmp/retouch-matrix-position-units-final.log`.
+
+Separate translate/zoom properties on the layer, 3D/singular transforms and
+canvas resizing in transformed frames remain incomplete. Full arbitrary-site
+parity and trusted Homebrew distribution remain incomplete. No push or native
+rebuild.
