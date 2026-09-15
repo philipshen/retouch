@@ -46,7 +46,7 @@
   Object.assign(surface.style,{position:'fixed',zIndex:40,cursor:'crosshair',touchAction:'none'});
   const drawing=root.document.createElementNS(ns,'svg');Object.assign(drawing.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none',overflow:'hidden'});surface.append(drawing);
   const preview=root.document.createElementNS(ns,{rectangle:'rect',circle:'circle',ellipse:'ellipse',line:'line',arrow:'path',triangle:'polygon',star:'polygon'}[preset]);
-  preview.style.cssText='pointer-events:none!important;fill:#a5b4fc!important;stroke:#6366f1!important;stroke-width:1!important;opacity:.7!important;';preview.setAttribute('vector-effect','non-scaling-stroke');if(['line','arrow'].includes(preset))preview.style.setProperty('fill','none','important');
+  preview.style.cssText='pointer-events:none!important;fill:#d9d9d9!important;stroke:var(--accent, #0d99ff)!important;stroke-width:1!important;opacity:.7!important;';preview.setAttribute('vector-effect','non-scaling-stroke');if(['line','arrow'].includes(preset))preview.style.setProperty('fill','none','important');
   let state=null,ended=false,spaceHeld=false;const cleanup=[];
   const current=()=>!space||space.current();
   if(native){let raf;const check=()=>{if(!current()){cancel();return;}raf=root.requestAnimationFrame(check);};raf=root.requestAnimationFrame(check);cleanup.push(()=>root.cancelAnimationFrame(raf));}

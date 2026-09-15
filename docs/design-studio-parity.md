@@ -19398,3 +19398,32 @@ Logs: `/tmp/retouch-shape-space-{html,react,liquid,units,pan,svg}-final.log`.
 
 No desktop rebuild or push. Full Figma parity, arbitrary-site support and
 trusted Homebrew distribution remain incomplete.
+
+### 2026-09-15 — Neutral creation defaults and blue shape previews
+
+New shape fills now use #d9d9d9 and new line/path strokes use #000000 instead
+of the earlier purple palette. Drawing previews use the same neutral fill and
+the editor's blue accent. Existing source shapes are not recolored. These
+creation helpers are shared by HTML, JSX and Liquid insertion adapters.
+
+Reference checked live: Figma's shapes/fills tutorial documents a default gray
+fill, and its screenshot explicitly shows D9D9D9:
+https://help.figma.com/hc/en-us/articles/30928855233175-FD4B-Create-your-avatar-using-shapes-and-fills
+https://help.figma.com/hc/article_attachments/31716235697815
+Figma's theme documentation describes the Design blue accent:
+https://developers.figma.com/docs/plugins/css-variables/
+The black stroke is Retouch's neutral creation default; this checkpoint does
+not claim exact reproduction of all Figma tool defaults or UI sections.
+
+All 1,665 unit tests passed. HTML and React Chromium and Liquid WebKit browser
+checks passed with explicit gray-fill/black-stroke assertions. The standalone
+SVG drawing suite verified computed preview colors and drawing/history flows.
+Focused Pen and curved-Pen suites passed open/closed creation at 50/100/200%,
+transforms, point editing, cancellation and exact undo/redo. A stale Pen status
+selector was updated to its existing standalone toolbar. Logs:
+`/tmp/retouch-neutral-shape-{html,react,liquid,units,svg,pen,curves}.log`.
+Visually inspected `/tmp/retouch-neutral-shape-preview.png` against the Figma
+reference screenshot saved as `/tmp/retouch-figma-shape-reference.png`.
+
+No desktop rebuild or push. Full Figma parity, arbitrary-site support and
+trusted Homebrew distribution remain incomplete.

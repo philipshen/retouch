@@ -4,7 +4,7 @@ const namespace='http://www.w3.org/2000/svg';
 const presets=['rectangle','circle','ellipse','line','arrow','triangle','star'];
 function pathShape(nodes,closed){
  const d=require('../shell/svg-path.js').serialize(nodes,closed);
- return d?'<path d="'+d+'" fill="'+(closed?'#a5b4fc':'none')+'" stroke="#6366f1" stroke-width="2"/>':null;
+ return d?'<path d="'+d+'" fill="'+(closed?'#d9d9d9':'none')+'" stroke="#000000" stroke-width="2"/>':null;
 }
 function drawnShape(preset,points){
  if(['polygon','polyline'].includes(preset)){
@@ -12,16 +12,16 @@ function drawnShape(preset,points){
   if(!Array.isArray(points)||points.length<minimum*2||points.length>1024||points.length%2||points.some(n=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>100000))return null;
   const pairs=[];for(let i=0;i<points.length;i+=2)pairs.push(points[i]+','+points[i+1]);
   if(new Set(pairs).size<minimum)return null;
-  return '<'+preset+' points="'+pairs.join(' ')+'" fill="'+(preset==='polygon'?'#a5b4fc':'none')+'" stroke="#6366f1" stroke-width="2"/>';
+  return '<'+preset+' points="'+pairs.join(' ')+'" fill="'+(preset==='polygon'?'#d9d9d9':'none')+'" stroke="#000000" stroke-width="2"/>';
  }
 
  if(!Array.isArray(points)||points.length!==4||points.some(n=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>100000))return null;
  const [x1,y1,x2,y2]=points,x=Math.min(x1,x2),y=Math.min(y1,y2),w=Math.abs(x2-x1),h=Math.abs(y2-y1);
  if(w>100000||h>100000||(!w&&!h)||!['line','arrow'].includes(preset)&&(!w||!h))return null;
- if(preset==='arrow'){const points=require('../shell/svg-draw.js').geometry(preset,{x:x1,y:y1},{x:x2,y:y2}).points,d=points&&require('../shell/svg-parametric.js').arrowPath(points);return d?'<path data-rt-shape="arrow" d="'+d+'" fill="none" stroke="#6366f1" stroke-width="2"/>':null;}
- if(['triangle','star'].includes(preset))return '<polygon points="'+require('../shell/svg-draw.js').geometry(preset,{x:x1,y:y1},{x:x2,y:y2}).points+'" fill="#a5b4fc" data-rt-shape="'+(preset==='star'?'star':'polygon')+'"/>';
- const n=v=>String(Math.round(v*1000000)/1000000),fill=' fill="#a5b4fc"/>';
- return {rectangle:`<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}"${fill}`,circle:`<circle cx="${n(x+w/2)}" cy="${n(y+h/2)}" r="${n(Math.min(w,h)/2)}"${fill}`,ellipse:`<ellipse cx="${n(x+w/2)}" cy="${n(y+h/2)}" rx="${n(w/2)}" ry="${n(h/2)}"${fill}`,line:`<line x1="${n(x1)}" y1="${n(y1)}" x2="${n(x2)}" y2="${n(y2)}" stroke="#6366f1" stroke-width="2"/>`}[preset]||null;
+ if(preset==='arrow'){const points=require('../shell/svg-draw.js').geometry(preset,{x:x1,y:y1},{x:x2,y:y2}).points,d=points&&require('../shell/svg-parametric.js').arrowPath(points);return d?'<path data-rt-shape="arrow" d="'+d+'" fill="none" stroke="#000000" stroke-width="2"/>':null;}
+ if(['triangle','star'].includes(preset))return '<polygon points="'+require('../shell/svg-draw.js').geometry(preset,{x:x1,y:y1},{x:x2,y:y2}).points+'" fill="#d9d9d9" data-rt-shape="'+(preset==='star'?'star':'polygon')+'"/>';
+ const n=v=>String(Math.round(v*1000000)/1000000),fill=' fill="#d9d9d9"/>';
+ return {rectangle:`<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}"${fill}`,circle:`<circle cx="${n(x+w/2)}" cy="${n(y+h/2)}" r="${n(Math.min(w,h)/2)}"${fill}`,ellipse:`<ellipse cx="${n(x+w/2)}" cy="${n(y+h/2)}" rx="${n(w/2)}" ry="${n(h/2)}"${fill}`,line:`<line x1="${n(x1)}" y1="${n(y1)}" x2="${n(x2)}" y2="${n(y2)}" stroke="#000000" stroke-width="2"/>`}[preset]||null;
 }
 function shape(resolved,preset){
  let viewport=resolved.element.node;while(viewport&&!(viewport.namespaceURI===namespace&&viewport.tagName==='svg'))viewport=viewport.parentNode;
@@ -32,8 +32,8 @@ function shape(resolved,preset){
  if(preset==='arrow')return drawnShape(preset,[x+w*.1,y+h*.5,x+w*.9,y+h*.5]);
  if(['triangle','star'].includes(preset))return drawnShape(preset,[x+w*.1,y+h*.1,x+w*.9,y+h*.9]);
  const n=value=>String(Math.round(value*1000000)/1000000),cx=n(x+w/2),cy=n(y+h/2);
- const fill=' fill="#a5b4fc"/>';
- return {rectangle:`<rect x="${n(x+w*.1)}" y="${n(y+h*.1)}" width="${n(w*.8)}" height="${n(h*.6)}"${fill}`,circle:`<circle cx="${cx}" cy="${cy}" r="${n(Math.min(w,h)*.3)}"${fill}`,ellipse:`<ellipse cx="${cx}" cy="${cy}" rx="${n(w*.4)}" ry="${n(h*.25)}"${fill}`,line:`<line x1="${n(x+w*.1)}" y1="${cy}" x2="${n(x+w*.9)}" y2="${cy}" stroke="#6366f1" stroke-width="${n(Math.min(w,h)*.02)}"/>`}[preset];
+ const fill=' fill="#d9d9d9"/>';
+ return {rectangle:`<rect x="${n(x+w*.1)}" y="${n(y+h*.1)}" width="${n(w*.8)}" height="${n(h*.6)}"${fill}`,circle:`<circle cx="${cx}" cy="${cy}" r="${n(Math.min(w,h)*.3)}"${fill}`,ellipse:`<ellipse cx="${cx}" cy="${cy}" rx="${n(w*.4)}" ry="${n(h*.25)}"${fill}`,line:`<line x1="${n(x+w*.1)}" y1="${cy}" x2="${n(x+w*.9)}" y2="${cy}" stroke="#000000" stroke-width="${n(Math.min(w,h)*.02)}"/>`}[preset];
 }
 function nativeDrawing(preset,points,react=false,nodes,closed=false){
  const path=require('../shell/svg-path.js'),vector=['polygon','polyline','path'].includes(preset);
