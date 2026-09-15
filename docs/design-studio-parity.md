@@ -17693,3 +17693,11 @@ Double-clicking a grouped child now enters the outermost unopened group boundary
 Validation: 1,639 unit tests passed (`/tmp/retouch-nested-group-units.log`). HTML, React, and Liquid browser flows passed outer/inner/leaf double-click entry, Shift+Enter parent navigation, Enter child navigation, Tab sibling navigation, restoration of outer-group selection after leaving, and unchanged source (`/tmp/retouch-nested-group-html.log`, `/tmp/retouch-nested-group-react.log`, `/tmp/retouch-nested-group-liquid.log`). The earlier single-group picking/editing/ungroup flow also passed (`/tmp/retouch-nested-group-regression.log`).
 
 This covers the tested nested selection hierarchy, not complete group transforms or arbitrary repeated instances. Full design parity, geometry-preserving frames, arbitrary source/compiler support, and trusted desktop distribution remain incomplete.
+
+### Current universal desktop candidate — 2026-09-15
+
+Clean source commit e0f756038be2822e7d50580e8a2bb39a18de2422 is packaged as a universal arm64/x86_64 Developer ID signed app in `/Users/philipshen/Developer/retouch-worktrees/desktop-groups-e0f7560/Retouch-0.1.0-mac.zip`. The extracted package's 249 source entries and native inputs match the checkout. Strict signature, hardened runtime, timestamp, extraction, and tamper checks passed; all 28 desktop unit tests passed. A checksum-bound local Homebrew cask was generated and syntax-checked.
+
+The extracted editor runtime passed 1,639 unit tests, React/Chromium nested-group navigation, and Liquid/WebKit responsive grouping/history. Installing the test-only Liquid dependency initially upgraded tailwind-merge; every bundled dependency entry was restored from the archive before the final reruns. All 1,050 bundled dependency files and source-manifest entries still matched after testing. Evidence is recorded in `desktop/verification/2026-09-15-groups-developer-id.json`.
+
+Gatekeeper rejected the candidate as Unnotarized Developer ID (exit 3). No GUI launch, notarization submission, cask installation, or public release was attempted. Trusted distribution still needs notarization credentials/profile and acceptance; Intel execution is unverified. This candidate update does not complete Figma or arbitrary-site parity.

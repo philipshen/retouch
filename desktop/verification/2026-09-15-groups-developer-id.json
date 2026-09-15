@@ -1,0 +1,90 @@
+{
+  "sourceCommit": "e0f756038be2822e7d50580e8a2bb39a18de2422",
+  "sourceTreeDirty": false,
+  "sourceFiles": 249,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/Users/philipshen/Developer/retouch-worktrees/desktop-groups-e0f7560/Retouch-0.1.0-mac.zip",
+  "sha256": "7c0371ef9719a5a6d11b08cdc9983c7b6087947bfa79aa4e71894e84bdb01324",
+  "sourceManifestMatchedCheckout": true,
+  "nativeBuildInputsMatchedCheckout": true,
+  "testedRuntimeMatchedManifestAfterTests": true,
+  "bundledDependencyFilesMatchedAfterTests": 1050,
+  "testOnlyDependencies": [
+    "commander",
+    "liquidjs"
+  ],
+  "testSetupCorrection": "npm initially upgraded tailwind-merge; all bundled dependency entries were restored exactly before the final unit and browser runs",
+  "signing": {
+    "authority": "Developer ID Application: Philip Shen (2HN3MWMRX2)",
+    "strictVerification": true,
+    "hardenedRuntime": true,
+    "secureTimestamp": true
+  },
+  "gatekeeper": {
+    "exitCode": 3,
+    "output": "/Users/philipshen/Developer/retouch-worktrees/desktop-groups-e0f7560/extracted/Retouch.app: rejected\nsource=Unnotarized Developer ID\n"
+  },
+  "nativeLaunch": "not attempted; unnotarized candidate rejected by Gatekeeper",
+  "notarization": "not complete; existing notarytool profile name still needed",
+  "publicRelease": "not published",
+  "desktopTestsPassed": 28,
+  "packagedRuntimeUnitsPassed": 1639,
+  "packageTamperChecks": "passed",
+  "archiveExtractionVerification": "passed",
+  "packagedBrowserWorkflows": [
+    {
+      "browser": "chromium",
+      "renderer": "react",
+      "result": "passed",
+      "workflow": "nested group entry and keyboard hierarchy; source unchanged"
+    },
+    {
+      "browser": "webkit",
+      "renderer": "liquid",
+      "result": "passed",
+      "workflow": "responsive grouping/ungrouping at 390/768/1100px, outlines, zoom and exact history"
+    }
+  ],
+  "localCask": "/Users/philipshen/Developer/retouch-worktrees/desktop-groups-e0f7560/retouch-studio.rb",
+  "caskSyntax": "passed",
+  "caskInstallation": "not attempted for this candidate",
+  "intelExecution": "not verified",
+  "logs": {
+    "build": {
+      "path": "/tmp/retouch-desktop-groups-build.log",
+      "sha256": "72bc458582f89d5fa36a3ba118075aa10d08d86c358e0fabda5395ae8909cd91"
+    },
+    "desktopUnits": {
+      "path": "/tmp/retouch-desktop-groups-tests.log",
+      "sha256": "c863bb9ac6a21b5a51019cc1cd16129fe2098babd3ef8de66936e9bd777a0e79"
+    },
+    "tamper": {
+      "path": "/tmp/retouch-desktop-groups-tamper.log",
+      "sha256": "74b828d723af4fd2aedf9d9659f758c79ae68b1fb5ed392628c83904dc4abed2"
+    },
+    "runtimeUnits": {
+      "path": "/tmp/retouch-desktop-groups-runtime-units-final.log",
+      "sha256": "03bb159c3b0f05dc31defee1cb511e0983af84a18a2866d103ff0383e6884af2"
+    },
+    "reactChromium": {
+      "path": "/tmp/retouch-desktop-groups-react-final.log",
+      "sha256": "300e6261918d5dc60ae359493e9d6060442e4ed1e68326b73a6daf023f83eba5"
+    },
+    "liquidWebKit": {
+      "path": "/tmp/retouch-desktop-groups-webkit-final.log",
+      "sha256": "dd4477891101478d0cb2465f43a7d118dd709fb5aa63b33273bf70cfc7c0e9f0"
+    },
+    "signing": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-groups-e0f7560/signing.log",
+      "sha256": "bc1066c0404087b5d1338f99bd816afa75c2d378427b85adaf1482cdd3983ffd"
+    },
+    "gatekeeper": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-groups-e0f7560/gatekeeper.log",
+      "sha256": "ae69b794fcf3307ddd7f85df6024a4078ad2acffbbce10cb7818c9c4baaca06f"
+    }
+  }
+}

@@ -1,5 +1,25 @@
 # Retouch for macOS
 
+## Latest groups/editor candidate (2026-09-15, e0f7560)
+
+The universal Developer ID signed archive now includes native parent moves,
+frames, responsive groups, nested group navigation, and comparison group selection.
+
+Archive: `/Users/philipshen/Developer/retouch-worktrees/desktop-groups-e0f7560/Retouch-0.1.0-mac.zip`
+
+SHA-256: `7c0371ef9719a5a6d11b08cdc9983c7b6087947bfa79aa4e71894e84bdb01324`
+
+All 249 packaged source entries and native inputs match clean commit `e0f7560`.
+The extracted runtime passed 1,639 unit tests, React/Chromium nested navigation,
+and Liquid/WebKit responsive grouping and history. All 1,050 bundled dependency
+files were verified unchanged after these tests. All 28 desktop unit tests and
+package tamper checks pass. A checksum-bound local cask was syntax-checked.
+
+Gatekeeper still reports **Unnotarized Developer ID**. Native launch and cask
+installation were not attempted for this candidate. Notarization, trusted public
+distribution, and Intel execution remain unverified. See
+[the receipt](verification/2026-09-15-groups-developer-id.json).
+
 ## Latest crop/editor candidate (2026-09-14, 6c18995)
 
 The universal Developer ID signed archive includes guide management, transformed
