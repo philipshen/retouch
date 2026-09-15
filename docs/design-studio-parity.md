@@ -18576,3 +18576,32 @@ Reference: https://www.w3.org/TR/css-align-3/#overview. This increment covers sh
 HTML CSS authoring; individual child self-alignment overrides remain authoritative.
 Full Figma fidelity, arbitrary-site support and trusted public Homebrew distribution
 remain incomplete. No desktop rebuild or push for this increment.
+
+### Consistent single-container grid alignment (2026-09-15)
+
+Single editable HTML grid containers now use the same physical nine-position
+alignment mapping as shared selections. Clicks recheck the connected container,
+current layout mode and selected pixel edit range before writing; controls disable
+when the preview is narrower than that range. Grid alignment also has a resettable
+Align columns CSS field. HTML container inspectors put alignment beside gap and
+move raw alignment fields into Layout options when a visual picker is available.
+Text-only layers without the container picker retain their visible CSS controls.
+
+Chromium and WebKit passed all nine positions within four grid cells across six
+writing directions (horizontal LTR/RTL, vertical-rl LTR/RTL, vertical-lr RTL and
+sideways-lr), exact atomic undo/redo, compact row placement, raw column editing and
+reset, keyboard grid navigation, desktop-only alignment and inactive-range guards.
+The twelve-case wrapping regression and the broader HTML editing/export/assets
+workflow passed. All 1,654 unit tests passed. The initial HTML regression expectation
+incorrectly assumed a text-only heading had container controls; restoring that
+expectation confirmed its raw fields remain available. Inspected
+`/tmp/retouch-single-grid-alignment-chromium.png`.
+
+Logs: `/tmp/retouch-single-grid-html-final.log`,
+`/tmp/retouch-single-grid-webkit-final.log`,
+`/tmp/retouch-single-grid-wrap-regression.log`,
+`/tmp/retouch-single-grid-html-site-final.log`, and
+`/tmp/retouch-single-grid-units-final.log`.
+
+Full Figma fidelity, arbitrary-site editing and trusted public Homebrew distribution
+remain incomplete. No desktop rebuild or push for this increment.

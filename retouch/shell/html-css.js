@@ -1,7 +1,7 @@
 (function(){
  const I=RetouchInspector;
  const openGridSections=new Set();
- const {options,fields,svgFields,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,childAlignment,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
+ const {options,fields,svgFields,adaptiveColumns,parseAdaptiveColumns,stackLayout,childAlignment,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
  const stopRail=RetouchGradientStopRail;
  function inheritedVariables(info,width){return Object.entries(info.cssRules||{}).filter(([scope])=>Number(scope)<width).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,rules])=>Object.assign(all,rules),{});}
  function mount(info,el,width,save,position=null,textStyleAction=null){
@@ -34,9 +34,11 @@
    if(isAdaptive){const minimum=document.createElement('input');minimum.type='number';minimum.min=1;minimum.max=2000;minimum.step=1;minimum.value=adaptiveSize;minimum.onchange=()=>{const value=adaptiveColumns(Number(minimum.value));if(value&&minimum.checkValidity())save('grid-template-columns',value,width);};I.field(layout,'Minimum column size (px)',minimum);I.note(layout,'Columns fit the available space automatically. Below this minimum, a single column shrinks to fit. Child sizes and spans can still affect the result.');}
    if(['flex','inline-flex'].includes(css.display)){
     const wrapping=document.createElement('select');for(const [value,label]of [['nowrap','Single line'],['wrap','Wrap to new lines'],['wrap-reverse','Wrap in reverse']]){const option=document.createElement('option');option.value=value;option.textContent=label;wrapping.append(option);}wrapping.value=css.flexWrap;wrapping.onchange=()=>save('flex-wrap',wrapping.value,width);I.field(layout,'Child wrapping',wrapping);
+   }
+   if(['flex','inline-flex','grid','inline-grid'].includes(css.display)){
     const align=document.createElement('div');align.className='layout-alignment';align.setAttribute('role','group');align.setAttribute('aria-label','Align children');
     for(let y=0;y<3;y++)for(let x=0;x<3;x++){
-     const label='Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x],changes=flexAlignment(x,y,css),button=I.button('•',()=>save(changes,null,width));button.setAttribute('aria-label',label);button.title=label;button.setAttribute('aria-pressed',String(css.justifyContent===changes['justify-content']&&css.alignItems===changes['align-items']&&(!changes['align-content']||css.alignContent===changes['align-content'])));align.append(button);
+     const label='Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x],changes=childAlignment(x,y,css),button=I.button('•',()=>{if(!el.isConnected||width>el.ownerDocument.defaultView.innerWidth)return;const current=el.ownerDocument.defaultView.getComputedStyle(el);if(['flex','inline-flex','grid','inline-grid'].includes(current.display))save(childAlignment(x,y,current),null,width);});button.setAttribute('aria-label',label);button.disabled=width>el.ownerDocument.defaultView.innerWidth;button.title=button.disabled?'Preview the selected edit range before aligning children.':label;button.setAttribute('aria-pressed',String(Object.entries(changes).every(([property,value])=>css.getPropertyValue(property)===value)));align.append(button);
     }
     layout.append(align);
    }
@@ -198,7 +200,7 @@
    I.note(custom,title==='Custom grid tracks'?'Separate sizes with spaces. 160px 1fr makes a fixed track and a flexible track.':'Choose a start and end line: 2 / 4 spans two tracks. Named lines work too.');grid.append(custom);
   }
 
-  for(const [property,label] of fields){
+  for(const [property,label] of [...fields,...(isGrid?[['justify-items','Align columns']]:[])]){
    const value=own[property]??css.getPropertyValue(property),input=document.createElement(options[property]?'select':'input');
    if(options[property])for(const item of new Set([value,...options[property]])){const option=document.createElement('option');option.value=item;option.textContent=item;input.append(option);}
    else input.type='text';
