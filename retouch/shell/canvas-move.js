@@ -219,5 +219,5 @@
   root.document.body.append(surface);if(initial){const e=initial.framePointer?frameEvent(initial.event):initial.event,handle=initial.handle;state={id:e.pointerId,handle,x:e.clientX,y:e.clientY,rawX:0,rawY:0,delta:{x:0,y:0}};if(!initial.released)(initial.framePointer?initial.target:surface).setPointerCapture(e.pointerId);if(initial.move)move(initial.framePointer?frameEvent(initial.move):initial.move);if(initial.released)root.queueMicrotask(()=>{if(!ended)finishPointer(initial.framePointer?frameEvent(initial.move):initial.move);});}
   (isSpacing?gapHandles[0]:isResize?preview.querySelector('[data-resize-handle=se]'):surface).focus({preventScroll:true});return cancel;
  }
- const api={delta,union,memberBounds,groupLimits,snap,resize,snapResize,rotateVector,rotatedBounds,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchCanvasMove=api;
+ const api={limits,delta,union,memberBounds,groupLimits,snap,resize,snapResize,rotateVector,rotatedBounds,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchCanvasMove=api;
 })(typeof window==='object'?window:globalThis);

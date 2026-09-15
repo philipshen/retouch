@@ -19790,3 +19790,35 @@ Separate translate/zoom properties on the layer, 3D/singular transforms and
 canvas resizing in transformed frames remain incomplete. Full arbitrary-site
 parity and trusted Homebrew distribution remain incomplete. No push or native
 rebuild.
+
+
+### Canvas resizing in transformed frames
+
+Resize on canvas now exposes eight handles along a transformed layer's actual
+outline. It supports nested 2D matrices, rotation, reflection and changing
+transform origins. Resizing solves the new position from the old anchor and
+measured new geometry, preserving the opposite corner or the center when Option/
+Alt is held. Shift preserves proportions. Content and inspector dimensions
+preview immediately; release or Enter writes one source edit.
+
+The new gesture path reuses size-limit and dimension-conversion helpers. Escape,
+screen changes and containing-frame changes restore temporary styles. The
+instruction hint stays above the dock. Matrix source text remains intact.
+
+Validation: all 1,676 unit tests passed, including changing transform origins
+and size-dependent matrix translation. HTML/Chromium, React/Chromium and
+Liquid/WebKit fixtures passed live dimensions, fixed opposite corner, centered
+proportional resizing, keyboard dimensions, CSS min/max width bounds, exact undo,
+Escape and screen/frame cancellation. Final browser runs use a percentage origin
+with size limits, nested matrices, rotation and reflection. WebKit expectations
+use delivered pointer coordinates because its events round the requested
+coordinates. The existing HTML positioning/canvas regression also passed.
+Inspected `/tmp/retouch-local-resize.png` after the final UI changes. Logs:
+`/tmp/retouch-local-resize-{html,react,liquid}-final.log`,
+`/tmp/retouch-local-resize-units-final.log`,
+`/tmp/retouch-local-resize-position-regression.log`.
+
+This path does not yet provide snapping guides or complete parity for layout-
+dependent transform changes. Separate translate/zoom properties, 3D/singular
+transforms, full arbitrary-site/Figma parity and trusted Homebrew distribution
+remain incomplete. No push or native rebuild.

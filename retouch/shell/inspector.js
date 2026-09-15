@@ -62,11 +62,11 @@
     return {...g,layoutLeft:g.layoutLeft+x,layoutTop:g.layoutTop+y,width:Math.abs(g.width*sx),height:Math.abs(g.height*sy),sourceTransformOrigin:g.transformOrigin,transformOrigin:(origin[0]-x)+'px '+(origin[1]-y)+'px'};
   }
   function outlineGeometry(el){const g=geometry(el,{allowRotation:true,allowScale:true,layoutOnly:true});return {...scaledOutline(g),sourceScale:el.ownerDocument.defaultView.getComputedStyle(el).scale};}
-  function localPositionCorners(g){
+  function localPositionCorners(g,points=[[0,0],[g.width,0],[g.width,g.height],[0,g.height]]){
     const origin=(g.transformOrigin||'0px 0px').split(/\s+/);if(origin.length>2&&parseFloat(origin[2])!==0)throw Error('Use a two-dimensional transform origin.');
     const [ox,oy]=origin.slice(0,2).map(value=>/^-?(?:\d*\.)?\d+px$/.test(value)?parseFloat(value):NaN),matrix=g.transformMatrix||[1,0,0,1,0,0],angle=(g.rotation||0)*Math.PI/180,c=Math.cos(angle),s=Math.sin(angle),sx=g.scaleX??1,sy=g.scaleY??1;
     if(matrix.length!==6||![g.x,g.y,g.width,g.height,ox,oy,sx,sy,angle,...matrix].every(Number.isFinite))throw Error('Use resolved local bounds and transform origin.');
-    return [[0,0],[g.width,0],[g.width,g.height],[0,g.height]].map(([x,y])=>{const tx=matrix[0]*(x-ox)+matrix[2]*(y-oy)+matrix[4],ty=matrix[1]*(x-ox)+matrix[3]*(y-oy)+matrix[5];return {x:g.x+ox+tx*sx*c-ty*sy*s,y:g.y+oy+tx*sx*s+ty*sy*c};});
+    return points.map(([x,y])=>{const tx=matrix[0]*(x-ox)+matrix[2]*(y-oy)+matrix[4],ty=matrix[1]*(x-ox)+matrix[3]*(y-oy)+matrix[5];return {x:g.x+ox+tx*sx*c-ty*sy*s,y:g.y+oy+tx*sx*s+ty*sy*c};});
   }
   function positionGeometry(el){try{return geometry(el,{allowRotation:true,allowScale:true});}catch(error){return localPositionGeometry(el);}}
   function localPositionGeometry(el){
@@ -591,7 +591,7 @@
       let g;
       try { g = positionGeometry(el); } catch (e) { const coordinates=sec.querySelector('[aria-label="X"]');if(coordinates&&onTransform&&!coordinates.dataset.localCoordinates){for(const action of ['move','resize']){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));sec.append(control);}}note(sec,coordinates?'Anchor presets and canvas transforms for this coordinate system are not available yet.':e.message,coordinates?'':'refused'); return sec; }
       note(sec, `Anchored to ${g.parentLabel}`);
-      if(onTransform){const tools=document.createElement('div');tools.className='stack-presets';for(const action of (g.localCoordinates?['move']:['move','resize'])){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));tools.append(control);}sec.append(tools);}
+      if(onTransform){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));tools.append(control);}sec.append(tools);}
       const x = inferredAnchor(classes,'x',info.anchorInheritedClasses), y = inferredAnchor(classes,'y',info.anchorInheritedClasses);
       const horizontal=select(sec,'Horizontal anchor',[['start','Left'],['center','Center'],['end','Right'],['stretch','Left + right'],['scale','Scale']],x,v=>applyAnchor(v,y));
       const vertical=select(sec,'Vertical anchor',[['start','Top'],['center','Center'],['end','Bottom'],['stretch','Top + bottom'],['scale','Scale']],y,v=>applyAnchor(x,v));
