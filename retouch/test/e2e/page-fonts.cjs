@@ -1321,10 +1321,17 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    await horizontal.fill('12');await horizontal.press('Enter');await settled();await wait(async()=>JSON.stringify(await gaps())===JSON.stringify([['12px','4px'],['12px','8px']]));const first=read();
    await vertical.fill('20');await vertical.press('Enter');await settled();await wait(async()=>(await gaps()).every(values=>values.join(',')==='12px,20px'));const second=read();
    if(process.env.RT_E2E_SHARED_SPACING_SCRUB){
-    const label=horizontal.locator('..').locator(':scope > span');await label.scrollIntoViewIfNeeded();
+    const label=horizontal.locator('..').locator(':scope > span');await label.evaluate(el=>el.scrollIntoView({block:'nearest'}));
     const begin=async()=>{const box=await label.boundingBox();assert.ok(box);await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();return box.x+box.width/2;};
     let x=await begin();await page.mouse.move(x+8,(await label.boundingBox()).y+8);await wait(async()=>(await gaps()).every(v=>v[0]==='20px'));assert.equal(read(),second,'drag previews do not write source');await page.keyboard.press('Escape');await page.mouse.up();await wait(async()=>(await gaps()).every(v=>v[0]==='12px'));assert.equal(read(),second,'cancel preserves source');
     x=await begin();await page.mouse.move(x+6,(await label.boundingBox()).y+8);await page.mouse.up();await settled();await wait(async()=>(await gaps()).every(v=>v[0]==='18px'));assert.notEqual(read(),second);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),second,'one Undo restores drag source');await wait(async()=>(await gaps()).every(v=>v[0]==='12px'));
+   }
+   if(process.env.RT_E2E_SHARED_SPACING_SCRUB){
+    for(const [value,initial,expected,formatted]of [['1rem','16px','32px','2rem'],['normal','normal','1px','1']]){
+     await horizontal.fill(value);await horizontal.press('Enter');await settled();await wait(async()=>(await gaps()).every(v=>v[0]===initial));assert.equal(await horizontal.inputValue(),value,'shared field preserves authored units');const source=read();
+     const label=horizontal.locator('..').locator(':scope > span');await label.evaluate(el=>el.scrollIntoView({block:'nearest'}));const box=await label.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+1,box.y+box.height/2);await wait(async()=>(await gaps()).every(v=>v[0]===expected));assert.equal(read(),source);assert.equal(await horizontal.inputValue(),formatted);await page.mouse.up();await settled();await wait(()=>read()!==source);const dragged=read();assert.equal(await horizontal.inputValue(),formatted);
+     await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),source);await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();assert.equal(read(),dragged);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),second);
+    }
    }
    assert.ok(Math.abs(await app.locator('h1').evaluate(el=>{const [a,b]=[...el.children].map(e=>e.getBoundingClientRect());return b.left-a.right;})-12)<.1);
    assert.deepEqual(await app.locator('p.other-font').evaluate(el=>{const [a,b,c]=[...el.children].map(e=>e.getBoundingClientRect());return [Math.round(a.left-c.right),Math.round(a.top-b.bottom)];}),[12,20]);

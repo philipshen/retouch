@@ -18791,3 +18791,25 @@ only; shared-selection scrubbing and normal-to-numeric browser coverage remain
 to be exercised. No desktop rebuild or push for this verification increment.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete.
+
+
+### Shared gap units and scrubbing — 2026-09-15
+
+Shared React/Liquid gap fields now use the same authored axis-value resolution
+as single-container fields, including active responsive scope and inherited
+important priority. Editing a shared `1rem` gap keeps `rem` in the field and
+subsequent drag instead of silently replacing it with computed pixels. Mixed
+values retain the existing explicit-entry behavior.
+
+Chromium/React and WebKit/Liquid browser checks passed for shared gap previews,
+Escape cancellation, one-step source undo, `1rem` to `2rem` scrubbing, `normal`
+to `1px` scrubbing, exact undo/redo, mixed writing directions, axis geometry,
+reset and phone isolation. All 1,663 unit tests passed. A first WebKit run hit a
+detached label during Playwright scrolling; the locator now scrolls through DOM
+evaluation before pointer input, and the rerun passed.
+
+Logs: `/tmp/retouch-shared-gap-units-react.log`,
+`/tmp/retouch-shared-gap-units-liquid-verified.log`, and
+`/tmp/retouch-shared-gap-units.log`. No desktop rebuild or push this increment.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete.
