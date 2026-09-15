@@ -28,6 +28,19 @@
   const metadata=owned?stored:'none',current=metadata==='none'?preciseColor(info,el,css.backgroundColor):css.backgroundColor;
   return {...B.state(current,metadata),current,stored:metadata};
  }
+ function rangeActive(input,el){
+  const scope=input.ownerDocument.querySelector('[aria-label="Style screen scope"]')?.value||'';if(!scope)return true;
+  const d=el.ownerDocument,w=d.defaultView,match=/^(min|max)-\[([\d.]+)(px|rem|em)\]:$/.exec(scope);
+  return match?w.matchMedia('('+match[1]+'-width: '+match[2]+match[3]+')').matches:root.RetouchResponsive.matches(root.RetouchResponsive.discover(d).find(choice=>choice.prefix===scope),w)===true;
+ }
+ const visibilityIcon=(hidden,mixed=false)=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>'+(hidden?'<path d="m3 3 18 18"/>':mixed?'<path d="M4 21h16"/>':'')+'</svg>';
+ let resizeCleanup=()=>{};
+ function watchVisibility(input,el,sync){
+  resizeCleanup();const w=el.ownerDocument.defaultView;let frame;
+  const cleanup=()=>{w.removeEventListener('resize',resize);if(frame!==undefined)w.cancelAnimationFrame(frame);};
+  const resize=()=>{if(frame!==undefined)w.cancelAnimationFrame(frame);frame=w.requestAnimationFrame(()=>{frame=undefined;if(!input.isConnected){cleanup();return;}sync();});};
+  w.addEventListener('resize',resize);resizeCleanup=cleanup;resize();
+ }
  function bind(info,el,input,save){
   let value,error;try{value=read(info,el);}catch(e){error=e.message;}
   if(error){input.disabled=true;input.title=error;return;}
@@ -47,25 +60,23 @@
    }catch(e){fail(e);}
   };
   input.retouchMountVisibility=field=>{
-   const button=document.createElement('button');button.type='button';button.className='background-visibility';button.setAttribute('aria-label',(value.hidden?'Show':'Hide')+' background color');button.title=button.getAttribute('aria-label');button.setAttribute('aria-pressed',String(!value.hidden));
-   button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>'+(value.hidden?'<path d="m3 3 18 18"/>':'')+'</svg>';
-   field.classList.toggle('background-color-hidden',value.hidden);button.onclick=async()=>{button.disabled=true;try{const state=read(info,el);root.RetouchPanelFocus?.queue(button,(state.hidden?'Hide':'Show')+' background color');await save(B.toggle(state.current,state.stored,!state.hidden));}catch(e){fail(e);}finally{if(button.isConnected)button.disabled=false;}};field.append(button);
+   const button=document.createElement('button');button.type='button';button.className='background-visibility';
+   const active=()=>rangeActive(input,el),sync=()=>{try{const state=read(info,el);button.setAttribute('aria-label',(state.hidden?'Show':'Hide')+' background color');button.setAttribute('aria-pressed',String(!state.hidden));button.innerHTML=visibilityIcon(state.hidden);field.classList.toggle('background-color-hidden',state.hidden);button.disabled=input.disabled||!active();button.title=active()?button.getAttribute('aria-label'):'Preview this screen range to change fill visibility.';}catch(error){button.disabled=true;button.title=error.message;}};
+   button.onclick=async()=>{if(!active()||input.disabled)return;button.disabled=true;try{const state=read(info,el);root.RetouchPanelFocus?.queue(button,(state.hidden?'Hide':'Show')+' background color');await save(B.toggle(state.current,state.stored,!state.hidden));}catch(e){fail(e);}finally{if(button.isConnected)sync();}};
+   field.append(button);sync();watchVisibility(input,el,sync);
   };
  }
- let selectionResizeCleanup=()=>{};
  function mountSelection(input,elements,save){
-  selectionResizeCleanup();
   let states;try{states=elements.map(el=>read({},el));}catch(error){input.title=error.message;return;}
   const allHidden=states.every(state=>state.hidden),mixed=states.some(state=>state.hidden)!==allHidden,button=document.createElement('button');button.type='button';button.className='background-visibility';
   const label=hidden=>(hidden?'Show':'Hide')+' selected background colors';button.setAttribute('aria-label',label(allHidden));button.title=mixed?'Mixed visibility · hide all selected backgrounds':label(allHidden);button.setAttribute('aria-pressed',mixed?'mixed':String(!allHidden));button.disabled=input.disabled;
-  button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>'+(allHidden?'<path d="m3 3 18 18"/>':mixed?'<path d="M4 21h16"/>':'')+'</svg>';
-  const active=()=>{const scope=input.ownerDocument.querySelector('[aria-label="Style screen scope"]')?.value||'';if(!scope)return true;const d=elements[0].ownerDocument,w=d.defaultView,match=/^(min|max)-\[([\d.]+)(px|rem|em)\]:$/.exec(scope);return match?w.matchMedia('('+match[1]+'-width: '+match[2]+match[3]+')').matches:root.RetouchResponsive.matches(root.RetouchResponsive.discover(d).find(choice=>choice.prefix===scope),w)===true;};button.disabled=input.disabled||!active();if(!active())button.title='Preview this screen range to change fill visibility.';
+  button.innerHTML=visibilityIcon(allHidden,mixed);
+  const active=()=>rangeActive(input,elements[0]);button.disabled=input.disabled||!active();if(!active())button.title='Preview this screen range to change fill visibility.';
   button.onclick=async()=>{if(!active())return;button.disabled=true;try{const current=elements.map(el=>read({},el)),hide=!current.every(state=>state.hidden),changes=current.map(state=>B.toggle(state.current,state.stored,hide));root.RetouchPanelFocus?.queue(button,label(hide));await save(changes);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}finally{if(button.isConnected)button.disabled=input.disabled||!active();}};
   const field=input.closest('.inspector-field');field.querySelector(':scope > span').textContent='Fill';if(!input.value)input.placeholder='Mixed';field.append(button);
-  const w=elements[0].ownerDocument.defaultView,sync=()=>{
-   if(!input.isConnected){w.removeEventListener('resize',resize);return;}
-   try{const current=elements.map(el=>read({},el)),hidden=current.every(state=>state.hidden),mixed=current.some(state=>state.hidden)!==hidden;button.setAttribute('aria-label',label(hidden));button.setAttribute('aria-pressed',mixed?'mixed':String(!hidden));button.disabled=input.disabled||!active();button.title=!active()?'Preview this screen range to change fill visibility.':mixed?'Mixed visibility · hide all selected backgrounds':label(hidden);button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>'+(hidden?'<path d="m3 3 18 18"/>':mixed?'<path d="M4 21h16"/>':'')+'</svg>';}catch(error){button.disabled=true;button.title=error.message;}
-  },resize=()=>w.requestAnimationFrame(sync);w.addEventListener('resize',resize);selectionResizeCleanup=()=>w.removeEventListener('resize',resize);resize();
+  const sync=()=>{
+   try{const current=elements.map(el=>read({},el)),hidden=current.every(state=>state.hidden),mixed=current.some(state=>state.hidden)!==hidden;button.setAttribute('aria-label',label(hidden));button.setAttribute('aria-pressed',mixed?'mixed':String(!hidden));button.disabled=input.disabled||!active();button.title=!active()?'Preview this screen range to change fill visibility.':mixed?'Mixed visibility · hide all selected backgrounds':label(hidden);button.innerHTML=visibilityIcon(hidden,mixed);}catch(error){button.disabled=true;button.title=error.message;}
+  };watchVisibility(input,elements[0],sync);
  }
  root.RetouchBackgroundPaintUI={read,bind,mountSelection};
 })(window);

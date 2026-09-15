@@ -24,7 +24,9 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
  const size=async value=>{await page.getByLabel('Screen size',{exact:true}).selectOption(value);await wait(()=>app.locator('body').evaluate((el,w)=>innerWidth===w,Number(value.split('x')[0])));await settled();};
  await size('768x1024');await page.getByLabel('Style screen scope').selectOption(kind==='html'?'min-[768px]:':'md:');await settled();
  const beforeScope=read();await page.getByRole('button',{name:'Hide background color',exact:true}).click();await wait(()=>read()!==beforeScope);await settled();assert.equal((await rendered()).alpha,0);
- await size('390x844');assert.equal((await rendered()).alpha,.375);await size('768x1024');assert.equal((await rendered()).alpha,0);
+ await size('390x844');assert.equal((await rendered()).alpha,.375);
+ const eye=page.locator('.background-visibility');await wait(async()=>await eye.isDisabled()&&await eye.getAttribute('aria-label')==='Hide background color');const outside=read();await eye.evaluate(el=>el.onclick());await settled();assert.equal(read(),outside,'out-of-range eye cannot write the phone paint into the tablet scope');
+ await size('768x1024');assert.equal((await rendered()).alpha,0);await wait(async()=>!await eye.isDisabled()&&await eye.getAttribute('aria-label')==='Show background color');
  await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeScope);await settled();assert.equal((await rendered()).alpha,.375);
  console.log(kind+': PASS background eye, hidden hex/opacity edits, preview cancellation, framing and exact undo/redo');
 };
