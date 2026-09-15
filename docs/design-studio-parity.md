@@ -17357,3 +17357,13 @@ Shared SVG dash/gap edits now prefer the selected scope's explicit source declar
 HTML/Chromium, React/Chromium and Liquid/WebKit flows verify that editing a base dash while a tablet `10 20` override is active preserves the base gap `4`, leaves tablet rendering intact, exposes `3 4` on the phone, and supports exact undo/redo. All 28 targeted SVG paint/shared-style tests pass, including explicit scoped reads, important declarations, missing/ambiguous source values and property isolation.
 
 This resolves the explicit-declaration case for shared stroke geometry. General paint opacity, inherited declarations, overlapping ranges and source values controlled by author styles still need broader cascade resolution; the full Figma/native/Homebrew goal remains open.
+
+### Explicit scoped shared colors and hidden fills — 2026-09-15
+
+Shared paint fields now prefer an explicit literal declaration from the selected source scope, including background, border, text and SVG paints. Background colors use metadata from that same scope when available. Background writes and saved-style operations pass the matching source state instead of a different active breakpoint's observed state. Named literal colors normalize through the picker parser; contextual/unresolved colors keep the computed fallback. A transparent declaration without owned hidden metadata also retains the fallback because hidden metadata may be inherited.
+
+HTML/Chromium, React/Chromium and Liquid/WebKit flows verify a base opacity edit while a tablet override is visible: tablet colors remain unchanged, the phone receives the new base opacity with original channels, the hidden layer stays hidden, the visible layer stays visible, and undo/redo restores exact source bytes. Browser assertions also cover literal SVG source reads, unresolved variables, border color pairs, transparent fallback and named backgrounds.
+
+The change resolves explicit selected-scope declarations. Ambiguous cascades, inheritance without a selected-scope declaration, overlapping media conditions and preview behavior while editing an overridden base value remain broader work. Full Figma/native/Homebrew parity is still incomplete.
+
+The existing Liquid/WebKit mixed hidden-fill picker/selection flow and React inherited hidden-fill saved-color capture/apply/refresh flow also pass, including mobile isolation and exact undo/redo.

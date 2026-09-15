@@ -28,6 +28,20 @@
   const metadata=owned?stored:'none',current=metadata==='none'?preciseColor(info,el,css.backgroundColor):css.backgroundColor;
   return {...B.state(current,metadata),current,stored:metadata};
  }
+ function sourceValue(info,scope,property){
+  if(info.cssAuthoring){const width=scope?Number(/^min-\[(\d+)px\]:$/.exec(scope)?.[1]):0;return info.cssRules?.[width]?.[property]??null;}
+  const tokens=root.RetouchResponsive.project(info.className||'',scope).split(/\s+/).map(token=>root.RetouchInspector.base(token)),prefix='['+property+':',matches=tokens.filter(token=>token?.startsWith(prefix)&&token.endsWith(']'));
+  return matches.length===1?matches[0].slice(prefix.length,-1).replace(/_/g,' '):null;
+ }
+ function sourceState(info,scope){
+  const literal=sourceValue(info,scope,'background-color'),parsed=literal===null?null:root.RetouchPaintPicker.parsePaint(literal);if(!parsed)return null;const current=parsed.value;
+  const stored=sourceValue(info,scope,B.property),state=B.state(current,stored??'none');
+  // A transparent declaration may still inherit hidden-fill metadata from a
+  // lower scope. Keep the observed fallback unless ownership is explicit.
+  if(stored===null&&root.RetouchPaletteValues.parse(state.color).alpha===0)return null;
+  return {...state,current,stored:stored??'none'};
+ }
+ function sourceColor(info,scope,property){if(property==='background-color')return sourceState(info,scope)?.color??null;const value=sourceValue(info,scope,property);if(value===null)return null;const parts=property==='border-color'?root.RetouchHTMLCSSValues.parseBorderColors(value):[value];return parts?.length&&parts.every(part=>root.RetouchPaintPicker.parsePaint(part))?value:null;}
  function rangeActive(input,el){
   const scope=input.ownerDocument.querySelector('[aria-label="Style screen scope"]')?.value||'';if(!scope)return true;
   const d=el.ownerDocument,w=d.defaultView,match=/^(min|max)-\[([\d.]+)(px|rem|em)\]:$/.exec(scope);
@@ -78,5 +92,5 @@
    try{const current=elements.map(el=>read({},el)),hidden=current.every(state=>state.hidden),mixed=current.some(state=>state.hidden)!==hidden;button.setAttribute('aria-label',label(hidden));button.setAttribute('aria-pressed',mixed?'mixed':String(!hidden));button.disabled=input.disabled||!active();button.title=!active()?'Preview this screen range to change fill visibility.':mixed?'Mixed visibility · hide all selected backgrounds':label(hidden);button.innerHTML=visibilityIcon(hidden,mixed);}catch(error){button.disabled=true;button.title=error.message;}
   };watchVisibility(input,elements[0],sync);
  }
- root.RetouchBackgroundPaintUI={read,bind,mountSelection,rangeActive};
+ root.RetouchBackgroundPaintUI={read,bind,mountSelection,rangeActive,sourceColor,sourceState};
 })(window);

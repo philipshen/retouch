@@ -39,12 +39,13 @@
   const seen=new Set(),colors=[];for(const value of entries.slice(0,48)){if(typeof value!=='string'||value.length>256||!CSS.supports('color',value))continue;const key=colorKey(value);if(!key||seen.has(key))continue;seen.add(key);colors.push(value);if(colors.length===12)break;}return colors;
  }
  function rememberColor(value){const key=colorKey(value);if(!key)return;recentMemory=[value,...recentColors().filter(color=>colorKey(color)!==key)].slice(0,12);try{localStorage.setItem(recentKey,JSON.stringify(recentMemory));}catch{}}
- function mountSelectionField(input,elements,property,saveVisibility,saveValues){
+ function mountSelectionField(input,elements,property,saveVisibility,saveValues,sourceColor){
   const background=property==='background-color'&&root.RetouchBackgroundPaintUI;
   const paintState=el=>background?background.read({},el):{hidden:false,color:el.ownerDocument.defaultView.getComputedStyle(el).getPropertyValue(property)};
-  if(background)try{const values=elements.map(el=>paintState(el).color);input.value=values.every(value=>value===values[0])?values[0]:'';input.placeholder=input.value?'CSS color':'Mixed · enter CSS color';}catch(error){input.disabled=true;input.title=error.message;}
+  const colors=()=>elements.map((el,i)=>sourceColor?.(i)??paintState(el).color);
+  if(background||sourceColor)try{const values=colors();input.value=values.every(value=>value===values[0])?values[0]:'';input.placeholder=input.value?'CSS color':'Mixed · enter CSS color';}catch(error){input.disabled=true;input.title=error.message;}
   input.retouchPreviewDocument=elements[0].ownerDocument;input.dataset.paintProperty=property;if(saveValues)input.retouchSetPaintValues=saveValues;root.RetouchInspector.fieldDraft(input);
-  input.retouchSelectionColors=()=>elements.filter(el=>el.isConnected).map(el=>paintState(el).color);
+  input.retouchSelectionColors=()=>{if(elements.some(el=>!el.isConnected))throw Error('Re-select the layers after the preview changed.');return colors();};
   input.retouchPaintPreview=()=>{const previews=elements.map(el=>({preview:propertyPreview({el,input,property}),hidden:paintState(el).hidden}));return {update:value=>previews.forEach(({preview,hidden})=>{const parsed=hidden?parsePaint(value):null;if(hidden&&!parsed)return;preview.update(hidden?root.RetouchBackgroundPaint.transparent(parsed.value):value);}),restore:()=>previews.forEach(({preview})=>preview.restore())};};
   const control=document.createElement('span');control.className='paint-field-control gradient-stop-color';input.replaceWith(control);control.append(input);
   const swatch=root.RetouchInspector.button('',()=>open(input));swatch.className='gradient-stop-swatch';swatch.setAttribute('aria-label','Edit '+input.getAttribute('aria-label'));swatch.title='Edit selected colors';swatch.disabled=input.disabled;control.prepend(swatch);

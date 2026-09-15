@@ -3453,7 +3453,7 @@ function selectionBackgroundStates(selection,property){
 function backgroundStyleState(info,property){
  if(property!=='background-color'||document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')return {};
  const element=matchingEls(info.id)[0];if(!element)throw Error('Re-select the layer to read its background paint.');
- const {current,stored}=RetouchBackgroundPaintUI.read(info,element);return {backgroundPaint:{current,stored}};
+ const {current,stored}=RetouchBackgroundPaintUI.sourceState(info,styleScope)||RetouchBackgroundPaintUI.read(info,element);return {backgroundPaint:{current,stored}};
 }
 async function writeTextStyle(type,width,extra={}){
   if(!sel)return;const info=sel.info;busyPanel(true);
