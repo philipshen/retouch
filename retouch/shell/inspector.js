@@ -975,7 +975,8 @@
       // other font properties. Scope wrapping is handled by the shell afterward.
       const styled=[...el.classList].some(t=>names.includes(t));
       const fontSizeBlocked=()=>el.style.getPropertyPriority('font-size')==='important';
-      const change=(match,value)=>{if(match===fontSizeToken&&fontSizeBlocked())return;return save(replaceTypography(info.className,match,styled||match===fontSizeToken&&el.style.getPropertyValue('font-size')?'!'+value:value));};
+      const inlineTypeProperty=match=>match===fontSizeToken?'font-size':match===lineHeightToken?'line-height':match===letterSpacingToken?'letter-spacing':null;
+      const change=(match,value)=>{const property=inlineTypeProperty(match);if(property&&el.style.getPropertyPriority(property)==='important')return;return save(replaceTypography(info.className,match,styled||property&&el.style.getPropertyValue(property)?'!'+value:value));};
       const resetProperty=(label,match)=>{const reset=button(label,()=>save(replaceTypography(info.className,match,'')));try{reset.disabled=replaceTypography(info.className,match,'')===info.className;}catch{reset.disabled=true;}sec.append(reset);};
       fontPicker(sec,d,css.fontFamily,value=>{const token=fontFamilyClass(value);if(token)change(fontFamilyToken,token);});
       const resetFamily=button('Reset font family',()=>save(replace(info.className,fontFamilyToken,'')));resetFamily.disabled=!tokens(info.className).map(base).some(t=>t&&fontFamilyToken(t));sec.append(resetFamily);
@@ -989,11 +990,12 @@
       const lineHeight=number(sec,'Line height (px)',parseFloat(css.lineHeight),0,2000,v=>change(lineHeightToken,`leading-[${v}px]`));
       numericPreview(lineHeight,el,'line-height');numericPreview(relativeLineHeight,el,'line-height',value=>String(Math.round(value*1e6)/1e8));
       if(css.lineHeight==='normal'){lineHeight.value='';lineHeight.placeholder='Automatic';relativeLineHeight.placeholder='Automatic';}
-      sec.append(button('Automatic line height',()=>change(lineHeightToken,'[line-height:normal]')));
+      const automaticLineHeight=button('Automatic line height',()=>change(lineHeightToken,'[line-height:normal]'));automaticLineHeight.disabled=el.style.getPropertyPriority('line-height')==='important';sec.append(automaticLineHeight);
       const resetLineHeight=button('Reset line height',()=>save(replaceTypography(info.className,lineHeightToken,'')));try{resetLineHeight.disabled=replaceTypography(info.className,lineHeightToken,'')===info.className;}catch{resetLineHeight.disabled=true;}sec.append(resetLineHeight);
       numericPreview(relativeNumber(sec,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,v=>change(letterSpacingToken,`tracking-[${Math.round(v*1e6)/1e8}em]`)),el,'letter-spacing',value=>Math.round(value*1e6)/1e8+'em').title='Relative to this layer’s font size.';
       numericPreview(number(sec,'Letter spacing (px)',parseFloat(css.letterSpacing)||0,-100,100,v=>change(letterSpacingToken,`tracking-[${v}px]`)),el,'letter-spacing');
       resetProperty('Reset letter spacing',letterSpacingToken);
+      for(const [property,label]of [['line-height','Line height'],['letter-spacing','Letter spacing']])if(el.style.getPropertyPriority(property)==='important')for(const unit of ['px','%']){const input=sec.querySelector('[aria-label="'+label+' ('+unit+')"]');input.disabled=true;input.title='An important inline rule controls this typography property.';}
       const indent=number(sec,'Paragraph indent (px)',/^-?[\d.]+px$/.test(css.textIndent)?parseFloat(css.textIndent):NaN,-10000,10000,v=>change(textIndentToken,`[text-indent:${v}px]`));
       if(!indent.value)indent.placeholder=css.textIndent;indent.title='Offsets the first line of each paragraph. Negative values create a hanging indent.';numericPreview(indent,el,'text-indent');
       const resetIndent=button('Reset paragraph indent',()=>save(replace(info.className,textIndentToken,'')));resetIndent.disabled=!tokens(info.className).map(base).some(t=>t&&textIndentToken(t));sec.append(resetIndent);
@@ -1023,11 +1025,12 @@
 
     }
     for(const [property,label,test] of [['line-height','Line height (px)',lineHeightToken],['letter-spacing','Letter spacing (px)',letterSpacingToken]]){
-      const own=tokens(info.className).map(base).filter(t=>t&&test(t));
-      const candidates=own.length?own:tokens(info.anchorInheritedClasses||'').map(base).filter(t=>t&&test(t));
-      if(candidates.length!==1||el.style.getPropertyValue(property))continue;
-      const token=candidates[0],match=property==='line-height'?/^(?:\[line-height:|leading-\[)([^\]]+)\]$/.exec(token):/^(?:\[letter-spacing:|tracking-\[)([^\]]+)\]$/.exec(token);
-      const percent=spacingPercent(property,match?.[1]),expected=percent/100*parseFloat(css.fontSize),actual=parseFloat(css.getPropertyValue(property));
+      const own=tokens(info.className).filter(t=>base(t)&&test(base(t)));
+      const candidates=own.length?own:tokens(info.anchorInheritedClasses||'').filter(t=>base(t)&&test(base(t)));
+      const selected=candidates.find(t=>/^!|!$/.test(t))||(candidates.length===1?candidates[0]:''),token=base(selected)||'',inline=el.style.getPropertyValue(property);
+      const match=property==='line-height'?/^(?:\[line-height:|leading-\[)([^\]]+)\]$/.exec(token):/^(?:\[letter-spacing:|tracking-\[)([^\]]+)\]$/.exec(token);
+      const raw=inline&&(el.style.getPropertyPriority(property)==='important'||!/^!|!$/.test(selected))?inline:match?.[1];
+      const percent=spacingPercent(property,raw),expected=percent/100*parseFloat(css.fontSize),actual=parseFloat(css.getPropertyValue(property));
       const input=sec.querySelector('[aria-label="'+label+'"]');
       if(input&&percent!==null&&Number.isFinite(actual)&&Math.abs(expected-actual)<.02)input.retouchSpacingPercent=percent;
     }

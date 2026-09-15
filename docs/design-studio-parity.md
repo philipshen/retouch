@@ -20632,3 +20632,29 @@ Logs: `/tmp/retouch-inline-font-react-final.log`,
 
 Other inline typography properties, full Figma fidelity/arbitrary-site support
 and trusted Homebrew distribution remain incomplete. No native rebuild or push.
+
+### Inline line-height and letter-spacing editing
+
+Single/shared React and Liquid typography controls now override ordinary inline
+line height and letter spacing using removable important utilities. Relative
+controls retain unitless line-height and em tracking semantics, and automatic
+line height follows the same priority path. Important inline rules disable the
+associated controls and are checked again when constructing source changes.
+Single-layer readouts recognize relative inline values and important relative
+utility overrides, retaining percentage display after a save when the computed
+value agrees.
+
+Validation: React/Chromium and Liquid/WebKit passed single/shared pixel and
+percentage edits against inline longhands and a font shorthand. Checks include
+original inline attributes, percentage readouts, phone isolation, reset, exact
+source undo, automatic line height and important-inline guards for pixel and
+relative controls. All 1,700 unit tests passed. The first browser test attempted
+to replace an existing 10% tracking value with 10% and incorrectly expected a
+write; the final test uses 15%. Shared percentage edits use their dedicated
+percentage field. Logs: `/tmp/retouch-inline-spacing-react-final.log`,
+`/tmp/retouch-inline-spacing-liquid-final.log`,
+`/tmp/retouch-inline-spacing-units.log`.
+
+Inline font family/weight and other typography properties, full Figma fidelity,
+arbitrary-site compatibility and trusted Homebrew distribution remain
+incomplete. No native rebuild or push.

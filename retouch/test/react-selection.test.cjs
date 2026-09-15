@@ -320,3 +320,13 @@ test('shared font size overrides ordinary inline values and allows reset beneath
  assert.throws(()=>change(next,'md:','font-size',50,null,false,important),/important inline/);
  assert.equal(change(next,'md:','font-size',null,null,false,important),'font-bold text-sm hover:text-xl');
 });
+
+test('inline spacing overrides preserve percentage semantics and guard important inline rules',()=>{
+ const el=priority=>({style:{getPropertyValue:()=> '1.5',getPropertyPriority:()=>priority}});
+ assert.equal(change('font-bold','md:','line-height',200,null,true,el('')),'font-bold md:![line-height:2]');
+ assert.equal(change('font-bold','md:','letter-spacing',10,null,true,el('')),'font-bold md:![letter-spacing:0.1em]');
+ for(const property of ['line-height','letter-spacing']){
+  assert.throws(()=>change('','md:',property,10,null,false,el('important')),/important inline/);
+  assert.equal(change('md:!['+property+':2px]','md:',property,null,null,false,el('important')),'');
+ }
+});
