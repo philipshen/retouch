@@ -204,8 +204,8 @@
  }
  function mount(info,el,save,saveCSS,own={},upload=null,saveImage=null,browseImages=null){
   if(!el)return null;const layer=el.ownerDocument.defaultView.getComputedStyle(el).backgroundImage;
-  if(!source(layer))return stackResetActions(mountOriginal(info,el,save,saveCSS,own,upload,saveImage,browseImages),info,el,save,saveCSS,own,saveImage);
-  const section=mountStack(info,el,save,saveCSS,[layer],upload,saveImage,browseImages);
+  if(layer!=='none'&&!source(layer))return stackResetActions(mountOriginal(info,el,save,saveCSS,own,upload,saveImage,browseImages),info,el,save,saveCSS,own,saveImage);
+  const section=mountStack(info,el,save,saveCSS,layer==='none'?[]:[layer],upload,saveImage,browseImages);
   if(!section.querySelector('.paint-order'))return section;
   const legacy=mountOriginal(info,el,save,saveCSS,own,upload,saveImage,browseImages,true);legacy.querySelector(':scope > h3')?.remove();legacy.className='legacy-image-controls';legacy.dataset.legacyImageControls='';section.append(legacy);return stackResetActions(section,info,el,save,saveCSS,own,saveImage);
  }

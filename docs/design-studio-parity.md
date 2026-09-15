@@ -17159,3 +17159,11 @@ Byte-exact sRGB colors in compact Fill, Stroke and SVG paint fields now remain s
 A Chromium reproduction caught focus formatting resetting the selection and causing input to append; selecting the formatted value fixes that interaction. All 1,559 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit compact-paint workflows pass focus/no-write behavior, shorthand alpha, opacity preservation, mixed border channels, cancellation and exact undo/redo. The HTML SVG stroke/settings regression passes as well. The final focused field was visually inspected, and the HTML run asserts its selected six-character range.
 
 Background-color-row visibility, broader gradient opacity, empty-Fill legacy form cleanup, the broader Figma fidelity/features, arbitrary-site support and trusted native/Homebrew distribution remain unfinished. No native app was rebuilt or published.
+
+### Compact empty Fill section — 2026-09-15
+
+An empty image/gradient stack now uses the same compact Fill section and Add paint menu as populated stacks. The older image-upload form remains available under collapsed More fill controls. Opening those controls does not write source.
+
+All 1,559 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit workflows pass removing the final paint, uploading an orange image from the empty stack, checking its rendered pixels, removing it, adding a solid paint and exact source undo. The React pixel check waits for the expected compiled image URL before sampling. The existing HTML legacy-upload regression also passes, and the compact empty state was visually inspected.
+
+Full Figma parity and trusted native/Homebrew distribution remain incomplete. No native app was rebuilt or published.
