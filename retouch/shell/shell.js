@@ -102,7 +102,13 @@ function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:Re
 
 let lockStorage;try{lockStorage=sessionStorage;}catch{}
 const layerLocks=RetouchLayerLocks.create({route:()=>currentPageRoute()||'',storage:lockStorage,scope:window.__RT_RENDERING?.stateScope});
-function pickLayer(node,x,y){const target=layerLocks.pick(node,x,y);return target?target.closest('[data-rt-boolean-result]')?.closest('[data-rt-boolean]')||layers.textOwner(target):null;}
+function pickLayer(node,x,y,{deep=false}={}){
+ const picked=layerLocks.pick(node,x,y);if(!picked)return null;
+ const target=picked.closest('[data-rt-boolean-result]')?.closest('[data-rt-boolean]')||layers.textOwner(picked);if(deep||!target)return target;
+ const selected=sel?matchingEls(activeId()).find(el=>el.ownerDocument===target.ownerDocument):null;
+ let result=target;for(let group=target.closest('[data-rt-group][data-rt]');group;group=group.parentElement?.closest('[data-rt-group][data-rt]')){if(selected&&selected!==group&&group.contains(selected))continue;if(!layerLocks.locked(group))result=group;}
+ return result;
+}
 window.RetouchCanvasSelection={marqueeTargets:resolveMarqueeTargets,pick:(node,x,y)=>pickLayer(node,x,y),selectable:node=>!layerLocks.locked(node),canMarquee:()=>window.__RT_RENDERING?.selectionStyling===true&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests};
 const historyRoutes = new Map();
 function currentPageRoute(){try{const loc=iframe.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
@@ -269,7 +275,7 @@ function hookFrame(d, w) {
     }
     e.preventDefault();
     e.stopPropagation();
-    const t = pickLayer(e.target,e.clientX,e.clientY);
+    const t = pickLayer(e.target,e.clientX,e.clientY,{deep:true});
     if (t&&!layerLocks.locked(t)) startInlineEdit(t, e, false, true);
   }, true);
   d.addEventListener('mousemove', (e) => {
@@ -663,6 +669,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
     scope: c.instanceId && info.id === c.instanceId ? 'instance' : 'host',
     info,
   };
+  if(el.hasAttribute('data-rt-group')){renderPanel();return;}
   if(info.svgBooleanOwner){
     if(openVector&&info.svgBooleanGroup){
       RetouchSVGBooleanGroup.revealOriginals(info);renderPanel();
