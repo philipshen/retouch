@@ -121,7 +121,7 @@
  function mountStack(info,el,save,saveCSS,layers,upload,saveImage,browseImages){
   const section=I.section('Image fill'),css=el.ownerDocument.defaultView.getComputedStyle(el);if(info.classNameDynamic&&!saveCSS){I.note(section,info.classNameReason||'Image fill styles are computed.','refused');return section;}I.note(section,'Paints are listed from front to back. Edits preserve neighboring paints and framing.');
   let stored='none',visibilityError=null;try{stored=visibilityState(info,el,layers);}catch(error){visibilityError=error.message;I.note(section,error.message,'refused');}
-  const hidden=visibilityError?[]:V.parsePaintVisibility(stored),framing=()=>Object.fromEntries(P.properties.map(property=>[property,css.getPropertyValue(property)]));section.retouchHasHiddenPaints=!!visibilityError||hidden.length>0;
+  const hidden=visibilityError?[]:V.parsePaintVisibility(stored),currentFraming=()=>Object.fromEntries(P.properties.map(property=>[property,css.getPropertyValue(property)]));section.retouchHasHiddenPaints=!!visibilityError||hidden.length>0;
   additions(section,info,el,save,saveCSS,layers,upload,saveImage,browseImages);
   const order=document.createElement('div');order.className='paint-order';section.append(order);
   const currentPaint=()=>el.isConnected&&JSON.stringify(V.imageLayers(el.ownerDocument.defaultView.getComputedStyle(el).backgroundImage))===JSON.stringify(layers),currentOrder=()=>section.isConnected&&currentPaint()&&!visibilityError;
@@ -151,8 +151,8 @@
    const row=editor.parentElement,isHidden=hidden.some(entry=>entry.index===index),kind=root.RetouchClassGradients.solidColor(V.parseGradients(layers[index])[0])?'solid':'gradient',name=(isHidden?'Show':'Hide')+' '+kind+' paint '+(index+1);
    const eye=I.button(name,async()=>{if(!currentOrder())return;eye.disabled=true;try{
     if(!saveCSS&&['background','background-size',V.paintVisibilityProperty].some(property=>el.style.getPropertyPriority(property)))throw Error('An important inline style controls this paint. Edit that style in source first.');
-    const changes=P.toggleVisibility(layers,framing(),stored,index,!isHidden);root.RetouchPanelFocus?.queue(eye,(isHidden?'Hide':'Show')+' '+kind+' paint '+(index+1));
-    if(saveImage)await saveImage(null,false,'visibility',{layers:stackReferences(info,el,layers),index,framing:framing(),visibility:stored,hidden:!isHidden});else if(saveCSS)await saveCSS(changes);else await save(P.frameClasses(info.className,changes));
+    const changes=P.toggleVisibility(layers,currentFraming(),stored,index,!isHidden);root.RetouchPanelFocus?.queue(eye,(isHidden?'Hide':'Show')+' '+kind+' paint '+(index+1));
+    if(saveImage)await saveImage(null,false,'visibility',{layers:stackReferences(info,el,layers),index,framing:currentFraming(),visibility:stored,hidden:!isHidden});else if(saveCSS)await saveCSS(changes);else await save(P.frameClasses(info.className,changes));
     const updated=visibilityState(info,el,layers);if(V.parsePaintVisibility(updated).some(entry=>entry.index===index)!==!isHidden)throw Error('The paint visibility could not be verified in the preview.');
    }catch(error){I.note(order,error.message,'refused');}finally{eye.disabled=false;}});
    eye.classList.add('paint-visibility');eye.setAttribute('aria-label',name);eye.title=name;eye.setAttribute('aria-pressed',String(isHidden));eye.disabled=!!visibilityError||!saveCSS&&['background','background-size',V.paintVisibilityProperty].some(property=>el.style.getPropertyPriority(property));eye.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>'+(isHidden?'<path d="m3 3 18 18"/>':'')+'</svg>';row.classList.toggle('paint-hidden',isHidden);row.insertBefore(eye,row.querySelector('[aria-label="Remove paint '+(index+1)+'"]'));
@@ -163,8 +163,8 @@
    const index=next.findIndex((paint,i)=>V.serializeGradients([paint])!==V.serializeGradients([paints[i]]));if(index<0)return;
    if(!currentOrder())throw Error('The paint stack changed. Select it again.');
    const values=next.map(paint=>V.serializeGradients([paint])),changes={'background-image':values.join(', ')};
-   if(stored!=='none'){values[index]=computedPaint(el,values[index]);changes['background-image']=values.join(', ');changes[V.paintVisibilityProperty]=P.editVisibilityPaint(layers,framing(),stored,index,values[index])[V.paintVisibilityProperty];}
-   if(saveImage)await saveImage(null,false,'gradient',{layers:stackReferences(info,el,layers),index,value:values[index],visibility:stored,framing:framing()});
+   if(stored!=='none'){values[index]=computedPaint(el,values[index]);changes['background-image']=values.join(', ');changes[V.paintVisibilityProperty]=P.editVisibilityPaint(layers,currentFraming(),stored,index,values[index])[V.paintVisibilityProperty];}
+   if(saveImage)await saveImage(null,false,'gradient',{layers:stackReferences(info,el,layers),index,value:values[index],visibility:stored,framing:currentFraming()});
    else if(saveCSS)await saveCSS(changes);else await save(P.frameClasses(stackClasses(info.className,values),changes));
   }});
   const gradientDetails=section.querySelector(':scope > details');if(gradientDetails){for(const group of [...gradientDetails.querySelectorAll(':scope > .gradient-controls')]){const index=Number(group.querySelector('legend').textContent.match(/\d+/)[0])-1;frameControls(group,index,null);const solid=root.RetouchClassGradients.solidColor(paints[index]),editor=editors[index];paintPopover(section,editor,group,paintKey(info,index),(solid?'Solid ':'Gradient ')+(index+1));if(solid)solidPaintRow(editor,group.querySelector('[aria-label="Solid paint '+(index+1)+' color"]'),solid,index);}gradientDetails.remove();}

@@ -19479,3 +19479,27 @@ implementation files after the process terminated.
 
 No push or desktop rebuild. Full Figma parity, arbitrary-site support and
 trusted Homebrew distribution remain incomplete.
+
+
+### Image fill mode regression fixed
+
+Resolved the Fit failure recorded in the empty-image checkpoint. The paint-stack
+visibility helper named `framing` shadowed the image-mode calculator with the
+same name. Fill, Fit, Tile and tile-scale controls consequently wrote current
+framing values back unchanged. Renamed the current-style reader to
+`currentFraming` and updated visibility/gradient callers, allowing image-mode
+controls to call the intended calculator.
+
+Fresh validation: 1,666 unit tests passed. The image-fill browser regression
+passes HTML/Chromium, React/Chromium and Liquid/WebKit, including intrinsic tile
+pixels, responsive inheritance, exact undo and retained preview state. Mixed
+image/gradient stacks also pass HTML/Chromium and Liquid/WebKit with per-paint
+framing, blend modes, ordering, asset references, crop pixels and exact undo.
+These use `RT_E2E_IMAGE_FILL=1 RT_E2E_IMAGE_FILL_UPLOAD=1
+RT_E2E_IMAGE_FILL_STACK=1 RT_E2E_PAINT_ORDER=1 RT_E2E_PAINT_FRAME=1`;
+initial stack attempts omitted required fixture flags and were not valid gates.
+Logs: `/tmp/retouch-image-mode-{html,react,liquid,units}.log` and
+`/tmp/retouch-image-mode-frame-{html,liquid}-final.log`.
+
+No push or native rebuild. Full Figma parity, arbitrary-site support and trusted
+Homebrew distribution remain incomplete.
