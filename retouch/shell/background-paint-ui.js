@@ -44,7 +44,22 @@
  function sourceColor(info,scope,property){if(property==='background-color')return sourceState(info,scope)?.color??null;const value=sourceValue(info,scope,property);if(value===null)return null;const parts=property==='border-color'?root.RetouchHTMLCSSValues.parseBorderColors(value):[value];return parts?.length&&parts.every(part=>root.RetouchPaintPicker.parsePaint(part))?value:null;}
  function sourceEffect(info,scope,property){if(!['filter','backdrop-filter','box-shadow'].includes(property))return null;const value=sourceValue(info,scope,property);return value!==null&&(property==='box-shadow'?root.RetouchHTMLCSSValues.parseShadows(value):root.RetouchHTMLCSSValues.parseFilters(value))!==null?value:null;}
  function sourceShadows(info,scope){const value=sourceValue(info,scope,'box-shadow'),metadata=sourceValue(info,scope,root.RetouchShadowVisibility.property);return value===null?null:metadata&&metadata!=='none'?root.RetouchShadowVisibility.read(value,metadata):root.RetouchHTMLCSSValues.parseShadows(value);}
- function readShadows(info,el){const css=el.ownerDocument.defaultView.getComputedStyle(el),property=root.RetouchShadowVisibility.property,metadata=css.getPropertyValue(property).trim()||'none',owned=(el.getAttribute('class')||'').includes('['+property+':'+metadata+']')||Object.values(info.cssRules||{}).some(values=>values[property]===metadata);return owned&&metadata!=='none'?root.RetouchShadowVisibility.read(css.boxShadow,metadata):root.RetouchHTMLCSSValues.parseShadows(css.boxShadow);}
+ const shadowSourceCache=new WeakMap();
+ function preciseShadows(info,el,css){
+  const d=el.ownerDocument,w=d.defaultView,R=root.RetouchResponsive,candidates=[],inline=el.style.getPropertyValue('box-shadow');if(inline)candidates.push(inline);
+  if(info.cssAuthoring){const effective=Object.assign({},...Object.entries(info.cssRules||{}).filter(([width])=>Number(width)<=w.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).map(([,values])=>values));if(effective['box-shadow'])candidates.push(effective['box-shadow']);}
+  let choices;for(const token of (el.getAttribute('class')||'').split(/\s+/).filter(Boolean)){
+   const part=R.split(token),plain=root.RetouchInspector.base(part.value),match=/^\[box-shadow:(.+)\]$/.exec(plain);if(!match)continue;
+   if(part.prefix){const arbitrary=/^(min|max)-\[([\d.]+)(px|rem|em)\]:$/.exec(part.prefix),active=arbitrary?w.matchMedia('('+arbitrary[1]+'-width: '+arbitrary[2]+arbitrary[3]+')').matches:R.matches((choices??=R.discover(d)).find(choice=>choice.prefix===part.prefix),w);if(active!==true)continue;}
+   candidates.push(match[1].replace(/_/g,' '));
+  }
+  if(!candidates.length)return css.boxShadow;
+  const key=JSON.stringify([css.boxShadow,css.color,candidates]),cached=shadowSourceCache.get(el);if(cached?.key===key)return cached.value;
+  const probe=d.createElement('span'),matches=new Set();probe.style.cssText='all:initial;position:fixed;visibility:hidden;pointer-events:none';probe.style.setProperty('color',css.color,'important');d.documentElement.append(probe);
+  try{for(const value of candidates){if(root.RetouchHTMLCSSValues.parseShadows(value)===null||!w.CSS.supports('box-shadow',value))continue;probe.style.setProperty('box-shadow',value,'important');if(w.getComputedStyle(probe).boxShadow===css.boxShadow)matches.add(value);}}finally{probe.remove();}
+  const value=matches.size===1?[...matches][0]:css.boxShadow;shadowSourceCache.set(el,{key,value});return value;
+ }
+ function readShadows(info,el){const css=el.ownerDocument.defaultView.getComputedStyle(el),property=root.RetouchShadowVisibility.property,metadata=css.getPropertyValue(property).trim()||'none',owned=(el.getAttribute('class')||'').includes('['+property+':'+metadata+']')||Object.values(info.cssRules||{}).some(values=>values[property]===metadata);const source=preciseShadows(info,el,css);return owned&&metadata!=='none'?root.RetouchShadowVisibility.read(source,metadata):root.RetouchHTMLCSSValues.parseShadows(source);}
  function shadowChanges(shadows,info){const property=root.RetouchShadowVisibility.property,stored=Object.values(info.cssRules||{}).some(values=>Object.hasOwn(values,property))||((info.className||'')+' '+(info.anchorInheritedClasses||'')).includes('['+property+':');return shadows.some(shadow=>shadow.hidden)||stored?root.RetouchShadowVisibility.write(shadows):{'box-shadow':root.RetouchHTMLCSSValues.serializeShadows(shadows)};}
  function shadowClasses(classes,scope,changes){return Object.hasOwn(changes,root.RetouchShadowVisibility.property)?root.RetouchShadowVisibility.classes(classes,scope,changes):root.RetouchResponsive.replaceScope(classes,root.RetouchInspector.shadowClasses(root.RetouchResponsive.project(classes,scope),changes['box-shadow']),scope);}
 
