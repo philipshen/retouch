@@ -50,3 +50,11 @@ test('flow handles switch only stationary transformed edges and preserve fixed o
  assert.deepEqual(choose(base,180,[1,1],center),['w','n','nw']);
  assert.deepEqual(choose(base,0,[-1,1],[[.5,0],[.5,.5]]),base);
 });
+
+test('flow resize accepts ordinary inline dimensions but refuses priority and logical conflicts',()=>{
+ const {available}=require('../shell/flow-resize.js');
+ const el=(values={},priority={})=>({ownerDocument:{defaultView:{getComputedStyle:()=>({position:'static',display:'block'})}},style:{getPropertyValue:p=>values[p]||'',getPropertyPriority:p=>priority[p]||''}});
+ assert.equal(available(el({width:'140px',height:'80px'})),true);
+ assert.equal(available(el({width:'140px'},{width:'important'})),false);
+ for(const property of ['inline-size','block-size','flex','flex-basis'])assert.equal(available(el({[property]:'100px'})),false);
+});

@@ -387,3 +387,9 @@ test('explicit layout controls override authored CSS without changing other scop
  assert.equal(L.explicitLayoutClasses('flex !flex-wrap','wrap','nowrap'),'flex !flex-nowrap');
  assert.throws(()=>L.explicitLayoutClasses('flex','align','center'));
 });
+
+test('inline dimensions use removable important sizing overrides',()=>{
+ assert.equal(L.sizeClasses('h-20','width','fixed',160,{inlineDimensions:['width']}),'h-20 !w-[160px]');
+ assert.equal(L.sizeClasses('!w-[160px] h-20','width','reset',0,{inlineDimensions:['width']}),'h-20');
+ assert.equal(L.sizeClasses('','height','fixed',100,{inlineDimensions:['width']}),'h-[100px]');
+});

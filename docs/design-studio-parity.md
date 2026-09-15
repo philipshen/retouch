@@ -20076,3 +20076,22 @@ Inline size restrictions, zero-response/piecewise layout edge cases, transformed
 snapping, unsupported multi-fragment/fixed/3D geometry and full arbitrary-site/
 Figma parity remain incomplete. Trusted Homebrew distribution remains
 incomplete. No native rebuild or push.
+
+### Ordinary inline flow dimensions
+
+Flow resizing now accepts ordinary inline width and height. Native class-based
+adapters generate important size utilities when necessary to override those
+values; the original inline styles remain intact. Native sizing fields share
+that priority behavior, and resetting the dimension removes the utility override.
+HTML continues using its existing important scoped declarations. Inline important
+dimensions, logical dimensions and inline flex sizing remain guarded for canvas
+flow resizing.
+
+Validation: 1,682 unit tests passed, including priority/reset and availability
+checks. Transformed flow fixtures with actual inline dimensions passed in React
+and HTML/Chromium and Liquid/WebKit: pointer/proportional/keyboard resizing,
+sibling and parent reflow, exact style restoration, cancellation, source undo,
+and rotation regression. Logs: `/tmp/retouch-inline-flow-units.log` and
+`/tmp/retouch-inline-flow-{react,html,liquid}.log`. These do not establish arbitrary
+site or full Figma parity. Native distribution is unchanged; no rebuild or push
+in this continuation.
