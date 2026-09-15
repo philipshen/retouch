@@ -164,6 +164,7 @@
   const value='rtbc1-'+Array.from(new TextEncoder().encode(JSON.stringify({version:1,color})),byte=>byte.toString(16).padStart(2,'0')).join('');parseHiddenBackground(value);return value;
  }
  function valid(property,value,allowVariable=true){
+  if(['--rt-hidden-filter','--rt-hidden-backdrop-filter'].includes(property)){if(value===null)return true;try{(typeof module==='object'&&module.exports?require('./filter-visibility.js'):globalThis.RetouchFilterVisibility).metadata(value);return true;}catch{return false;}}
   if(property==='--rt-hidden-shadows'){if(value===null)return true;try{(typeof module==='object'&&module.exports?require('./shadow-visibility.js'):globalThis.RetouchShadowVisibility).metadata(value);return true;}catch{return false;}}
   if(property===hiddenBackgroundProperty){if(value===null)return true;try{parseHiddenBackground(value);return true;}catch{return false;}}
   if(property===paintVisibilityProperty){if(value===null)return true;try{parsePaintVisibility(value);return true;}catch{return false;}}

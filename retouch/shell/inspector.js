@@ -700,7 +700,7 @@
   function filterClasses(classes,property,value){
     const values=typeof module==='object'&&module.exports?require('./html-css-values.js'):root.RetouchHTMLCSSValues;
     if(!['filter','backdrop-filter'].includes(property)||value!==null&&(!values.valid(property,value)||typeof value!=='string'))throw Error('Unsupported filter stack.');
-    const match=t=>t.startsWith('['+property+':')||(property==='backdrop-filter'?/^backdrop-(?:blur|brightness|contrast|grayscale|hue-rotate|invert|opacity|saturate|sepia|filter)(?:-|$)/.test(t):/^(?:-?hue-rotate|filter|blur|brightness|contrast|drop-shadow|grayscale|invert|saturate|sepia)(?:-|$)/.test(t));
+    const match=t=>t.startsWith('['+property+':')||t.startsWith('[--rt-hidden-'+property+':')||(property==='backdrop-filter'?/^backdrop-(?:blur|brightness|contrast|grayscale|hue-rotate|invert|opacity|saturate|sepia|filter)(?:-|$)/.test(t):/^(?:-?hue-rotate|filter|blur|brightness|contrast|drop-shadow|grayscale|invert|saturate|sepia)(?:-|$)/.test(t));
     if(tokens(classes).some(t=>/^!|!$/.test(t)&&base(t)?.startsWith('[all:')))throw Error('Resolve the important all-property reset before editing filters.');
     return replace(classes,match,value===null?'':'!['+property+':'+value.replace(/\s/g,'_')+']');
   }

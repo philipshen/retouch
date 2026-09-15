@@ -1,5 +1,5 @@
 'use strict';
-const background=require('../shell/background-paint.js'),shadowVisibility=require('../shell/shadow-visibility.js');
+const background=require('../shell/background-paint.js'),shadowVisibility=require('../shell/shadow-visibility.js'),filterVisibility=require('../shell/filter-visibility.js');
 const parse5=require('parse5'),MagicString=require('magic-string'),html=require('./adapters/html.cjs');
 const {valid,families,overlaps,variableName,variableCycle}=require('../shell/html-css-values.js');
 const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
@@ -52,6 +52,11 @@ function plan(resolved,op){
   if(colorChange&&!changes.some(([property])=>property===background.property)&&Object.hasOwn(effective,background.property)&&(colorChange[1]===null||effective[background.property]!=='none')){
    const replacement=colorChange[1]===null?background.reset():background.edit(effective['background-color'],effective[background.property],colorChange[1]);
    changes=changes.filter(([property])=>property!=='background-color').concat(Object.entries(replacement));
+  }
+  for(const [property,key]of Object.entries(filterVisibility.properties)){
+   const effect=changes.find(([name])=>name===property),metadata=changes.find(([name])=>name===key);
+   if(metadata){if(!effect)return refuse('Write filter visibility with its filter stack.');if(effect[1]===null||metadata[1]===null){if(effect[1]!==null||metadata[1]!==null)return refuse('Reset filter visibility and its stack together.');}else filterVisibility.read(effect[1],metadata[1]);}
+   else if(effect&&state.blocks.some(block=>block.width<=op.width&&Object.hasOwn(block.values,key)))changes.push([key,effect[1]===null?null:'none']);
   }
   const shadowChange=changes.find(([property])=>property==='box-shadow'),metadataChange=changes.find(([property])=>property===shadowVisibility.property);
   if(metadataChange){if(!shadowChange)return refuse('Write shadow visibility with its shadow stack.');const css=shadowChange[1],metadata=metadataChange[1];if(css===null||metadata===null){if(css!==null||metadata!==null)return refuse('Reset the shadow stack and its visibility together.');}else shadowVisibility.read(css,metadata);}
