@@ -260,3 +260,14 @@ test('individual translation follows the element transform in frame coordinates'
  after.forEach((p,i)=>{assert.ok(Math.abs(p.x-before[i].x-30)<1e-9);assert.ok(Math.abs(p.y-before[i].y+15)<1e-9);});
  assert.deepEqual(localPositionCorners({x:10,y:20,width:100,height:80,referenceTransform:[2,0,0,3,5,-10]},[[0,0],[100,80]]),[{x:15,y:10},{x:215,y:250}]);
 });
+
+test('relative spacing readouts require matching computed values and honor inline priority',()=>{
+ const {effectiveSpacingPercent}=require('../shell/inspector.js');
+ const el=(inline,priority,actual)=>({style:{getPropertyValue:()=>inline,getPropertyPriority:()=>priority},ownerDocument:{defaultView:{getComputedStyle:()=>({fontSize:'20px',getPropertyValue:()=>actual})}}});
+ assert.equal(effectiveSpacingPercent('','',el('1.5','','30px'),'line-height'),150);
+ assert.equal(effectiveSpacingPercent('![line-height:2]','',el('1.5','','40px'),'line-height'),200);
+ assert.equal(effectiveSpacingPercent('![line-height:2]','',el('1.5','important','30px'),'line-height'),150);
+ assert.equal(effectiveSpacingPercent('[line-height:2]','',el('1.5','','30px'),'line-height'),150);
+ assert.equal(effectiveSpacingPercent('![line-height:2]','',el('1.5','','35px'),'line-height'),null);
+ assert.equal(effectiveSpacingPercent('','![letter-spacing:0.1em]',el('','','2px'),'letter-spacing'),10);
+});

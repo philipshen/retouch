@@ -309,8 +309,27 @@
    const writeSize=(mode,value)=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i),{css,context,blocked}=sizeContext(el,property);if(blocked&&mode!=='reset')throw Error('An important inline sizing rule or layout constraint controls a selected layer.');const pixels=mode==='fixed'?dimensionValue(css,property,(Array.isArray(value)?value[i]:value)??dimensionSize(css,property)):0;return [info.id,changeSizeMode(info.className,scope,property,mode,pixels,context,el.ownerDocument)];})));}catch(error){I.note(sec,error.message,'refused');}};
    const write=value=>{try{if(value!==null&&property==='rotate'&&infos.some((_,i)=>{const el=liveElement(i);return el.style.getPropertyPriority('rotate')==='important'||!Number.isFinite(rotationDegrees(el.ownerDocument.defaultView.getComputedStyle(el).rotate));}))throw Error('Edit the selected layer’s important inline or 3D rotation in its source first.');if(!infos.every((_,i)=>itemApplies(liveElement(i),field)))throw Error('The selected layers no longer share a compatible parent layout.');if(dimension)return writeSize(value===null?'reset':value==='auto'?'auto':value==='fit-content'?'hug':'fixed',value);save(Object.fromEntries(infos.map((info,i)=>[info.id,property==='rotate'?changeRotation(info.className,scope,value,liveElement(i)):change(info.className,scope,property,sizing?dimensionValue(liveElement(i).ownerDocument.defaultView.getComputedStyle(liveElement(i)),property,value):Array.isArray(value)?value[i]:value,liveElement(i).ownerDocument,false,liveElement(i))])));}catch(error){I.note(sec,error.message,'refused');}};
    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(field.text&&!field.valid(input.value.trim())){input.setCustomValidity(field.svg?'Enter a supported SVG stroke value.':'Enter auto, content, a positive length such as 100px, or a percentage such as 50%.');input.reportValidity();return;}if(input.value!==''&&input.checkValidity())write(field.options||field.text?input.value.trim():Number(input.value));};input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=display;input.setCustomValidity('');input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};I.field(sec,'Shared '+field.label,input);if(field.svg)input.dataset.svgStroke=property;if(property==='stroke-dasharray'){input.retouchPreviewDocument=elements[0].ownerDocument;input.retouchHasScopedValues=()=>infos.every(info=>root.RetouchSVGPaint.scopedValue(info.className,scope,property)!==null);input.retouchDashValues=()=>infos.map((info,i)=>root.RetouchSVGPaint.scopedValue(info.className,scope,property)??liveElement(i).ownerDocument.defaultView.getComputedStyle(liveElement(i)).strokeDasharray);input.retouchSetDashValues=values=>save(Object.fromEntries(infos.map((info,i)=>[info.id,change(info.className,scope,property,values[i],liveElement(i).ownerDocument)])));}
+   let percentDisplay=false;
    if(['font-size','line-height','letter-spacing'].includes(property)){
-    input.onkeydown=null;root.RetouchNumericExpression.calculation(input,{unit:'px'});I.fieldDraft(input);
+    const E=root.RetouchNumericExpression,relative=['line-height','letter-spacing'].includes(property),R=root.RetouchResponsive,percentages=relative?infos.map((info,i)=>I.effectiveSpacingPercent(R.project(info.className,scope),R.inherited(info.className,scope,elements[i].ownerDocument),elements[i],property)):[],absoluteCommit=input.onchange;
+    percentDisplay=relative&&percentages.every(value=>value!==null&&Math.abs(value-percentages[0])<.0001);
+    const initial=percentDisplay?E.decimal(percentages[0])+'%':input.value;
+    if(relative)input.addEventListener('change',event=>{
+     if(input.disabled||input.value===initial)return;
+     try{
+      const quantity=E.quantity(input.value,percentDisplay?'%':'px');if(!quantity)return;
+      if(quantity.unit==='%'){
+       event.stopImmediatePropagation();const min=property==='line-height'?0:-100;if(quantity.value<min||quantity.value>1000)throw Error('Enter a percentage from '+min+' to 1000.');
+       input.setCustomValidity('');relativeWrite(property,quantity.value);
+      }else if(percentDisplay&&quantity.unit==='px'){
+       event.stopImmediatePropagation();if(quantity.value<(field.min??0)||quantity.value>(field.max??100))throw Error('Enter a supported pixel value.');input.value=E.decimal(quantity.value);input.setCustomValidity('');absoluteCommit.call(input,event);
+      }
+     }catch(error){event.stopImmediatePropagation();input.setCustomValidity(error.message);input.reportValidity();}
+    },true);
+    if(percentDisplay){input.min=property==='line-height'?'0':'-100';input.max='1000';}
+    input.onkeydown=null;root.RetouchNumericExpression.calculation(input,{unit:percentDisplay?'%':'px',displayValue:initial});I.fieldDraft(input);
+    if(relative)input.title+=' Use px or %; percentages follow each selected layer’s font size.';
+    if(percentDisplay)input.retouchNumericRead=raw=>{try{const quantity=E.quantity(raw,'%');return quantity?.unit==='%'?{value:quantity.value,min:property==='line-height'?0:-100,max:1000,format:value=>E.decimal(value)+'%'}:null;}catch{return null;}};
    }
    if(!field.options&&!field.text){
     const format=value=>String(field.step===1?Math.round(value):value),minimum=sizing?Math.max(field.min??0,...elements.map(el=>decoration(el.ownerDocument.defaultView.getComputedStyle(el),property))):field.min??0;
@@ -323,7 +342,7 @@
      const flexPreviews=dimension?targets.flatMap(el=>{const {context}=sizeContext(el,property);return /flex/.test(context.display||'')&&root.RetouchLayout.layoutAxes(context).main===property?[['flex-grow','0'],['flex-shrink','0'],['flex-basis','auto']].map(([property,value])=>({preview:root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}),value})):[];}):[];
      return {current:()=>targets.every((el,i)=>el.isConnected&&(!resolveElement||resolveElement(infos[i].id)===el))&&previews.every(preview=>preview.current())&&flexPreviews.every(({preview})=>preview.current()),update:value=>{
       const amount=Number(format(value));
-      const values=targets.map((el,i)=>sizing?dimensionValue(el.ownerDocument.defaultView.getComputedStyle(el),property,mixedSizes?mixedSizes[i]+amount-mixedSizes[0]:amount)+'px':property==='opacity'?String(amount/100):property==='rotate'?amount+'deg':['font-size','line-height','letter-spacing'].includes(property)?(mixedSizes?mixedSizes[i]+amount-mixedSizes[0]:amount)+'px':String(amount));
+      const values=targets.map((el,i)=>percentDisplay?String(amount/100)+(property==='letter-spacing'?'em':''):sizing?dimensionValue(el.ownerDocument.defaultView.getComputedStyle(el),property,mixedSizes?mixedSizes[i]+amount-mixedSizes[0]:amount)+'px':property==='opacity'?String(amount/100):property==='rotate'?amount+'deg':['font-size','line-height','letter-spacing'].includes(property)?(mixedSizes?mixedSizes[i]+amount-mixedSizes[0]:amount)+'px':String(amount));
       flexPreviews.forEach(({preview,value})=>preview.update(value));previews.forEach((preview,i)=>preview.update(values[i]));
      },...(mixedSizes?{commit:value=>{if(value===mixedSizes[0]){input.value='';return;}const next=mixedSizes.map(size=>size+value-mixedSizes[0]);if(dimension)writeSize('fixed',next);else write(next);}}:{}),restore:()=>{previews.forEach(preview=>preview.restore());flexPreviews.forEach(({preview})=>preview.restore());}};
     };

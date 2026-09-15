@@ -20681,3 +20681,27 @@ Logs: `/tmp/retouch-inline-face-react-final.log`,
 This covers the six core inline font properties, not arbitrary typography
 cascade behavior. Full Figma fidelity, arbitrary-site compatibility and trusted
 Homebrew distribution remain incomplete. No native rebuild or push.
+
+### Shared spacing accepts percentages in the primary fields
+
+React/Liquid shared line-height and letter-spacing fields now accept percentage
+values and calculations directly, alongside explicit pixel values. When all
+selected layers have the same effective relative value, the field displays that
+percentage and scrubs in percentage units. Explicit px values switch back to
+absolute sizing. Relative writes continue to follow each layer's own font size.
+Single and shared readouts now use the same helper, which verifies authored
+relative values against computed results before presenting a percentage.
+
+Validation: React/Chromium and Liquid/WebKit passed primary-field percentage
+entry/readouts, switching between px and percent, percent drag preview/cancel
+and commit, exact undo, invalid percentage refusal, responsive isolation,
+inline preservation, reset and important-inline guards. Unit coverage checks
+readout priority and mismatched computed values. All 1,702 unit tests passed.
+Logs: `/tmp/retouch-shared-spacing-input-react.log`,
+`/tmp/retouch-shared-spacing-input-liquid.log`,
+`/tmp/retouch-shared-spacing-input-units.log`.
+
+The raw HTML inspector has a separate CSS input path; this change does not
+unify that path or add mixed relative-value dragging. Full Figma fidelity,
+arbitrary-site compatibility and trusted Homebrew distribution remain
+incomplete. No native rebuild or push.

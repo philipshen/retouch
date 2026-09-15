@@ -929,6 +929,14 @@
     const percent=Number(match[1])*(match[2]==='%'?1:100);
     return Number.isFinite(percent)?percent:null;
   }
+  function effectiveSpacingPercent(classes,inherited,el,property){
+    const test=property==='line-height'?lineHeightToken:letterSpacingToken,own=tokens(classes).filter(t=>base(t)&&test(base(t)));
+    const candidates=own.length?own:tokens(inherited).filter(t=>base(t)&&test(base(t)));
+    const selected=candidates.find(t=>/^!|!$/.test(t))||(candidates.length===1?candidates[0]:''),token=base(selected)||'',inline=el.style.getPropertyValue(property);
+    const match=property==='line-height'?/^(?:\[line-height:|leading-\[)([^\]]+)\]$/.exec(token):/^(?:\[letter-spacing:|tracking-\[)([^\]]+)\]$/.exec(token);
+    const raw=inline&&(el.style.getPropertyPriority(property)==='important'||!/^!|!$/.test(selected))?inline:match?.[1],percent=spacingPercent(property,raw),css=el.ownerDocument.defaultView.getComputedStyle(el),expected=percent/100*parseFloat(css.fontSize),actual=parseFloat(css.getPropertyValue(property));
+    return percent!==null&&Number.isFinite(actual)&&Math.abs(expected-actual)<.02?percent:null;
+  }
   function typographyPreview(parent,el){
     const d=el.ownerDocument,css=d.defaultView.getComputedStyle(el);
     const preview=document.createElement('iframe');preview.className='type-preview';preview.title='Typography preview';preview.setAttribute('sandbox','allow-same-origin');parent.append(preview);
@@ -1025,15 +1033,9 @@
 
 
     }
-    for(const [property,label,test] of [['line-height','Line height (px)',lineHeightToken],['letter-spacing','Letter spacing (px)',letterSpacingToken]]){
-      const own=tokens(info.className).filter(t=>base(t)&&test(base(t)));
-      const candidates=own.length?own:tokens(info.anchorInheritedClasses||'').filter(t=>base(t)&&test(base(t)));
-      const selected=candidates.find(t=>/^!|!$/.test(t))||(candidates.length===1?candidates[0]:''),token=base(selected)||'',inline=el.style.getPropertyValue(property);
-      const match=property==='line-height'?/^(?:\[line-height:|leading-\[)([^\]]+)\]$/.exec(token):/^(?:\[letter-spacing:|tracking-\[)([^\]]+)\]$/.exec(token);
-      const raw=inline&&(el.style.getPropertyPriority(property)==='important'||!/^!|!$/.test(selected))?inline:match?.[1];
-      const percent=spacingPercent(property,raw),expected=percent/100*parseFloat(css.fontSize),actual=parseFloat(css.getPropertyValue(property));
-      const input=sec.querySelector('[aria-label="'+label+'"]');
-      if(input&&percent!==null&&Number.isFinite(actual)&&Math.abs(expected-actual)<.02)input.retouchSpacingPercent=percent;
+    for(const [property,label] of [['line-height','Line height (px)'],['letter-spacing','Letter spacing (px)']]){
+      const percent=effectiveSpacingPercent(info.className,info.anchorInheritedClasses||'',el,property),input=sec.querySelector('[aria-label="'+label+'"]');
+      if(input&&percent!==null)input.retouchSpacingPercent=percent;
     }
     if(info.canSetTag)select(sec,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label'].map(n=>[n,n]),info.tag,changeTag);
     return sec;
@@ -1070,6 +1072,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={localPositionCorners,positionGeometry,localPositionGeometry,textResizing,textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={effectiveSpacingPercent,localPositionCorners,positionGeometry,localPositionGeometry,textResizing,textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);
