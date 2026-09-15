@@ -20513,3 +20513,25 @@ rebuilds. Logs: `/tmp/retouch-inline-grid-react.log`,
 Single-layer inline grid controls and adaptive grid behavior remain separate
 work. Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
 incomplete. No native rebuild or push.
+
+
+### Single-layer grid controls over inline rules
+
+Single React/Liquid grid counts, flow and custom tracks now emit important
+overrides when ordinary inline grid rules control the property. Custom fields
+show the effective inline value instead of an overridden ordinary utility.
+Important inline rules disable the affected controls with an explanation.
+Inputs and custom-track resets respect the selected edit range; reset remains
+available for removing editor overrides when the range is active.
+
+Validation: `single-inline-grid.cjs` passed on React/Chromium and Liquid/WebKit
+for counts, flow, custom tracks, unchanged neighboring grid/inline attributes,
+phone isolation, disabled scope controls, reset and exact source undo. The final
+Liquid run checks the important-inline tooltip and synchronizes panel focus
+restoration before switching screens. All 1,696 unit tests passed. Logs:
+`/tmp/retouch-single-inline-grid-react.log`,
+`/tmp/retouch-single-inline-grid-liquid-verified.log`,
+`/tmp/retouch-single-inline-grid-units.log`.
+
+Adaptive inline grids, full Figma/arbitrary-site parity and trusted Homebrew
+distribution remain incomplete. No native rebuild or push.

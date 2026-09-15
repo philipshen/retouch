@@ -280,25 +280,26 @@
     }
     if(mode!=='flow') {
       if(mode==='grid') {
+        const inlineGrid=(axis,important=false)=>(axis==='flow'?['grid','grid-auto-flow']:['grid','grid-template','grid-template-'+axis]).some(property=>important?el.style.getPropertyPriority(property)==='important':el.style.getPropertyValue(property)),gridReady=axis=>spacingActive()&&!inlineGrid(axis,true),gridHint=()=>!spacingActive()?'Switch to a screen inside the selected edit range.':'An important inline rule controls this grid. Edit that source rule first.';
         for(const [label,property,computed] of [['Columns','columns',css.gridTemplateColumns],['Rows','rows',css.gridTemplateRows]]){
-          const field=numeric(label,gridTrackCount(computed)||1,1,24,v=>save(arrangementClasses(classes,property,v,inherited)));field.step='1';
+          const field=numeric(label,gridTrackCount(computed)||1,1,24,v=>{if(gridReady(property))save(arrangementClasses(classes,property,v,inherited,inlineGrid(property)));});field.step='1';field.disabled=!gridReady(property);if(field.disabled)field.title=gridHint();
         }
         I.note(sec,'Counts create equal tracks. Content may create additional implicit tracks.');
         const custom=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Custom grid tracks';custom.className='inspector-disclosure';custom.append(summary);custom.open=customTracksOpen;custom.ontoggle=()=>{customTracksOpen=custom.open;};
         for(const axis of ['columns','rows']){
           const property='grid-template-'+axis,label=axis==='columns'?'Column sizes':'Row sizes';
-          const input=document.createElement('input');input.type='text';input.value=ownGridTemplate(classes,axis)??css.getPropertyValue(property);
+          const input=document.createElement('input');input.type='text';input.value=ownGridTemplate(classes,axis,inlineGrid(axis))??css.getPropertyValue(property);input.disabled=!gridReady(axis);
           const initial=input.value;input.oninput=()=>input.setCustomValidity('');
-          input.onchange=()=>{try{const value=input.value.trim();if(value===initial)return;const next=gridTemplateClasses(classes,axis,value,inherited);if(!el.ownerDocument.defaultView.CSS.supports(property,value))throw Error('Enter supported grid track sizes.');save(next);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+          input.onchange=()=>{try{const value=input.value.trim();if(value===initial||!gridReady(axis))return;const next=gridTemplateClasses(classes,axis,value,inherited,inlineGrid(axis));if(!el.ownerDocument.defaultView.CSS.supports(property,value))throw Error('Enter supported grid track sizes.');save(next);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
           const row=document.createElement('div');row.className='property-row';custom.append(row);I.field(row,label,input);
-          input.title='Enter saves. Escape cancels.';
+          input.title=input.disabled?gridHint():'Enter saves. Escape cancels.';
           input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};
-          const reset=I.button('Reset '+label.toLowerCase(),()=>save(gridTemplateClasses(classes,axis,null)));reset.setAttribute('aria-label','Reset '+label.toLowerCase());reset.title='Reset '+label.toLowerCase();reset.textContent='↺';reset.classList.add('property-reset');reset.disabled=gridTemplateClasses(classes,axis,null)===classes;row.append(reset);
+          const reset=I.button('Reset '+label.toLowerCase(),()=>{if(spacingActive())save(gridTemplateClasses(classes,axis,null));});reset.setAttribute('aria-label','Reset '+label.toLowerCase());reset.title='Reset '+label.toLowerCase();reset.textContent='↺';reset.classList.add('property-reset');reset.disabled=!spacingActive()||gridTemplateClasses(classes,axis,null)===classes;row.append(reset);
         }
         I.note(custom,'Separate tracks with spaces: 160px 1fr makes a fixed track and a flexible track. auto fits content; minmax(80px, 1fr) sets a minimum.');sec.append(custom);
 
         const flow=css.gridAutoFlow==='dense'?'row-dense':css.gridAutoFlow.replace('column','col').replace(/\s+/g,'-');
-        layoutSelect('Place grid items',[['row','Across rows'],['col','Down columns'],['row-dense','Across rows · fill gaps'],['col-dense','Down columns · fill gaps']],flow,v=>save(arrangementClasses(classes,'flow',v,inherited)));
+        const flowInput=layoutSelect('Place grid items',[['row','Across rows'],['col','Down columns'],['row-dense','Across rows · fill gaps'],['col-dense','Down columns · fill gaps']],flow,v=>{if(gridReady('flow'))save(arrangementClasses(classes,'flow',v,inherited,inlineGrid('flow')));});flowInput.disabled||=!gridReady('flow');if(flowInput.disabled)flowInput.title=gridHint();
         I.note(sec,'Fill gaps can move later items into earlier empty spaces.');
       } else {
         const wrapBlocked=()=>['flex-wrap','flex-flow'].some(property=>el.style.getPropertyPriority(property)==='important'),wrapInput=layoutSelect('Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>{if(!wrapBlocked())save(explicitLayoutClasses(classes,'wrap',v,inherited));});wrapInput.disabled||=wrapBlocked();

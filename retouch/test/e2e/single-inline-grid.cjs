@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({page,app,read,wait,settled,kind})=>{
+ const source=read(),targets=app.locator('h1,p.other-font'),styles=await targets.evaluateAll(els=>els.map(el=>el.getAttribute('style'))),screen=page.getByLabel('Screen size',{exact:true});
+ await screen.focus();await screen.selectOption('768x1024');await page.getByLabel('Style screen scope',{exact:true}).selectOption('md:');await settled();
+ const state=()=>targets.evaluateAll(els=>els.map(el=>{const css=getComputedStyle(el);return [css.gridTemplateColumns,css.gridTemplateRows,css.gridAutoFlow];})),initial=await state();
+ const reveal=async input=>wait(()=>input.evaluate(el=>{for(let n=el.parentElement;n;n=n.parentElement)if(n.tagName==='DETAILS')n.open=true;return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(el.isConnected&&el.getClientRects().length>0))));}));
+ for(const [label,value,index,expected]of [['Columns','3',0,null],['Rows','3',1,null],['Place grid items','col-dense',2,'column dense'],['Column sizes','40px 80px',0,'40px 80px'],['Row sizes','30px 60px',1,'30px 60px']]){
+  const input=page.getByLabel(label,{exact:true});await reveal(input);assert.equal(await input.isEnabled(),true);if(label==='Place grid items')await input.selectOption(value);else{await input.fill(value);await input.press('Tab');}await wait(()=>read()!==source);await settled();await wait(async()=>{const current=await state();return expected?current[0][index]===expected:current[0][index].split(/\s+/).length===3;});assert.deepEqual((await state())[1],initial[1]);assert.deepEqual(await targets.evaluateAll(els=>els.map(el=>el.getAttribute('style'))),styles);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));const changed=read();await screen.focus();await screen.selectOption('390x844');await settled();await screen.focus();assert.deepEqual(await state(),initial);await wait(async()=>await input.isDisabled());await screen.focus();await screen.selectOption('768x1024');await settled();
+  if(label.endsWith('sizes')){await reveal(input);await page.getByRole('button',{name:'Reset '+label.toLowerCase(),exact:true}).click();await wait(()=>read()!==changed);await settled();assert.deepEqual(await state(),initial);await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===changed);await settled();}
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===source);await settled();assert.deepEqual(await state(),initial);
+ }
+ await targets.first().evaluate(el=>el.style.setProperty('grid-template-columns','30px 50px','important'));await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click();await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await settled();assert.equal(await page.getByLabel('Columns',{exact:true}).isDisabled(),true);assert.equal(await page.getByLabel('Column sizes',{exact:true}).isDisabled(),true);assert.match(await page.getByLabel('Column sizes',{exact:true}).getAttribute('title'),/important inline/);assert.equal(read(),source);
+ console.log(kind+': PASS single inline grid counts, flow, custom tracks, neighbor preservation, scope guards, important inline guards, reset and exact undo');
+};
