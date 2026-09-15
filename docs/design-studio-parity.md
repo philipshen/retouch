@@ -18101,3 +18101,29 @@ The first parent canvas assertion measured the parent's viewport edge before
 zoom-to-selection (8 px), then compared it after zoom/scroll (-170 px). The
 corrected test captures the edge at gesture start and passes. This was a test
 coordinate-lifetime correction, not an editor change.
+
+### Whole-selection parent alignment checkpoint
+
+Shift-clicking a group alignment control now aligns the union of the selected
+roots to their shared visible parent's bounds. Every member receives the same
+canvas displacement, so spacing between selected groups and ordinary layers is
+preserved. Alt+Shift alignment shortcuts use the same path. The modifier takes
+precedence over a selected reference-layer target without changing that saved
+choice. Tooltips describe the Shift behavior when a shared parent is available.
+
+Validation: 1,651 unit tests pass. The parent-alignment browser fixture now has
+asymmetric padding so each direction must actually move the selection. HTML,
+transformed React and transformed Liquid/WebKit workflows verify all six Shift
+alignments at 390/768/1100 pixels, Alt+Shift+H, reference-target override,
+unchanged dimensions and spacing, full selection restoration and exact history.
+The same runs retain ordinary single/mixed parent-alignment and responsive
+grouping checks.
+
+Logs: `/tmp/retouch-group-unit-align-units.log`,
+`/tmp/retouch-group-unit-align-html.log`,
+`/tmp/retouch-group-unit-align-react.log`, and
+`/tmp/retouch-group-unit-align-webkit.log`.
+
+Group resize/rotation, viewport handling for negative-position groups, full
+Figma parity and trusted public Homebrew distribution remain incomplete. No
+desktop rebuild or push for this checkpoint.
