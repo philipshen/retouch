@@ -17175,3 +17175,11 @@ When a supported paint stack has row editors, More fill controls now hides its d
 All 1,559 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit stack workflows pass editing, visibility, responsive scope, ordering, clear/reset and exact undo. An additional HTML run verifies duplicate-control exclusion for a visible single solid paint and an enabled reset action; its expanded advanced section was visually inspected.
 
 Validation is not complete: older gradient workflows in `retouch/test/e2e/html-site.cjs` and `retouch/test/e2e/page-fonts.cjs` still address the legacy Add gradient / Fill N / Gradient N controls. Migrate those workflows to Add paint and Paint N row dialogs, preserving their picker, numeric gestures, stop geometry, focus, responsive and exact-undo assertions, then run them. The new stack checks do not replace that coverage. Full Figma parity and trusted native/Homebrew distribution remain incomplete.
+
+### Gradient row regression migration, first group — 2026-09-15
+
+Migrated imported-stop editing, numeric scrubbing, responsive gradient gestures, interrupted gestures and responsive color-picker checks to Paint N controls opened from the Fill rows. Each gesture reopens its row dialog when needed; the original source, preview, cancellation and undo assertions remain.
+
+Verified terminal passes: imported double-position/implicit stops on React/Chromium and Liquid/WebKit; numeric angle/stop/center scrubbing on HTML/Chromium and Liquid/WebKit; out-of-range stop/angle/center drags, screen/resize/zoom/runtime interruption and color-picker range isolation on both HTML/Chromium and Liquid/WebKit. These are ten browser runs. This batch changes tests only.
+
+Migration remains incomplete: the longer `RT_E2E_GRADIENTS` workflow and the gradient portion of `html-site.cjs` still target legacy controls. Their broader picker, radial geometry, stop actions, ordering and focus checks must move to the row dialogs and actions menus without discarding coverage. Full Figma parity and trusted native/Homebrew distribution remain incomplete.
