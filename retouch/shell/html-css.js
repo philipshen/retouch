@@ -99,8 +99,8 @@
   }
   for(const property of ['filter','backdrop-filter'])RetouchFilterStack.mount(blur,property,own[property]??css.getPropertyValue(property),value=>save(property,value,width),{reset:Object.hasOwn(own,property)});
   I.note(blur,'Layer blur affects the layer and its children. Background blur affects content behind transparent areas. Existing color filters stay in order.');
-  const effects=I.section('Shadows'),shadows=parseShadows(own['box-shadow']??css.boxShadow);
-  const writeShadows=next=>{const value=serializeShadows(next);if(valid('box-shadow',value)&&CSS.supports('box-shadow',value))save('box-shadow',value,width);};
+  const effects=I.section('Shadows'),shadows=RetouchBackgroundPaintUI.sourceShadows(info,width?'min-['+width+'px]:':'')??RetouchBackgroundPaintUI.readShadows(info,el);
+  const writeShadows=next=>{const changes=RetouchBackgroundPaintUI.shadowChanges(next,info);if(valid('box-shadow',changes['box-shadow'])&&CSS.supports('box-shadow',changes['box-shadow']))save(changes,null,width);};
   if(shadows===null)I.note(effects,'This shadow uses values these controls cannot represent. Clear it to create a new shadow, or Reset to restore the page’s styling.');
   else {
    shadows.forEach((shadow,index)=>{
@@ -109,9 +109,10 @@
     const type=document.createElement('select');for(const [value,label]of [['drop','Drop shadow'],['inner','Inner shadow']]){const option=document.createElement('option');option.value=value;option.textContent=label;type.append(option);}type.value=shadow.inset?'inner':'drop';type.onchange=()=>update('inset',type.value==='inner');I.field(group,'Type',type).setAttribute('aria-label','Shadow '+(index+1)+' type');
     for(const [key,label]of [['x','X'],['y','Y'],['blur','Blur'],['spread','Spread']]){
      const input=document.createElement('input');input.type='number';input.step='any';input.min=key==='blur'?0:-10000;input.max=10000;input.value=shadow[key];
-     input.onchange=()=>{if(input.value!==''&&input.checkValidity())update(key,Number(input.value));};I.numericLabelDrag(I.field(group,label+' (px)',input)).setAttribute('aria-label','Shadow '+(index+1)+' '+label+' (px)');I.numericPreview(input,el,'box-shadow',value=>serializeShadows(shadows.map((item,i)=>i===index?{...item,[key]:value}:item)));
+     input.onchange=()=>{if(input.value!==''&&input.checkValidity())update(key,Number(input.value));};I.numericLabelDrag(I.field(group,label+' (px)',input)).setAttribute('aria-label','Shadow '+(index+1)+' '+label+' (px)');I.numericPreview(input,el,'box-shadow',value=>RetouchBackgroundPaintUI.shadowChanges(shadows.map((item,i)=>i===index?{...item,[key]:value}:item),info)['box-shadow']);
     }
     const color=document.createElement('input');color.value=shadow.color;color.retouchPaintPreview=()=>RetouchPaintPicker.shadowPreview({el,group,shadows,index});color.oninput=()=>color.setCustomValidity('');color.onchange=()=>{const value=color.value.trim();if(!valid('color',value)||!CSS.supports('color',value)){color.setCustomValidity('Use a CSS color, such as #00000040 or rgba(0, 0, 0, 0.25).');color.reportValidity();return;}update('color',value);};I.field(group,'Color',color).setAttribute('aria-label','Shadow '+(index+1)+' color');
+    RetouchBackgroundPaintUI.shadowEye(color,()=>[shadow],hidden=>update('hidden',hidden),()=>RetouchBackgroundPaintUI.rangeActive(color,el)||RetouchBackgroundPaintUI.sourceShadows(info,width?'min-['+width+'px]:':'')!==null,el,'Shadow '+(index+1));
     group.append(I.button('Remove shadow '+(index+1),()=>writeShadows(shadows.filter((_,i)=>i!==index))));
     if(index>0)group.append(I.button('Move shadow '+(index+1)+' up',()=>{const next=[...shadows];[next[index-1],next[index]]=[next[index],next[index-1]];writeShadows(next);}));
         if(index<shadows.length-1)group.append(I.button('Move shadow '+(index+1)+' down',()=>{const next=[...shadows];[next[index],next[index+1]]=[next[index+1],next[index]];writeShadows(next);}));
@@ -287,7 +288,7 @@
   }
   for(const [a,b]of [['width','height'],['min-width','min-height'],['max-width','max-height']]){const first=rows.get(a),second=rows.get(b);if(!first||!second)continue;const pair=document.createElement('div');pair.className='property-pair';first.before(pair);pair.append(first,second);for(const [property,row]of [[a,first],[b,second]])row.querySelector('.inspector-field > span').textContent=property.replace('min-','Min ').replace('max-','Max ').replace('width','W').replace('height','H');}
   for(const property of ['filter','backdrop-filter'])RetouchFilterStack.mountSharedBlur(groups.effects,infos,elements,width?'min-['+width+'px]:':'',property,values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,{[property]:values[i]}]))));
-  RetouchFilterStack.mountSharedShadows(groups.effects,infos,elements,width?'min-['+width+'px]:':'',values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,values[i]===undefined?{}:{'box-shadow':values[i]}]))));
+  RetouchFilterStack.mountSharedShadows(groups.effects,infos,elements,width?'min-['+width+'px]:':'',values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,values[i]===undefined?{}:values[i]]))));
   for(const body of Object.values(groups))if(!body.querySelector('.inspector-field'))body.parentElement.remove();
   return section;
  }

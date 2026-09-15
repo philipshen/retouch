@@ -708,19 +708,20 @@
     const V=typeof module==='object'&&module.exports?require('./html-css-values.js'):root.RetouchHTMLCSSValues;
     if(value!==null&&!V.valid('box-shadow',value))throw Error('Unsupported shadow stack.');
     if(tokens(classes).some(token=>/^!|!$/.test(token)&&/^(?:\[all:|(?:inset-)?ring(?:-|$))/.test(base(token)||'')))throw Error('Resolve the important ring or all-property reset before editing shadows.');
-    return replace(classes,t=>/^shadow(?:-|$)/.test(t)||/^\[box-shadow:/.test(t),value===null?'':'![box-shadow:'+value.replace(/\s/g,'_')+']');
+    return replace(classes,t=>/^shadow(?:-|$)/.test(t)||/^\[(?:box-shadow|--rt-hidden-shadows):/.test(t),value===null?'':'![box-shadow:'+value.replace(/\s/g,'_')+']');
   }
   function shadowStack(parent,info,el,save,notify){
-    const V=root.RetouchHTMLCSSValues,shadows=root.RetouchBackgroundPaintUI.sourceShadows(info,'')??V.parseShadows(el.ownerDocument.defaultView.getComputedStyle(el).boxShadow),details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Shadow stack';details.append(summary);details.open=shadowStackExpanded;details.retouchSetOpen=value=>{shadowStackExpanded=!!value;details.open=shadowStackExpanded;};details.ontoggle=()=>{if(details.isConnected)shadowStackExpanded=details.open;};parent.append(details);
-    const write=next=>{try{save(shadowClasses(info.className,next===null?null:V.serializeShadows(next)));}catch(error){notify(error.message);}};
+    const V=root.RetouchHTMLCSSValues,shadows=root.RetouchBackgroundPaintUI.sourceShadows(info,'')??root.RetouchBackgroundPaintUI.readShadows(info,el),details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Shadow stack';details.append(summary);details.open=shadowStackExpanded;details.retouchSetOpen=value=>{shadowStackExpanded=!!value;details.open=shadowStackExpanded;};details.ontoggle=()=>{if(details.isConnected)shadowStackExpanded=details.open;};parent.append(details);
+    const write=next=>{try{save(next===null?shadowClasses(info.className,null):root.RetouchBackgroundPaintUI.shadowClasses(info.className,'',root.RetouchBackgroundPaintUI.shadowChanges(next,info)));}catch(error){notify(error.message);}};
     if(shadows===null)note(details,'This shadow stack contains values these controls cannot edit.');
     else{
       shadows.forEach((shadow,index)=>{
         const group=document.createElement('fieldset'),legend=document.createElement('legend');group.className='shadow-controls';legend.textContent='Shadow '+(index+1);group.append(legend);
         const update=(key,value)=>write(shadows.map((item,i)=>i===index?{...item,[key]:value}:item));
         select(group,'Shadow '+(index+1)+' type',[['drop','Drop shadow'],['inner','Inner shadow']],shadow.inset?'inner':'drop',value=>update('inset',value==='inner'));
-        for(const [key,label]of [['x','X'],['y','Y'],['blur','Blur'],['spread','Spread']])numericPreview(number(group,'Shadow '+(index+1)+' '+label+' (px)',shadow[key],key==='blur'?0:-10000,10000,value=>update(key,value)),el,'box-shadow',value=>V.serializeShadows(shadows.map((item,i)=>i===index?{...item,[key]:value}:item)));
+        for(const [key,label]of [['x','X'],['y','Y'],['blur','Blur'],['spread','Spread']])numericPreview(number(group,'Shadow '+(index+1)+' '+label+' (px)',shadow[key],key==='blur'?0:-10000,10000,value=>update(key,value)),el,'box-shadow',value=>root.RetouchBackgroundPaintUI.shadowChanges(shadows.map((item,i)=>i===index?{...item,[key]:value}:item),info)['box-shadow']);
         const color=document.createElement('input');color.value=shadow.color;color.retouchPaintPreview=()=>root.RetouchPaintPicker.shadowPreview({el,group,shadows,index});field(group,'Shadow '+(index+1)+' color',color);color.oninput=()=>color.setCustomValidity('');color.onchange=()=>{const value=color.value.trim();if(!V.valid('color',value)||!el.ownerDocument.defaultView.CSS.supports('color',value)){color.setCustomValidity('Enter a supported CSS color.');color.reportValidity();return;}update('color',value);};
+        root.RetouchBackgroundPaintUI.shadowEye(color,()=>[shadow],hidden=>update('hidden',hidden),()=>root.RetouchBackgroundPaintUI.rangeActive(color,el)||root.RetouchBackgroundPaintUI.sourceShadows(info,'')!==null,el,'Shadow '+(index+1));
         group.append(button('Remove shadow '+(index+1),()=>write(shadows.filter((_,i)=>i!==index))));
         if(index>0)group.append(button('Move shadow '+(index+1)+' up',()=>{const next=[...shadows];[next[index-1],next[index]]=[next[index],next[index-1]];write(next);}));
         if(index<shadows.length-1)group.append(button('Move shadow '+(index+1)+' down',()=>{const next=[...shadows];[next[index],next[index+1]]=[next[index+1],next[index]];write(next);}));
@@ -752,7 +753,7 @@
     }
     note(sec,css.boxShadow,'computed-value');
     shadowStack(sec,info,el,save,notify);
-    const shadowMatch=t=>/^shadow(?:-|$)/.test(t)||/^\[box-shadow:/.test(t);
+    const shadowMatch=t=>/^shadow(?:-|$)/.test(t)||/^\[(?:box-shadow|--rt-hidden-shadows):/.test(t);
     const saveShadow=value=>{const inherited=tokens(info.anchorInheritedClasses).some(token=>/^!|!$/.test(token)&&base(token)!==null&&shadowMatch(base(token)));return save(replace(info.className,shadowMatch,inherited?'!'+value:value));};
     const presets=[['','Choose shadow…'],['shadow-none','None'],['shadow-sm','Small'],['shadow-md','Medium'],['shadow-lg','Large'],['shadow-xl','Extra large'],['shadow-inner','Inner']];
     select(sec,'Shadow preset',presets,tokens(info.className).map(base).find(t=>presets.some(([p])=>p===t))||'',value=>{if(value)saveShadow(value);});

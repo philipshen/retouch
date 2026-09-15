@@ -43,7 +43,18 @@
  }
  function sourceColor(info,scope,property){if(property==='background-color')return sourceState(info,scope)?.color??null;const value=sourceValue(info,scope,property);if(value===null)return null;const parts=property==='border-color'?root.RetouchHTMLCSSValues.parseBorderColors(value):[value];return parts?.length&&parts.every(part=>root.RetouchPaintPicker.parsePaint(part))?value:null;}
  function sourceEffect(info,scope,property){if(!['filter','backdrop-filter','box-shadow'].includes(property))return null;const value=sourceValue(info,scope,property);return value!==null&&(property==='box-shadow'?root.RetouchHTMLCSSValues.parseShadows(value):root.RetouchHTMLCSSValues.parseFilters(value))!==null?value:null;}
- function sourceShadows(info,scope){const value=sourceValue(info,scope,'box-shadow');return value===null?null:root.RetouchHTMLCSSValues.parseShadows(value);}
+ function sourceShadows(info,scope){const value=sourceValue(info,scope,'box-shadow'),metadata=sourceValue(info,scope,root.RetouchShadowVisibility.property);return value===null?null:metadata&&metadata!=='none'?root.RetouchShadowVisibility.read(value,metadata):root.RetouchHTMLCSSValues.parseShadows(value);}
+ function readShadows(info,el){const css=el.ownerDocument.defaultView.getComputedStyle(el),property=root.RetouchShadowVisibility.property,metadata=css.getPropertyValue(property).trim()||'none',owned=(el.getAttribute('class')||'').includes('['+property+':'+metadata+']')||Object.values(info.cssRules||{}).some(values=>values[property]===metadata);return owned&&metadata!=='none'?root.RetouchShadowVisibility.read(css.boxShadow,metadata):root.RetouchHTMLCSSValues.parseShadows(css.boxShadow);}
+ function shadowChanges(shadows,info){const property=root.RetouchShadowVisibility.property,stored=Object.values(info.cssRules||{}).some(values=>Object.hasOwn(values,property))||((info.className||'')+' '+(info.anchorInheritedClasses||'')).includes('['+property+':');return shadows.some(shadow=>shadow.hidden)||stored?root.RetouchShadowVisibility.write(shadows):{'box-shadow':root.RetouchHTMLCSSValues.serializeShadows(shadows)};}
+ function shadowClasses(classes,scope,changes){return Object.hasOwn(changes,root.RetouchShadowVisibility.property)?root.RetouchShadowVisibility.classes(classes,scope,changes):root.RetouchResponsive.replaceScope(classes,root.RetouchInspector.shadowClasses(root.RetouchResponsive.project(classes,scope),changes['box-shadow']),scope);}
+
+ const shadowEyeCleanups=new Map();
+ function shadowEye(input,states,save,active,el,label){input.retouchMountVisibility=field=>{
+  const button=input.ownerDocument.createElement('button');button.type='button';button.className='background-visibility';field.append(button);
+  const sync=()=>{try{const current=states(),hidden=current.every(shadow=>shadow.hidden),mixed=!hidden&&current.some(shadow=>shadow.hidden);button.setAttribute('aria-label',(hidden?'Show':'Hide')+' '+label);button.setAttribute('aria-pressed',mixed?'mixed':String(!hidden));button.innerHTML=visibilityIcon(hidden,mixed);button.disabled=input.disabled||!active();button.title=button.disabled?'Preview this screen range to change shadow visibility.':button.getAttribute('aria-label');field.classList.toggle('background-color-hidden',hidden);}catch(error){button.disabled=true;button.title=error.message;}};
+  button.onclick=()=>{if(button.disabled||!active())return;const hidden=!states().every(shadow=>shadow.hidden);root.RetouchPanelFocus?.queue(button,(hidden?'Show':'Hide')+' '+label);try{Promise.resolve(save(hidden)).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();});}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+  const w=el.ownerDocument.defaultView,cleanup=()=>w.removeEventListener('resize',resize),resize=()=>{if(!input.isConnected){cleanup();return;}sync();};shadowEyeCleanups.get(label)?.();shadowEyeCleanups.set(label,cleanup);w.addEventListener('resize',resize);new MutationObserver(sync).observe(input,{attributes:true,attributeFilter:['disabled']});sync();
+ };}
  function bindSource(input,info,scope,property,el){input.retouchPreviewDocument=el.ownerDocument;input.retouchHasScopedValues=()=>sourceColor(info,scope,property)!==null;}
  function rangeActive(input,el){
   const scope=input.ownerDocument.querySelector('[aria-label="Style screen scope"]')?.value||'';if(!scope)return true;
@@ -97,5 +108,5 @@
    try{const current=selectedStates(),hidden=current.every(state=>state.hidden),mixed=current.some(state=>state.hidden)!==hidden;button.setAttribute('aria-label',label(hidden));button.setAttribute('aria-pressed',mixed?'mixed':String(!hidden));button.disabled=input.disabled||!active();button.title=!active()?'Preview this screen range to change fill visibility.':mixed?'Mixed visibility · hide all selected backgrounds':label(hidden);button.innerHTML=visibilityIcon(hidden,mixed);}catch(error){button.disabled=true;button.title=error.message;}
   };watchVisibility(input,elements[0],sync);
  }
- root.RetouchBackgroundPaintUI={read,bind,mountSelection,rangeActive,sourceColor,sourceState,sourceEffect,sourceShadows,bindSource};
+ root.RetouchBackgroundPaintUI={read,bind,mountSelection,rangeActive,sourceColor,sourceState,sourceEffect,sourceShadows,readShadows,shadowChanges,shadowClasses,shadowEye,bindSource};
 })(window);

@@ -213,7 +213,7 @@
   }
   for(const property of ['filter','backdrop-filter'])root.RetouchFilterStack.mountSharedBlur(groups.effects,infos,elements,scope,property,values=>save(Object.fromEntries(infos.map((info,i)=>[info.id,root.RetouchResponsive.replaceScope(info.className,I.filterClasses(root.RetouchResponsive.project(info.className,scope),property,values[i]),scope)]))));
 
-  root.RetouchFilterStack.mountSharedShadows(groups.effects,infos,elements,scope,values=>save(Object.fromEntries(infos.map((info,i)=>[info.id,values[i]===undefined?info.className:root.RetouchResponsive.replaceScope(info.className,I.shadowClasses(root.RetouchResponsive.project(info.className,scope),values[i]),scope)]))));
+  root.RetouchFilterStack.mountSharedShadows(groups.effects,infos,elements,scope,values=>save(Object.fromEntries(infos.map((info,i)=>[info.id,values[i]===undefined?info.className:root.RetouchBackgroundPaintUI.shadowClasses(info.className,scope,values[i])]))));
 
   if(saveColor)for(const [property,label]of [['color','Text color'],['background-color','Background color'],['border-color','Border color'],...(elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg')?[['fill','SVG fill'],['stroke','SVG stroke']]:[])]){
    const sec=property==='color'?groups.typography:['background-color','fill'].includes(property)?groups.fill:groups.stroke;

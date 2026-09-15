@@ -12,7 +12,7 @@
  }
  function shadowPreview({el,group,shadows,index}){
   const canvas=propertyPreview({el,input:group,property:'box-shadow'});
-  return {update:color=>canvas.update(root.RetouchHTMLCSSValues.serializeShadows(shadows.map((shadow,i)=>i===index?{...shadow,color}:shadow))),restore:()=>canvas.restore()};
+  return {update:color=>canvas.update(root.RetouchBackgroundPaintUI.shadowChanges(shadows.map((shadow,i)=>i===index?{...shadow,color}:shadow),{})['box-shadow']),restore:()=>canvas.restore()};
  }
  function propertyPreview({el,input,property,respectScope=true}){
   const properties=property==='border-color'?['border-top-color','border-right-color','border-bottom-color','border-left-color']:root.RetouchHTMLCSSValues.families[property]||[property],originalStyle=el.getAttribute('style'),original=properties.map(name=>({name,value:el.style.getPropertyValue(name),priority:el.style.getPropertyPriority(name)}));let lastStyle=null,last=null,restored=false;
