@@ -522,6 +522,8 @@ async function select(node,{toggle=false,sourceId,current=()=>true}={}) {
 let comparisonSelectionSerial=0;
 window.addEventListener('retouch:comparison-edit',async event=>{
   const detail=event.detail||{},serial=++comparisonSelectionSerial,selectionSerial=++inspectorSelectionSerial;
+  const contextOpener=document.activeElement;
+  if(detail.contextMenu&&(!Number.isFinite(detail.contextMenu.x)||!Number.isFinite(detail.contextMenu.y)))return;
   if(inspectorTextCommit)await inspectorTextCommit;
   if(serial!==comparisonSelectionSerial||selectionSerial!==inspectorSelectionSerial)return;
   if(panelTasks||undoBusy||sourceRequests||!['width','height'].every(key=>Number.isInteger(detail[key])&&detail[key]>=240&&detail[key]<=7680))return;
@@ -539,6 +541,7 @@ window.addEventListener('retouch:comparison-edit',async event=>{
     if(!sel)return toast('Select a layer before choosing its style scope.','err');
     styleScope=sel.info.cssAuthoring?`min-[${detail.width}px]:`:RetouchResponsive.atWidth(doc(),detail.width).prefix;renderPanel();
   };
+  const openContext=()=>{if(detail.contextMenu&&serial===comparisonSelectionSerial&&sameRoute()&&contextOpener?.isConnected&&sel)window.RetouchActions?.contextMenu({...detail.contextMenu,opener:contextOpener});};
   if(group?.length===0){if(!detail.append)clearSelection();return;}
   if(!group&&!detail.hostId&&!detail.instanceId&&!detail.scopeAtWidth)return;
   const classification=classificationSerial;let viewportReady=false;
@@ -557,7 +560,8 @@ window.addEventListener('retouch:comparison-edit',async event=>{
     const matches=[...doc().querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===detail.hostId&&el.getAttribute('data-rt-i')===detail.instanceId),target=matches[detail.occurrence];
     if(!target)continue;
     if(layerLocks.locked(target))return toast('This layer is locked. Select it in Layers to edit.','err');
-    await select(target,{toggle:detail.toggle===true});if(serial!==comparisonSelectionSerial||classificationSerial!==classification+1)return;applyScope();target.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});return;
+    if(detail.contextMenu&&sel?.multiple?.some(info=>matchingInDocument(doc(),info.id,info).includes(target))){renderPanel();openContext();return;}
+    await select(target,{toggle:detail.toggle===true});if(serial!==comparisonSelectionSerial||classificationSerial!==classification+1)return;applyScope();target.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});openContext();return;
   }
   toast(viewportReady?'This layer is not present on the main canvas at this size.':'This comparison size did not become ready. Try selecting it again.','err');
 });

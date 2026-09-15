@@ -230,7 +230,7 @@
     const toolbar=document.createElement('div');toolbar.className='compare-toolbar';const heading=document.createElement('h2');heading.textContent='Screens';toolbar.append(heading);rail.append(toolbar);
     const focus=document.createElement('button');focus.id='comparisonFocus';focus.type='button';focus.className='control-button';focus.setAttribute('aria-label','Screen controls');focus.textContent='Controls';focus.setAttribute('aria-expanded',String(!focusPreviews));focus.title=focusPreviews?'Show screen controls':'Hide screen controls and focus previews';
     focus.onclick=()=>{focusPreviews=!focusPreviews;rail.classList.toggle('focus-previews',focusPreviews);focus.setAttribute('aria-expanded',String(!focusPreviews));focus.title=focusPreviews?'Show screen controls':'Hide screen controls and focus previews';try{localStorage.setItem(storageKey+'.focus',String(focusPreviews));}catch{}layoutPreviews();};toolbar.append(focus);
-    const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.hidden=true;hint.textContent='Click a layer to edit on the main canvas; Shift-click to add or remove it. Drag from empty space to select a group. Style scope stays unchanged. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll the panel at its center. Enter opens its size.';rail.append(hint);
+    const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.hidden=true;hint.textContent='Click a layer to edit on the main canvas; Shift-click to add or remove it. Drag from empty space to select a group. Style scope stays unchanged. Right-click a layer, or press Shift+F10 on a focused preview, to open its editing menu. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll the panel at its center. Enter opens its size.';rail.append(hint);
     const help=document.createElement('button');help.type='button';help.className='control-button';help.textContent='?';help.setAttribute('aria-label','Comparison help');help.setAttribute('aria-controls',hint.id);help.setAttribute('aria-expanded','false');help.title='Selection and keyboard help';help.onclick=()=>{hint.hidden=!hint.hidden;help.setAttribute('aria-expanded',String(!hint.hidden));layoutPreviews();};help.onkeydown=e=>{if(e.key==='Escape'&&!hint.hidden){e.preventDefault();e.stopPropagation();hint.hidden=true;help.setAttribute('aria-expanded','false');layoutPreviews();}};toolbar.append(help);
     scopeSummary=document.createElement('p');scopeSummary.className='hint compare-scope';scopeSummary.setAttribute('aria-label','Comparison style scope');scopeSummary.textContent='Style scope: '+scope.label;rail.append(scopeSummary);
     const files=document.createElement('div');files.className='compare-files';
@@ -341,7 +341,7 @@
           target.focus({preventScroll:true});target.scrollIntoView({block:'nearest',inline:'nearest'});
         }
       };
-      const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';viewport.setAttribute('aria-describedby','comparisonNavigationHint');viewport.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight PageUp PageDown Home End Enter Space');
+      const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';viewport.setAttribute('aria-describedby','comparisonNavigationHint');viewport.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight PageUp PageDown Home End Enter Space Shift+F10');
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const surface=document.createElement('div');surface.className='compare-surface';surface.setAttribute('aria-hidden','true');surface.append(frame);rail.append(surface);
       const overlay=document.createElement('div');overlay.className='compare-overlay';
@@ -536,21 +536,23 @@
       for(const [control,action]of [[label,'rename'],[edit,'edit'],[reveal,'reveal'],[disclosure,'visibility']]){control.dataset.comparisonAction=action;control.dataset.comparisonCommand=previewBody.id+'-'+action;}
       updateLabels();updateSizeHistory();
       viewport.append(overlay);previewBody.append(viewport,message,reveal,scopeMessage,scopeButton);card.append(header,nameHistory,dimensions,dimensionError,sizeHistory,order,disclosure,previewBody);rail.insertBefore(card,before);
-      function activate(event){
+      function activate(event,context=false){
         try{
           const d=frame.contentDocument,loc=frame.contentWindow.location;
           if(!d?.body||loc.origin!==location.origin||loc.pathname+loc.search+loc.hash!==path()){message.textContent='Wait for this comparison to finish loading.';return;}
           const bounds=viewport.getBoundingClientRect(),scale=viewport.clientWidth/width;
           const x=event?(event.clientX-bounds.left)/scale:0,y=event?(event.clientY-bounds.top)/scale:0;
-          const node=event?window.RetouchCanvasSelection?.pick(d.elementFromPoint(x,y),x,y):null;
-          if(event&&!node){message.textContent='No unlocked editable layer here. Select locked layers in Layers.';return;}
+          const node=event?window.RetouchCanvasSelection?.pick(d.elementFromPoint(x,y),x,y):context?selectedGroups(d).find(group=>rendered(group.element))?.element:null;
+          if((event||context)&&!node){message.textContent='No unlocked editable layer here. Select locked layers in Layers.';return;}
           const hostId=node?.getAttribute('data-rt'),instanceId=node?.getAttribute('data-rt-i');
           const peers=node?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===hostId&&el.getAttribute('data-rt-i')===instanceId):[];
-          window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,hostId,instanceId,occurrence:node?peers.indexOf(node):0,toggle:!!event?.shiftKey,route:path()}}));
+          window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,hostId,instanceId,occurrence:node?peers.indexOf(node):0,toggle:!context&&!!event?.shiftKey,route:path(),...(context?{contextMenu:{x:event?.clientX??bounds.left,y:event?.clientY??bounds.top}}:{})}}));
         }catch{message.textContent='Preview unavailable for this page';}
       }
       viewport.addEventListener('click',event=>{if(event.button===0)activate(event);});
+      viewport.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();viewport.focus({preventScroll:true});activate(event,true);});
       viewport.addEventListener('keydown',event=>{
+        if(!event.defaultPrevented&&!event.isComposing&&(event.key==='ContextMenu'||event.key==='F10'&&event.shiftKey)){event.preventDefault();event.stopPropagation();activate(undefined,true);return;}
         if(event.defaultPrevented||event.isComposing||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey)return;
         if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();activate();return;}
         if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End'].includes(event.key))return;
