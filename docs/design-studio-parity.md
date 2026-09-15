@@ -17349,3 +17349,11 @@ This closes the outside-range computed-value leak; it does not resolve all casca
 An outside-range shared selection now shows a sticky notice with a Preview edit range action. It uses the existing responsive preview-size resolver, including the range's media conditions, and changes only the preview size. The chosen editing range and site source stay intact. The action explains the target dimensions; ranges that cannot be reached by resizing remain explicitly unavailable. Returning to a matching size hides the notice and re-enables per-layer paint controls.
 
 HTML/Chromium, React/Chromium and Liquid/WebKit flows verify the direct action, preserved source and scope, enabled controls on arrival, and correct scoped colors following explicit off-screen authoring. The HTML scroll check verifies the notice stays in the visible inspector area. This improves navigation to a range; it does not solve overlapping-cascade resolution or prove complete responsive/Figma/native distribution parity.
+
+### Preserve explicit scoped stroke values — 2026-09-15
+
+Shared SVG dash/gap edits now prefer the selected scope's explicit source declaration over preview-computed spacing. HTML reads the managed CSS declaration at the selected width; React/Liquid read a unique explicit SVG declaration in the selected class scope. Shared React/Liquid stroke fields also display explicit selected-scope declarations. Ambiguous or utility-only declarations retain the existing computed fallback rather than claiming a unique literal source value.
+
+HTML/Chromium, React/Chromium and Liquid/WebKit flows verify that editing a base dash while a tablet `10 20` override is active preserves the base gap `4`, leaves tablet rendering intact, exposes `3 4` on the phone, and supports exact undo/redo. All 28 targeted SVG paint/shared-style tests pass, including explicit scoped reads, important declarations, missing/ambiguous source values and property isolation.
+
+This resolves the explicit-declaration case for shared stroke geometry. General paint opacity, inherited declarations, overlapping ranges and source values controlled by author styles still need broader cascade resolution; the full Figma/native/Homebrew goal remains open.

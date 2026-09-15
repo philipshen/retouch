@@ -10,6 +10,10 @@
   return null;
  }
  function value(classes,key){const token=(classes||'').split(/\s+/).filter(t=>property(t)===key).at(-1);if(!token)return null;const match=new RegExp('^\\['+key+':(.+)\\]$').exec(I.base(token));return match?match[1].replace(/_/g,' '):null;}
+ function scopedValue(classes,scope,key){
+  const R=root.RetouchResponsive||(typeof require==='function'?require('./responsive.js'):null),projected=R.project(classes,scope),matches=projected.split(/\s+/).filter(token=>property(token)===key);
+  return matches.length===1?value(matches[0],key):null;
+ }
  function update(classes,key,next,inherited=''){
   if(!V.svgFields.some(([p])=>p===key)||!V.valid(key,next))throw Error('Use a supported SVG paint value.');
   if(next!==null&&/[\[\]"'`\\{};]/.test(next))throw Error('Use a literal SVG paint value.');
@@ -51,5 +55,5 @@
   }
   I.note(sec,'Paint follows the selected screen scope through Tailwind classes. Reset reveals inherited paint or the original SVG attribute.');return sec;
  }
- const api={property,value,update,pattern,dashPair,attributeReason,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPaint=api;
+ const api={property,value,scopedValue,update,pattern,dashPair,attributeReason,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPaint=api;
 })(typeof window==='object'?window:globalThis);

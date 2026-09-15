@@ -41,3 +41,12 @@ test('stroke patterns distinguish solid, regular and custom without dropping uni
  assert.deepEqual(paint.pattern('none'),{type:'solid',parts:[]});assert.deepEqual(paint.pattern('8px, 2%'),{type:'dashed',parts:['8px','2%']});assert.equal(paint.pattern('1 2 3').type,'custom');assert.equal(paint.dashPair('5'),'5 5');assert.equal(paint.dashPair('none'),'4 4');assert.equal(paint.dashPair('1 2 3 4'),'1 2');assert.equal(paint.dashPair('8px 2%',{gap:'0'}),'8px 0');assert.equal(paint.dashPair('8px 2%',{dash:'.5%'}),'.5% 2%');
  for(const value of ['-1','1,2','var(--dash)','100001','none','NaN','1;fill:red'])assert.equal(paint.dashPair('4 4',{dash:value}),null);for(const value of ['1,,2','1,','-1 2','var(--dash)'])assert.equal(paint.pattern(value),null);
 });
+test('scoped SVG reads prefer one explicit declaration and do not guess ambiguous utilities',()=>{
+ const P=require('../shell/svg-paint.js');
+ assert.equal(P.scopedValue('[stroke-dasharray:4_2] md:[stroke-dasharray:10_20]','','stroke-dasharray'),'4 2');
+ assert.equal(P.scopedValue('[stroke-dasharray:4_2] md:![stroke-dasharray:10_20]','md:','stroke-dasharray'),'10 20');
+ assert.equal(P.scopedValue('stroke-2 md:stroke-4','','stroke-width'),null);
+ assert.equal(P.scopedValue('[stroke-width:3] [stroke-width:4]','','stroke-width'),null);
+ assert.equal(P.scopedValue('[stroke-width:3]','md:','stroke-width'),null);
+ assert.equal(P.scopedValue('[stroke-linecap:round] [stroke-linejoin:bevel]','','stroke-linecap'),'round');
+});
