@@ -171,3 +171,10 @@ test('shared rotation retains responsive and axis ownership and important priori
  for(const value of [NaN,Infinity,-361,361,'90'])assert.throws(()=>change(original,'','rotate',value));
  assert.equal(rotationDegrees('none'),0);assert.equal(rotationDegrees('.25turn'),90);assert.equal(rotationDegrees('100grad'),90);assert.equal(rotationDegrees('z 30deg'),30);assert.ok(Math.abs(rotationDegrees('3.141592653589793rad')-180)<1e-8);assert.ok(Number.isNaN(rotationDegrees('x 30deg')));
 });
+test('shared SVG stroke changes preserve paints, other scopes and priority',()=>{
+ assert.equal(change('stroke-red-500 stroke-2 md:stroke-4 hover:stroke-8','md:','stroke-width','7'),'stroke-red-500 stroke-2 hover:stroke-8 md:[stroke-width:7]');
+ assert.equal(change('!stroke-2 fill-blue-500','md:','stroke-width','3%'),'!stroke-2 fill-blue-500 md:![stroke-width:3%]');
+ assert.equal(change('stroke-2 md:[stroke-width:7] md:stroke-blue-500','md:','stroke-width',null),'stroke-2 md:stroke-blue-500');
+ assert.equal(change('[stroke-linecap:butt] [stroke-linejoin:miter]','','stroke-linecap','round'),'[stroke-linejoin:miter] [stroke-linecap:round]');
+ for(const [property,value]of [['stroke-width','-1'],['stroke-linecap','invalid'],['stroke-dasharray','1;fill:red'],['vector-effect','bad']])assert.throws(()=>change('stroke-2','',property,value));
+});
