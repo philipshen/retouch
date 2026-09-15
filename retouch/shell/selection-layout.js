@@ -99,8 +99,8 @@
    const input=I.number(fields,label,initial[axis],-100000,100000,value=>{try{const before=measure();write({...before,[axis]:value},before,input);}catch(error){report(error.message);}});I.fieldDraft(input);if(initial.localCoordinates)input.dataset.localCoordinates='true';input.title='Position from the containing frame in pixels. '+input.title;
    input.retouchNumericPreview=()=>{
     let before;try{before=measure();}catch(error){report(error.message);return {current:()=>false,update(){},restore(){}};}
-    const preview=root.RetouchPaintPicker.propertyPreview({el,input,property:'translate'});
-    return {current:()=>el.isConnected,update:value=>preview.update(axis==='x'?(value-before.x)+'px 0':'0 '+(value-before.y)+'px'),restore:()=>preview.restore()};
+    const originalTranslate=el.ownerDocument.defaultView.getComputedStyle(el).translate,preview=root.RetouchPaintPicker.propertyPreview({el,input,property:'translate'});
+    return {current:()=>el.isConnected&&preview.current(),update:value=>preview.update(root.RetouchTranslateValues.add(originalTranslate,{x:axis==='x'?value-before.x:0,y:axis==='y'?value-before.y:0})),restore:()=>preview.restore()};
    };
   }
   return group;

@@ -19846,3 +19846,24 @@ Numeric position-field previews still need additive translation preservation.
 Replaced elements have not received separate browser coverage for this change.
 Own zoom, 3D/singular transforms, full Figma/arbitrary-site parity and trusted
 Homebrew distribution remain incomplete. No native rebuild.
+
+
+### Position-field preview preserves translation
+
+Single-layer X/Y scrubbing now adds its local pixel delta to the layer's
+authored translation instead of replacing it. The preview also verifies
+that it still owns its temporary style before allowing a commit. This closes
+the numeric-preview gap recorded in the preceding checkpoint.
+
+All 1,677 unit tests passed. HTML/Chromium, React/Chromium and Liquid/WebKit
+browser fixtures passed both X and Y label scrubbing with percentage/calc
+translation, content-box transforms, padding, borders, nested rotation and
+reflection. The tests measure rendered movement against the containing frame's
+axes, verify unchanged source during the gesture, exact inline-style restoration
+on Escape, saved geometry on release and exact source undo. Existing canvas
+movement, resize and alignment checks passed in the same runs. Logs:
+`/tmp/retouch-field-translate-{html,react,liquid}.log` and
+`/tmp/retouch-field-translate-units.log`.
+
+Full arbitrary-site/Figma parity and trusted Homebrew distribution remain
+incomplete. No native rebuild or push in this checkpoint.
