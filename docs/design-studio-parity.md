@@ -18362,3 +18362,32 @@ and `/tmp/retouch-scale-shortcuts-units.log`.
 Tool activation without a selection, full Figma interaction/visual parity,
 arbitrary-site editing and trusted public Homebrew distribution remain
 incomplete. No desktop rebuild or push at this checkpoint.
+
+### Scale in the canvas toolbar (2026-09-15)
+
+Scale now has a visible toolbar button beside Move, with a K shortcut hint and
+an active blue state. K and inspector activation update the same pressed state.
+Clicking the active Scale button returns to Move; Escape restores focus to the
+actual toolbar opener. Pending source setup disables duplicate activation and
+cancellation restores availability immediately. Hand mode disables Scale.
+
+Browser checks exposed that clearing selection leaves hidden inspector controls
+mounted. Scale commands now require and retain the current selection identity,
+so hidden stale controls cannot enable Scale after deselection.
+
+Verified toolbar activation/toggle/focus, K state, Hand and empty-selection
+availability, Actions/context menu access, typing and modifier guards, and
+pending source cancellation in HTML/Chromium, React/Chromium and Liquid/WebKit.
+All 1,652 unit tests passed. Visually inspected
+`/tmp/retouch-scale-toolbar-html.png`: Scale is highlighted beside the unselected
+Move button in the light toolbar.
+
+Logs: `/tmp/retouch-scale-toolbar-html-verified.log`,
+`/tmp/retouch-scale-toolbar-react-verified.log`,
+`/tmp/retouch-scale-toolbar-webkit-verified.log`,
+`/tmp/retouch-scale-toolbar-units-final.log`, and
+`/tmp/retouch-scale-toolbar-actions.log` (existing Actions regression).
+
+Scale still requires an existing editable selection. Full Figma fidelity,
+arbitrary-site source support and trusted public Homebrew installation remain
+incomplete. No desktop rebuild or push for this checkpoint.

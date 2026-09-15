@@ -142,7 +142,7 @@
   let bounds={};if(isScale)bounds={minWidth:r.width*.01,minHeight:r.height*.01,maxWidth:r.width*100,maxHeight:r.height*100};else if(isResize)try{for(const item of snapshots)item.sizeLimits=limits(item.el,preserveBox);bounds=targets.length>1?groupLimits(snapshots.map(item=>item.rect),snapshots.map(item=>item.sizeLimits)):snapshots[0].sizeLimits;}catch(error){onError(error.message);return null;}
   const left=Math.max(f.left,c.left),top=Math.max(f.top,c.top),right=Math.min(f.right,c.right),bottom=Math.min(f.bottom,c.bottom);
   if(!Number.isFinite(scale)||scale<=0||right<=left||bottom<=top){onError('Bring the layer into view before moving it.');return null;}
-  const surface=root.document.createElement('div');surface.className='canvas-move-surface';surface.tabIndex=0;surface.setAttribute('aria-label',isSpacing?'Adjust '+(axis==='x'?'horizontal':'vertical')+' selection gaps on canvas':(isScale?'Scale':isResize?'Resize':'Move')+(targets.length>1?' selection':' layer')+' on canvas');
+  const surface=root.document.createElement('div');surface.className='canvas-move-surface';surface.dataset.canvasMode=mode;surface.tabIndex=0;surface.setAttribute('aria-label',isSpacing?'Adjust '+(axis==='x'?'horizontal':'vertical')+' selection gaps on canvas':(isScale?'Scale':isResize?'Resize':'Move')+(targets.length>1?' selection':' layer')+' on canvas');
   Object.assign(surface.style,{position:'fixed',left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px',zIndex:40,overflow:'hidden',touchAction:'none'});
   const preview=root.document.createElement('div');preview.className='canvas-move-preview';preview.setAttribute('aria-label',targets.length>1?'Drag selected layers':'Drag selected layer');
   const x=f.left+r.left*scale-left,y=f.top+r.top*scale-top;

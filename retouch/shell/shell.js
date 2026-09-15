@@ -3492,8 +3492,8 @@ async function scaleGroupOnCanvas(info,opener){
  stopDrawing?.();
  let cancelled=false;
  const frameDocument=doc(),onKey=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cancel();}};
- const cancel=()=>{cancelled=true;frameDocument.removeEventListener('keydown',onKey,true);if(stopDrawing===cancel)stopDrawing=null;};
- stopDrawing=cancel;frameDocument.addEventListener('keydown',onKey,true);
+ const cancel=()=>{cancelled=true;frameDocument.removeEventListener('keydown',onKey,true);if(stopDrawing===cancel){stopDrawing=null;window.dispatchEvent(new Event('retouch:shape-tools'));}};
+ stopDrawing=cancel;frameDocument.addEventListener('keydown',onKey,true);window.dispatchEvent(new Event('retouch:shape-tools'));
  try{
   const context=await moveGroupOnCanvas(info,null,{prepareOnly:true,allowLayers:true});
   if(cancelled||!context||!context.current())return;
@@ -3505,7 +3505,7 @@ async function scaleGroupOnCanvas(info,opener){
    onCommit:result=>{try{const plan=RetouchGroupMove.scalePlan(context.members,result.width/rect.width,{x:result.x,y:result.y});return writeGroupMove(context,plan.deltas,plan);}catch(error){toast(error.message,'err');}}
   });
  }catch(error){if(!cancelled)toast(error.message,'err');}
- finally{frameDocument.removeEventListener('keydown',onKey,true);if(stopDrawing===cancel)cancel();}
+ finally{frameDocument.removeEventListener('keydown',onKey,true);if(stopDrawing===cancel)cancel();window.dispatchEvent(new Event('retouch:shape-tools'));}
 }
 
 async function scaleGroup(info,percent,input){
@@ -4355,8 +4355,8 @@ window.RetouchShapeTools={
  commands(){
   const canMove=()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!historyRecoveryRequired;
   const move={id:'shape-move',action:'move',label:'Move tool',keywords:'select pointer canvas V',element:modeBtn,available:canMove,reason:'Finish the current edit and switch to Edit mode.',run(){if(canMove()){stopDrawing?.();canvasPan.cancel();}}};
-  const scaleControl=panelBody.querySelector('[data-canvas-tool=scale]'),common=[move];
-  if(scaleControl)common.push({id:'shape-scale',action:'scale',label:'Scale tool',keywords:'resize proportional selection canvas K',element:scaleControl,available:()=>canMove()&&!stopDrawing&&!canvasPan.active,reason:'Select editable layers and finish the current gesture.',run(){if(canMove()&&!stopDrawing&&!canvasPan.active)scaleControl.click();}});
+  const scaleInfo=sel?.info,scaleControl=panelBody.querySelector('[data-canvas-tool=scale]'),common=[move],canScale=()=>canMove()&&!!scaleInfo&&sel?.info===scaleInfo&&!stopDrawing&&!canvasPan.active;
+  if(scaleControl&&scaleInfo)common.push({id:'shape-scale',action:'scale',label:'Scale tool',keywords:'resize proportional selection canvas K',element:scaleControl,available:canScale,reason:'Select editable layers and finish the current gesture.',run(opener=scaleControl){if(canScale())return scaleGroupOnCanvas(scaleInfo,opener);}});
   const info=sel?.info;if(!info||!info.svgInsertion&&!info.svgTransform?.editable||sel.multiple?.length>1||info.kind==='instance')return common;
   const owner=JSON.stringify([info.file,info.id,info.hash,sel.instanceId,sel.scope]);
   const available=()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!historyRecoveryRequired&&!panelBody.inert&&!(sel?.multiple?.length>1)&&owner===JSON.stringify([sel?.info.file,sel?.info.id,sel?.info.hash,sel?.instanceId,sel?.scope]);
