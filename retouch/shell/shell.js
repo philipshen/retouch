@@ -300,7 +300,8 @@ function hookFrame(d, w) {
       const next=target();if(next&&!layerLocks.locked(next)){if((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.contextSelection||sel?.info.kind==='instance'))await select(next,{toggle:true});else await startInlineEdit(next,e,true);}else if(!next)clearSelection();return;
     }
     if (panelTasks > 0 || undoBusy || sourceRequests) { e.preventDefault(); e.stopPropagation(); return; }
-    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.contextSelection||sel?.info.kind==='instance')){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=pickLayer(e.target,e.clientX,e.clientY);if(target)await select(target,{toggle:true});return;}
+    const creationToolArmed=armedCanvasTool==='pen'||armedCanvasTool?.startsWith('draw-');
+    if ((e.shiftKey&&!creationToolArmed||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.contextSelection||sel?.info.kind==='instance')){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=pickLayer(e.target,e.clientX,e.clientY);if(target)await select(target,{toggle:true});return;}
     if (editing) {
       if (editing.el.contains(e.target)) return;
       commitInlineEdit(); // clicking away commits (R-5)

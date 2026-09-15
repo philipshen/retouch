@@ -19298,3 +19298,22 @@ Logs: `/tmp/retouch-pen-drag-{html,react,liquid,units}.log` and
 
 No desktop rebuild or push. Full Figma parity, arbitrary-site support and
 trusted Homebrew distribution remain incomplete.
+
+### 2026-09-15 — Route Shift-click to armed drawing tools
+
+An existing selection previously sent Shift-click into multi-selection before
+Pen could place its first anchor. The click handler now gives armed Shape/Pen
+entry priority for Shift; ordinary selection and Ctrl/Command behavior retain
+their existing routing. Scale's selection routing is unchanged.
+
+All 1,665 unit tests passed. HTML and React Chromium plus Liquid WebKit checks
+passed with source-incompatible children and delayed writable-parent lookup.
+The Pen case now starts from an existing heading selection, Shift-clicks the
+canvas, verifies a single destination and the original first-anchor position,
+finishes a line with exact endpoints and undoes to identical source. A separate
+check confirms ordinary Shift-click still selects two layers. Existing direct
+Pen curves, shapes, cancellation and armed-tool tests also passed. Logs:
+`/tmp/retouch-pen-shift-{html,react,liquid,units}.log`.
+
+No desktop rebuild or push. Full Figma parity, arbitrary-site support and
+trusted Homebrew distribution remain incomplete.
