@@ -17193,3 +17193,13 @@ Migration exposed two missing interactions. Removing a paint now focuses the nex
 All 1,559 unit tests pass. The full migrated workflow passes React/Chromium and Liquid/WebKit, and the HTML mixed image/solid/gradient visibility, clear/reset and exact-undo regression passes. React radial and action-menu screenshots were visually inspected. Undo via the outside toolbar closes a paint popover; the tests reopen the row before further editing and require nonzero stop-row geometry.
 
 Remaining migration: the gradient portion of `html-site.cjs` still uses legacy controls. The advanced section also retains an empty legacy Gradient fills disclosure to clean up. Full Figma parity and trusted native/Homebrew distribution remain incomplete; no native build or publication occurred.
+
+### HTML gradient workflow migrated — 2026-09-15
+
+The gradient portion of `html-site.cjs` now runs through `html-gradient-rows.cjs` using Add paint, Paint N fields, row dialogs and actions menus. It preserves the HTML workflow's picker conversion/cancel/apply, invalid drafts, stop preview/commit/cancel and keyboard edits, panel fit, radial/custom radii/conic/repeating/interpolation controls, menu keyboard/focus, reverse/duplicate/remove/reorder, phone/tablet isolation, inherited reset and exact original-source undo. Newly added paints begin at the front; the ordering check moves that new paint behind the existing one and verifies the resulting order. Default 180-degree gradients are checked through the parsed model because Chromium can omit the angle from serialized CSS.
+
+The HTML harness now waits for panel tasks, source requests and undo work in addition to the busy attribute. WebKit had exposed a measurement during source refresh; drag setup also uses Playwright's visibility/stability-aware scrolling instead of a raw DOM scroll call.
+
+Fresh complete `html-site.cjs` runs pass on Chromium and WebKit, covering the migrated gradient sequence along with responsive CSS, shorthand/edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo. The WebKit gradient dialog screenshot was visually inspected. This batch changes tests only; the prior unit result is not claimed as a fresh run.
+
+The two previously identified long gradient workflows are migrated. Broader Figma fidelity/features, advanced-section cleanup, arbitrary-site support and trusted native/Homebrew distribution remain incomplete.
