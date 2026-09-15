@@ -302,3 +302,13 @@ test('inline grid values hide overridden ordinary custom track utilities',()=>{
  assert.equal(ownGridTemplate('grid-cols-[20px_30px]','columns',true),null);
  assert.equal(ownGridTemplate('!grid-cols-[20px_30px]','columns',true),'20px 30px');
 });
+
+test('adaptive grid refuses important inline layout rules and overrides ordinary inline rules',()=>{
+ const {changeAdaptiveGrid}=require('../shell/react-selection.js');
+ for(const property of ['display','grid','grid-template','grid-template-columns','grid-template-rows']){
+  const el={style:{getPropertyPriority:name=>name===property?'important':''}};
+  assert.throws(()=>changeAdaptiveGrid('flex','md:',180,null,el),/important inline/);
+ }
+ const el={style:{getPropertyPriority:()=>''}},next=changeAdaptiveGrid('flex','md:',180,null,el);
+ assert.match(next,/md:!grid\b/);assert.match(next,/md:!grid-cols-/);assert.match(next,/md:!grid-rows-/);
+});

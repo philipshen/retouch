@@ -20535,3 +20535,26 @@ restoration before switching screens. All 1,696 unit tests passed. Logs:
 
 Adaptive inline grids, full Figma/arbitrary-site parity and trusted Homebrew
 distribution remain incomplete. No native rebuild or push.
+
+### Adaptive grids over ordinary inline layouts
+
+Single and shared adaptive grid controls now accept ordinary inline display and
+track declarations. The existing important grid utilities override these without
+rewriting original inline attributes. Minimum-column edits preserve priority,
+responsive scope and grouped source undo. Important inline rules remain guarded;
+the shared mutation helper also checks them before constructing source changes.
+
+Validation: single and shared selections each passed on React/Chromium and
+Liquid/WebKit, including minimum edits, phone isolation, original inline
+attributes, exact source undo and important-inline refusal. The final shared
+React and single Liquid runs additionally assert rendered columns change (and
+single selection preserves its neighbor). All 1,697 unit tests passed.
+Logs: `/tmp/retouch-adaptive-inline-react.log`,
+`/tmp/retouch-adaptive-inline-liquid.log`,
+`/tmp/retouch-adaptive-inline-react-shared.log`,
+`/tmp/retouch-adaptive-inline-liquid-single.log`,
+`/tmp/retouch-adaptive-inline-units.log`.
+
+This verifies the preset and minimum field against the inline-grid fixture;
+it does not prove arbitrary cascade/layout compatibility or full Figma parity.
+Trusted Homebrew distribution remains incomplete. No native rebuild or push.
