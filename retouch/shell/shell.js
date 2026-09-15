@@ -218,12 +218,23 @@ function hookFrame(d, w) {
     prepare:async({target},current)=>{const selection=sel,valid=()=>current()&&sel===selection&&doc()===d&&!!vectorDragCandidate(target);await select(target,{current:valid});const result=current()&&vectorDragCandidate(target);return result?.info?result:null;},
     onStart:({info,target,infos},event,move,released)=>infos?moveSVGSelection({initialPointer:event,initialMove:move,pointerTarget:target}):resizeSVGOnCanvas(info,target,event,'se','move',{framePointer:true,initialMove:move,initialReleased:released}),onError:error=>toast(error.message,'err')});
   const groupDragCandidate=node=>{
-   if(mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active||sel?.multiple?.length||!sel?.info)return null;
-   const matches=matchingEls(sel.info.id),target=matches.length===1?matches[0]:null;
-   return target?.hasAttribute('data-rt-group')&&target.contains(node)&&!layerLocks.locked(target)?{target,selectionInfo:sel.info}:null;
+   if(mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active||sel?.multiple?.length)return null;
+   const matches=sel?.info?matchingEls(sel.info.id):[],selected=matches.length===1?matches[0]:null;
+   if(selected?.hasAttribute('data-rt-group')&&selected.contains(node)&&!layerLocks.locked(selected))return {target:selected,selectionInfo:sel.info,selection:sel,scope:styleScope};
+   const target=pickLayer(node);
+   return target?.hasAttribute('data-rt-group')&&!layerLocks.locked(target)?{target,selection:sel,scope:styleScope}:null;
   };
   stopGroupDrag?.();stopGroupDrag=RetouchSVGDrag.mount({document:d,frame:iframe,candidate:groupDragCandidate,
-   prepare:async({target,selectionInfo},current)=>{const valid=()=>current()&&doc()===d&&groupDragCandidate(target)?.selectionInfo===selectionInfo;const prepared=await moveGroupOnCanvas(selectionInfo,null,{prepareOnly:true,valid});return prepared&&valid()?{target,selectionInfo,prepared}:null;},
+   prepare:async({target,selectionInfo,selection,scope},current)=>{
+    if(!selectionInfo){
+     const valid=()=>current()&&doc()===d&&sel===selection&&styleScope===scope&&groupDragCandidate(target)?.target===target;
+     let selectedHere=false;await select(target,{current:()=>{selectedHere=valid();return selectedHere;}});
+     if(!selectedHere||!current()||doc()!==d||styleScope!==scope)return null;
+     selectionInfo=groupDragCandidate(target)?.selectionInfo;if(!selectionInfo)return null;
+    }
+    const valid=()=>current()&&doc()===d&&styleScope===scope&&groupDragCandidate(target)?.selectionInfo===selectionInfo;
+    const prepared=await moveGroupOnCanvas(selectionInfo,null,{prepareOnly:true,valid});return prepared&&valid()?{target,selectionInfo,prepared}:null;
+   },
    onStart:({target,selectionInfo,prepared},event,move,released)=>void moveGroupOnCanvas(selectionInfo,null,{prepared,event,move,released,framePointer:true,target}),onError:error=>toast(error.message,'err')});
   stopMarquee?.();
   stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>window.__RT_RENDERING?.selectionStyling===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
@@ -1975,7 +1986,7 @@ function renderPanelContents(textEditing=false) {
   if(sel.multiple?.length>1){mountSelectionEffectStyles();mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchClassSiteVariables.mountSelection(sel.multiple,elements,styleScope,setReactClassesSelection,message=>toast(message,'err')),RetouchFlip.mountSelection(sel.multiple,elements,0,null,strategy),RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,(property,value,values)=>setSelectionColorOverride(property,value,undefined,values),id=>matchingEls(id)[0],changes=>setSelectionColorOverride('background-color',undefined,changes)));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchFlip.mountSelection(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes)),RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.svgMask?.canRelease||info.svgMask?.ownerId){const target=matchingEls(info.id)[0];panelBody.append(RetouchSVGMask.mount([info],[target],{current:()=>sel?.info===info&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&target?.isConnected&&!layerLocks.locked(target),save:writeSVGMask,edit:async ids=>{await restoreLayerSelection(ids);if(sel)renderPanel();await layers.refresh();}}));}
-  if(!sel.multiple?.length&&matchingEls(info.id)[0]?.hasAttribute('data-rt-group')){const section=RetouchInspector.section('Group');const button=RetouchInspector.button('Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag the selected group directly on the canvas, or use this action for keyboard movement.';section.append(button);panelBody.append(section);}
+  if(!sel.multiple?.length&&matchingEls(info.id)[0]?.hasAttribute('data-rt-group')){const section=RetouchInspector.section('Group');const button=RetouchInspector.button('Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag a group directly on the canvas, or use this action for keyboard movement.';section.append(button);panelBody.append(section);}
   if(info.canCreateComponent)panelBody.append(createComponentSection(info));
 
   if(info.components?.length) {

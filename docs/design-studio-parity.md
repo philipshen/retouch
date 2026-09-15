@@ -17814,3 +17814,25 @@ This gesture currently begins from an already selected group. Selecting and
 dragging an unselected group in one gesture, group resizing/rotation, the other
 remaining unsupported source/transform cases, full Figma parity, and notarized
 desktop distribution remain unfinished. No desktop build or push in this step.
+
+### Select and drag a group in one gesture (2026-09-15)
+
+Direct group dragging now resolves a closed unselected group using the same
+picking rules as ordinary canvas selection, selects it, and continues the original
+gesture. The initial selection and edit scope are captured while selection is
+being resolved, so a superseded lookup cannot start a late move. Existing selected
+group dragging and entry into group children retain their behavior.
+
+Validation: 1,644 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit
+checks cover dragging from no selection, releasing while initial group resolution
+is held, starting from another selected layer, cancellation after selection
+changes, live captured dragging, Escape, exact undo/redo and selected-group
+restoration. Transformed/percentage fixtures pass in React and WebKit. Existing
+group click/double-click behavior and nested one-level entry/navigation also pass.
+Logs: `/tmp/retouch-group-unselected-{html,react,webkit}.log`,
+`/tmp/retouch-group-unselected-{picking,nested}.log`, and
+`/tmp/retouch-group-unselected-units.log`.
+
+Multi-selection containing groups, group resizing/rotation, remaining complex
+source/transform cases, full Figma parity and trusted desktop distribution remain
+incomplete. No desktop rebuild or GitHub push in this checkpoint.
