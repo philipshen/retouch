@@ -10,6 +10,14 @@
     if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(matches(I.base(token)||'')||/^\[flex-flow:/.test(I.base(token)||''))))addition=addition.split(' ').map(token=>'!'+token).join(' ');
     return I.replace(classes,matches,addition);
   }
+  function stackClasses(classes,axis,context={},inherited=''){
+    if(!['flow','vertical','horizontal'].includes(axis))throw Error('Choose normal flow, a vertical stack or a horizontal stack.');
+    if(axis==='flow')return I.replace(classes,token=>display(token)||token.startsWith('[display:'),'!block');
+    const V=root.RetouchHTMLCSSValues||require('./html-css-values.js'),mode=V.stackLayout(axis,context.writingMode)['flex-direction']==='row'?'row':'column';
+    let next=modeClasses(classes,mode,inherited);
+    next=arrangementClasses(next,'wrap','nowrap',inherited);
+    return next.split(/\s+/).map(token=>/^(?:flex|flex-(?:row|col|nowrap))$/.test(I.base(token)||'')?'!'+token.replace(/^!|!$/g,''):token).join(' ');
+  }
   function arrangementClasses(classes,property,value,inherited=''){
     const options={flow:['row','col','row-dense','col-dense'],wrap:['nowrap','wrap','wrap-reverse'],align:['start','center','end','stretch','baseline'],justify:['start','center','end','between','around','evenly']};
     if(['columns','rows'].includes(property)?!Number.isInteger(value)||value<1||value>24:!options[property]?.includes(value))throw Error('Unknown arrangement value');
@@ -350,6 +358,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

@@ -103,11 +103,15 @@
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   return R.replaceScope(classes,L.gridTemplateClasses(R.project(classes,scope),axis,value,R.inherited(classes,scope,document)),scope);
  }
+ function changeStack(classes,scope,axis,context={},document=null){
+  const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
+  return R.replaceScope(classes,L.stackClasses(R.project(classes,scope),axis,context,R.inherited(classes,scope,document)),scope);
+ }
  function changeAdaptiveGrid(classes,scope,size,document=null){
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   return R.replaceScope(classes,L.adaptiveGridClasses(R.project(classes,scope),size,R.inherited(classes,scope,document)),scope);
  }
- let sharedGridTracksOpen=false,sharedSizeLimitsOpen=false;
+ let sharedGridTracksOpen=false,sharedSizeLimitsOpen=false,sharedLayoutOptionsOpen=false;
  function changeContainer(classes,scope,property,value,document=null){
   if(!containerRules[property])throw Error('Unknown container layout control');
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js'),active=R.project(classes,scope),inherited=R.inherited(classes,scope,document);
@@ -131,14 +135,20 @@
   I.note(sec,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Each edit updates these source layers and undoes together, including every rendered instance.');
   const liveElement=i=>{const el=resolveElement?resolveElement(infos[i].id):elements[i];if(!el?.isConnected||!el.ownerDocument.defaultView)throw Error('The preview changed. Select the layers again.');return el;};
   const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el)),groups=sharedGroups(sec,elements),flex=css=>['flex','inline-flex'].includes(css.display),layout=css=>flex(css)||['grid','inline-grid'].includes(css.display),arrangementApplies=(property,css)=>property==='mode'||(property==='wrap'?flex(css):layout(css));
+  const presets=root.document.createElement('div');presets.className='layout-mode-segments shared-layout-presets';groups.layout.append(presets);
+  for(const [axis,label,path]of [['flow','Shared Normal flow','M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z'],['vertical','Shared Vertical stack','M4 3h12v4H4z M4 12h12v4H4z'],['horizontal','Shared Horizontal stack','M3 4h4v12H3z M12 4h4v12h-4z']]){
+   const active=()=>!scope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',blocked=el=>!active()||(axis==='flow'?['display']:['display','flex-direction','flex-wrap','flex-flow']).some(property=>el.style.getPropertyValue(property));
+   const button=I.button('',()=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el))throw Error('Preview this edit range and select containers without inline layout overrides.');return [info.id,changeStack(info.className,scope,axis,el.ownerDocument.defaultView.getComputedStyle(el),el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}});button.setAttribute('aria-label',label);button.title=label.replace('Shared ','');button.disabled=elements.some(blocked);button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+path+'"/></svg>';button.setAttribute('aria-pressed',String(computed.every(css=>axis==='flow'?['block','inline','inline-block','flow-root','list-item'].includes(css.display):Object.entries(root.RetouchHTMLCSSValues.stackLayout(axis,css.writingMode)).every(([property,value])=>css.getPropertyValue(property)===value))));presets.append(button);
+  }
   {
    const R=root.RetouchResponsive,L=root.RetouchLayout,V=root.RetouchHTMLCSSValues,minimums=infos.map((info,i)=>L.adaptiveMinimum(R.project(info.className,scope),R.inherited(info.className,scope,elements[i].ownerDocument))),active=()=>!scope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',blocked=el=>!active()||['display','grid','grid-template','grid-template-columns','grid-template-rows'].some(property=>el.style.getPropertyValue(property));
    const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el))throw Error('Preview this edit range and select containers without inline grid overrides.');return [info.id,changeAdaptiveGrid(info.className,scope,value??minimums[i]??240,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}};
-   const button=I.button('Adaptive grid',()=>write(null));button.setAttribute('aria-label','Shared Adaptive grid');button.disabled=elements.some(blocked);button.setAttribute('aria-pressed',String(computed.every((css,i)=>['grid','inline-grid'].includes(css.display)&&minimums[i]!==null)));groups.layout.append(button);
+   const button=I.button('Adaptive grid',()=>write(null));button.setAttribute('aria-label','Shared Adaptive grid');button.disabled=elements.some(blocked);button.setAttribute('aria-pressed',String(computed.every((css,i)=>['grid','inline-grid'].includes(css.display)&&minimums[i]!==null)));button.title='Adaptive grid';button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14v14H3z M3 10h14 M10 3v14"/></svg>';presets.append(button);root.RetouchInspectorUI?.keyboardToolbar(presets,'Shared layout mode buttons');
    if(computed.every((css,i)=>['grid','inline-grid'].includes(css.display)&&minimums[i]!==null)){
     const mixed=minimums.some(value=>value!==minimums[0]),minimum=I.number(groups.layout,'Shared Minimum column size (px)',mixed?NaN:minimums[0],1,2000,value=>{const columns=V.adaptiveColumns(value);if(!columns)return;try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el)||!['grid','inline-grid'].includes(el.ownerDocument.defaultView.getComputedStyle(el).display))throw Error('Preview this edit range and select grid containers without inline overrides.');return [info.id,changeGridTracks(info.className,scope,'columns',columns,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}});minimum.step='1';minimum.disabled=elements.some(blocked);minimum.placeholder=mixed?'Mixed':'';minimum.closest('.inspector-field').querySelector('span').textContent='Min column';
    }
   }
+  const layoutOptions=root.document.createElement('details'),layoutSummary=root.document.createElement('summary');layoutOptions.className='inspector-disclosure';layoutOptions.setAttribute('aria-label','Shared layout options');layoutSummary.textContent='Layout options';layoutOptions.append(layoutSummary);layoutOptions.open=sharedLayoutOptionsOpen;layoutOptions.ontoggle=()=>{if(layoutOptions.isConnected)sharedLayoutOptionsOpen=layoutOptions.open;};
   for(const [property,label,choices,read,inline]of [
    ['mode','Arrange children',[['flow','Normal flow'],['row','Row'],['column','Column'],['row-reverse','Row reversed'],['column-reverse','Column reversed'],['grid','Grid']],css=>/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow',['display','flex-direction','flex-flow']],
    ['wrap','Wrap children',['nowrap','wrap','wrap-reverse'],css=>css.flexWrap,['flex-wrap','flex-flow']],
@@ -148,8 +158,8 @@
    if(!computed.every(css=>arrangementApplies(property,css)))continue;
    const values=computed.map(read),mixed=values.some(value=>value!==values[0]),options=choices.map(choice=>Array.isArray(choice)?choice:[choice,({nowrap:'No wrap',wrap:'Wrap','wrap-reverse':'Wrap reversed',between:'Space between',around:'Space around',evenly:'Space evenly'})[choice]||choice[0].toUpperCase()+choice.slice(1)]);if(mixed)options.unshift(['','Mixed']);else if(!options.some(([value])=>value===values[0]))options.unshift([values[0],values[0]]);
    const blocked=el=>inline.some(key=>el.style.getPropertyValue(key)),write=value=>{try{const changes=Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el)||!arrangementApplies(property,el.ownerDocument.defaultView.getComputedStyle(el)))throw Error('Select compatible containers without inline layout overrides.');return [info.id,changeContainer(info.className,scope,property,value,el.ownerDocument)];}));save(changes);}catch(error){I.note(groups.layout,error.message,'refused');}};
-   const input=I.select(groups.layout,'Shared '+label,options,mixed?'':values[0],write);input.disabled=elements.some(blocked);if(mixed)input.options[0].disabled=true;
-   const reset=I.button('Reset shared '+label.toLowerCase(),()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeContainer(info.className,scope,property,null)===info.className);groups.layout.append(reset);
+   const target=['align','justify'].includes(property)?layoutOptions:groups.layout,input=I.select(target,'Shared '+label,options,mixed?'':values[0],write);input.disabled=elements.some(blocked);if(mixed)input.options[0].disabled=true;
+   const reset=I.button('Reset shared '+label.toLowerCase(),()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeContainer(info.className,scope,property,null)===info.className);target.append(reset);
   }
   if(computed.every(layout)){
    const picker=root.document.createElement('div'),V=root.RetouchHTMLCSSValues;picker.className='layout-alignment';picker.setAttribute('role','group');picker.setAttribute('aria-label','Shared child alignment');groups.layout.append(picker);
@@ -210,7 +220,7 @@
    }
   }
   {
-   const L=root.RetouchLayout,inlineGap=el=>['gap','row-gap','column-gap'].some(property=>el.style.getPropertyValue(property)),blocked=elements.some(inlineGap),pair=root.document.createElement('div');pair.className='property-pair';const alignment=groups.layout.querySelector(':scope > .layout-alignment');if(alignment){const spacing=root.document.createElement('div');spacing.className='layout-alignment-spacing';groups.layout.prepend(spacing);spacing.append(alignment,pair);}else groups.layout.prepend(pair);
+   const L=root.RetouchLayout,inlineGap=el=>['gap','row-gap','column-gap'].some(property=>el.style.getPropertyValue(property)),blocked=elements.some(inlineGap),pair=root.document.createElement('div');pair.className='property-pair';const alignment=groups.layout.querySelector(':scope > .layout-alignment');if(alignment){const spacing=root.document.createElement('div');spacing.className='layout-alignment-spacing';presets.after(spacing);spacing.append(alignment,pair);}else presets.after(pair);
    const gapApplies=(css,axis)=>layout(css)||((parseInt(css.columnCount)>1||css.columnWidth&&css.columnWidth!=='auto')&&L.layoutAxes({writingMode:css.writingMode}).inline===axis);
    for(const [axis,label,icon]of [['width','Horizontal gap','↔'],['height','Vertical gap','↕']]){
     if(!computed.every(css=>gapApplies(css,axis)))continue;
@@ -344,7 +354,8 @@
    const hints=[...body.children].filter(el=>el.classList.contains('hint')&&!el.classList.contains('refused')&&!el.hasAttribute('role'));
    if(hints.length){const details=root.document.createElement('details'),summary=root.document.createElement('summary');details.className='inspector-disclosure';summary.textContent='Details';details.append(summary,...hints);body.append(details);}
   }
+  if(layoutOptions.children.length>1)groups.layout.append(layoutOptions);
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={changeAdaptiveGrid,sharedGroups,rotationDegrees,changeSizeMode,changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={changeStack,changeAdaptiveGrid,sharedGroups,rotationDegrees,changeSizeMode,changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);

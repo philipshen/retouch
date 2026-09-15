@@ -190,3 +190,10 @@ test('shared adaptive grid changes only the selected responsive scope',()=>{
  const {changeAdaptiveGrid}=require('../shell/react-selection.js'),R=require('../shell/responsive.js'),L=require('../shell/layout.js');
  const source='flex grid-cols-2 md:grid-cols-4 hover:grid-cols-6';const next=changeAdaptiveGrid(source,'md:',180);assert.equal(R.project(next,''),'flex grid-cols-2');assert.ok(next.includes('hover:grid-cols-6'));assert.equal(L.adaptiveMinimum(R.project(next,'md:')),180);assert.ok(next.includes('md:!grid'));assert.equal(L.ownGridTemplate(R.project(next,'md:'),'rows'),'none');
 });
+
+
+test('shared stack presets write only the selected scope using each container writing mode',()=>{
+ const {changeStack}=require('../shell/react-selection.js'),R=require('../shell/responsive.js');
+ const source='grid grid-cols-2 md:flex-wrap hover:block',changed=changeStack(source,'md:','vertical',{writingMode:'vertical-rl'});
+ assert.equal(R.project(changed,''),'grid grid-cols-2');assert.ok(changed.includes('hover:block'));assert.equal(R.project(changed,'md:'),'!flex !flex-row !flex-nowrap');
+});

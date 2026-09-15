@@ -358,3 +358,11 @@ test('adaptive grid classes retain unrelated styles and override authored layout
  assert.equal(L.adaptiveMinimum(next),240);assert.equal(L.adaptiveMinimum('',next),240);assert.equal(L.adaptiveMinimum('grid-cols-2',next),null);assert.equal(L.adaptiveMinimum('grid-cols-[80px_1fr]',next),null);
  for(const value of [0,2001,1.5,NaN])assert.throws(()=>L.adaptiveGridClasses('',value));
 });
+
+
+test('stack presets map physical axes and override existing layout without changing other variants',()=>{
+ assert.equal(L.stackClasses('grid grid-cols-2 flex-wrap hover:flex p-4','horizontal',{writingMode:'vertical-rl'}),'grid-cols-2 hover:flex p-4 !flex !flex-col !flex-nowrap');
+ assert.equal(L.stackClasses('flex flex-col flex-wrap md:grid','flow'),'flex-col flex-wrap md:grid !block');
+ assert.equal(L.stackClasses('','vertical',{writingMode:'vertical-lr'}),'!flex !flex-row !flex-nowrap');
+ assert.throws(()=>L.stackClasses('','diagonal'));
+});

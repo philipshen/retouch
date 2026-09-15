@@ -18667,3 +18667,35 @@ Logs: `/tmp/retouch-class-adaptive-react-verified.log`,
 
 Full Figma fidelity, arbitrary-site/framework support and trusted public Homebrew
 distribution remain incomplete. No desktop rebuild or push for this increment.
+
+### Shared class-editor stack presets and compact Layout (2026-09-15)
+
+Shared React/Liquid layout now starts with the same four compact presets as HTML:
+Normal flow, Vertical stack, Horizontal stack and Adaptive grid. Stack presets
+map physical orientation through each container's writing mode, disable wrapping
+and write all selected layers atomically. Important generated utilities make the
+explicit preset work over ordinary stylesheet declarations. Normal flow changes
+only display, retaining flex settings. Other source variants remain intact.
+Presets disable outside the edit range or for conflicting inline layout overrides.
+
+The alignment/gap row follows the presets. Raw alignment and distribution fields
+move to a retained Layout options disclosure, including their reset controls.
+Keyboard arrows navigate the preset row without editing source.
+
+React/Chromium and Liquid/WebKit verified all presets, physical child geometry in
+horizontal/vertical writing, pressed state, keyboard navigation, desktop-only
+presets, untouched phone layout, disabled inactive controls, advanced distribution
+editing/reset, retained disclosure state and exact atomic undo/redo. HTML's expanded
+stack regression and Liquid's single/shared adaptive-grid regression passed.
+All 1,660 unit tests passed. Inspected
+`/tmp/retouch-shared-stack-presets-liquid.png`; the inspector is compact while the
+small authored geometry-fixture child boxes retain their existing text overflow.
+
+Logs: `/tmp/retouch-class-stacks-react-verified.log`,
+`/tmp/retouch-class-stacks-liquid-webkit-final.log`,
+`/tmp/retouch-class-stacks-html-regression.log`,
+`/tmp/retouch-class-stacks-adaptive-regression.log`, and
+`/tmp/retouch-class-stacks-units-final.log`.
+
+Full Figma fidelity, arbitrary-site/framework support and trusted public Homebrew
+distribution remain incomplete. No desktop rebuild or push for this increment.
