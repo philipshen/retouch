@@ -1954,6 +1954,7 @@ function renderPanelContents(textEditing=false) {
   if(!info.svgBooleanOwner&&!(sel.multiple||[]).some(i=>i.svgBooleanOwner))head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
   if(groupMovementRoots())panelBody.append(groupMovementSection(info));
+  else{const roots=groupMovementRoots(true);if(roots?.every(el=>el.namespaceURI==='http://www.w3.org/1999/xhtml')&&(sel.multiple||[info]).every(item=>item.kind!=='instance'&&(item.cssAuthoring||item.classSelection&&!item.classNameDynamic))){const section=RetouchInspector.section('Scale');appendSelectionScaleControls(section,info,roots);panelBody.append(section);}}
   if(info.svgBooleanOwner||(sel.multiple||[]).some(i=>i.svgBooleanOwner)){
    if(sel.multiple?.length>1){
     const infos=sel.multiple,elements=infos.map(item=>matchingEls(item.id).length===1?matchingEls(item.id)[0]:null),current=()=>sel?.multiple===infos&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&elements.every(el=>el&&!layerLocks.locked(el));
@@ -3149,9 +3150,9 @@ async function convertSVGToPath(info,toArrow=false,arrowPoints){
   busyPanel(true);
   try{const result=await api('POST','/rt/__api/op',{type:operation,id:info.id,fileHash:info.hash,...(editedArrow?{arrowPoints}:{})});if(!result?.ok)return toast(result?.reason||result?.error||'Could not convert shape','err');if(result.undoId)editorHistory.record({type:operation,id:info.id,selectionBefore:[info.id],selectionAfter:[info.id],undoId:result.undoId});renderedSelection=null;sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.tagName.toLowerCase()===targetTag&&svgGeometryMatches(el,sel.info));await restoreLayerSelection([info.id]);renderPanel();toast(editedArrow?'Arrow updated':toArrow?'Converted to an editable arrow':'Converted to an editable vector path','ok');}finally{busyPanel(false);}
 }
-function groupMovementRoots(){
+function groupMovementRoots(allowLayers=false){
  if(!sel?.info)return null;const roots=(sel.multiple||[sel.info]).map(info=>{const matches=matchingEls(info.id);return matches.length===1?matches[0]:null;});
- return roots.every(Boolean)&&roots.some(el=>el.hasAttribute('data-rt-group'))?roots:null;
+ return roots.every(Boolean)&&(allowLayers||roots.some(el=>el.hasAttribute('data-rt-group')))?roots:null;
 }
 function groupNudgeShortcut(e){
  if(e.defaultPrevented||e.repeat||e.isComposing||e.ctrlKey||e.metaKey||e.altKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)||mode!=='edit'||editing||stopDrawing||panelTasks||sourceRequests||undoBusy||canvasPan.active||!sel?.info||document.querySelector('dialog[open]'))return false;
@@ -3437,7 +3438,7 @@ async function refreshGroupMove(infos,before){
 }
 async function moveGroupOnCanvas(info,opener,gesture={}){
  if(!gesture.prepareOnly)stopDrawing?.();if(panelTasks||sourceRequests||undoBusy||editing||sel?.info!==info)return;
- const scope=styleScope,hash=info.hash,selection=sel,selectionIds=(sel.multiple||[info]).map(item=>item.id),roots=groupMovementRoots(),current=()=>mode==='edit'&&sel===selection&&sel.info.hash===hash&&styleScope===scope&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!document.querySelector('dialog[open]');
+ const scope=styleScope,hash=info.hash,selection=sel,selectionIds=(sel.multiple||[info]).map(item=>item.id),roots=groupMovementRoots(gesture.allowLayers),current=()=>mode==='edit'&&sel===selection&&sel.info.hash===hash&&styleScope===scope&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!document.querySelector('dialog[open]');
  try{
   if(!roots)throw Error('Select groups and layers with one rendered occurrence each.');
   const width=scope?Number(/^min-\[(\d+)px\]:$/.exec(scope)?.[1]):0;
@@ -3477,17 +3478,22 @@ function groupMovementSection(info){
    input.retouchNumericPreview=()=>{const selection=sel,scope=styleScope,hash=info.hash,start=groupPositionMeasurement(roots),preview=RetouchGroupMove.preview(start.members);let delta={x:0,y:0};return {current:()=>{try{return sel===selection&&info.hash===hash&&styleScope===scope&&!panelTasks&&!sourceRequests&&!undoBusy&&preview.current()&&start.members.every(item=>{const r=item.el.getBoundingClientRect();return ['x','y','width','height'].every(key=>Math.abs(r[key]-item.rect[key]-(key==='x'?delta.x:key==='y'?delta.y:0))<.1);});}catch{return false;}},update:value=>{delta={x:axis==='x'?value-start.x:0,y:axis==='y'?value-start.y:0};preview.update(delta);},restore:preview.restore};};
   }
  }catch(error){I.note(section,error.message,'refused');}
- const scaling=I.number(section,'Scale selection (%)',100,1,10000,value=>void scaleGroup(info,value,scaling));scaling.title='Scale selected content proportionally from its top-left corner. Layout slots stay unchanged.';I.fieldDraft(scaling);scaling.retouchNumericPreview=()=>{const selection=sel,scope=styleScope,hash=info.hash,preview=RetouchGroupMove.scalePreview(RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el)));return {current:()=>sel===selection&&info.hash===hash&&styleScope===scope&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&preview.current(),update:value=>preview.update(value/100),restore:preview.restore};};
- const scaleCanvas=I.button('Scale selection on canvas',event=>void scaleGroupOnCanvas(info,event.currentTarget));scaleCanvas.dataset.canvasTool='scale';section.append(scaleCanvas);
+ appendSelectionScaleControls(section,info,roots);
  const button=I.button(sel.multiple?.length?'Move selection on canvas':'Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag selected groups and layers on the canvas. Arrow keys move 1 px; Shift moves 10 px.';section.append(button);return section;
 }
 
+function appendSelectionScaleControls(section,info,roots){
+ const I=RetouchInspector;
+ const scaling=I.number(section,'Scale selection (%)',100,1,10000,value=>void scaleGroup(info,value,scaling));scaling.title='Scale selected content proportionally from its top-left corner. Layout slots stay unchanged.';I.fieldDraft(scaling);scaling.retouchNumericPreview=()=>{const selection=sel,scope=styleScope,hash=info.hash,preview=RetouchGroupMove.scalePreview(RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el)));return {current:()=>sel===selection&&info.hash===hash&&styleScope===scope&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&preview.current(),update:value=>preview.update(value/100),restore:preview.restore};};
+ const scaleCanvas=I.button('Scale selection on canvas',event=>void scaleGroupOnCanvas(info,event.currentTarget));scaleCanvas.dataset.canvasTool='scale';section.append(scaleCanvas);
+}
+
 async function scaleGroupOnCanvas(info,opener){
- stopDrawing?.();try{const context=await moveGroupOnCanvas(info,null,{prepareOnly:true});if(!context||!context.current())return;RetouchGroupMove.scalePlan(context.members,1);const rect=RetouchCanvasMove.union(context.members.map(item=>item.rect)),preview=RetouchGroupMove.scalePreview(context.members);canvasPan.cancel();stopDrawing=RetouchCanvasMove.mount({target:context.members[0].el,targets:context.members.map(item=>item.el),selectionId:info.id,frame:iframe,canvas:canvasSurface,mode:'scale',opener,current:context.current,contentPreview:preview,onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err'),onCommit:result=>{try{const plan=RetouchGroupMove.scalePlan(context.members,result.width/rect.width,{x:result.x,y:result.y});return writeGroupMove(context,plan.deltas,plan);}catch(error){toast(error.message,'err');}}});}catch(error){toast(error.message,'err');}
+ stopDrawing?.();try{const context=await moveGroupOnCanvas(info,null,{prepareOnly:true,allowLayers:true});if(!context||!context.current())return;RetouchGroupMove.scalePlan(context.members,1);const rect=RetouchCanvasMove.union(context.members.map(item=>item.rect)),preview=RetouchGroupMove.scalePreview(context.members);canvasPan.cancel();stopDrawing=RetouchCanvasMove.mount({target:context.members[0].el,targets:context.members.map(item=>item.el),selectionId:info.id,frame:iframe,canvas:canvasSurface,mode:'scale',opener,current:context.current,contentPreview:preview,onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err'),onCommit:result=>{try{const plan=RetouchGroupMove.scalePlan(context.members,result.width/rect.width,{x:result.x,y:result.y});return writeGroupMove(context,plan.deltas,plan);}catch(error){toast(error.message,'err');}}});}catch(error){toast(error.message,'err');}
 }
 
 async function scaleGroup(info,percent,input){
- try{if(percent===100)return;const context=await moveGroupOnCanvas(info,null,{prepareOnly:true});if(!context||!context.current())return;const plan=RetouchGroupMove.scalePlan(context.members,percent/100);if(document.activeElement===input)RetouchPanelFocus.queue(input);await writeGroupMove(context,plan.deltas,plan);}catch(error){toast(error.message,'err');}
+ try{if(percent===100)return;const context=await moveGroupOnCanvas(info,null,{prepareOnly:true,allowLayers:true});if(!context||!context.current())return;const plan=RetouchGroupMove.scalePlan(context.members,percent/100);if(document.activeElement===input)RetouchPanelFocus.queue(input);await writeGroupMove(context,plan.deltas,plan);}catch(error){toast(error.message,'err');}
 }
 
 function groupPositionMeasurement(roots,members=RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el))){

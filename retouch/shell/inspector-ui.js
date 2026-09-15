@@ -289,7 +289,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   const position=[...panel.children].find(el=>title(el)==='Position'),sharedRotation=panel.querySelector('[aria-label="Shared Rotation (°)"]')?.closest('.inspector-field');
   if(position&&sharedRotation){const label=sharedRotation.querySelector(':scope > span');if(label)label.textContent='Rotation (°)';const row=sharedRotation.closest('.property-row')||sharedRotation,reset=row.nextElementSibling;position.append(row);if(reset?.classList.contains('control-button')&&reset.textContent.toLowerCase().startsWith('reset shared rotation'))position.append(reset);}
   const selectionFlips=[...panel.children].find(el=>title(el)==='Flip selection');if(position&&selectionFlips){position.append(...[...selectionFlips.children].filter(el=>el.tagName!=='H3'));selectionFlips.remove();}
-  const order=['Component','Shared component properties','Group','Position','Selection transform','Combine shapes','Boolean group','Boolean operations','Mask','Vector position','Vector size','Geometry',...([...panel.children].some(el=>title(el)==='Vector size')&&!panel.querySelector('.shared-inspector-group')?[]:['Layout']),'Appearance',...((head.dataset.textLayer==='true'||RetouchInspector.isTextLayer(head.dataset.layerTag||''))?['Typography']:[]),'Fill','Image fill','Fill gradient','Stroke','Stroke gradient','Original shapes','Effects','Image framing','Image','Export'];
+  const order=['Component','Shared component properties','Group','Position','Selection transform','Combine shapes','Boolean group','Boolean operations','Mask','Vector position','Vector size','Geometry',...([...panel.children].some(el=>title(el)==='Vector size')&&!panel.querySelector('.shared-inspector-group')?[]:['Layout']),'Scale','Appearance',...((head.dataset.textLayer==='true'||RetouchInspector.isTextLayer(head.dataset.layerTag||''))?['Typography']:[]),'Fill','Image fill','Fill gradient','Stroke','Stroke gradient','Original shapes','Effects','Image framing','Image','Export'];
   const advanced=disclosure('More properties','advanced');advanced.classList.add('inspector-more');
   const children=[...panel.children].filter(el=>el!==head);
   for(const name of order)for(const el of children.filter(el=>title(el)===name)){el.classList.add('inspector-section');panel.append(el);}
@@ -574,6 +574,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    if(notes.children.length>1){notes.classList.add('shared-inspector-notes');shared.before(notes);}
    shared.remove();
   }
+  const scaleSection=panel.querySelector(':scope > [data-section=scale]'),sharedLayout=panel.querySelector(':scope > [data-shared-section=layout]');if(scaleSection&&sharedLayout)sharedLayout.after(scaleSection);
   if(!['svg','foreignobject'].includes((head.dataset.layerTag||'').toLowerCase()))for(const paint of ['fill','stroke']){
    const section=[...panel.children].find(el=>el.dataset.section===paint),input=section?.querySelector('[aria-label="SVG '+paint+'"]');
    if(!input||section.querySelector('[data-gradient-paint]')||section.querySelector(':scope > .section-add')||/^url\(/i.test(input.value.trim()))continue;

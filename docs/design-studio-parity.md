@@ -18305,3 +18305,30 @@ responsive grouping checks at 390/768/1100 pixels.
 Full Figma fidelity, group layout resizing/rotation, arbitrary-site source
 coverage, complex fixed-position descendants and trusted public Homebrew
 installation remain incomplete. No desktop rebuild or push for this checkpoint.
+
+### Scale ordinary layers and selections (2026-09-15)
+
+Editable HTML layers now expose the same numeric and canvas Scale controls as
+groups, including ordinary multi-selections. The controls reuse the source
+context, preview, atomic write and history paths. Group movement still requires
+a group; opting into ordinary layers is specific to scaling. The shared Scale
+section sits in the main inspector and follows multi-selection layout controls.
+
+Browser verification covers single and multiple layers at 390 and 1100 pixels,
+75-percent typed scaling, live canvas keyboard scaling, unchanged unselected
+siblings, Escape restoration, retained selection and exact undo/redo. Selecting
+a container and its child scales the hierarchy once. Passed for HTML/Chromium,
+transformed React/Chromium and transformed Liquid/WebKit. The existing HTML group
+scaling suite also passed. All 1,652 unit tests passed.
+
+Evidence: `/tmp/retouch-layer-scale-units-final.log`,
+`/tmp/retouch-layer-scale-html-final.log`,
+`/tmp/retouch-layer-scale-react-final.log`,
+`/tmp/retouch-layer-scale-liquid-final.log`, and
+`/tmp/retouch-layer-scale-group-regression.log`. The final inspector placement
+check is `/tmp/retouch-layer-scale-html-layout.log`; the rendered canvas is
+`/tmp/retouch-layer-scale-html.png`.
+
+This remains visual content scaling with preserved layout slots. Arbitrary
+framework/source coverage, layout reflow scaling, full Figma fidelity and trusted
+public Homebrew installation remain incomplete. No desktop rebuild or push.
