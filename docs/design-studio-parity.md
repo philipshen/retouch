@@ -23262,3 +23262,35 @@ Copying and ungrouping need persistent membership handling, followed by editor
 runtime/history integration. The known React/Liquid editor comparison failure
 has not yet been fixed by registration of this path. Full Figma parity, arbitrary
 site coverage and trusted desktop distribution remain unfinished. No push.
+
+### Liquid copied scale identities and snapshots
+
+Liquid duplicate/paste planning now allocates fresh persistent scale-member
+identities for copied markup and remaps ordered member snapshots to the new
+owners. Whole-group copies prune the original group's identities from their
+snapshots; copies of children extend the containing group's snapshots. The
+ordinary structural transaction retains original source-ID mapping and history.
+The regression first reproduced identical IDs in original and copied groups
+(two distinct identities for four source members), then passed after this change.
+
+Source checks cover individual child copies, whole groups, sibling paste and
+multi-selection duplication. Saved-page Chromium and WebKit checks compare
+copy-after-composition against copy-before-composition followed by the same
+group scale. Both match at 390/768/1100/1440/523px with reloads. The full unit
+suite passed 1,788 tests; after adding the released-set ownership guard and
+extending paste/multi-selection coverage, all five Liquid planner tests and the
+WebKit saved-page suite passed again. git diff --check passed.
+Evidence: /tmp/retouch-liquid-copy-identity-before.log,
+/tmp/retouch-liquid-copy-targeted.log,
+/tmp/retouch-liquid-copy-browser.log,
+/tmp/retouch-liquid-copy-webkit.log,
+/tmp/retouch-liquid-copy-units.log.
+
+The initial test also confirmed a separate pre-existing structural restriction:
+Liquid control scopes and expression-bearing siblings are refused before copy
+planning (/tmp/retouch-liquid-copy-before.log). The copy-identity regression uses
+currently editable literal markup to isolate identity ownership. This does not
+claim template/control-scope copying is solved. That broader structural proof,
+released-set ownership/ungrouping, and editor runtime/history integration remain
+necessary. Liquid group scaling is still not advertised in the editor. Full
+Figma parity and trusted desktop distribution remain unfinished. No push.

@@ -38,4 +38,27 @@ function plan(resolved,op){
   return {ok:true,hash:liquid.contentHash(after),edits:[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return {ok:false,refused:true,reason:error.message};}
 }
-module.exports={plan};
+function clone(resolved,range){
+ const elements=resolved.elements||liquid.collect(resolved.source,resolved.relPath).elements,chunk=new MagicString(resolved.source.slice(range.start,range.end)),copies=new Map(),identities=new Set(elements.map(e=>value(e,'data-rt-scale-member')).filter(Boolean));
+ for(const element of elements){
+  const marker=attr(element,'data-rt-scale-member');if(!marker||marker.attrStart<range.start||marker.attrEnd>range.end)continue;
+  const old=value(element,'data-rt-scale-member');if(!/^[a-zA-Z0-9_-]{1,80}$/.test(old)||copies.has(old))throw Error('Copied group members need distinct persistent identities.');
+  let id,counter=0;do{id=liquid.contentHash(resolved.source+'|scale-copy|'+element.id+'|'+counter++).slice(0,10);}while(identities.has(id));identities.add(id);copies.set(old,id);chunk.overwrite(marker.attrStart-range.start,marker.attrEnd-range.start,'data-rt-scale-member="'+id+'"');
+ }
+ if(copies.size&&/data-rt-scale-set\s*=/.test(resolved.source))throw Error('Released Liquid scale copies need instance ownership mapping.');
+ return {chunk:chunk.toString(),append(source){
+  if(!copies.size)return source;
+  const elements=liquid.collect(source,resolved.relPath).elements,out=new MagicString(source),decode=text=>require('parse5').parseFragment('<textarea>'+text.replace(/</g,'&lt;')+'</textarea>').childNodes[0].childNodes[0]?.value||'';
+  for(const group of elements){
+   if(attr(group,'data-rt-scale-set'))throw Error('Released Liquid scale copies need instance ownership mapping.');
+   const marker=attr(group,'data-rt-scale');if(!marker)continue;
+   const data=JSON.parse(decode(value(group,'data-rt-scale')));require('../runtime/group-scale-bootstrap.js').parse(JSON.stringify(data));
+   if(!data.steps?.some(step=>step.styles))continue;
+   const owned=new Set(elements.filter(e=>e.tagStart>group.tagStart&&e.closeEnd<=group.closeStart).map(e=>value(e,'data-rt-scale-member')).filter(Boolean));
+   for(const step of data.steps)if(step.styles){for(const [old,id]of copies)if(owned.has(id)&&Object.hasOwn(step.styles,old))step.styles[id]=step.styles[old];step.styles=Object.fromEntries(Object.entries(step.styles).filter(([id])=>owned.has(id)));}
+   const metadata=JSON.stringify(data);require('../runtime/group-scale-bootstrap.js').parse(metadata);out.overwrite(marker.attrStart,marker.attrEnd,'data-rt-scale="'+escape(metadata)+'"');
+  }
+  return runtime.upgrade(out.toString());
+ }};
+}
+module.exports={plan,clone};

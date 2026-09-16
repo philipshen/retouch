@@ -91,7 +91,7 @@ function describe(resolved,language) {
     const items=ranges(resolved,language),index=items.findIndex(r=>r.selected);
     if(index<0) throw Error('The source element could not be located.');
     let canDuplicate=duplicateAllowed(resolved.source,items[index],language);
-    if(canDuplicate&&language==='html')try{require('./html-css.cjs').clone(resolved,items[index]);}catch{canDuplicate=false;}
+    if(canDuplicate&&['html','liquid'].includes(language))try{require(language==='html'?'./html-css.cjs':'./liquid-group-scale.cjs').clone(resolved,items[index]);}catch{canDuplicate=false;}
     return {canReparent:true,parentId:items.parentId,canPaste:true,canDuplicate,canDelete:true,canMoveBefore:index>0,canMoveAfter:index<items.length-1,canMoveFirst:index>0,canMoveLast:index<items.length-1,reason:null};
   } catch(error) {return {canReparent:false,parentId:null,canPaste:false,canDuplicate:false,canDelete:false,canMoveBefore:false,canMoveAfter:false,reason:error.message};}
 }
@@ -114,7 +114,7 @@ function planOp(resolved,op,language) {
       if(!duplicateAllowed(source,copied,language)) throw Error('Duplicating this element would duplicate an authored identity.');
       const previous=items[index-1];
       const gap=previous?source.slice(previous.end,node.start):'\n'+(source.slice(0,node.start).match(/(?:^|\n)([ \t]*)$/)?.[1]||'');
-      const cloned=language==='html'?require('./html-css.cjs').clone(resolved,copied):null;
+      const cloned=['html','liquid'].includes(language)?require(language==='html'?'./html-css.cjs':'./liquid-group-scale.cjs').clone(resolved,copied):null;
       next=source.slice(0,node.end)+gap+(cloned?.chunk??source.slice(copied.start,copied.end))+source.slice(node.end);
       const adapter=require('./adapters/'+language+'.cjs'),start=element=>language==='react'?element.node.start:language==='html'?element.location.startOffset:element.tagStart;
       const elements=adapter.collect(next,resolved.relPath).elements,insertedLength=next.length-source.length;
