@@ -1720,7 +1720,21 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
     await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),linked);await wait(async()=>(await measure()).every(v=>v.family==='monospace'));
    }
    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();assert.deepEqual(await measure(),initial);
-   if(process.env.RT_E2E_SHARED_TYPE_SCREENSHOT){await page.locator('#panel').evaluate(panel=>{panel.scrollTop+=panel.querySelector('[data-shared-section=typography]').getBoundingClientRect().top-panel.getBoundingClientRect().top-50;});await page.locator('#panel').screenshot({path:process.env.RT_E2E_SHARED_TYPE_SCREENSHOT});}
+   const alignment=page.getByRole('toolbar',{name:'Selected text alignment buttons'}),center=page.getByRole('button',{name:'Align selected text center',exact:true});
+   assert.equal(await page.getByRole('button',{name:'Align selected text left',exact:true}).getAttribute('aria-pressed'),'true');
+   await center.click();await wait(()=>read()!==before);await settled();await wait(async()=>await app.locator('p').evaluateAll(nodes=>nodes.every(el=>getComputedStyle(el).textAlign==='center')));
+   assert.equal(await center.getAttribute('aria-pressed'),'true');
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();
+   await page.getByRole('button',{name:'Align selected text left',exact:true}).focus();await page.keyboard.press('ArrowRight');assert.equal(await center.evaluate(el=>document.activeElement===el),true);assert.equal(read(),before);
+   assert.equal(await alignment.getByRole('button').count(),4);
+   const reselect=async()=>{await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click();await page.getByRole('treeitem',{name:'p · Named text',exact:true}).click({modifiers:['Shift']});await settled();};
+   await app.locator('p').evaluateAll(nodes=>nodes.forEach(el=>el.setAttribute('dir','rtl')));await reselect();
+   assert.equal(await page.getByRole('button',{name:'Align selected text right',exact:true}).getAttribute('aria-pressed'),'true');
+   await app.locator('p').first().evaluate(el=>el.setAttribute('dir','ltr'));await reselect();
+   assert.equal(await alignment.locator('[aria-pressed="true"]').count(),0);assert.equal(read(),before);
+   await app.locator('p').evaluateAll(nodes=>nodes.forEach(el=>el.removeAttribute('dir')));await reselect();
+
+   if(process.env.RT_E2E_SHARED_TYPE_SCREENSHOT){await page.locator('#panel').evaluate(panel=>{panel.scrollTop+=panel.querySelector('[data-shared-section=typography]').getBoundingClientRect().top-panel.getBoundingClientRect().top-50;});await page.locator('#panel').screenshot({path:process.env.RT_E2E_SHARED_TYPE_SCREENSHOT,caret:'initial'});}
    const leading=page.getByLabel('Shared Line height (%)',{exact:true});await leading.fill('200');await leading.press('Tab');await wait(()=>read()!==before);await settled();await wait(async()=>JSON.stringify((await measure()).map(v=>v.leading))===JSON.stringify(['40px','64px']));const withLeading=read();
    const tracking=page.getByLabel('Shared Letter spacing (%)',{exact:true});await tracking.fill('10');await tracking.press('Tab');await wait(()=>read()!==withLeading);await settled();await wait(async()=>JSON.stringify((await measure()).map(v=>v.tracking))===JSON.stringify([2,3.2]));
    await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();await wait(async()=>JSON.stringify(await measure())===JSON.stringify(initial));

@@ -233,6 +233,18 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   font.classList.add('typography-family');primary.append(font);
   const pair=(rows,name)=>{const group=document.createElement('div');group.className='property-pair '+name;rows.forEach(row=>group.append(row));primary.append(group);return group;};
   pair([weight,size],'typography-size');pair([leading,tracking],'typography-spacing');
+  const align=find(['Text alignment']),alignment=row(align);
+  if(align&&alignment){
+   const field=align.closest('.inspector-field'),group=document.createElement('div');field.classList.add('text-align-modes');group.className='layout-mode-segments';
+   const values=align.retouchTextAlignments?.()||[align.value],physical=values.length&&values.every(value=>value===values[0])?values[0]:'';
+   for(const value of ['left','center','right','justify']){
+    const button=document.createElement('button');button.type='button';button.setAttribute('aria-label','Align selected text '+value);button.title=align.disabled?align.title:'Align selected text '+value;button.disabled=align.disabled;button.setAttribute('aria-pressed',String(physical===value));
+    const short=value==='left'?'M3 7h9 M3 15h9':value==='right'?'M8 7h9 M8 15h9':value==='center'?'M6 7h8 M6 15h8':'M3 7h14 M3 15h14';button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14 M3 11h14 '+short+'"/></svg>';
+    button.onclick=()=>{if(align.disabled||!align.isConnected)return;align.value=value;align.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);
+   }
+   field.insertBefore(group,align);primary.append(alignment);keyboardToolbar(group,'Selected text alignment buttons');
+  }
+
   for(const [field,title,path]of [[leading,'Line height','M4 3h12 M4 17h12 M6 14l4-8 4 8 M8 11h4'],[tracking,'Letter spacing','M3 4v12 M17 4v12 M6 14l4-8 4 8 M8 11h4']]){
    field.classList.add('typography-spacing-cell');field.dataset.caption=title;
    const label=field.querySelector('.inspector-field > span')||field.querySelector(':scope > span');if(label)label.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+path+'"/></svg>';

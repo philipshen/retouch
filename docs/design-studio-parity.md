@@ -20852,3 +20852,25 @@ All 1,702 unit tests passed. Evidence: `/tmp/retouch-shared-type-layout.log`,
 Shared named-weight menus, alignment segments and consolidated Type settings
 still need visual parity work. Full Figma parity, arbitrary-site support and
 trusted Homebrew distribution remain incomplete. No native rebuild or push.
+
+### Shared text alignment segments
+
+Multi-selection typography now includes left, center, right and justified
+alignment buttons beneath the primary spacing fields. The existing dropdown
+retains logical start/end values. The buttons use original adapter writes and
+mirror disabled controls; physical selected state resolves each selected
+layer's text direction, with no selected segment for mixed physical alignment.
+Arrow/Home/End navigation uses the existing toolbar focus behavior.
+
+React and HTML Chromium browser checks passed alignment source writes, exact
+undo, keyboard focus without a source write, RTL start alignment and mixed
+LTR/RTL start alignment. Existing shared font, relative spacing and screen
+fallback checks also passed. Rendered 280px panels were inspected. All 1,702
+unit tests passed. Logs: `/tmp/retouch-shared-align-react.log`,
+`/tmp/retouch-shared-align-html.log`, `/tmp/retouch-shared-align-units.log`.
+Screenshots: `/tmp/retouch-shared-align-react.png`,
+`/tmp/retouch-shared-align-html.png`.
+
+Shared named-weight menus and consolidated Type settings remain unfinished,
+as do the broader full-parity, arbitrary-site and trusted Homebrew goals.
+No native rebuild or push.
