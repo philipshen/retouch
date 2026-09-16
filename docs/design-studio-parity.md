@@ -23893,3 +23893,30 @@ When Add screen dimensions match an existing comparison, the dialog also offers
 and moves focus to that comparison without renaming it, creating another card,
 or resizing the main canvas. The browser checks verify the existing document
 and selection survive this path, alongside ordinary creation and cancellation.
+
+### Vue SFC source mapping foundation
+
+`retouch/src/vue-source.cjs` now parses single-file components with pinned Vue
+3.5.42 compilers and stamps native template elements using structural IDs.
+Source locations refer to the complete SFC, including Unicode and CRLF input;
+script, scoped style and custom block bytes remain intact. Generated source maps
+retain the original document and map template text and untouched blocks back to
+their original positions.
+
+Component invocations and structural templates are transparent boundaries, so
+native slot content can be mapped without forwarding a component invocation's
+marker onto a separately owned root. Loop and conditional scope is retained.
+Literal template content, side-effect tags and children replaced by v-html/v-text
+are not stamped. Broad/dynamically named bindings and conflicting marker
+attributes currently exclude the affected host, with an explicit reason; their
+independent native children can still be mapped. These exclusions need further
+instrumentation work for complete Vue coverage. External templates and template
+preprocessors require additional source adapters.
+
+Ten focused tests verify exact locations and source maps, idempotent stamping,
+stable IDs, component/slot boundaries, v-pre, custom-element/compiler options,
+invalid source rejection, and actual Vue server rendering of repeated and
+conditional content. The full unit suite passed 1,838 tests. This is an internal
+mapping foundation: a Vue write adapter, Vite integration, browser editing/HMR
+verification and compiler-version compatibility are still required before Vue
+projects can be edited through the UI. Full Figma parity remains incomplete.
