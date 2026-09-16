@@ -21286,3 +21286,31 @@ Evidence: /tmp/retouch-shared-features-units.log,
 combination have not been visually compared with Figma. Full Figma parity,
 arbitrary-site guarantees and trusted Homebrew distribution remain incomplete.
 No native rebuild or push in this continuation.
+
+### Shared Type settings categories
+
+Shared typography now reuses the single-layer Type settings tab layout and
+keyboard behavior. Basics contains general text controls; Details contains
+number formatting, ligatures, capital forms and number position. Shared and
+single-layer tab choices are retained independently. Programmatic control
+reveal selects its containing category, so action/search navigation can still
+reach hidden fields. No empty Variable tab is shown for the shared panel.
+
+Validation: 1,710 unit tests passed. Shared feature browser tests passed on
+HTML and React Chromium 145 with two-tab navigation, selected/focused tab
+assertions, automatic category reveal, Escape returning focus to the opener,
+and no source changes from navigation, followed by feature editing, responsive
+fallback and exact undo checks. Existing single-layer Type settings popover
+and font-catalog browser coverage also passed. Inspected the HTML screenshot:
+light panel, bounded popup, visible tabs, compact fields and grouped controls.
+Evidence: /tmp/retouch-shared-tabs-units.log,
+/tmp/retouch-shared-tabs-html-final.log,
+/tmp/retouch-shared-tabs-react-final.log,
+/tmp/retouch-type-tabs-single.log,
+/tmp/retouch-shared-tabs-html.png and /tmp/retouch-shared-tabs-react.png.
+
+The first new navigation assertions used a button-role locator for the existing
+summary opener; corrected them to its accessible label and reran successfully.
+Shared font previews and variable-axis editing remain incomplete, as do full
+Figma fidelity, arbitrary-site guarantees and trusted Homebrew distribution.
+No native rebuild or push in this continuation.

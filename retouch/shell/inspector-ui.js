@@ -1,7 +1,7 @@
 (function(root){
  'use strict';
 const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',row:'M3 5v10 M8 5v10 M13 5v10 M16 10h4 M18 8l2 2-2 2',column:'M5 3h10 M5 8h10 M5 13h10 M10 16v4 M8 18l2 2 2-2',grid:'M3 3h14v14H3z M10 3v14 M3 10h14'};
- let activeTypeTab='Basics',typeTabId=0;
+ let activeTypeTab='Basics',activeSharedTypeTab='Basics',typeTabId=0;
  const openGroups=new Set(),collapsedSections=new Set(),expandedEmptySections=new Set();
  const sectionPreferenceKey='retouch.inspector.sections.v1';
  try{const saved=JSON.parse(root.localStorage.getItem(sectionPreferenceKey));if(Array.isArray(saved))for(const name of saved.slice(0,64))if(typeof name==='string'&&name.length<=64)collapsedSections.add(name);}catch{}
@@ -160,24 +160,25 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   const resetAll=[...body.querySelectorAll(':scope > button')].find(button=>button.textContent==='Reset text overrides');if(resetAll)fontSettings.append(resetAll);
   if(fontSettings.children.length>1)body.append(fontSettings);
  }
- function typeSettingsTabs(settings,section){
-  const body=settings.querySelector('.stroke-settings-body');compactTypeSettings(body,section);
+ function typeSettingsTabs(settings,section,shared=false){
+  const body=settings.querySelector('.stroke-settings-body');if(!shared)compactTypeSettings(body,section);
   const children=[...body.children].filter(el=>el.tagName!=='HEADER');
   const tabs=document.createElement('div');tabs.className='type-settings-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Type settings categories');
   const preview=section.querySelector('.type-preview'),groups=new Map();
   const samples={'Number position':'123 abc','Capital forms':'Aa Bb Cc Abc','Number width':'111111 · 888888','Number style':'0123456789','Fractions':'1/2 1/3 3/4','Ordinals':'1st 2nd 3rd','Zero style':'0 O 00 OO','Common ligatures':'fi fl ffi ffl','Rare ligatures':'st ct','Historical ligatures':'st ct tz','Contextual alternates':'affinity office'};
-  const defaultSample=()=>activeTypeTab==='Details'?'0123456789':null;
+  const active=()=>shared?activeSharedTypeTab:activeTypeTab;
+  const defaultSample=()=>active()==='Details'?'0123456789':null;
   const focusedSample=()=>{const control=body.contains(document.activeElement)?document.activeElement:null;return control&&!control.closest('[hidden]')?samples[control.getAttribute('aria-label')]??defaultSample():defaultSample();};
-  for(const name of ['Basics','Details','Variable']){
+  for(const name of shared?['Basics','Details']:['Basics','Details','Variable']){
    const tab=document.createElement('button'),panel=document.createElement('div'),id='type-tab-'+(++typeTabId);tab.type='button';tab.textContent=name;tab.id=id;tab.setAttribute('role','tab');tab.setAttribute('aria-controls',id+'-panel');panel.id=id+'-panel';panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',id);panel.className='type-settings-page';groups.set(name,{tab,panel});tabs.append(tab);
   }
-  for(const child of children){const summary=child.querySelector(':scope > summary')?.textContent;groups.get(summary==='Variable font axes'?'Variable':child.dataset.typeCategory==='Details'||['Number formatting','Ligatures','Capital forms','Number position'].includes(summary)?'Details':'Basics').panel.append(child);}
-  const select=(name,focus=false)=>{activeTypeTab=name;for(const [key,{tab,panel}]of groups){const chosen=key===name;tab.setAttribute('aria-selected',String(chosen));tab.tabIndex=chosen?0:-1;panel.hidden=!chosen;}body.scrollTop=0;preview?.retouchSample?.(defaultSample());if(focus)groups.get(name).tab.focus();};
+  for(const child of children){const summary=child.querySelector(':scope > summary')?.textContent;groups.get(summary==='Variable font axes'?'Variable':child.dataset.typeCategory==='Details'||shared&&!!child.querySelector('[aria-label="Shared Capital forms"],[aria-label="Shared Number position"]')||['Number formatting','Ligatures','Capital forms','Number position'].includes(summary)?'Details':'Basics').panel.append(child);}
+  const select=(name,focus=false)=>{if(shared)activeSharedTypeTab=name;else activeTypeTab=name;for(const [key,{tab,panel}]of groups){const chosen=key===name;tab.setAttribute('aria-selected',String(chosen));tab.tabIndex=chosen?0:-1;panel.hidden=!chosen;}body.scrollTop=0;preview?.retouchSample?.(defaultSample());if(focus)groups.get(name).tab.focus();};
   for(const [name,{tab,panel}]of groups){tab.onclick=()=>select(name);panel.retouchReveal=()=>select(name);}
   tabs.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||event.altKey||event.metaKey||event.ctrlKey)return;const names=[...groups.keys()],index=names.findIndex(name=>groups.get(name).tab===event.target);if(index<0)return;event.preventDefault();event.stopPropagation();select(names[event.key==='Home'?0:event.key==='End'?names.length-1:(index+(event.key==='ArrowRight'?1:-1)+names.length)%names.length],true);};
   for(const [label,text]of Object.entries(samples)){const control=[...groups.values()].map(({panel})=>panel.querySelector('[aria-label="'+label+'"]')).find(Boolean);if(!control)continue;const field=control.closest('.inspector-field')||control;field.addEventListener('pointerenter',()=>preview?.retouchSample?.(text));field.addEventListener('pointerleave',()=>preview?.retouchSample?.(focusedSample()));control.addEventListener('focus',()=>preview?.retouchSample?.(text));control.addEventListener('blur',()=>queueMicrotask(()=>preview?.retouchSample?.(focusedSample())));}
   if(preview){const old=preview.closest('details');body.append(preview);if(old&&old!==settings)old.remove();}
-  body.append(tabs,...[...groups.values()].map(group=>group.panel));select(groups.has(activeTypeTab)?activeTypeTab:'Basics');
+  body.append(tabs,...[...groups.values()].map(group=>group.panel));select(groups.has(active())?active():'Basics');
  }
  function typographyPrimary(section){
   const find=labels=>labels.map(label=>section.querySelector('[aria-label="'+label+'"]')).find(Boolean),row=control=>control?.closest('.property-row')||control?.closest('.inspector-field');
@@ -265,7 +266,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   const settings=disclosure('Type settings','shared-type-settings');
   for(const child of [...body.children])if(child!==primary&&!child.matches('[data-paint-property="color"]')&&!child.querySelector('[data-paint-property="color"]'))settings.append(child);
   const tools=document.createElement('div');tools.className='typography-alignment-tools';primary.append(tools);if(alignment){alignment.classList.add('shared-typography-alignment');tools.append(alignment);}
-  strokePopover(settings,tools,'shared-type-settings','Type settings','Shared type settings');
+  strokePopover(settings,tools,'shared-type-settings','Type settings','Shared type settings');typeSettingsTabs(settings,section,true);
  }
  function collapsibleSection(section){
   const heading=section.querySelector(':scope > h3');if(!heading)return;
