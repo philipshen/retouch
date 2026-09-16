@@ -11,6 +11,8 @@ function plan(resolved,op){
  try{
   if(!['frameSelection','groupSelection','removeFrame'].includes(op.type))return refuse('Choose group selection, frame selection or remove frame.');
   if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the layers.');
+  const originalSource=resolved.source;
+  if(op.type==='removeFrame'&&resolved.element.node.attrs.some(a=>a.name==='data-rt-scale')){const source=require('./group-scale-runtime.cjs').upgrade(originalSource),elements=html.collect(source,resolved.relPath).elements;resolved={...resolved,source,elements,element:elements.find(item=>item.id===resolved.element.id)};}
   const elements=resolved.elements||html.collect(resolved.source,resolved.relPath).elements;
   let roots,parent,start,end,opening='',closing='',removed=null;
   if(op.type!=='removeFrame'){
@@ -47,7 +49,7 @@ function plan(resolved,op){
   for(const element of elements){if(element===removed)continue;const next=mapped.get(element.node),expected=roots.includes(element)?(removed?mapped.get(parent.node):frame):mapped.get(element.node.parentNode);if(expected&&next.node.parentNode!==expected.node)return refuse('Framing would move an unrelated layer.');}
   const selectionIds=removed?(roots.length?roots.map(e=>mapped.get(e.node).id):[mapped.get(parent.node).id]):[frame.id];
   const sourceIdMap=elements.filter(element=>element!==removed).flatMap(element=>{const id=mapped.get(element.node).id;return id===element.id?[]:[[element.id,id]];}),removedSourceIds=removed?[removed.id]:[];
-  return {ok:true,hash:html.contentHash(after),sourceIdMap,removedSourceIds,parentId:parent.id,selectionIds,rootCount:roots.length,structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
+  return {ok:true,hash:html.contentHash(after),sourceIdMap,removedSourceIds,parentId:parent.id,selectionIds,rootCount:roots.length,structural:true,edits:[{file:resolved.file,before:originalSource,after}]};
  }catch(error){return refuse(error.message);}
 }
 module.exports={describe,plan};

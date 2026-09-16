@@ -22875,3 +22875,39 @@ arbitrary reparenting, runtime version migration, React/Liquid parity, and
 trusted desktop distribution remain unfinished. The new canvas-move entry point
 uses the shared gesture implementation; the new independent-move browser case
 exercises position fields, not a separate pointer-drag case. No push.
+
+### Upgrading recognized saved scale runtimes (2026-09-16)
+
+Scale edits and ungrouping now upgrade exact recognized legacy runtime scripts
+inside the same source transaction. The allowlist records SHA-256 digests of
+complete script markup generated from commits 4dcc52b6, 66c9ce41, ef5a4825, and
+31915148. Unknown/modified scripts and duplicate runtime carriers are refused.
+The archived pre-revision fixture was generated from 31915148 using its runtime
+builder and all five dependency files at that commit. Future runtime changes
+must retain recognized prior fingerprints to preserve this migration path.
+
+The current bundle exposes a revision derived from its embedded modules.
+Group descriptions return that revision; preview synchronization replaces an
+older running controller when revisions differ, including comparison frames.
+The source operation retains original pre-upgrade bytes as its history input.
+Undo may restore a legacy saved script while the editor keeps the compatible
+current controller for rendering the restored metadata.
+
+Chromium and WebKit open the archived runtime, scale the group, verify geometry
+and runtime revision in main/Phone/Tablet/Desktop without document reload, then
+undo to exact legacy source and redo to exact upgraded source. Unit coverage
+also verifies legacy ungrouping and refusal of changed/duplicate scripts. The
+existing failed-Tablet-request retry, independent movement, released-layer copy/
+delete history, and saved-page reload regressions pass. All 1,776 unit tests pass.
+Evidence: /tmp/retouch-runtime-upgrade-editor.log,
+/tmp/retouch-runtime-upgrade-editor-webkit.log,
+/tmp/retouch-runtime-upgrade-targeted.log,
+/tmp/retouch-runtime-upgrade-retry.log,
+/tmp/retouch-runtime-upgrade-saved.log,
+/tmp/retouch-runtime-upgrade-units.log.
+
+Migration is exercised through scale and ungroup operations, not automatic file
+rewriting on open. Browser migration coverage uses the archived 31915148 runtime;
+the other allowlist hashes were generated from their committed source. Transform
+composition, other renderers, CSP delivery, complete Figma parity, and trusted
+notarized desktop distribution remain unfinished. No push.

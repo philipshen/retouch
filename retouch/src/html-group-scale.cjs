@@ -7,6 +7,7 @@ function plan(resolved,op){
  try{
   if(op.fileHash!==resolved.hash)throw Error('The file changed. Re-select the group.');
   if(!Number.isInteger(op.width)||op.width<0||op.width>7680||typeof op.factor!=='number'||!Number.isFinite(op.factor)||op.factor<.01||op.factor>100)throw Error('Choose a valid screen width and scale factor.');
+  const originalSource=resolved.source;resolved={...resolved,source:runtime.upgrade(originalSource)};
   const {element,source,relPath}=resolved,elements=html.collect(source,relPath).elements,group=elements.find(item=>item.id===element.id);
   if(!group||group.node.namespaceURI!=='http://www.w3.org/1999/xhtml'||attr(group.node,'data-rt-group')===undefined)throw Error('Choose a source-backed group.');
   const groups=elements.filter(item=>attr(item.node,'data-rt-scale')!==undefined);
@@ -29,7 +30,7 @@ function plan(resolved,op){
   const pixels=stored===undefined?{}:{...JSON.parse(stored).pixels};let currentPixels=[0,0];for(const [width]of ranges)if(width<=op.width)currentPixels=pixels[width]||[0,0];const nextPixels=currentPixels.map((n,i)=>n+move[i]);if(nextPixels.some(n=>n!==0))pixels[op.width]=nextPixels;else delete pixels[op.width];
   const values=Object.fromEntries(ranges);values[op.width]=current*op.factor;
   const metadata=JSON.stringify({version:1,ranges:values,...(Object.keys(offsets).length?{offsets}:{}),...(Object.keys(pixels).length?{pixels}:{})});parse(metadata);
-  if(op.factor===1&&[...shift,...move].every(n=>n===0))return {ok:true,hash:resolved.hash,edits:[]};
+  if(source===originalSource&&op.factor===1&&[...shift,...move].every(n=>n===0))return {ok:true,hash:resolved.hash,edits:[]};
   const tree=parse5.parse(source,{sourceCodeLocationInfo:true}),scripts=[];let bodyEnd=null;
   function walk(node){if(node.tagName==='body')bodyEnd=node.sourceCodeLocation?.endTag?.startOffset??null;if(attr(node,'data-rt-scale-runtime')!==undefined)scripts.push(node);for(const child of node.childNodes||[])walk(child);}
   walk(tree);if(bodyEnd===null)throw Error('Responsive scaling needs an explicit HTML body end tag.');
@@ -42,13 +43,13 @@ function plan(resolved,op){
   if(!scripts.length)out.appendLeft(bodyEnd,runtime.script());
   const after=out.toString(),next=html.collect(after,relPath).elements;
   if(next.length!==elements.length||next.some((item,i)=>item.id!==elements[i].id||item.tag!==elements[i].tag))throw Error('Scaling changed source layer identity.');
-  return {ok:true,hash:html.contentHash(after),edits:[{file:resolved.file,before:source,after}]};
+  return {ok:true,hash:html.contentHash(after),edits:[{file:resolved.file,before:originalSource,after}]};
  }catch(error){return {ok:false,refused:true,reason:error.message};}
 }
 function describe(resolved){
  const elements=html.collect(resolved.source,resolved.relPath).elements,group=elements.find(item=>item.id===resolved.element.id);if(!group||attr(group.node,'data-rt-group')===undefined)return {};
  const members=elements.filter(item=>item.id!==group.id&&contains(group.node,item.node));
- return {groupScale:{metadata:attr(group.node,'data-rt-scale')??null,members:Object.fromEntries(members.map(item=>[item.id,attr(item.node,'data-rt-scale-member')??null]))}};
+ return {groupScale:{runtimeRevision:runtime.revision(),metadata:attr(group.node,'data-rt-scale')??null,members:Object.fromEntries(members.map(item=>[item.id,attr(item.node,'data-rt-scale-member')??null]))}};
 }
 function release(resolved){
  const metadata=attr(resolved.element.node,'data-rt-scale');if(metadata===undefined)return null;parse(metadata);

@@ -3600,8 +3600,8 @@ async function scaleGroupOnCanvas(info,opener){
 async function refreshHTMLGroupScale(info){
  const select=d=>matchingInDocument(d,info.id,info),state=info.groupScale;
  const matches=el=>el.getAttribute('data-rt-scale')===state.metadata&&Object.entries(state.members).every(([id,value])=>{const members=matchingInDocument(el.ownerDocument,id);return members.length&&members.every(member=>member.getAttribute('data-rt-scale-member')===value);});
- await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select,matches});await RetouchRenderSync.ensureGroupScaleRuntime(iframe);
- const result=await window.RetouchComparisons?.syncRendered({select,matches,kind:'Scale',afterSync:RetouchRenderSync.ensureGroupScaleRuntime});if(result?.failures.length)throw Error('Retry the failed comparison previews.');
+ await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select,matches});await RetouchRenderSync.ensureGroupScaleRuntime(iframe,state.runtimeRevision);
+ const result=await window.RetouchComparisons?.syncRendered({select,matches,kind:'Scale',afterSync:frame=>RetouchRenderSync.ensureGroupScaleRuntime(frame,state.runtimeRevision)});if(result?.failures.length)throw Error('Retry the failed comparison previews.');
 }
 async function writeHTMLGroupScale(info,percent,offset=[0,0],move=[0,0]){
  if(!selectionEditRangeActive()||sel?.info!==info)return;
