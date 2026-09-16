@@ -422,3 +422,11 @@ test('shared variable font settings retain other feature classes and responsive 
  for(const value of ['"bad" 1','"wght" 10001','"wght" NaN','normal; color:red'])assert.throws(()=>change(source,'md:','font-variation-settings',value));
  const el={style:{getPropertyPriority:()=> 'important',getPropertyValue:()=>''}};assert.throws(()=>change(source,'md:','font-variation-settings','normal',null,false,el),/important inline/);
 });
+
+test('shared font metadata intersects supported axis ranges without inventing defaults',()=>{
+ const {sharedAxisRanges}=require('../shell/inspector.js');
+ const first={axes:[{tag:'wght',name:'Weight',min:100,max:900},{tag:'wdth',name:'Width',min:75,max:125}]},second={axes:[{tag:'wght',name:'Weight',min:300,max:700}]};
+ assert.deepEqual(sharedAxisRanges([first,second]),[{tag:'wght',name:'Weight',min:300,max:700}]);
+ assert.deepEqual(sharedAxisRanges([first,{axes:[]}]),[]);assert.deepEqual(sharedAxisRanges([first,null]),[]);assert.deepEqual(sharedAxisRanges([]),[]);
+ assert.deepEqual(sharedAxisRanges([first,{axes:[{tag:'wght',min:950,max:1000}]}]),[]);
+});

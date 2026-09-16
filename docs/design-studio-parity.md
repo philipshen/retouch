@@ -21369,3 +21369,33 @@ font-specific range intersection are still missing; the initial shared axis
 UI uses explicit tags and the existing broad coordinate limits. Full Figma
 fidelity, arbitrary-site guarantees and trusted Homebrew distribution remain
 incomplete. No desktop rebuild or push.
+
+### Shared font metadata and supported ranges
+
+Shared Variable controls now expose declared font-file choices and Inspect
+selected font axes. Inspection reuses the font metadata service/cache and
+intersects the selected files' axes and numeric ranges. Existing overrides
+outside the common axis set are disabled for shared editing; their remove
+controls remain available. Supported axes without overrides are discoverable
+as Font default fields. Range checks also run in the write callback, and file
+changes clear stale discovered controls and ranges. An incomplete set of
+readable font files leaves explicit manual editing available with an
+explanation, rather than treating missing metadata as an empty font.
+
+Validation: 1,712 unit tests passed, including differing range intersections,
+missing axes, unavailable metadata and disjoint ranges. Embedded Geist font
+inspection passed on HTML/React Chromium 145 and Liquid WebKit 26: actual
+100–900 Weight limits, unsupported Width disabled, out-of-range refusal,
+per-layer coordinate preservation, responsive fallback, reset/undo and
+important inline refusal. Additional HTML coverage removes the Weight
+override, finds its discovered Font default control, edits it and restores the
+exact original source through undo. Evidence:
+/tmp/retouch-shared-axis-metadata-units.log,
+/tmp/retouch-shared-axis-metadata-{html,react,liquid}.log,
+/tmp/retouch-shared-axis-metadata-defaults.log.
+
+This verifies selected declared files, not proof of the font used for every
+glyph or fallback family. Cross-origin/CSP-limited metadata, live font-family
+replacement and named shared presets remain incomplete. Full Figma fidelity,
+arbitrary-site guarantees and trusted Homebrew distribution remain incomplete.
+No native rebuild or push.
