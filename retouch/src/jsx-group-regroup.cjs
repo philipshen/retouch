@@ -29,4 +29,4 @@ function plan(resolved,op){try{
  }catch(error){return {ok:false,refused:true,reason:error.message};}}
 function applies(resolved){try{const id=member(resolved.element);return !!id&&records(resolved).found.some(r=>r.data.members.includes(id));}catch{return !!resolved.element.node.openingElement.attributes.some(a=>a.name?.name==='data-rt-scale-member');}}
 function describe(resolved){try{const {parent}=claim(resolved);return {canFrame:true,parentId:parent.id};}catch{return {};}}
-module.exports={plan,applies,describe};
+module.exports={plan,applies,describe,claim,member};

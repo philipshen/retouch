@@ -57,6 +57,17 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===released);await settled();await check(false);
    console.log('REGROUP RESPONSIVE SCALE PASS',kind,{scoped});
   }
+  if(kind==='react'&&process.env.RT_E2E_RELEASED_DELETE){
+   const heading=page.getByRole('treeitem',{name:'h1 · Headline',exact:true});await heading.click();await settled();await heading.press('Delete');await wait(()=>read()!==released);await settled();const deleted=read();
+   const checkDeleted=async empty=>{for(let f=0;f<frames.length;f++){await wait(async()=>await frames[f].locator('h1').count()===0);await wait(async()=>await frames[f].locator('[data-rt-scale-set]').count()===(empty?0:1));if(!empty){const factor=!scoped||f===0||f===3?1.5:1;await wait(async()=>await frames[f].locator('[data-rt-scale-member]').evaluateAll((nodes,factor)=>nodes.length===1&&nodes.every(node=>{const scale=getComputedStyle(node).scale;return Math.abs((scale==='none'?1:parseFloat(scale))-factor)<.001&&node.ownerDocument[Symbol.for('retouch.group-scale.runtime')]?.manages(node);}),factor));}else assert.equal(await frames[f].locator('[data-rt-scale-member]').count(),0);}};
+   await checkDeleted(false);await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click();await settled();await page.getByRole('treeitem',{selected:true}).press('Delete');await wait(()=>read()!==deleted);await settled();const empty=read();await checkDeleted(true);assert.equal(empty.includes(' released='),false);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===deleted);await settled();await checkDeleted(false);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===released);await settled();await check(false);
+   await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===deleted);await settled();await checkDeleted(false);
+   await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===empty);await settled();await checkDeleted(true);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===deleted);await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===released);await settled();await check(false);
+   console.log('REACT RELEASED DELETE AND HISTORY PASS',{scoped});
+  }
   if(process.env.RT_E2E_RELEASED_MOVE){
    await page.getByRole('treeitem',{name:/^h1 ·/}).first().click();await settled();
    const checkMove=async moved=>{for(let f=0;f<frames.length;f++){const active=!scoped||f===0||f===3;await wait(async()=>{const boxes=await measure(frames[f]);return boxes.length===expected[f].length&&boxes.every((r,i)=>r.every((n,j)=>Math.abs(n-expected[f][i][j]-(moved&&active&&i===0&&j===0?23:0))<.1));});}};

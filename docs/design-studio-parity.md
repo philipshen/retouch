@@ -23653,3 +23653,27 @@ regrouping, subsequent scaling at 390/768/1100/1440/523 pixels, and reload. Evid
 /tmp/retouch-react-regroup-scoped.log, /tmp/retouch-react-regroup-runtime.log,
 /tmp/retouch-react-regroup-webkit.log. Full Figma parity and trusted desktop
 distribution remain incomplete.
+
+### Deleting released responsive React layers
+
+Delete now works on direct roots released from a scaled React group. The planner
+removes selected native subtrees, prunes their persistent IDs from ordered member
+snapshots, and retains the surviving roots in the adjacent ownership record.
+Deleting the final root removes the record. One transaction maps surviving source
+identities and restores exact source bytes through undo. Partial deletion still
+allows the remaining set to be regrouped. Mixed-group selections and modified
+runtime helpers are refused; independent structural edits within released subtrees
+and broader arbitrary-source support remain unfinished.
+
+All 1,807 unit tests passed. A further targeted run verifies that deleting a nested
+subtree prunes its snapshots while preserving another root's independent movement.
+Chromium passed first/last released-root deletion and undo/redo in all four previews.
+The standalone saved page passed surviving-layer geometry at
+390/768/1100/1440/523 pixels and after reload. Evidence:
+/tmp/retouch-released-delete-units.log, /tmp/retouch-released-delete-targeted.log,
+/tmp/retouch-released-delete-editor.log, /tmp/retouch-released-delete-runtime.log.
+Full Figma parity and trusted macOS/Homebrew distribution remain incomplete.
+
+WebKit passed the corresponding 1100 px scoped editor deletion and history flow
+across all previews: /tmp/retouch-released-delete-webkit.log. git diff --check passed.
+This continuation is committed locally; no new push was requested.
