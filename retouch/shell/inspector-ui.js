@@ -222,6 +222,22 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   }
 
  }
+ function sharedTypographyPrimary(section){
+  const body=section.querySelector('.shared-inspector-group-body');if(!body)return;
+  const find=names=>names.map(name=>body.querySelector('[aria-label="Shared '+name+'"]')).find(Boolean);
+  const row=control=>control?.closest('.property-row')||control?.closest('.inspector-field');
+  const font=row(find(['Page font'])),weight=row(find(['Font weight (1–1000)','Font weight'])),size=row(find(['Font size (px)','Font size']));
+  const leading=row(find(['Line height (px)','Line height'])),tracking=row(find(['Letter spacing (px)','Letter spacing']));
+  if(!font||!weight||!size||!leading||!tracking)return;
+  const primary=document.createElement('div');primary.className='typography-primary shared-typography-primary';body.prepend(primary);
+  font.classList.add('typography-family');primary.append(font);
+  const pair=(rows,name)=>{const group=document.createElement('div');group.className='property-pair '+name;rows.forEach(row=>group.append(row));primary.append(group);return group;};
+  pair([weight,size],'typography-size');pair([leading,tracking],'typography-spacing');
+  for(const [field,title,path]of [[leading,'Line height','M4 3h12 M4 17h12 M6 14l4-8 4 8 M8 11h4'],[tracking,'Letter spacing','M3 4v12 M17 4v12 M6 14l4-8 4 8 M8 11h4']]){
+   field.classList.add('typography-spacing-cell');field.dataset.caption=title;
+   const label=field.querySelector('.inspector-field > span')||field.querySelector(':scope > span');if(label)label.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+path+'"/></svg>';
+  }
+ }
  function collapsibleSection(section){
   const heading=section.querySelector(':scope > h3');if(!heading)return;
   const name=heading.textContent,key=section.dataset.section||name,button=document.createElement('button');button.type='button';button.className='section-toggle';button.textContent=name;
@@ -575,6 +591,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     }
     group.classList.add('sec');shared.before(group);for(const input of group.querySelectorAll('input[data-paint-property]'))if(['color','background-color','border-color','fill','stroke','shadow-color'].includes(input.dataset.paintProperty))compactPaint(group,input);
    }
+   const typography=groups.find(group=>group.dataset.sharedSection==='typography');if(typography&&(!svg||shared.dataset.sharedSvgText==='true'))sharedTypographyPrimary(typography);
    if(!svg){
     const size=groups.find(group=>group.dataset.sharedSection==='size'),layout=groups.find(group=>group.dataset.sharedSection==='layout');
     if(size&&layout){const dimensions=size.querySelector('.shared-inspector-group-body'),body=layout.querySelector('.shared-inspector-group-body');const primary=[...dimensions.children].find(row=>row.querySelector('[aria-label="Shared Width (px)"], [aria-label="Shared Width"]'));if(primary)body.prepend(primary);body.append(...dimensions.childNodes);size.remove();}

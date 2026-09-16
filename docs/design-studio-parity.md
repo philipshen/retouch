@@ -20827,3 +20827,28 @@ Logs: `/tmp/retouch-mixed-pixel-spacing-react.log`,
 Automatic line-height measurement, full Figma fidelity, arbitrary-site
 compatibility and trusted Homebrew distribution remain incomplete. No native
 rebuild or push.
+
+### Shared typography primary layout
+
+Shared text selection now starts with a full-width font picker, paired weight
+and size fields, and paired line-height and letter-spacing fields with captions
+and icons. This uses the existing single-selection light-theme primitives and
+moves the original controls, preserving their handlers, accessible names,
+resets, disabled states and mixed values. React/Liquid and HTML label variants
+are supported; non-text SVG CSS disclosures are not promoted.
+
+Visual reference: https://help.figma.com/hc/en-us/articles/360039956634-Explore-text-properties
+Rendered React and HTML panels were inspected at 280px width. React and HTML
+shared typography browser checks passed font selection, relative spacing,
+screen-range fallback and exact undo. React mixed pixel-spacing dragging also
+passed cancellation, commits, clamps, source undo/redo and foreign changes.
+All 1,702 unit tests passed. Evidence: `/tmp/retouch-shared-type-layout.log`,
+`/tmp/retouch-shared-type-layout-html.log`,
+`/tmp/retouch-shared-type-layout-drag.log`,
+`/tmp/retouch-shared-type-layout-units.log`; screenshots:
+`/tmp/retouch-shared-typography-after.png` and
+`/tmp/retouch-shared-typography-html-after.png`.
+
+Shared named-weight menus, alignment segments and consolidated Type settings
+still need visual parity work. Full Figma parity, arbitrary-site support and
+trusted Homebrew distribution remain incomplete. No native rebuild or push.
