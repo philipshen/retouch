@@ -261,6 +261,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    field.classList.add('typography-spacing-cell');field.dataset.caption=title;
    const label=field.querySelector('.inspector-field > span')||field.querySelector(':scope > span');if(label)label.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+path+'"/></svg>';
   }
+  const underline=disclosure('Underline details','shared-underline-details');for(const label of ['Underline style','Underline thickness','Underline offset','Underline skip ink']){const field=row(find([label]));if(field){const caption=field.querySelector('.inspector-field > span')||field.querySelector(':scope > span');if(caption)caption.textContent=label.replace('Underline ','').replace(/^./,letter=>letter.toUpperCase());underline.append(field);}}if(underline.children.length>1)body.append(underline);
   const settings=disclosure('Type settings','shared-type-settings');
   for(const child of [...body.children])if(child!==primary&&!child.matches('[data-paint-property="color"]')&&!child.querySelector('[data-paint-property="color"]'))settings.append(child);
   const tools=document.createElement('div');tools.className='typography-alignment-tools';primary.append(tools);if(alignment){alignment.classList.add('shared-typography-alignment');tools.append(alignment);}

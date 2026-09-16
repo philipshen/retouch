@@ -3,7 +3,7 @@
  const openGridSections=new Set();
  const {options,fields,svgFields,adaptiveColumns,parseAdaptiveColumns,stackLayout,childAlignment,alignmentProperties,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
  const stopRail=RetouchGradientStopRail;
- const coreTypography=['font-family','font-size','font-weight','font-style','line-height','letter-spacing','text-decoration-line'];
+ const coreTypography=['font-family','font-size','font-weight','font-style','line-height','letter-spacing','text-decoration-line','text-decoration-style','text-decoration-thickness','text-underline-offset','text-decoration-skip-ink'];
  function typographyReady(elements,width,property,reset=false){return elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth&&(reset||el.style.getPropertyPriority(property)!=='important'));}
  function typographyHint(elements,width){return elements.some(el=>width>el.ownerDocument.defaultView.innerWidth)?'Switch to a screen inside the selected edit range.':'An important inline rule controls this typography property.';}
  function typographySave(save,infos,elements,width){return (...args)=>{
@@ -291,7 +291,7 @@
   }
   const automaticLineHeight=I.button('Automatic shared line height',()=>{if(typeRangeReady('line-height'))save('line-height','normal',width);});automaticLineHeight.disabled=!typeRangeReady('line-height');typography.append(automaticLineHeight);
   I.note(details(typography,'type-options','Typography options'),'Percentages follow each layer’s font size. Use the CSS fields below for fixed spacing.');
-  const sharedFields=[['visibility','Visibility'],['opacity','Opacity (%)'],['rotate','Rotation (°)'],['mix-blend-mode','Blend mode'],['isolation','Blend group'],...fields,...(hasGrid?[['justify-items','Align columns']]:[]),...(elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg')?svgFields:[])];
+  const sharedFields=[['visibility','Visibility'],['opacity','Opacity (%)'],['rotate','Rotation (°)'],['mix-blend-mode','Blend mode'],['isolation','Blend group'],...fields,...[['text-decoration-style','Underline style'],['text-decoration-thickness','Underline thickness'],['text-underline-offset','Underline offset'],['text-decoration-skip-ink','Underline skip ink']],...(hasGrid?[['justify-items','Align columns']]:[]),...(elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg')?svgFields:[])];
   for(const [property,label]of sharedFields){
    let target=/^(?:min-|max-)?(?:width|height)$/.test(property)?groups.size:/^margin/.test(property)?groups.item:/^(?:font-|text-|line-height|letter-spacing|color$)/.test(property)?groups.typography:['background-color','fill'].includes(property)?groups.fill:/^border.*radius$/.test(property)||['visibility','opacity','rotate','mix-blend-mode','isolation'].includes(property)?groups.appearance:/^border|^stroke/.test(property)||property==='vector-effect'?groups.stroke:groups.layout;
    if(/^(?:min-|max-)/.test(property))target=details(groups.size,'size-limits','Size limits');

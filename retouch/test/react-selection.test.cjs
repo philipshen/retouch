@@ -349,3 +349,11 @@ test('shared decoration replaces only its selected scope and preserves color and
  assert.throws(()=>change(source,'','text-decoration-line','underline; color:red'));
  const el={style:{getPropertyPriority:()=>'',getPropertyValue:()=> 'overline'}};assert.equal(change('p-4','','text-decoration-line','underline',null,false,el),'p-4 ![text-decoration-line:underline]');el.style.getPropertyPriority=()=> 'important';assert.throws(()=>change('p-4','','text-decoration-line','none',null,false,el),/important inline/);assert.equal(change('p-4 !underline','','text-decoration-line',null,null,false,el),'p-4');
 });
+
+test('shared underline details preserve other decoration properties',()=>{
+ const source='underline decoration-red-500 decoration-dotted decoration-2 underline-offset-4 md:decoration-wavy';
+ for(const [property,value,removed]of [['text-decoration-style','double','decoration-dotted'],['text-decoration-thickness','3px','decoration-2'],['text-underline-offset','-2px','underline-offset-4'],['text-decoration-skip-ink','none',null]]){
+  const next=change(source,'',property,value);assert.ok(next.includes('['+property+':'+value+']'));assert.ok(next.includes('underline'));assert.ok(next.includes('decoration-red-500'));assert.ok(next.includes('md:decoration-wavy'));if(removed)assert.ok(!next.split(' ').includes(removed));assert.equal(change(next,'',property,value),next);
+ }
+ assert.throws(()=>change(source,'','text-decoration-thickness','-2px'));assert.throws(()=>change(source,'','text-underline-offset','2px; color:red'));
+});

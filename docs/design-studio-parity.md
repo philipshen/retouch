@@ -20985,3 +20985,33 @@ This does not add shared underline thickness/color/offset controls, measure
 ancestor-propagated decoration, or establish arbitrary-cascade parity. Shared
 advanced typography grouping, full Figma parity, arbitrary-site support and
 trusted Homebrew distribution remain incomplete. No native rebuild or push.
+
+### Shared underline details
+
+React, Liquid and HTML shared selections now expose decoration style,
+thickness, underline offset and skip-ink controls under Underline details in
+Type settings. These reuse literal CSS validation and existing decoration
+matchers so replacing thickness does not remove color or line style. React
+and Liquid preserve other scopes and use important overrides for ordinary
+inline values. The new properties use typography range/priority guards in
+both adapter families. Compact captions match the single-layer group.
+
+React, Liquid and HTML Chromium fixtures passed wavy style, 3px thickness,
+negative offset and disabled skip-ink, inactive-scope refusal, reset and exact
+undo for each property. Decoration-line regression checks also passed.
+Initial browser runs revealed controls before a subsequent inspector rebuild;
+the helper now waits for a connected, visible control across render frames.
+Final runs passed. The final HTML popover render was inspected. All 1,704 unit
+tests passed, including preservation of unrelated decoration classes and
+invalid thickness/offset rejection.
+
+Logs: `/tmp/retouch-shared-underline-react.log`,
+`/tmp/retouch-shared-underline-liquid.log`,
+`/tmp/retouch-shared-underline-html.log`,
+`/tmp/retouch-shared-underline-units.log`.
+Screenshot: `/tmp/retouch-shared-underline-html.png`.
+
+Shared decoration color, mixed-value gesture editing of these new fields,
+ancestor-propagated decoration behavior and arbitrary shorthand/cascade
+coverage remain incomplete, along with full Figma parity and trusted Homebrew
+distribution. No native rebuild or push.
