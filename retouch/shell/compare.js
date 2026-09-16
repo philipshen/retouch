@@ -687,7 +687,7 @@
     },
     syncImage(options){return this.syncRendered(options);},
     syncSource(options){return this.syncRendered({...options,kind:'Classes',serverRendered:false});},
-    async syncRendered({select,matches,serverRendered=true,revisionAttribute,hash,onlyFrame,kind='Image'}){
+    async syncRendered({select,matches,serverRendered=true,revisionAttribute,hash,onlyFrame,kind='Image',afterSync}){
       if(!open)return;const expectedRoute=path(),failures=[];
       await Promise.all(cards.filter(card=>!onlyFrame||card.frame===onlyFrame).map(async card=>{
         const token=Symbol();card.imageSyncToken=token;card.retryImage=null;card.imageSyncError=null;card.retryImageControl.disabled=true;if(!onlyFrame)card.retryImageControl.hidden=true;
@@ -707,10 +707,12 @@
           }
           await RetouchRenderSync.sync({frame:card.frame,serverRendered,select,matches:ready,current:()=>card.imageSyncToken===token&&open&&cards.includes(card)&&path()===expectedRoute});
           if(kind==='Classes'&&card.imageSyncToken===token&&card.frame.contentDocument===d)await RetouchRenderSync.refreshStyles(d,hash||Date.now().toString(36));
+          if(afterSync&&card.imageSyncToken===token&&card.frame.contentDocument===d)await afterSync(card.frame);
           if(card.imageSyncToken===token)card.retryImageControl.hidden=true;
-        }catch(error){if(open&&cards.includes(card)&&card.imageSyncToken===token&&path()===expectedRoute){card.imageSyncError=kind+' saved; comparison refresh failed: '+error.message;failures.push(card.frame.title||'Comparison');card.retryImageControl.hidden=false;card.retryImageControl.textContent='Retry '+kind.toLowerCase();card.retryImageControl.setAttribute('aria-label','Retry '+kind.toLowerCase()+' in '+card.frame.title.replace(/ preview$/,''));card.retryImage=()=>{if(card.imageSyncToken!==token||path()!==expectedRoute||!open)return;return window.RetouchComparisons.syncRendered({select,matches,serverRendered,revisionAttribute,hash,onlyFrame:card.frame,kind});};}}
+        }catch(error){if(open&&cards.includes(card)&&card.imageSyncToken===token&&path()===expectedRoute){card.imageSyncError=kind+' saved; comparison refresh failed: '+error.message;failures.push(card.frame.title||'Comparison');card.retryImageControl.hidden=false;card.retryImageControl.textContent='Retry '+kind.toLowerCase();card.retryImageControl.setAttribute('aria-label','Retry '+kind.toLowerCase()+' in '+card.frame.title.replace(/ preview$/,''));card.retryImage=()=>{if(card.imageSyncToken!==token||path()!==expectedRoute||!open)return;return window.RetouchComparisons.syncRendered({select,matches,serverRendered,revisionAttribute,hash,onlyFrame:card.frame,kind,afterSync});};}}
         finally{if(card.imageSyncToken===token)card.retryImageControl.disabled=false;}
       }));
+      if(open){clearTimeout(timer);paint();}
       return {ok:!failures.length,failures};
     },
     async syncText(info){

@@ -108,6 +108,7 @@ function handle(req, res, ctx) {
     requireToken(req, ctx.token);
     return json(res, 200, { ok: true, ...(ctx.sourceMonitor?.state() || { revision: 0, available: false }) });
   }
+  if(p==='/rt/__group-scale-runtime.js'&&req.method==='GET'){res.setHeader('Content-Type','application/javascript');res.setHeader('Cache-Control','no-store');return res.end(require('./group-scale-runtime.cjs').bundle());}
   if (p === '/rt/__api/health') return json(res, 200, { ok: true, service: 'retouch' });
   if(p==='/rt/__api/variables/resolve'){
     requireToken(req,ctx.token);if(req.method!=='POST')return json(res,405,{ok:false,reason:'Use POST to preview variable modes.'});

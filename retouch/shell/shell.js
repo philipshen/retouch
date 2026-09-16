@@ -3597,8 +3597,24 @@ async function scaleGroupOnCanvas(info,opener){
  finally{frameDocument.removeEventListener('keydown',onKey,true);if(stopDrawing===cancel)cancel();window.dispatchEvent(new Event('retouch:shape-tools'));}
 }
 
+async function refreshHTMLGroupScale(info){
+ const select=d=>matchingInDocument(d,info.id,info),state=info.groupScale;
+ const matches=el=>el.getAttribute('data-rt-scale')===state.metadata&&Object.entries(state.members).every(([id,value])=>{const members=matchingInDocument(el.ownerDocument,id);return members.length&&members.every(member=>member.getAttribute('data-rt-scale-member')===value);});
+ await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select,matches});await RetouchRenderSync.ensureGroupScaleRuntime(iframe);
+ const result=await window.RetouchComparisons?.syncRendered({select,matches,kind:'Scale',afterSync:RetouchRenderSync.ensureGroupScaleRuntime});if(result?.failures.length)throw Error('Retry the failed comparison previews.');
+}
+async function writeHTMLGroupScale(info,percent,offset=[0,0],move=[0,0]){
+ if(!selectionEditRangeActive()||sel?.info!==info)return;
+ const context=await moveGroupOnCanvas(info,null,{prepareOnly:true,allowLayers:true});if(!context||!context.current())return;RetouchGroupMove.scalePlan(context.members,percent/100);
+ const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;busyPanel(true);
+ try{
+  const result=await api('POST','/rt/__api/op',{type:'scaleGroup',id:info.id,fileHash:info.hash,width,factor:percent/100,offset,move});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not scale the group.');
+  if(result.undoId)editorHistory.record({type:'htmlGroupScale',id:info.id,undoId:result.undoId});sel.info=result.element;
+  try{await refreshHTMLGroupScale(result.element);}finally{await restoreLayerSelection([info.id]);if(sel)renderPanel();}
+ }finally{busyPanel(false);}
+}
 async function scaleGroup(info,percent,input){
- try{if(percent===100)return;const context=await moveGroupOnCanvas(info,null,{prepareOnly:true,allowLayers:true});if(!context||!context.current())return;const plan=RetouchGroupMove.scalePlan(context.members,percent/100);if(document.activeElement===input)RetouchPanelFocus.queue(input);await writeGroupMove(context,plan.deltas,plan);}catch(error){toast(error.message,'err');}
+ try{if(percent===100)return;if(info.groupScale&&!sel?.multiple?.length){await writeHTMLGroupScale(info,percent);return;}const context=await moveGroupOnCanvas(info,null,{prepareOnly:true,allowLayers:true});if(!context||!context.current())return;const plan=RetouchGroupMove.scalePlan(context.members,percent/100);if(document.activeElement===input)RetouchPanelFocus.queue(input);await writeGroupMove(context,plan.deltas,plan);}catch(error){toast(error.message,'err');}
 }
 
 function groupPositionMeasurement(roots,members=RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el))){
@@ -3627,17 +3643,24 @@ async function alignGroupSelection(mode,control,gap,asUnit=false){
 
 async function writeGroupMove({info,roots,selectionIds,members,infos,scope,width,css,current},delta,scaling=null){
     if(!current())return;
-    try{
+    let busy=false;try{
      const fresh=RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el));
      if(fresh.length!==members.length||fresh.some((item,i)=>item.el!==members[i].el||item.translate!==members[i].translate||item.matrix.some((n,j)=>Math.abs(n-members[i].matrix[j])>1e-9)||['x','y','width','height'].some(key=>Math.abs(item.rect[key]-members[i].rect[key])>.1)))throw Error('The group changed during movement. Re-select it.');
-     const deltas=Array.isArray(delta)?delta:members.map(()=>delta);if(deltas.length!==members.length)throw Error('Resolve every layer offset.');const moving=members.map((item,i)=>({item,delta:deltas[i],info:infos[i]})).filter(({delta})=>scaling||delta.x!==0||delta.y!==0);if(!moving.length)return;const writeInfos=moving.map(entry=>entry.info),changesById=Object.fromEntries(moving.map(({item,delta})=>[item.id,{translate:RetouchGroupMove.translation(item.translate,RetouchGroupMove.localDelta(item.matrix,delta)),...(scaling?{scale:scaling.scales[item.id]}:{})}])),classesById=Object.fromEntries(writeInfos.map(item=>[item.id,scaling?RetouchGroupMove.scaleClasses(RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate),scope,scaling.scales[item.id]):RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate)])),first=writeInfos[0],multi=writeInfos.length>1;
-     busyPanel(true);
+     const deltas=Array.isArray(delta)?delta:members.map(()=>delta);if(deltas.length!==members.length)throw Error('Resolve every layer offset.');
+     if(css&&info.groupScale&&selectionIds.length===1&&(scaling||info.groupScale.metadata)){
+      const bounds=RetouchCanvasMove.union(members.map(item=>item.rect)),factor=scaling?scaling.expected[0].width/members[0].rect.width:1;
+      if(!scaling&&deltas.some(d=>Math.abs(d.x-deltas[0].x)>.001||Math.abs(d.y-deltas[0].y)>.001))throw Error('Move the scaled group as one selection.');
+      const dx=scaling?scaling.expected[0].x-(bounds.left+(members[0].rect.x-bounds.left)*factor):deltas[0].x,dy=scaling?scaling.expected[0].y-(bounds.top+(members[0].rect.y-bounds.top)*factor):deltas[0].y;
+      return await writeHTMLGroupScale(info,factor*100,scaling?[dx/bounds.width,dy/bounds.height]:[0,0],scaling?[0,0]:[dx,dy]);
+     }
+     const moving=members.map((item,i)=>({item,delta:deltas[i],info:infos[i]})).filter(({delta})=>scaling||delta.x!==0||delta.y!==0);if(!moving.length)return;const writeInfos=moving.map(entry=>entry.info),changesById=Object.fromEntries(moving.map(({item,delta})=>[item.id,{translate:RetouchGroupMove.translation(item.translate,RetouchGroupMove.localDelta(item.matrix,delta)),...(scaling?{scale:scaling.scales[item.id]}:{})}])),classesById=Object.fromEntries(writeInfos.map(item=>[item.id,scaling?RetouchGroupMove.scaleClasses(RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate),scope,scaling.scales[item.id]):RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate)])),first=writeInfos[0],multi=writeInfos.length>1;
+     busyPanel(true);busy=true;
      const result=await api('POST','/rt/__api/op',{type:css?(multi?'setCSSSelection':'setCSS'):(multi?'setClassesSelection':'setClasses'),id:first.id,fileHash:first.hash,...(multi?{ids:writeInfos.map(item=>item.id)}:{}),...(css?{width,...(multi?{changesById}:{changes:changesById[first.id]})}:multi?{classesById,...selectionSourceContexts(writeInfos)}:{classes:classesById[first.id],context:first.context})});
      if(!result?.ok)throw Error(result?.reason||result?.error||'Could not move group.');
      const updated=result.selection||[result.element],before=Object.fromEntries(writeInfos.map(item=>[item.id,item.className])),after=Object.fromEntries(updated.map(item=>[item.id,item.className]));
      if(result.undoId)editorHistory.record({type:'moveGroup',id:first.id,groupId:info.id,selectionIds,childIds:writeInfos.map(item=>item.id),classesBefore:before,classesAfter:after,undoId:result.undoId});
      try{await refreshGroupMove(updated,before);}finally{await restoreLayerSelection(selectionIds);if(sel)renderPanel();}let settled=false;for(let attempt=0;attempt<50;attempt++){settled=members.every((item,i)=>{const el=matchingEls(item.id)[0],r=el?.getBoundingClientRect();const expected=scaling?.expected[i]||{x:item.rect.x+deltas[i].x,y:item.rect.y+deltas[i].y,width:item.rect.width,height:item.rect.height};return r&&['x','y','width','height'].every(key=>Math.abs(r[key]-expected[key])<.6);});if(settled)break;await new Promise(resolve=>setTimeout(resolve,100));}if(!settled)throw Error('Group changes saved, but the canvas did not match. Check style overrides.');toast(scaling?'Selection scaled':'Group moved','ok');
-    }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+    }catch(error){toast(error.message,'err');}finally{if(busy)busyPanel(false);}
 }
 
 function transformLayerSelection(elements,commit,opener,action='move',spacing=null){
@@ -3915,6 +3938,7 @@ async function restoreHistory(direction,op) {
     if(op.type==='duplicateComponentSelection'){await refreshComponentSelection(direction==='undo'?op.selectionBefore:op.selectionAfter);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='htmlGroupScale'){const resultInfo=await api('GET',resolveUrl(op.id));if(!resultInfo?.ok)throw Error('The scaled group no longer resolves.');try{await refreshHTMLGroupScale(resultInfo.element);}finally{await restoreLayerSelection([op.id]);if(sel)renderPanel();}return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentPropSelection'){await refreshComponentSelection(op.selectionIds);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='moveGroup'){const results=await Promise.all(op.childIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(r=>r?.ok))throw Error('The group contents no longer resolve.');try{await refreshGroupMove(results.map(r=>r.element),direction==='undo'?op.classesAfter:op.classesBefore);}finally{await restoreLayerSelection(op.selectionIds||[op.groupId]);if(sel)renderPanel();}return result;}

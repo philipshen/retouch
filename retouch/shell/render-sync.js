@@ -166,7 +166,18 @@
       d.dispatchEvent(new frame.contentWindow.CustomEvent('retouch:render',{detail:{source:'server'}}));return {ok:true,method:'classes'};
     }finally{clearTimeout(timer);}
   }
-  const api = { capture, restore, reconcile, sync, syncCSS, syncClasses, refreshStyles: revalidateStyles };
+  async function ensureGroupScaleRuntime(frame){
+    const d=frame.contentDocument;if(!d?.querySelector('[data-rt-scale]')){d?.[Symbol.for('retouch.group-scale.runtime')]?.refresh();return;}
+    if(!d[Symbol.for('retouch.group-scale.runtime')])await new Promise((resolve,reject)=>{
+      const script=d.createElement('script'),timer=setTimeout(()=>finish(Error('Scale runtime did not load.')),8000);
+      function finish(error){clearTimeout(timer);script.remove();if(error)reject(error);else resolve();}
+      script.src=new URL('/rt/__group-scale-runtime.js',frame.contentWindow.location.href).href;
+      script.onload=()=>finish(d[Symbol.for('retouch.group-scale.runtime')]?null:Error('Scale runtime could not start.'));script.onerror=()=>finish(Error('Scale runtime could not load.'));d.body.append(script);
+    });
+    d[Symbol.for('retouch.group-scale.runtime')]?.refresh();
+    if(frame.contentDocument!==d)throw Error('Preview navigated while synchronizing group scale.');
+  }
+  const api = { capture, restore, reconcile, sync, syncCSS, syncClasses, ensureGroupScaleRuntime, refreshStyles: revalidateStyles };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.RetouchRenderSync = api;
 })(typeof window !== 'undefined' ? window : globalThis);

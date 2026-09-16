@@ -8,20 +8,27 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
  const measure=frame=>frame.locator('h1,p').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect();return [r.x,r.y,r.width,r.height];}));
  const initial=[];for(const frame of frames){await frame.locator('[data-rt-group]').waitFor({state:'attached'});initial.push(await measure(frame));await frame.locator('body').evaluate(()=>window.__groupMoveDocument=document);}
  let failed=false;
- if(kind==='react'){
+ if(kind==='react'||kind==='html'&&scaling){
   const tablet=await (await page.locator('iframe[title="Tablet comparison preview"]').elementHandle()).contentFrame();
-  await page.route(/__rt_revision=/,async route=>{if(!failed&&route.request().frame()===tablet){failed=true;await route.abort();}else await route.continue();});
+  await page.route(kind==='react'?/__rt_revision=/:/\/rt\/__group-scale-runtime\.js$/,async route=>{if(!failed&&route.request().frame()===tablet){failed=true;await route.abort();}else await route.continue();});
  }
  const x=page.getByLabel(scaling?'Scale selection (%)':'Group X (px)',{exact:true});await x.fill(scaling?'150':String(Number(await x.inputValue())+23));await x.press('Enter');await wait(()=>read()!==original);await settled();const moved=read();
- if(kind==='react'){const retry=page.getByRole('button',{name:'Retry classes in Tablet comparison',exact:true});await retry.waitFor();assert.ok(failed);await retry.click();await retry.waitFor({state:'hidden'});}
- const verify=async delta=>{for(let f=0;f<frames.length;f++){
-  const active=!scoped||f===0||f===3,factor=scaling&&delta&&active?1.5:1,left=Math.min(...initial[f].slice(0,2).map(r=>r[0])),top=Math.min(...initial[f].slice(0,2).map(r=>r[1]));
-  const expected=initial[f].map((r,i)=>i>=2?r:scaling?[left+(r[0]-left)*factor,top+(r[1]-top)*factor,r[2]*factor,r[3]*factor]:r.map((n,j)=>n+(j===0&&active?delta:0)));
+ if(kind==='react'||kind==='html'&&scaling){const retry=page.getByRole('button',{name:kind==='react'?'Retry classes in Tablet comparison':'Retry scale in Tablet comparison',exact:true});await retry.waitFor();assert.ok(failed);await retry.click();await retry.waitFor({state:'hidden'});}
+ const verify=async(delta,scaledFactor=1.5,translate=0)=>{for(let f=0;f<frames.length;f++){
+  const active=!scoped||f===0||f===3,factor=scaling&&delta&&active?scaledFactor:1,left=Math.min(...initial[f].slice(0,2).map(r=>r[0])),top=Math.min(...initial[f].slice(0,2).map(r=>r[1]));
+  const expected=initial[f].map((r,i)=>i>=2?r:scaling?[left+(r[0]-left)*factor+(active?translate:0),top+(r[1]-top)*factor,r[2]*factor,r[3]*factor]:r.map((n,j)=>n+(j===0&&active?delta:0)));
   try{await wait(async()=>(await measure(frames[f])).every((box,i)=>box.every((n,j)=>Math.abs(n-expected[i][j])<.1)));}catch(error){console.error('GROUP TRANSFORM GEOMETRY',JSON.stringify({kind,scoped,scaling,frame:['Main','Phone','Tablet','Desktop'][f],before:initial[f],expected,actual:await measure(frames[f])}));await page.screenshot({path:'/tmp/retouch-group-transform-failure-'+kind+'.png',caret:'initial'});throw error;}assert.ok(await frames[f].locator('body').evaluate(()=>window.__groupMoveDocument===document),'Group movement retains documents');
  }};
- await verify(23);
+ await verify(23);if(scaling)await page.screenshot({path:'/tmp/retouch-scaled-comparisons-'+kind+'.png',caret:'initial'});
  await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await verify(0);
  await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===moved);await settled();await verify(23);
+ if(scaling&&kind==='html'){
+  const scale=page.getByLabel('Scale selection (%)',{exact:true});await scale.fill('50');await scale.press('Enter');await wait(()=>read()!==moved);await settled();await verify(23,.75);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===moved);await settled();await verify(23);
+  const beforePreview=await measure(app);await page.getByRole('button',{name:'Scale selection on canvas',exact:true}).click();const handle=page.getByRole('button',{name:'Scale bottom right',exact:true});await handle.focus();await handle.press('ArrowRight');await wait(async()=>(await measure(app))[0][2]>beforePreview[0][2]);assert.equal(read(),moved);await handle.press('Escape');await verify(23);
+  const position=page.getByLabel('Group X (px)',{exact:true});await position.fill(String(Number(await position.inputValue())+23));await position.press('Enter');await wait(()=>read()!==moved);await settled();await verify(23,1.5,23);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===moved);await settled();await verify(23);
+ }
  if(scoped){
   const screen=page.getByLabel('Screen size',{exact:true});await screen.focus();await screen.selectOption('390x844');await settled();await wait(async()=>await page.getByLabel('Edit range status',{exact:true}).getAttribute('data-match')==='false');
   for(const name of ['Group X (px)','Group Y (px)','Scale selection (%)'])assert.ok(await page.getByLabel(name,{exact:true}).isDisabled(),name+' is disabled outside the edit range');

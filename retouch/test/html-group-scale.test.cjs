@@ -16,3 +16,9 @@ test('saved scaling is one exact undoable source transaction',t=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'rt-scale-history-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));const file=path.join(root,'index.html');fs.writeFileSync(file,source);
  const r={...resolve(source),file},result=applyPlan(root,plan(r,{fileHash:r.hash,width:0,factor:1.5}));assert.equal(result.ok,true,result.reason);const history=new SourceHistory(),id=history.record(result.edits),saved=fs.readFileSync(file,'utf8');assert.notEqual(saved,source);assert.equal(history.apply(root,'undo',id,{}).ok,true);assert.equal(fs.readFileSync(file,'utf8'),source);assert.equal(history.apply(root,'redo',id,{}).ok,true);assert.equal(fs.readFileSync(file,'utf8'),saved);
 });
+test('scale anchors compose separately from pixel moves and survive range inheritance',()=>{
+ let r=resolve(source);const step=op=>{const result=plan(r,{fileHash:r.hash,width:0,...op});assert.equal(result.ok,true,result.reason);r=resolve(result.edits[0].after);return JSON.parse(r.element.node.attrs.find(attr=>attr.name==='data-rt-scale').value);};
+ step({factor:1.5});const anchored=step({factor:2,offset:[-.5,-.5]});assert.deepEqual(anchored.offsets,{0:[-.75,-.75]});assert.equal(anchored.ranges[0],3);
+ const moved=step({factor:1,move:[23,-9]});assert.deepEqual(moved.pixels,{0:[23,-9]});assert.deepEqual(moved.offsets,anchored.offsets);
+ const inherited=step({factor:.5,width:1100});assert.equal(inherited.ranges[1100],1.5);assert.deepEqual(inherited.offsets[1100],[-.75,-.75]);assert.deepEqual(inherited.pixels[1100],[23,-9]);
+});

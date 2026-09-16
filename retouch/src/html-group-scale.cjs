@@ -13,9 +13,13 @@ function plan(resolved,op){
   if(groups.some(other=>other.id!==group.id&&(contains(other.node,group.node)||contains(group.node,other.node))))throw Error('Overlapping responsive scale groups are not supported yet.');
   const stored=attr(group.node,'data-rt-scale'),ranges=stored===undefined?[]:parse(stored);let current=1;
   for(const [width,value]of ranges)if(width<=op.width)current=value;
+  const shift=op.offset??[0,0],move=op.move??[0,0];if([shift,move].some(pair=>!Array.isArray(pair)||pair.length!==2||pair.some(n=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>10000)))throw Error('Choose finite group offsets.');
+  const offsets=stored===undefined?{}:{...JSON.parse(stored).offsets};let currentOffset=[0,0];for(const [width]of ranges)if(width<=op.width)currentOffset=offsets[width]||[0,0];
+  const nextOffset=currentOffset.map((n,i)=>n+current*shift[i]);if(nextOffset.some(n=>n!==0))offsets[op.width]=nextOffset;else delete offsets[op.width];
+  const pixels=stored===undefined?{}:{...JSON.parse(stored).pixels};let currentPixels=[0,0];for(const [width]of ranges)if(width<=op.width)currentPixels=pixels[width]||[0,0];const nextPixels=currentPixels.map((n,i)=>n+move[i]);if(nextPixels.some(n=>n!==0))pixels[op.width]=nextPixels;else delete pixels[op.width];
   const values=Object.fromEntries(ranges);values[op.width]=current*op.factor;
-  const metadata=JSON.stringify({version:1,ranges:values});parse(metadata);
-  if(op.factor===1)return {ok:true,hash:resolved.hash,edits:[]};
+  const metadata=JSON.stringify({version:1,ranges:values,...(Object.keys(offsets).length?{offsets}:{}),...(Object.keys(pixels).length?{pixels}:{})});parse(metadata);
+  if(op.factor===1&&[...shift,...move].every(n=>n===0))return {ok:true,hash:resolved.hash,edits:[]};
   const tree=parse5.parse(source,{sourceCodeLocationInfo:true}),scripts=[];let bodyEnd=null;
   function walk(node){if(node.tagName==='body')bodyEnd=node.sourceCodeLocation?.endTag?.startOffset??null;if(attr(node,'data-rt-scale-runtime')!==undefined)scripts.push(node);for(const child of node.childNodes||[])walk(child);}
   walk(tree);if(bodyEnd===null)throw Error('Responsive scaling needs an explicit HTML body end tag.');
@@ -31,4 +35,9 @@ function plan(resolved,op){
   return {ok:true,hash:html.contentHash(after),edits:[{file:resolved.file,before:source,after}]};
  }catch(error){return {ok:false,refused:true,reason:error.message};}
 }
-module.exports={plan};
+function describe(resolved){
+ const group=resolved.element;if(attr(group.node,'data-rt-group')===undefined)return {};
+ const members=html.collect(resolved.source,resolved.relPath).elements.filter(item=>item.id!==group.id&&contains(group.node,item.node));
+ return {groupScale:{metadata:attr(group.node,'data-rt-scale')??null,members:Object.fromEntries(members.map(item=>[item.id,attr(item.node,'data-rt-scale-member')??null]))}};
+}
+module.exports={plan,describe};

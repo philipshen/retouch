@@ -22687,3 +22687,57 @@ remains unresolved. Inline-script CSP restrictions, overlapping groups, and
 framework lifecycle are not covered by the plain HTML proof. Full Figma parity,
 arbitrary-site support, and trusted Homebrew distribution remain unfinished.
 No push or desktop rebuild in this continuation.
+
+### HTML editor uses responsive group scaling (2026-09-16)
+
+Single HTML groups now use the persistent scale operation from percentage
+fields and canvas scaling gestures. Anchor compensation is stored as fractions
+of the unscaled group bounds, while subsequent group moves use separate pixel
+offsets. These compose with inherited responsive factors. Source writes
+preflight the current rendered group, including locks, scope, dimensions, and
+editable scale properties. Mixed selections retain the previous path.
+
+The runtime exposes ownership and pause/resume through a document symbol.
+Gesture previews pause affected controllers, temporarily preview from the
+current visual bounds, restore their owned changes, and resume the runtime.
+This permits repeated scaling and moving an already-scaled group without
+adopting gesture preview styles into its source baseline. One early canvas
+route incorrectly decremented panelTasks twice; writeGroupMove now balances
+only the busy state it actually acquired.
+
+Live HTML synchronization reconciles the group and persistent member IDs,
+loads the same private runtime through /rt/__group-scale-runtime.js, and
+refreshes it directly. Comparison failures expose Retry scale and recover
+without replacing documents. The runtime bootstrap is idempotent per document;
+undo removes metadata and synchronously restores owned styles. Comparison
+outlines repaint after synchronization rather than waiting for their next timer.
+
+Verification:
+- The original HTML responsive scale regression now passes, with correct
+  Phone/Tablet/Desktop group anchors and unchanged outside siblings.
+- Repeated 150% then 50% scaling, preview/Escape on an already-scaled group,
+  subsequent 23px moves, and exact undo/redo pass with retained documents.
+- Desktop-scoped scaling leaves Phone/Tablet unchanged; controls disable and
+  re-enable across the range. WebKit passes the same flow.
+- Chromium and WebKit recover from an intentionally aborted Tablet runtime
+  request through the per-screen retry control.
+- Full HTML scale field/scrub/corner/edge/center gesture regression passes,
+  including Escape, mixed selections on the old path, and exact history.
+- Ordinary saved HTML renders offset metadata correctly without the editor.
+- Shared image-crop comparison regression still passes.
+- All 1,768 unit tests pass on the final code.
+
+Evidence: /tmp/retouch-html-scale-editor-retry.log,
+/tmp/retouch-html-scale-editor-webkit-final.log,
+/tmp/retouch-html-scale-gestures-final.log,
+/tmp/retouch-html-scale-saved.log,
+/tmp/retouch-scale-image-regression.log,
+/tmp/retouch-html-scale-units-final.log. Visually inspected
+/tmp/retouch-scaled-comparisons-html.png; its transient failure toast is from
+the deliberate failed request, and the recovered selection outlines are aligned.
+
+This resolves the recorded regression for single HTML groups. React/Liquid,
+multi-group/mixed responsive composition, structural edits to scaled groups,
+runtime version migration, and CSP-restricted delivery still need work. Full
+Figma parity, arbitrary-site support, and trusted notarized Homebrew distribution
+remain unfinished. No push or desktop rebuild in this continuation.
