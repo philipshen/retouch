@@ -194,7 +194,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    const weightRow=row(weight),settings=[...section.querySelectorAll('details')].find(details=>details.querySelector(':scope > summary')?.textContent==='Type settings');
    if(weightRow&&settings){
     const select=document.createElement('select'),cell=document.createElement('label');cell.className='inspector-field typography-weight-style';select.setAttribute('aria-label','Font weight style');
-    select.title='Choose a weight; use Custom for a numeric value.';select.disabled=weight.disabled;
+    select.title=weight.disabled&&weight.title?weight.title:'Choose a weight; use Custom for a numeric value.';select.disabled=weight.disabled;
     const target=weight.retouchPreviewTarget,current=target?target.ownerDocument.defaultView.getComputedStyle(target).fontWeight:weight.value;
     const names=[['100','Thin'],['200','Extra Light'],['300','Light'],['400','Regular'],['500','Medium'],['600','Semi Bold'],['700','Bold'],['800','Extra Bold'],['900','Black']];
     for(const [value,name] of names){const option=document.createElement('option');option.value=value;option.textContent=name;select.append(option);}

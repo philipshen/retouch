@@ -20753,3 +20753,26 @@ after these behavior checks.
 
 Mixed pixel/automatic spacing, full Figma fidelity, arbitrary-site compatibility
 and trusted Homebrew distribution remain incomplete. No native rebuild or push.
+
+### Pause core font edits outside the selected screen range
+
+React/Liquid single and shared font family, size, weight, slant, line-height and
+letter-spacing controls now disable when the preview is outside the selected
+edit range. Their write/reset callbacks recheck the range so synthetic events
+cannot apply invisible edits. Font browsing receives the disabled state, and
+the primary weight dropdown preserves the underlying control's explanation.
+Single Reset text overrides also observes the active range.
+
+Validation: React/Chromium passed single/shared family, weight and slant range
+guards, tooltip explanations, disabled resets and dispatched-event refusal.
+React font-size dragging passed inactive-range refusal. Liquid/WebKit passed
+single/shared pixel/relative spacing guards, mixed percentage dragging and
+source/undo preservation. The first weight-tooltip assertion exposed a generic
+tooltip on the disabled primary dropdown; the corrected final run passed.
+All 1,702 unit tests passed. Logs: `/tmp/retouch-type-scope-face-final.log`,
+`/tmp/retouch-type-scope-size.log`, `/tmp/retouch-type-scope-spacing.log`,
+`/tmp/retouch-type-scope-units.log`.
+
+These guards cover core font fields, not every typography/library operation.
+Full Figma fidelity, arbitrary-site compatibility and trusted Homebrew
+distribution remain incomplete. No native rebuild or push.

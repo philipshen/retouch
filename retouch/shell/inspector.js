@@ -964,6 +964,7 @@
   function typography(info, el, save, changeTag, textStyleAction) {
     const sec=section('Typography'); if(!el)return sec;
     const d=el.ownerDocument, css=d.defaultView.getComputedStyle(el);
+    const typeActive=()=>el.isConnected&&(!info.styleScope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false');
     root.RetouchTextStyles?.mount(sec,el,info.classTextStyles&&!info.classNameDynamic&&textStyleAction?{inherited:root.RetouchResponsive.inheritedLink(info.textStyleLinks,info.styleScope||'',d),update:info.textStyleUpdates===false?undefined:(styleId,libraryRevision,name,properties)=>textStyleAction('updateTextStyle',info.styleScope||'',{styleId,libraryRevision,name,properties}),link:info.textStyleLinks?.[info.styleScope||''],overrides:info.textStyleOverrides?.[info.styleScope||'']||[],reset:(styleId,libraryRevision)=>textStyleAction('resetTextStyle',info.styleScope||'',{styleId,libraryRevision}),apply:(styleId,libraryRevision)=>textStyleAction('applyTextStyle',info.styleScope||'',{styleId,libraryRevision}),detach:()=>textStyleAction('detachTextStyle',info.styleScope||'',{})}:{});
     note(sec,`${css.fontFamily} · ${css.fontSize} / ${css.lineHeight} · ${css.fontWeight}`,'computed-value');
     typographyPreview(sec,el);
@@ -984,14 +985,14 @@
       const styled=[...el.classList].some(t=>names.includes(t));
       const fontSizeBlocked=()=>el.style.getPropertyPriority('font-size')==='important';
       const inlineTypeProperty=match=>match===fontSizeToken?'font-size':match===lineHeightToken?'line-height':match===letterSpacingToken?'letter-spacing':match===fontFamilyToken?'font-family':match===fontWeightToken?'font-weight':match===fontStyleToken?'font-style':null;
-      const change=(match,value)=>{const property=inlineTypeProperty(match);if(property&&el.style.getPropertyPriority(property)==='important')return;return save(replaceTypography(info.className,match,styled||property&&el.style.getPropertyValue(property)?'!'+value:value));};
-      const resetProperty=(label,match)=>{const reset=button(label,()=>save(replaceTypography(info.className,match,'')));try{reset.disabled=replaceTypography(info.className,match,'')===info.className;}catch{reset.disabled=true;}sec.append(reset);};
-      fontPicker(sec,d,css.fontFamily,value=>{const token=fontFamilyClass(value);if(token)change(fontFamilyToken,token);},{disabled:el.style.getPropertyPriority('font-family')==='important'});
-      const resetFamily=button('Reset font family',()=>save(replace(info.className,fontFamilyToken,'')));resetFamily.disabled=!tokens(info.className).map(base).some(t=>t&&fontFamilyToken(t));sec.append(resetFamily);
+      const change=(match,value)=>{const property=inlineTypeProperty(match);if(property&&(!typeActive()||el.style.getPropertyPriority(property)==='important'))return;return save(replaceTypography(info.className,match,styled||property&&el.style.getPropertyValue(property)?'!'+value:value));};
+      const resetProperty=(label,match)=>{const reset=button(label,()=>{if(!inlineTypeProperty(match)||typeActive())save(replaceTypography(info.className,match,''));});try{reset.disabled=replaceTypography(info.className,match,'')===info.className;}catch{reset.disabled=true;}sec.append(reset);};
+      fontPicker(sec,d,css.fontFamily,value=>{const token=fontFamilyClass(value);if(token)change(fontFamilyToken,token);},{disabled:!typeActive()||el.style.getPropertyPriority('font-family')==='important'});
+      const resetFamily=button('Reset font family',()=>{if(typeActive())save(replace(info.className,fontFamilyToken,''));});resetFamily.disabled=!tokens(info.className).map(base).some(t=>t&&fontFamilyToken(t));sec.append(resetFamily);
       for(const [label,re,choices] of controls){const token=tokens(info.className).map(base).find(t=>re.test(t));const control=select(sec,label,[['','Inherited / custom'],...choices],choices.some(([value])=>value===token)?token:'',value=>{if(value)change(re.test,value);});if(el.style.getPropertyPriority(label==='Font size'?'font-size':'font-weight')==='important'){control.disabled=true;control.title='An important inline rule controls this typography property.';}}
       const fontWeight=numericPreview(number(sec,'Font weight (1–1000)',parseFloat(css.fontWeight),1,1000,v=>{const token=fontWeightClass(v);if(token)change(fontWeightToken,token);}),el,'font-weight',String);
       if(el.style.getPropertyPriority('font-weight')==='important'){fontWeight.disabled=true;fontWeight.title='An important inline rule controls this font weight.';}
-      const resetWeight=button('Reset font weight',()=>save(replace(info.className,fontWeightToken,'')));resetWeight.disabled=!tokens(info.className).map(base).some(t=>t&&fontWeightToken(t));sec.append(resetWeight);
+      const resetWeight=button('Reset font weight',()=>{if(typeActive())save(replace(info.className,fontWeightToken,''));});resetWeight.disabled=!tokens(info.className).map(base).some(t=>t&&fontWeightToken(t));sec.append(resetWeight);
       const fontSize=numericPreview(number(sec,'Font size (px)',parseFloat(css.fontSize),1,1000,v=>change(fontSizeToken,`text-[${v}px]`)),el,'font-size');
       if(fontSizeBlocked()){fontSize.disabled=true;fontSize.title='An important inline rule controls this font size.';}
       resetProperty('Reset font size',fontSizeToken);
@@ -1000,7 +1001,7 @@
       numericPreview(lineHeight,el,'line-height');numericPreview(relativeLineHeight,el,'line-height',value=>String(Math.round(value*1e6)/1e8));
       if(css.lineHeight==='normal'){lineHeight.value='';lineHeight.placeholder='Automatic';relativeLineHeight.placeholder='Automatic';}
       const automaticLineHeight=button('Automatic line height',()=>change(lineHeightToken,'[line-height:normal]'));automaticLineHeight.disabled=el.style.getPropertyPriority('line-height')==='important';sec.append(automaticLineHeight);
-      const resetLineHeight=button('Reset line height',()=>save(replaceTypography(info.className,lineHeightToken,'')));try{resetLineHeight.disabled=replaceTypography(info.className,lineHeightToken,'')===info.className;}catch{resetLineHeight.disabled=true;}sec.append(resetLineHeight);
+      const resetLineHeight=button('Reset line height',()=>{if(typeActive())save(replaceTypography(info.className,lineHeightToken,''));});try{resetLineHeight.disabled=replaceTypography(info.className,lineHeightToken,'')===info.className;}catch{resetLineHeight.disabled=true;}sec.append(resetLineHeight);
       numericPreview(relativeNumber(sec,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,v=>change(letterSpacingToken,`tracking-[${Math.round(v*1e6)/1e8}em]`)),el,'letter-spacing',value=>Math.round(value*1e6)/1e8+'em').title='Relative to this layer’s font size.';
       numericPreview(number(sec,'Letter spacing (px)',parseFloat(css.letterSpacing)||0,-100,100,v=>change(letterSpacingToken,`tracking-[${v}px]`)),el,'letter-spacing');
       resetProperty('Reset letter spacing',letterSpacingToken);
@@ -1028,7 +1029,7 @@
       ligatureTypography(sec,css.fontVariantLigatures,value=>change(ligatureToken,`[font-variant-ligatures:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,ligatureToken,'')),tokens(info.className).map(base).some(t=>t&&ligatureToken(t)));
       numericTypography(sec,css.fontVariantNumeric,value=>change(numericToken,`[font-variant-numeric:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,numericToken,'')),tokens(info.className).map(base).some(t=>t&&numericToken(t)));
       const textOverride=textOverrideToken;
-      const reset=button('Reset text overrides',()=>save(replace(info.className,textOverride,'')));
+      const reset=button('Reset text overrides',()=>{if(typeActive())save(replace(info.className,textOverride,''));});
       reset.disabled=!tokens(info.className).map(base).some(t=>t!==null&&textOverride(t));sec.append(reset);
 
 
@@ -1037,6 +1038,7 @@
       const percent=effectiveSpacingPercent(info.className,info.anchorInheritedClasses||'',el,property),input=sec.querySelector('[aria-label="'+label+'"]');
       if(input&&percent!==null)input.retouchSpacingPercent=percent;
     }
+    if(!typeActive())for(const control of sec.querySelectorAll('input,select,button')){const name=control.getAttribute('aria-label')||control.textContent;if(/^(?:Page font$|Font (?:size|weight|slant)|Line height|Letter spacing|Automatic line height$|Reset (?:font (?:size|weight|family|style)|line height|letter spacing|text overrides)$)/i.test(name)){control.disabled=true;control.title='Switch to a screen inside the selected edit range.';}}
     if(info.canSetTag)select(sec,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label'].map(n=>[n,n]),info.tag,changeTag);
     return sec;
   }
