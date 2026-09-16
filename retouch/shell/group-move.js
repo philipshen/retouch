@@ -26,7 +26,7 @@
   localDelta(result,{x:0,y:0});return result;
  }
  function measure(group,locked=()=>false){if(!group?.hasAttribute('data-rt-group'))throw Error('Select a group in the current screen.');return measureSelection([group],locked);}
- function measureSelection(roots,locked=()=>false){
+ function measureSelection(roots,locked=()=>false,identity=el=>el.getAttribute('data-rt')){
   if(!Array.isArray(roots)||!roots.length||roots.length>100||roots.some(el=>!el?.isConnected||el.ownerDocument!==roots[0].ownerDocument))throw Error('Select layers in one current document.');
   if(roots.some(locked))throw Error('Unlock the selected layers before moving them.');
   const w=roots[0].ownerDocument.defaultView,targets=[];
@@ -39,11 +39,11 @@
     for(const child of el.children)visit(child);return;
    }
    if(css.display==='none')throw Error('Choose a screen where all group children are visible before moving them.');
-   if(!el.getAttribute('data-rt')||el.namespaceURI!=='http://www.w3.org/1999/xhtml')throw Error('Group movement needs source-backed page layers.');
+   if(!identity(el)||el.namespaceURI!=='http://www.w3.org/1999/xhtml')throw Error('Group movement needs source-backed page layers.');
    if(css.display==='inline')throw Error('Use a box-producing display for inline group children before moving them.');
    if([...el.querySelectorAll('[data-rt]')].some(locked))throw Error('Unlock the group contents before moving them.');
    const rect=el.getBoundingClientRect();if(rect.width<=0||rect.height<=0)throw Error('Group movement needs visible child bounds.');
-   const translate=css.translate||'none';translation(translate,{x:0,y:0});targets.push({el,id:el.getAttribute('data-rt'),translate,rect,matrix:parentMatrix(el)});
+   const translate=css.translate||'none';translation(translate,{x:0,y:0});targets.push({el,id:identity(el),translate,rect,matrix:parentMatrix(el)});
   }
   for(const el of [...new Set(roots)].filter(el=>!roots.some(parent=>parent!==el&&parent.contains(el))))visit(el);if(!targets.length||targets.length>100||new Set(targets.map(item=>item.id)).size!==targets.length)throw Error('Choose a group with 1–100 distinct source children.');return targets;
  }

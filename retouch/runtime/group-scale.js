@@ -2,8 +2,7 @@
  'use strict';
  // The source adapter must persist this controller and its geometry dependencies
  // with the site. Loading it only into editor frames cannot fix authored output.
- function mount({roots,factor,media='',onError=()=>{}}){
-  const geometry=root.RetouchGroupMove;
+ function mount({roots,factor,media='',onError=()=>{},geometry=root.RetouchGroupMove,identity}){
   if(!geometry)throw Error('Load group geometry before responsive scaling.');
   if(typeof roots!=='function'||typeof factor!=='function')throw Error('Provide live group roots and scale factor readers.');
   const document=root.document,query=media?root.matchMedia(media):null;
@@ -34,7 +33,7 @@
     const selected=roots();if(!Array.isArray(selected))throw Error('Resolve an array of group roots.');targets=selected.filter(el=>el?.nodeType===1&&el.ownerDocument===document);
     if(query&&!query.matches)return;
     const value=factor();if(value===1)return;
-    const members=geometry.measureSelection(selected);targets=members.map(item=>item.el);
+    const members=geometry.measureSelection(selected,()=>false,identity);targets=members.map(item=>item.el);
     preview=geometry.scalePreview(members);preview.update(value);
    }catch(error){preview?.restore();preview=null;onError(error);}
    finally{if(!disposed)observe(targets);}

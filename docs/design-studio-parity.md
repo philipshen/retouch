@@ -22647,3 +22647,43 @@ rather than relying on editor-only instrumentation. Multiple overlapping
 controllers, animated layout, source round-trips, and host framework lifecycle
 have not yet been validated. No production behavior changed, desktop rebuild,
 or push in this continuation. The full goal remains unfinished.
+
+### Persistent HTML scaling intent and standalone runtime (2026-09-16)
+
+Added an HTML scaleGroup source operation with relative factor and minimum-width
+range. It stores absolute responsive factors on the group, persistent member
+identities, and one private 29KB runtime bundle in a single source edit. The
+geometry engine accepts an identity reader, so ordinary saved pages do not
+require editor data-rt instrumentation. The bootstrap resolves ranges, starts
+controllers, updates changed metadata, and restores styles when metadata is
+removed. Runtime dependencies stay private rather than adding Retouch globals.
+Source planning rejects stale hashes, invalid ranges/factors, duplicate member
+identities, overlapping scaled groups, and externally modified runtime text.
+The HTML adapter exposes the operation; the editor does not call it yet.
+
+The saved-group-scale-runtime.cjs browser test uses actual planner output on a
+plain HTTP server, without the Retouch server or editor. Chromium and WebKit
+pass 390/768/1100/1440/523px geometry and page reloads with base 150% and >=1000px
+200% scale, runtime metadata changes/removal, absent editor IDs, private globals,
+and source restoration/reapplication. Unit coverage verifies one exact source
+transaction with byte-for-byte undo/redo and unchanged source layer identities.
+Evidence: /tmp/retouch-saved-scale-runtime.log,
+/tmp/retouch-saved-scale-runtime-webkit.log,
+/tmp/retouch-scale-bundle-units-final.log (1,767 pass).
+
+An earlier full run stalled after component-creation test setup failed before
+its cleanup block (missing shell token). Its process was confirmed alive with
+an idle listening server for over six hours, then deliberately terminated.
+The focused component test and fresh full suite passed. Setup now runs inside
+that test's try/finally, preventing a setup exception from leaking the server;
+the focused 44 tests pass after that cleanup change in
+/tmp/retouch-scale-component-recheck.log.
+
+Remaining integration: route editor scale fields/gestures and history through
+the new operation; synchronize live previews with the authored runtime;
+implement React/Liquid output and multi-group composition. Existing saved
+editor scaling still takes the old pixel-offset path and its failing regression
+remains unresolved. Inline-script CSP restrictions, overlapping groups, and
+framework lifecycle are not covered by the plain HTML proof. Full Figma parity,
+arbitrary-site support, and trusted Homebrew distribution remain unfinished.
+No push or desktop rebuild in this continuation.

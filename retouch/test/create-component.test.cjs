@@ -42,9 +42,10 @@ test('component extraction accepts subtree-local callback bindings and checks na
 });
 test('component creation API integrates inspection and exact Undo/Redo with source CAS',async()=>{
  const source=`export default function Page(){return <main><article className="p-4"><h2>Card</h2></article></main>}`;
- const f=fixture(source),server=require('../src/server.cjs').startServer({appRoot:f.root,port:0,quiet:true});await require('node:events').once(server,'listening');
- const base='http://127.0.0.1:'+server.address().port,shell=await(await fetch(base+'/rt')).text(),headers={'x-retouch-token':/__RT_TOKEN = "([a-f0-9]+)"/.exec(shell)[1],'content-type':'application/json'},post=async body=>(await fetch(base+'/rt/__api/op',{method:'POST',headers,body:JSON.stringify(body)})).json();
+ const f=fixture(source),server=require('../src/server.cjs').startServer({appRoot:f.root,port:0,quiet:true});
  try{
+ await require('node:events').once(server,'listening');
+ const base='http://127.0.0.1:'+server.address().port,shell=await(await fetch(base+'/rt')).text(),headers={'x-retouch-token':/__RT_TOKEN = "([a-f0-9]+)"/.exec(shell)[1],'content-type':'application/json'},post=async body=>(await fetch(base+'/rt/__api/op',{method:'POST',headers,body:JSON.stringify(body)})).json();
   const op={type:'createComponent',name:'Card',id:f.selected.element.id,fileHash:f.selected.hash};assert.equal((await post({...op,fileHash:'stale'})).ok,false);
   const result=await post(op);assert.ok(result.ok,result.reason||result.error);assert.ok(result.undoId);assert.equal(result.element.kind,'instance');const after=fs.readFileSync(f.selected.file,'utf8');
   const info=await(await fetch(base+'/rt/__api/component?id='+result.createdComponent.instanceId,{headers})).json();assert.ok(info.ok,info.reason);assert.equal(info.definitionId,result.createdComponent.definitionId);assert.equal(info.inlineComponent,false);
