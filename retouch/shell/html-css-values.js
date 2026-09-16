@@ -82,7 +82,7 @@
  const corners=['top-left','top-right','bottom-right','bottom-left'];
  const families={'white-space':['white-space-collapse','text-wrap-mode','white-space-trim'],'text-box':['text-box-trim','text-box-edge'],'text-wrap':['text-wrap-mode','text-wrap-style'],'text-decoration':['text-decoration-line','text-decoration-style','text-decoration-color','text-decoration-thickness'],'border-style':sides.map(s=>'border-'+s+'-style'),inset:sides,'inset-inline':['inset-inline-start','inset-inline-end'],'inset-block':['inset-block-start','inset-block-end'],'border-radius':corners.map(c=>'border-'+c+'-radius'),overflow:['overflow-x','overflow-y'],'grid-column':['grid-column-start','grid-column-end'],'grid-row':['grid-row-start','grid-row-end'],padding:sides.map(s=>'padding-'+s),margin:sides.map(s=>'margin-'+s),gap:['row-gap','column-gap'],'border-width':sides.map(s=>'border-'+s+'-width')};
  const fields=[['width','Width'],['height','Height'],['min-width','Minimum width'],['max-width','Maximum width'],['min-height','Minimum height'],['max-height','Maximum height'],['display','Display'],['flex-direction','Direction'],['flex-wrap','Wrap'],['align-items','Align items'],['align-content','Align lines'],['justify-content','Distribute items'],['gap','Gap'],['padding','Padding'],...sides.map(s=>['padding-'+s,'Padding '+s]),['margin','Margin'],...sides.map(s=>['margin-'+s,'Margin '+s]),['font-family','Font family'],['font-weight','Font weight'],['font-style','Font style'],['text-decoration-line','Text decoration'],['text-transform','Text case'],['font-size','Font size'],['line-height','Line height'],['letter-spacing','Letter spacing'],['text-indent','Paragraph indent'],['text-align','Text alignment'],['color','Text color'],['background-color','Background color'],['border-width','Border width'],...sides.map(s=>['border-'+s+'-width','Border '+s+' width']),['border-style','Border style'],...sides.map(s=>['border-'+s+'-style','Border '+s+' style']),['border-color','Border color'],['border-radius','Corner radius'],...corners.map(c=>['border-'+c+'-radius',c.split('-').map((word,i)=>i?word:word[0].toUpperCase()+word.slice(1)).join(' ')+' corner'])];
- const lengths=new Set(['text-decoration-thickness','text-underline-offset',...sides,...fields.map(([p])=>p).filter(p=>!options[p]&&!p.endsWith('color')),'flex-basis','row-gap','column-gap',...families['border-width']]);
+ const lengths=new Set(['min-inline-size','max-inline-size','min-block-size','max-block-size','text-decoration-thickness','text-underline-offset',...sides,...fields.map(([p])=>p).filter(p=>!options[p]&&!p.endsWith('color')),'flex-basis','row-gap','column-gap',...families['border-width']]);
  const colors=new Set(['text-decoration-color','color','background-color','border-color']);
  const colorNumber='[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:e[+-]?\\d+)?',hslHue=colorNumber+'(?:deg|grad|rad|turn)?',hslPercent=colorNumber+'%',hslAlpha=colorNumber+'%?';
  const literalHSL=new RegExp('^hsla?\\(\\s*'+hslHue+'(?:\\s*,\\s*'+hslPercent+'\\s*,\\s*'+hslPercent+'(?:\\s*,\\s*'+hslAlpha+')?|\\s+'+hslPercent+'\\s+'+hslPercent+'(?:\\s*/\\s*'+hslAlpha+')?)\\s*\\)$','i');
@@ -244,10 +244,10 @@
    if(token==='auto'&&['text-decoration-thickness','text-underline-offset'].includes(property))return true;
    if(token==='from-font'&&property==='text-decoration-thickness')return true;
    if(token==='auto'&&sides.includes(property))return true;
-   if(token==='auto')return /^(?:width|height|min-width|min-height|margin(?:-(?:top|right|bottom|left))?)$/.test(property);
-   if(token==='none')return property==='max-width'||property==='max-height';
+   if(token==='auto')return /^(?:width|height|min-width|min-height|min-inline-size|min-block-size|margin(?:-(?:top|right|bottom|left))?)$/.test(property);
+   if(token==='none')return /^max-(?:width|height|inline-size|block-size)$/.test(property);
    if(token==='normal')return ['gap','row-gap','column-gap','line-height','letter-spacing'].includes(property);
-   if(['min-content','max-content','fit-content'].includes(token))return /^(?:(?:min|max)-)?(?:width|height)$/.test(property);
+   if(['min-content','max-content','fit-content'].includes(token))return /^(?:(?:min|max)-)?(?:width|height|inline-size|block-size)$/.test(property);
    return false;
   });
  }

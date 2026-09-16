@@ -22109,3 +22109,38 @@ Remaining work includes selections mixing existing lists and plain paragraphs,
 soft-line selections within a single text run, nested paragraph containers,
 arbitrary authored styling/bindings, and full Figma parity. Trusted notarized
 Homebrew distribution remains unfinished. No desktop rebuild or push here.
+
+## Text sizing resolves minimum and maximum bounds (2026-09-16)
+
+The preceding turn was progress: b6313511 added selected-paragraph list creation
+with source/browser verification. This continuation reproduced a text sizing
+failure: Auto height left a layer at its authored minimum height rather than
+fitting its content. /tmp/retouch-text-sizing-bounds-before.log records the
+failing rendered-height assertion before the fix.
+
+Auto width, Auto height and Fixed size now clear physical and logical minimum
+and maximum size limits within the selected edit range as part of the same
+source transaction. Preset tooltips state this behavior. React/Liquid updates
+remove conflicting size-limit classes only in that range; other breakpoints,
+interaction variants and unrelated classes remain. Important inline bounds
+participate in the existing refusal guard. Mode recognition reports constrained
+sizes as custom rather than implying an unconstrained preset is active.
+
+HTML authoring now validates logical min/max inline/block sizes and can save
+these overrides together with the sizing preset. The initial HTML run exposed
+that missing validation path, which is covered by a source transaction test.
+
+All 1,756 unit tests pass. Chromium 145 browser checks pass for shared sizing in
+HTML, React and Liquid with all eight physical/logical bounds present, HTML
+single-layer sizing with bounds, and the existing React flex-layout regression.
+They verify actual widths/heights, cleared computed bounds, responsive range
+isolation, exact source undo, and important inline refusal. Source tests verify
+scoped class replacement, idempotency, supported values and isolated HTML rules.
+Evidence: /tmp/retouch-text-sizing-bounds-{html,react,liquid,single,flex,units,
+targeted,html-targeted}.log.
+
+Explicit logical inline/block-size overrides, arbitrary cascade/binding behavior
+and universal text sizing remain outside this evidence. Mode recognition still
+uses computedStyleMap and returns custom when that API is unavailable. Full
+Figma parity, arbitrary-site support and trusted notarized Homebrew distribution
+remain unfinished. No desktop rebuild or push in this continuation.

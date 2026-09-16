@@ -483,7 +483,7 @@ test('shared text sizing preserves other scopes and replaces coupled sizing and 
 });
 test('text sizing captures each CSS box and preserves its wrap style',()=>{
  const {textResizeChanges}=require('../shell/inspector.js'),css={width:'220px',height:'140px',getPropertyValue:()=> 'balance'};
- assert.deepEqual(textResizeChanges(css,'height'),{width:'220px',height:'auto','white-space':'pre-wrap','text-wrap':'wrap balance'});
+ assert.deepEqual(textResizeChanges(css,'height'),{...Object.fromEntries(require('../shell/inspector.js').textSizeLimits.map(key=>[key,key.startsWith('min-')?'0px':'none'])),width:'220px',height:'auto','white-space':'pre-wrap','text-wrap':'wrap balance'});
  assert.equal(textResizeChanges(css,'width').width,'max-content');assert.equal(textResizeChanges(css,'fixed').height,'140px');assert.throws(()=>textResizeChanges({...css,width:'auto'},'fixed'));
 });
 
@@ -522,4 +522,13 @@ test('text sizing mode distinguishes authored keywords, responsive sizes and lay
  for(const width of ['auto','50%','fit-content','calc(100% - 10px)'])assert.equal(textResizeMode({width,height:'auto'},css),null);
  const row={display:'flex',flexDirection:'row',alignItems:'stretch'};assert.equal(textResizeMode({width:'200px',height:'100px'},{...css,flexGrow:'1'},row),null);assert.equal(textResizeMode({width:'200px',height:'auto'},{...css,alignSelf:'auto'},row),null);
  const grid={display:'grid',writingMode:'vertical-rl',justifyItems:'stretch'};assert.equal(textResizeMode({width:'200px',height:'auto'},{...css,justifySelf:'auto'},grid),null);assert.equal(textResizeMode({width:'200px',height:'auto'},css,grid),'height');
+});
+
+
+test('text sizing clears physical and logical limits only in the edited scope',()=>{
+ const I=require('../shell/inspector.js'),{changeTextResizing}=require('../shell/react-selection.js'),css={width:'260px',height:'180px',getPropertyValue:()=>''},changes=I.textResizeChanges(css,'height');
+ for(const property of I.textSizeLimits){assert.equal(changes[property],property.startsWith('min-')?'0px':'none');assert.throws(()=>changeTextResizing('','',changes,{style:{getPropertyPriority:key=>key===property?'important':''}}),/important inline/);assert.throws(()=>changeTextResizing('','',{...changes,[property]:'999px'}),/supported/);assert.equal(I.textResizeMode({width:'260px',height:'auto'},{getPropertyValue:key=>key===property?'180px':''}),null);}
+ const source='min-h-20 max-w-md md:!min-h-40 md:max-w-lg md:[min-inline-size:300px] md:[max-block-size:200px] hover:min-h-80',next=changeTextResizing(source,'md:',changes);
+ assert.ok(next.includes('min-h-20 max-w-md'));assert.ok(next.includes('hover:min-h-80'));for(const old of ['md:!min-h-40','md:max-w-lg','md:[min-inline-size:300px]','md:[max-block-size:200px]'])assert.ok(!next.includes(old));for(const property of I.textSizeLimits)assert.ok(next.includes('md:!['+property+':'+changes[property]+']'));
+ assert.equal(changeTextResizing(next,'md:',changes),next);
 });

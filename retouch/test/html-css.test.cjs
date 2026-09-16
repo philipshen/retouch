@@ -320,3 +320,11 @@ test('HTML text sizing saves cross-axis alignment with independent flex sizing',
 test('HTML text sizing supports validated grid inline-axis alignment',()=>{
  const result=css.plan(resolve(original),{width:768,changes:{height:'auto','justify-self':'flex-start'}});assert.equal(result.ok,true);assert.ok(result.edits[0].after.includes('justify-self:flex-start !important'));assert.equal(css.plan(resolve(original),{width:768,changes:{'justify-self':'stretch;display:none'}}).ok,false);
 });
+
+
+test('text sizing clears logical and physical bounds in one isolated HTML source edit',()=>{
+ const I=require('../shell/inspector.js'),changes=I.textResizeChanges({width:'260px',height:'180px',getPropertyValue:()=>''},'height');
+ const result=css.plan(resolve(original),{width:768,changes});assert.equal(result.ok,true,JSON.stringify(result));
+ const saved=result.edits[0].after;assert.deepEqual(css.describe(resolve(saved)).cssRules,{768:changes});assert.ok(saved.includes('<style>.title{color:red}</style>'));assert.ok(saved.includes('<h1 class="title">Second</h1>'));
+ for(const property of I.textSizeLimits){assert.equal(css.valid(property,null),true);assert.equal(css.valid(property,'-1px'),false);assert.equal(css.valid(property,'0px; color:red'),false);assert.equal(css.valid(property,'max-content'),true);}
+});
