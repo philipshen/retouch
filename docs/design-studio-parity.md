@@ -21558,3 +21558,14 @@ Mixed scripts/font fallback metrics and arbitrary inline formatting remain
 outside this geometry fixture. Full Figma fidelity, arbitrary-site guarantees
 and trusted Homebrew distribution remain incomplete. No desktop rebuild or
 push.
+
+### Multiline shared cap-height trim validation
+
+Extended the shared trim fixture to two-line text with nested span, emphasis,
+and strong elements, starting with mixed trim-start/none values. HTML and React
+in Chromium 145 and Liquid in WebKit 26 pass: cap-height and none edits preserve
+64px inter-line spacing and text, restore the expected box heights, retain
+responsive fallback, and support reset and exact source undo. Important inline
+longhand refusal still passes. Evidence: /tmp/retouch-trim-multiline-{html,react,liquid}.log.
+A fresh full unit run passed all 1,717 tests (/tmp/retouch-push-units.log).
+This fixture does not establish arbitrary script or fallback-font behavior.
