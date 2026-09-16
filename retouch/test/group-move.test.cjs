@@ -30,7 +30,7 @@ test('container transform inversion maps screen movement through nested rotation
  assert.throws(()=>move.localDelta([0,0,0,1],{x:1,y:2}),/singular/);assert.throws(()=>move.localDelta([Infinity,0,0,1],{x:1,y:2}),/singular/);
 });
 test('mixed group measurements flatten transparent groups and move covered descendants only once',()=>{
- const d={defaultView:{DOMMatrixReadOnly:class{constructor(){Object.assign(this,{a:1,b:0,c:0,d:1,is2D:true});}},getComputedStyle:el=>({display:el.group?'contents':'block',transform:'none',rotate:'none',scale:'none',translate:'none',zoom:'1'})}};
+ const d={defaultView:{DOMMatrixReadOnly:class{constructor(){Object.assign(this,{a:1,b:0,c:0,d:1,is2D:true});}},getComputedStyle:el=>({display:el.hidden?'none':el.group?'contents':'block',transform:'none',rotate:'none',scale:'none',translate:'none',zoom:'1'})}};
  const node=(id,group=false)=>({id,group,namespaceURI:'http://www.w3.org/1999/xhtml',isConnected:true,ownerDocument:d,parentElement:null,children:[],childNodes:[],hasAttribute:name=>name==='data-rt-group'&&group,getAttribute:name=>name==='data-rt'?id:null,getBoundingClientRect:()=>({x:0,y:0,width:10,height:10}),querySelectorAll(){return this.children.flatMap(child=>[child,...child.querySelectorAll()]);},contains(other){return other===this||this.children.some(child=>child.contains(other));}});
  const group=node('group',true),nested=node('nested',true),a=node('a'),b=node('b'),c=node('c');group.children=group.childNodes=[a,nested];a.parentElement=nested.parentElement=group;nested.children=nested.childNodes=[b];b.parentElement=nested;
  assert.deepEqual(move.measureSelection([group,a,c,group]).map(item=>item.id),['a','b','c']);
@@ -41,6 +41,10 @@ test('mixed group measurements flatten transparent groups and move covered desce
  assert.deepEqual(bounds.map(({el,...rect})=>rect),[{left:10,top:20,width:60,height:70},{left:100,top:5,width:10,height:10}]);
  assert.deepEqual(move.memberDeltas(bounds,members,[{x:0,y:-15},{x:-90,y:0}]),[{x:0,y:-15},{x:0,y:-15},{x:-90,y:0}]);
  assert.throws(()=>move.memberDeltas(bounds,members,[{x:NaN,y:0},{x:0,y:0}]),/finite/);
+ a.hidden=true;assert.throws(()=>move.measureSelection([group]),/visible/);assert.deepEqual(move.measureSelection([group],()=>false,undefined,{visibleOnly:true}).map(item=>item.id),['b']);
+ group.hidden=true;assert.deepEqual(move.measureSelection([group],()=>false,undefined,{visibleOnly:true}),[]);assert.deepEqual(move.measureSelection([b],()=>false,undefined,{visibleOnly:true}),[]);
+ group.hidden=false;a.hidden=false;assert.deepEqual(move.measureSelection([group],()=>false,undefined,{visibleOnly:true}).map(item=>item.id),['a','b']);
+
  assert.throws(()=>move.memberDeltas(bounds.slice(0,1),members,[{x:0,y:0}]),/one selection root/);
 
 });

@@ -22977,3 +22977,32 @@ Evidence: /tmp/retouch-released-gestures.log,
 Shared transform composition after independent offsets, arbitrary reparenting,
 nested scale groups, other renderers, CSP delivery, full Figma parity, and trusted
 desktop distribution remain unfinished. No push.
+
+### Responsive scaling with hidden children (2026-09-16)
+
+Fixed saved scaling disappearing from visible children when a sibling becomes
+`display:none`. Runtime measurement now opts into visible-only members, skips
+hidden roots/ancestors, and permits an empty visible set. Hidden persistent
+members stay observed so they can rejoin after being shown. Editor gesture
+measurement retains its existing strict default instead of silently omitting
+selected hidden layers. Registered the prior 3fbea5cf runtime fingerprint before
+changing bundled dependencies.
+
+The saved-page regression failed before the fix. Chromium and WebKit now verify
+both grouped and released roots across widths 390/1100/1440/768/1440/523px,
+including one hidden member, all members hidden, reappearance, and reloads at
+each width. Live DOM hide/show of a child and its main ancestor also recovers
+without runtime errors; visible geometry is compared to the equally hidden
+unscaled baseline. All 1,777 unit tests pass; measurement coverage verifies
+strict-editor refusal, runtime filtering, hidden ancestors, and reappearance.
+
+Evidence: /tmp/retouch-scale-hidden-before.log,
+/tmp/retouch-scale-hidden-chromium-final.log,
+/tmp/retouch-scale-hidden-webkit-final.log,
+/tmp/retouch-scale-hidden-targeted.log,
+/tmp/retouch-scale-hidden-units.log.
+
+This covers display:none, not arbitrary zero-size/overflow or content-visibility
+geometry. Editor operations with hidden selected children remain guarded.
+Transform composition, nested groups, renderer parity, CSP delivery, full Figma
+parity, and trusted desktop distribution remain unfinished. No push.

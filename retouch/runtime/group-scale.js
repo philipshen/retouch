@@ -30,10 +30,10 @@
     // Restore only our own writes. A host change to either property becomes
     // part of the next baseline rather than being overwritten on cleanup.
     preview?.restore();preview=null;managed.clear();
-    const selected=roots();if(!Array.isArray(selected))throw Error('Resolve an array of group roots.');targets=selected.filter(el=>el?.nodeType===1&&el.ownerDocument===document);
+    const selected=roots();if(!Array.isArray(selected))throw Error('Resolve an array of group roots.');targets=selected.filter(el=>el?.nodeType===1&&el.ownerDocument===document).flatMap(el=>[el,...el.querySelectorAll('[data-rt-scale-member],[data-rt]')]);
     if(query&&!query.matches)return;
     const value=factor(),shift=offset(),pixels=pixelOffset();if([shift,pixels].some(pair=>!Array.isArray(pair)||pair.length!==2||pair.some(n=>!Number.isFinite(n))))throw Error('Resolve a finite scale offset.');
-    const members=geometry.measureSelection(selected,()=>false,identity);targets=members.map(item=>item.el);managed=new Set(targets);
+    const members=geometry.measureSelection(selected,()=>false,identity,{visibleOnly:true});targets=[...new Set([...targets,...members.map(item=>item.el)])];managed=new Set(members.map(item=>item.el));if(!members.length)return;
     const memberFactors=Object.fromEntries(members.map(item=>[item.id,geometry.memberScale(item.el)]));
     const movements=Object.fromEntries(members.map(item=>[item.id,geometry.scaleMovement(item.el)]));
     if(value===1&&Object.values(memberFactors).every(n=>n===1)&&[...shift,...pixels,...Object.values(movements).flatMap(value=>[value.x,value.y])].every(n=>n===0))return;

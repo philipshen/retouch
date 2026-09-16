@@ -26,13 +26,14 @@
   localDelta(result,{x:0,y:0});return result;
  }
  function measure(group,locked=()=>false){if(!group?.hasAttribute('data-rt-group'))throw Error('Select a group in the current screen.');return measureSelection([group],locked);}
- function measureSelection(roots,locked=()=>false,identity=el=>el.getAttribute('data-rt')){
+ function measureSelection(roots,locked=()=>false,identity=el=>el.getAttribute('data-rt'),{visibleOnly=false}={}){
   if(!Array.isArray(roots)||!roots.length||roots.length>100||roots.some(el=>!el?.isConnected||el.ownerDocument!==roots[0].ownerDocument))throw Error('Select layers in one current document.');
   if(roots.some(locked))throw Error('Unlock the selected layers before moving them.');
   const w=roots[0].ownerDocument.defaultView,targets=[];
   function visit(el){
    if(locked(el))throw Error('Unlock the group contents before moving them.');
    const css=w.getComputedStyle(el);
+   if(visibleOnly&&css.display==='none')return;
    if(el.hasAttribute('data-rt-group')&&css.display!=='contents')throw Error('Choose layout-transparent groups.');
    if(css.display==='contents'){
     if([...el.childNodes].some(node=>node.nodeType===3&&node.textContent.trim()))throw Error('Wrap the group’s direct text in a layer before moving it.');
@@ -45,7 +46,7 @@
    const rect=el.getBoundingClientRect();if(rect.width<=0||rect.height<=0)throw Error('Group movement needs visible child bounds.');
    const translate=css.translate||'none';translation(translate,{x:0,y:0});targets.push({el,id:identity(el),translate,rect,matrix:parentMatrix(el)});
   }
-  for(const el of [...new Set(roots)].filter(el=>!roots.some(parent=>parent!==el&&parent.contains(el))))visit(el);if(!targets.length||targets.length>100||new Set(targets.map(item=>item.id)).size!==targets.length)throw Error('Choose a group with 1–100 distinct source children.');return targets;
+  for(const el of [...new Set(roots)].filter(el=>!roots.some(parent=>parent!==el&&parent.contains(el)))){let hidden=false;if(visibleOnly)for(let node=el;node;node=node.parentElement)if(w.getComputedStyle(node).display==='none'){hidden=true;break;}if(!hidden)visit(el);}if(!targets.length&&!visibleOnly||targets.length>100||new Set(targets.map(item=>item.id)).size!==targets.length)throw Error('Choose a group with 1–100 distinct source children.');return targets;
  }
  function selectionBounds(roots,members){
   const outer=[...new Set(roots)].filter(el=>!roots.some(parent=>parent!==el&&parent.contains(el)));
