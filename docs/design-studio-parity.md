@@ -22240,3 +22240,28 @@ control in the light layout inspector. Logs:
 Arbitrary cascade, intrinsic sizing, writing-mode combinations and universal
 source support remain unproven. Full Figma parity and trusted notarized Homebrew
 distribution remain unfinished. No desktop rebuild or push here.
+
+## Shared aspect-ratio range guards (2026-09-16)
+
+The preceding turn was progress: 688daf3f resolved text/aspect-ratio conflicts and
+added HTML shared ratio controls. The next audit reproduced React's shared ratio
+field remaining enabled when previewing outside the selected edit range:
+/tmp/retouch-ratio-range-before.log.
+
+React/Liquid ratio fields, ratio presets and reset now use a shared live readiness
+check. Writes require a matching preview range and connected target layers;
+non-reset edits retain the inline-sizing refusal and exclude non-rendered layers.
+Reset remains possible in range when an inline rule controls rendering. Handlers
+recheck readiness, so a synthetic event or a stale enabled control cannot bypass
+the range guard. The visible field caption is shortened to Aspect ratio while
+retaining its accessible name.
+
+All 1,760 unit tests pass. Chromium 145 HTML, React and Liquid browser checks
+verify disabled fields/presets/reset outside the range, synthetic change/click
+attempts preserving source, important inline ratio refusal, and the existing
+active-range edit/reset/undo and sizing geometry flows. Evidence:
+/tmp/retouch-ratio-range-{html,react,liquid,units}.log.
+
+This establishes the tested shared ratio boundary, not universal source or
+interaction parity. Full Figma parity, arbitrary-site support and trusted
+notarized Homebrew distribution remain unfinished. No desktop rebuild or push.
