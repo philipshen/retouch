@@ -380,3 +380,10 @@ test('shared wrap style preserves whitespace and guards important inline longhan
  el.style.getPropertyPriority=()=>'';el.style.getPropertyValue=key=>key==='text-wrap-mode'?'nowrap':'';assert.equal(change('','','text-wrap','balance',null,false,el),'![text-wrap:balance]');
  assert.throws(()=>change('','','text-wrap','invalid'));
 });
+
+test('shared wrap replaces mode/style classes and inherits their priority',()=>{
+ const source='whitespace-pre-wrap [text-wrap-mode:nowrap] [text-wrap-style:balance] hover:[text-wrap-mode:wrap]';
+ const next=change(source,'','text-wrap','pretty');assert.ok(next.includes('whitespace-pre-wrap'));assert.ok(next.includes('hover:[text-wrap-mode:wrap]'));assert.ok(next.includes('[text-wrap:pretty]'));assert.ok(!next.includes('[text-wrap-mode:nowrap]'));assert.ok(!next.includes('[text-wrap-style:balance]'));
+ assert.equal(change('![text-wrap-mode:nowrap] [text-wrap-style:balance]','md:','text-wrap','wrap'),'![text-wrap-mode:nowrap] [text-wrap-style:balance] md:![text-wrap:wrap]');
+ assert.equal(change('text-wrap md:[text-wrap-mode:nowrap] md:[text-wrap-style:balance]','md:','text-wrap',null),'text-wrap');
+});

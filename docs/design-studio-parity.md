@@ -21184,3 +21184,26 @@ Evidence: `/tmp/retouch-wrap-geometry-react.log`,
 This pass changes browser verification only. Full Figma parity, arbitrary-site
 support and trusted Homebrew distribution remain incomplete. No native rebuild
 or push.
+
+### Wrapping longhand source classes
+
+The typography wrap matcher now includes arbitrary text-wrap-mode and
+text-wrap-style classes. Choosing a wrapping shorthand removes both selected-
+scope longhands, and inherited important longhands cause an important scoped
+override. Reset removes selected-scope wrapping longhands without removing
+unrelated whitespace or hover rules. The matcher is shared by single and
+multi-selection typography.
+
+Unit tests cover selected-scope replacement/reset and inherited priority.
+React/Chromium and Liquid/WebKit fixtures begin with important no-wrap mode
+and a separate balance style, verify one rendered line initially, then verify
+scoped wrapping and original no-wrap geometry after reset or smaller-screen
+fallback. All 1,708 unit tests passed. An initial fixture patch stopped before
+insertion; those browser runs were discarded and the completed fixture was
+rerun successfully.
+
+Evidence: `/tmp/retouch-wrap-longhands-react.log`,
+`/tmp/retouch-wrap-longhands-liquid.log`,
+`/tmp/retouch-wrap-longhands-units.log`.
+Arbitrary cascade/shorthand behavior, full Figma parity, arbitrary-site support
+and trusted Homebrew distribution remain incomplete. No native rebuild or push.
