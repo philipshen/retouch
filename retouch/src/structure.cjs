@@ -6,21 +6,21 @@ const traverse = require('@babel/traverse').default;
 const unsafeTags = new Set(['script','style','template','html','head','body']);
 const types = new Set(['duplicateElement', 'pasteElement', 'deleteElement', 'moveElement']);
 const refuse = reason => ({ok:false,refused:true,reason});
-function reactRange(resolved) {
-  let target;
-  traverse(parseSource(resolved.source), {JSXElement(p) {
+function reactRange(resolved,{scaleChildren=false}={}) {
+  let target;const ast=parseSource(resolved.source),anchors=scaleChildren?require('./jsx-group-scale.cjs').anchors(ast,resolved):new Set();
+  traverse(ast, {JSXElement(p) {
     if(p.node.start===resolved.element.node.start) {target=p;p.stop();}
   }});
   if(!target || !['JSXElement','JSXFragment'].includes(target.parent.type)) throw Error('Select a literal child element, not a component root or expression.');
   for(let p=target.parentPath;p;p=p.parentPath) {
     if(p.type==='JSXExpressionContainer') throw Error('Elements rendered by expressions cannot be structurally edited.');
   }
-  const literal = n => n.type==='JSXElement' && n.openingElement.name.type==='JSXIdentifier' && /^[a-z]/.test(n.openingElement.name.name) && !unsafeTags.has(n.openingElement.name.name) &&
-    n.openingElement.attributes.every(a=>a.type==='JSXAttribute' && (!a.value || a.value.type==='StringLiteral')) &&
+  const literal = n => anchors.has(n.start)||n.type==='JSXElement' && n.openingElement.name.type==='JSXIdentifier' && /^[a-z]/.test(n.openingElement.name.name) && !unsafeTags.has(n.openingElement.name.name) &&
+    n.openingElement.attributes.every(a=>a.type==='JSXAttribute' && (!a.value || a.value.type==='StringLiteral'||scaleChildren&&['data-rt-scale','data-rt-scale-member'].includes(a.name?.name)&&a.value.type==='JSXExpressionContainer'&&a.value.expression.type==='StringLiteral')) &&
     n.children.every(c=>c.type==='JSXText'||literal(c));
   const children=target.parent.children;
   if(children.some(n=>n.type==='JSXText'?n.value.trim()!=='':!literal(n))) throw Error('Structural editing requires literal native siblings without expressions or mixed text.');
-  const items=children.filter(n=>n.type==='JSXElement').map(n=>({start:n.start,end:n.end,selected:n.start===target.node.start}));
+  const items=children.filter(n=>n.type==='JSXElement'&&!anchors.has(n.start)).map(n=>({start:n.start,end:n.end,selected:n.start===target.node.start}));
   items.parentId=resolved.elements?.find(e=>e.node.start===target.parent.start)?.id || null;
   return items;
 }
@@ -88,21 +88,21 @@ function htmlRange(resolved) {
   items.parentId=resolved.elements?.find(e=>e.node===parent)?.id||null;
   return items;
 }
-function ranges(resolved,language,options) {return language==='react'?reactRange(resolved):language==='html'?htmlRange(resolved):liquidRange(resolved,options);}
+function ranges(resolved,language,options) {return language==='react'?reactRange(resolved,options):language==='html'?htmlRange(resolved):liquidRange(resolved,options);}
 function duplicateAllowed(source,range,language) {return !/\s(?:id|key|ref)\s*=/i.test(source.slice(range.start,range.end));}
 function describe(resolved,language,options) {
   try {
     const items=ranges(resolved,language,options),index=items.findIndex(r=>r.selected);
     if(index<0) throw Error('The source element could not be located.');
     let canDuplicate=duplicateAllowed(resolved.source,items[index],language);
-    if(canDuplicate&&['html','liquid'].includes(language))try{require(language==='html'?'./html-css.cjs':'./liquid-group-scale.cjs').clone(resolved,items[index]);}catch{canDuplicate=false;}
+    if(canDuplicate&&['html','liquid','react'].includes(language))try{require(language==='html'?'./html-css.cjs':language==='react'?'./jsx-group-scale.cjs':'./liquid-group-scale.cjs').clone(resolved,items[index]);}catch{canDuplicate=false;}
     return {canReparent:true,parentId:items.parentId,canPaste:true,canDuplicate,canDelete:true,canMoveBefore:index>0,canMoveAfter:index<items.length-1,canMoveFirst:index>0,canMoveLast:index<items.length-1,reason:null};
   } catch(error) {return {canReparent:false,parentId:null,canPaste:false,canDuplicate:false,canDelete:false,canMoveBefore:false,canMoveAfter:false,reason:error.message};}
 }
 function planOp(resolved,op,language) {
   if(op.fileHash && op.fileHash!==resolved.hash) return refuse('The file changed. Re-select the element before editing.');
   try {
-    const items=ranges(resolved,language,{templateChildren:true}),index=items.findIndex(r=>r.selected),source=resolved.source;
+    const items=ranges(resolved,language,{templateChildren:true,scaleChildren:true}),index=items.findIndex(r=>r.selected),source=resolved.source;
     if(index<0) throw Error('The source element could not be located.');
     const node=items[index];
     let next,createdId,movedId,sourceIdMap,removedSourceIds;
@@ -118,7 +118,7 @@ function planOp(resolved,op,language) {
       if(!duplicateAllowed(source,copied,language)) throw Error('Duplicating this element would duplicate an authored identity.');
       const previous=items[index-1];
       const gap=previous?source.slice(previous.end,node.start):'\n'+(source.slice(0,node.start).match(/(?:^|\n)([ \t]*)$/)?.[1]||'');
-      const cloned=['html','liquid'].includes(language)?require(language==='html'?'./html-css.cjs':'./liquid-group-scale.cjs').clone(resolved,copied):null;
+      const cloned=['html','liquid','react'].includes(language)?require(language==='html'?'./html-css.cjs':language==='react'?'./jsx-group-scale.cjs':'./liquid-group-scale.cjs').clone(resolved,copied):null;
       next=source.slice(0,node.end)+gap+(cloned?.chunk??source.slice(copied.start,copied.end))+source.slice(node.end);
       const adapter=require('./adapters/'+language+'.cjs'),start=element=>language==='react'?element.node.start:language==='html'?element.location.startOffset:element.tagStart;
       const elements=adapter.collect(next,resolved.relPath).elements,insertedLength=next.length-source.length;

@@ -47,10 +47,36 @@ function describe(resolved){
 }
 const structural=new Set(['frameSelection','groupSelection','removeFrame','reparentElement','reparentSelection','duplicateSelection','deleteSelection','moveSelection','insertElement','duplicateElement','pasteElement','deleteElement','moveElement','setChildren','setTag','createComponent','detachComponent','insertComponent','swapComponent','moveComponent','reparentComponentSelection','deleteComponent','deleteComponentSelection','duplicateComponent','duplicateComponentSelection']);
 function guard(resolved,op){
- if(!structural.has(op.type))return null;
+ if(!structural.has(op.type)||['duplicateElement','pasteElement','duplicateSelection'].includes(op.type))return null;
  const elements=resolved.elements||collectElements(resolved.source,resolved.relPath).elements,ids=new Set([resolved.element.id,...(Array.isArray(op.ids)?op.ids:[]),op.copiedId,op.parentId,op.targetId,op.destinationId]),selected=elements.filter(e=>ids.has(e.id));
  const owners=elements.filter(e=>attribute(e,'data-rt-scale'));
  if(owners.some(owner=>selected.some(e=>e.node.start<owner.node.end&&e.node.end>owner.node.start)))return {ok:false,refused:true,reason:'Responsive React groups need preserved scale ownership for this structural edit. Undo the group scaling first.'};
  return null;
 }
-module.exports={plan,describe,guard};
+function anchors(ast,resolved){
+ if(!ast.program.body.some(n=>n.type==='ImportDeclaration'&&n.source.value===moduleName))return new Set();
+ const helper=path.join(path.dirname(resolved.file),'.retouch-group-scale.jsx');if(!fs.existsSync(helper)||fs.readFileSync(helper,'utf8')!==runtime.component())return new Set();
+ const result=new Set(),traverse=require('@babel/traverse').default;
+ traverse(ast,{JSXElement(p){const opening=p.node.openingElement,name=opening.name;if(name.type!=='JSXIdentifier'||!opening.selfClosing||opening.attributes.length)return;const binding=p.scope.getBinding(name.name),imported=binding?.path;if(imported?.node.type!=='ImportDefaultSpecifier'||imported.parent.source?.value!==moduleName)return;const parent=p.parentPath.node;if(parent.type==='JSXElement'&&parent.openingElement.attributes.some(a=>a.name?.name==='data-rt-scale'))result.add(p.node.start);}});
+ return result;
+}
+function clone(resolved,range){
+ const elements=resolved.elements||collectElements(resolved.source,resolved.relPath).elements,chunk=new MagicString(resolved.source.slice(range.start,range.end)),copies=new Map(),identities=new Set(elements.map(e=>literal(e,'data-rt-scale-member')).filter(Boolean));
+ for(const element of elements){const marker=attribute(element,'data-rt-scale-member');if(!marker||marker.start<range.start||marker.end>range.end)continue;
+  const old=literal(element,'data-rt-scale-member');if(!/^[a-zA-Z0-9_-]{1,80}$/.test(old)||copies.has(old))throw Error('Copied members need distinct persistent identities.');
+  let id,counter=0;do{id=contentHash(resolved.source+'|scale-copy|'+element.id+'|'+counter++).slice(0,10);}while(identities.has(id));identities.add(id);copies.set(old,id);chunk.overwrite(marker.start-range.start,marker.end-range.start,'data-rt-scale-member={'+JSON.stringify(id)+'}');
+ }
+ if(copies.size){const helper=path.join(path.dirname(resolved.file),'.retouch-group-scale.jsx');if(!fs.existsSync(helper)||fs.readFileSync(helper,'utf8')!==runtime.component())throw Error('Upgrade or restore the saved React scale helper before copying.');}
+ return {chunk:chunk.toString(),append(source){
+  if(!copies.size)return source;
+  const elements=collectElements(source,resolved.relPath).elements,out=new MagicString(source);
+  for(const group of elements){const marker=attribute(group,'data-rt-scale');if(!marker)continue;const raw=literal(group,'data-rt-scale'),data=JSON.parse(raw);require('../runtime/group-scale-bootstrap.js').parse(raw);
+   if(!data.steps?.some(step=>step.styles))continue;
+   const owned=new Set(elements.filter(e=>e.node.start>group.node.start&&e.node.end<group.node.end).map(e=>literal(e,'data-rt-scale-member')).filter(Boolean));
+   for(const step of data.steps)if(step.styles){for(const [old,id]of copies)if(owned.has(id)&&Object.hasOwn(step.styles,old))step.styles[id]=step.styles[old];step.styles=Object.fromEntries(Object.entries(step.styles).filter(([id])=>owned.has(id)));}
+   const metadata=JSON.stringify(data);require('../runtime/group-scale-bootstrap.js').parse(metadata);out.overwrite(marker.start,marker.end,'data-rt-scale={'+JSON.stringify(metadata)+'}');
+  }
+  return out.toString();
+ }};
+}
+module.exports={plan,describe,guard,clone,anchors};

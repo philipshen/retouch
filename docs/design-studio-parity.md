@@ -23529,3 +23529,33 @@ Evidence: /tmp/retouch-react-integrated-final-units.log,
 /tmp/retouch-react-editor-warm-null.log, /tmp/retouch-react-editor-null-webkit.log,
 /tmp/retouch-react-warm-transition.log, /tmp/retouch-react-warm-transition-webkit.log,
 /tmp/retouch-scaled-comparisons-react.png. git diff --check passed. No push.
+
+### Independent copies of saved React scale groups
+
+React duplicate, same-parent paste and multi-selection duplication now preserve
+saved group transforms while assigning fresh persistent member identities. Whole
+group copies retain their runtime registration and remap snapshot ownership; child
+copies extend the containing group's independent-transform snapshots. Existing
+source identities are remapped through the structural transaction, and undo restores
+the exact original source. Authored id/key/ref duplication remains refused.
+
+The structural parser recognizes only a verified generated helper import with its
+actual lexical binding, and only literal saved-scale metadata expressions. Its
+strict default remains available to other consumers. Modified/missing/older helpers
+must be restored or upgraded before copying. Unsupported move/delete/reparent/frame
+and ungroup actions remain guarded and disabled in descriptors. Cross-parent/file
+copy, generated children, arbitrary components and released groups remain outside
+this implementation. Full Figma parity and desktop distribution remain incomplete.
+
+Chromium and WebKit loaded source-planned copies, rescaled the copy independently,
+and matched separate baseline geometry at 390/768/1100/1440/523 pixels and after
+reload. Chromium also passed editor duplicate/undo/redo across all four previews.
+The WebKit copied-route test uses fresh pages to avoid the existing Next navigation
+race between separate fixture routes. Unit coverage includes group/member copies,
+paste, multi-selection, snapshot remapping, exact undo and helper tamper refusal.
+Evidence: /tmp/retouch-react-copy-chromium.log,
+/tmp/retouch-react-copy-webkit-isolated.log, /tmp/retouch-react-copy-editor.log,
+/tmp/retouch-react-copy-controls-tests.log. No push.
+
+Final validation: all 1,801 unit tests and git diff --check passed.
+Unit log: /tmp/retouch-react-copy-complete-units.log.

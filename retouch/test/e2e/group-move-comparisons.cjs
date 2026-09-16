@@ -99,5 +99,10 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
   }
   console.log('SCALED UNGROUP SOURCE AND GEOMETRY PASS',kind);
  }
+ if(process.env.RT_E2E_REACT_SCALED_COPY){
+  assert.equal(kind,'react');assert.equal(scaling,true);const before=read();await page.getByRole('treeitem',{selected:true}).press('Meta+d');await wait(()=>read()!==before);await settled();const copied=read();
+  const check=async count=>{for(const frame of frames){await wait(async()=>await frame.locator('[data-rt-group]').count()===count);await wait(async()=>await frame.locator('[data-rt-group]').evaluateAll(groups=>groups.every(group=>{const runtime=group.ownerDocument[Symbol.for('retouch.group-scale.runtime')];return [...group.querySelectorAll('[data-rt-scale-member]')].every(member=>runtime?.manages(member));})));if(count===2){const state=await frame.locator('[data-rt-group]').evaluateAll(groups=>groups.map(group=>({metadata:group.getAttribute('data-rt-scale'),ids:[...group.querySelectorAll('[data-rt-scale-member]')].map(e=>e.getAttribute('data-rt-scale-member')),scale:getComputedStyle(group.querySelector('h1')).scale})));assert.equal(state[0].metadata,state[1].metadata);assert.equal(state[0].scale,state[1].scale);assert.equal(new Set(state.flatMap(s=>s.ids)).size,4);}}};
+  await check(2);await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();await check(1);await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===copied);await settled();await check(2);console.log('REACT SCALED GROUP COPY AND HISTORY PASS');
+ }
  console.log('GROUP MOVE COMPARISONS PASS',kind,{scoped,scaling});
 };
