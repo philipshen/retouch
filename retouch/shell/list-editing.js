@@ -160,6 +160,9 @@
  function join(el,backward=true){
   const context=joinContext(el,backward);if(!context)return false;
   const {left,gap}=context,d=el.ownerDocument;let right=context.right;
+  // The merged paragraph ends where the right paragraph ended. Preserve its
+  // authored gap, including zero when it was the final paragraph.
+  const ending=!context.listItem&&left.style.marginBlockStart==='0px'&&right.style.marginBlockStart==='0px'&&/^\d+(?:\.\d+)?px$/.test(left.style.marginBlockEnd)&&/^\d+(?:\.\d+)?px$/.test(right.style.marginBlockEnd)?right.style.marginBlockEnd:null;
   if(context.listItem){
    for(const [item,first]of [[left,false],[right,true]]){
     const children=[...item.childNodes].filter(node=>node.nodeType!==3||node.textContent.trim()),edge=first?children[0]:children.at(-1);
@@ -178,6 +181,7 @@
   for(const node of gap)node.remove();
   if(flatten){left.append(...right.childNodes);right.remove();}
   else {right.removeAttribute('data-retouch-paragraph');right.style.setProperty('display','inline',right.style.getPropertyPriority('display'));right.__rtParagraphInline=true;left.append(right);}
+  if(ending!==null&&left.style.marginBlockEnd!==ending){left.style.marginBlockEnd=ending;left.__rtParagraphSpacing=parseFloat(ending);}
   const range=d.createRange();range.setStart(caretNode,offset);range.collapse(true);d.getSelection().removeAllRanges();d.getSelection().addRange(range);return true;
  }
  function spacingParagraphs(el){

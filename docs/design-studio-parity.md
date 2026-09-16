@@ -21853,3 +21853,25 @@ all source-relative units, and full paragraph-join normalization. The native
 paragraph source path is unit-tested; browser geometry evidence here uses
 explicit paragraph spans. Full Figma fidelity, arbitrary-site support and trusted
 Homebrew distribution remain unfinished. No desktop rebuild or push here.
+
+## Paragraph spacing after joins (2026-09-16)
+
+The previous turn was progress: b5770ae5 added paragraph spacing and retained
+source/browser evidence. This continuation reproduced a remaining layout bug:
+joining the last two spaced paragraphs left the left paragraph's 24 px margin
+after the final text. A paragraph join now carries the right paragraph's authored
+ending spacing onto the merged paragraph, including zero for a final paragraph.
+The normalization is limited to explicit spaced paragraphs and leaves list joins
+and unrecognized authored margins on their existing paths.
+
+Validation: HTML/React Chromium 145 and Liquid WebKit 26 pass forward and
+backward joining, preserved gaps between remaining paragraphs, zero trailing
+margin, local undo/redo, save/reopen, joining down to one paragraph, and exact
+source undo/redo. All 1,736 unit tests pass. Evidence:
+/tmp/retouch-paragraph-spacing-join-{before,html,react,liquid,units}.log.
+The before run failed with actual 24px versus expected 0px.
+
+Arbitrary selection deletion, native p/div joining, responsive/shared spacing,
+list spacing and all cascade/layout combinations remain incomplete. Full Figma
+parity, arbitrary-site support and trusted Homebrew distribution remain open.
+No desktop rebuild or push here.
