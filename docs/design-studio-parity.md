@@ -22265,3 +22265,31 @@ active-range edit/reset/undo and sizing geometry flows. Evidence:
 This establishes the tested shared ratio boundary, not universal source or
 interaction parity. Full Figma parity, arbitrary-site support and trusted
 notarized Homebrew distribution remain unfinished. No desktop rebuild or push.
+
+### Single-layer aspect ratio editing across renderers (2026-09-16)
+
+React and Liquid now expose a compact Aspect ratio field and reset in Layout.
+The single-layer inspector retains the complete source class string so ratio
+changes use the same responsive and importance-aware writer as multi-selection,
+then project only the chosen scope back through the single-layer save path.
+Setting a ratio also makes height automatic; reset removes only the ratio.
+Enter saves and Escape restores the displayed value before blurring.
+
+HTML previously restricted its ratio control to layers accepting inserted
+children. The field now also appears on HTML text layers. Edits and resets check
+preview range and connected state at dispatch time. Non-reset edits refuse
+non-rendered/inline layers and important inline size conflicts in HTML; the
+React/Liquid control follows the existing shared inline-size refusal policy.
+
+All 1,760 unit tests pass. Chromium 145 single-layer HTML, React and Liquid
+browser checks verify 2:1 rendered geometry, reset to the authored square ratio,
+exact source undo, preservation at the smaller screen, disabled field/reset
+outside the edit range, synthetic out-of-range events producing no writes, and
+important inline ratio refusal. HTML multi-selection ratio regression also
+passes. Logs: /tmp/retouch-single-ratio-{html,react,liquid,units}.log and
+/tmp/retouch-single-ratio-shared-regression.log. The inspected screenshot at
+/tmp/retouch-single-ratio.png shows the ratio field and 220 by 110 selected layer.
+
+This closes the tested single-layer ratio control gap. Full Figma parity,
+arbitrary-site support, and trusted notarized Homebrew distribution remain
+unfinished. No desktop rebuild or push in this continuation.

@@ -56,12 +56,17 @@
     }
     layout.append(align);const properties=alignmentProperties(css),reset=I.button('Reset child alignment',()=>{if(layoutActive())save(Object.fromEntries(properties.map(property=>[property,null])),null,width);});reset.dataset.alignmentReset='true';reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');reset.disabled=!layoutActive()||properties.every(property=>!Object.hasOwn(own,property));layout.append(reset);
    }
-   const ratio=document.createElement('input');ratio.type='text';ratio.value=own['aspect-ratio']??css.aspectRatio;ratio.placeholder='auto, 1 / 1, 16 / 9';ratio.oninput=()=>ratio.setCustomValidity('');ratio.onchange=()=>{const value=ratio.value.trim().replace(/\s*[:/]\s*/g,' / ');if(!valid('aspect-ratio',value)||!CSS.supports('aspect-ratio',value)){ratio.setCustomValidity('Use auto or a positive ratio such as 16 / 9.');ratio.reportValidity();return;}save(value==='auto'?{'aspect-ratio':'auto'}:{'aspect-ratio':value,height:'auto'},null,width);};I.field(layout,'Frame aspect ratio',ratio);
-   const resetRatio=I.button('Reset aspect ratio',()=>save('aspect-ratio',null,width));resetRatio.disabled=!Object.hasOwn(own,'aspect-ratio');layout.append(resetRatio);
-   I.note(layout,'Setting a ratio makes height automatic. Content and minimum sizes can still make the frame taller. Undo restores both settings.');
    const clipping=document.createElement('input');clipping.type='checkbox';clipping.checked=['hidden','clip'].includes(css.overflowX)&&['hidden','clip'].includes(css.overflowY);clipping.indeterminate=!clipping.checked&&!(css.overflowX==='visible'&&css.overflowY==='visible');clipping.onchange=()=>save({overflow:clipping.checked?'clip':'visible','overflow-x':null,'overflow-y':null},null,width);I.field(layout,'Clip content',clipping);
    const resetClipping=I.button('Reset clipping',()=>save({overflow:null,'overflow-x':null,'overflow-y':null},null,width));resetClipping.disabled=!['overflow','overflow-x','overflow-y'].some(p=>Object.hasOwn(own,p));layout.append(resetClipping);
    I.note(layout,'Arrange children at this screen size. Alignment uses the available space inside the container. Each action is one undo step.');
+  }
+  if(el.namespaceURI==='http://www.w3.org/1999/xhtml'){
+   const ratioReady=(reset=false)=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth&&(reset||!['aspect-ratio','height','inline-size','block-size'].some(key=>el.style.getPropertyPriority(key)==='important')&&!['inline','contents','none'].includes(el.ownerDocument.defaultView.getComputedStyle(el).display));
+   const ratio=document.createElement('input');ratio.type='text';ratio.value=own['aspect-ratio']??css.aspectRatio;ratio.placeholder='auto, 1 / 1, 16 / 9';ratio.disabled=!ratioReady();ratio.oninput=()=>ratio.setCustomValidity('');ratio.onchange=()=>{if(!ratioReady())return;const value=ratio.value.trim().replace(/\s*[:/]\s*/g,' / ');if(!valid('aspect-ratio',value)||!CSS.supports('aspect-ratio',value)){ratio.setCustomValidity('Use auto or a positive ratio such as 16 / 9.');ratio.reportValidity();return;}save(value==='auto'?{'aspect-ratio':'auto'}:{'aspect-ratio':value,height:'auto'},null,width);};
+   const ratioRow=document.createElement('div');ratioRow.className='property-row';layout.append(ratioRow);I.field(ratioRow,'Frame aspect ratio',ratio);ratio.closest('.inspector-field').querySelector('span').textContent='Aspect ratio';
+   ratio.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){ratio.value=own['aspect-ratio']??css.aspectRatio;ratio.setCustomValidity('');}ratio.blur();};
+   const resetRatio=I.button('Reset aspect ratio',()=>{if(ratioReady(true))save('aspect-ratio',null,width);});resetRatio.setAttribute('aria-label','Reset aspect ratio');resetRatio.title='Reset aspect ratio';resetRatio.textContent='↺';resetRatio.classList.add('property-reset');resetRatio.disabled=!ratioReady(true)||!Object.hasOwn(own,'aspect-ratio');ratioRow.append(resetRatio);
+   I.note(layout,'Setting a ratio makes height automatic. Content and minimum sizes can still make the frame taller. Undo restores both settings.');
   }
   const corners=I.section('Corners'),appearance=I.section('Appearance'),typography=I.section('Typography');
   const inheritedWidth=Object.keys(info.textStyleLinks||{}).map(Number).filter(value=>value<width).sort((a,b)=>b-a)[0];
@@ -253,7 +258,7 @@
   container.append(RetouchSiteVariables.mount(el,width,save,own,null,[inheritedVariables(info,width)]));
   if(textLayer)container.append(typography);
   if(position)container.append(position);
-  if(paint)container.append(paint);if(info.structure?.canInsert||flowControl)container.append(layout);
+  if(paint)container.append(paint);if(info.structure?.canInsert||flowControl||el.namespaceURI==='http://www.w3.org/1999/xhtml')container.append(layout);
   container.append(appearance,corners,fills,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);
   if(!textLayer)container.append(typography);container.append(sec);return container;
  }

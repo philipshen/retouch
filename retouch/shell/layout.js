@@ -396,6 +396,14 @@
       I.select(sec,title+' behavior',[['','Inherited / auto'],['fixed','Fixed'],['hug','Hug content'],['fill','Fill available']],sizing,v=>size(v||'reset',Math.round(dims[axis]*100)/100));
       numeric(title+' (px)',dims[axis],0,100000,v=>size('fixed',v)).retouchDimension={target:el,axis,box:'border'};
     }
+    const ratioReady=(reset=false)=>spacingActive()&&(reset||!['aspect-ratio','height','inline-size','block-size'].some(key=>el.style.getPropertyValue(key))&&!['inline','contents','none'].includes(el.ownerDocument.defaultView.getComputedStyle(el).display));
+    const ratio=document.createElement('input');ratio.type='text';ratio.value=css.aspectRatio;ratio.placeholder='auto, 1 / 1, 16 / 9';ratio.disabled=!ratioReady();ratio.title=ratio.disabled?'Preview the selected edit range and remove inline size overrides to change aspect ratio.':'Setting a ratio makes height automatic.';
+    const ratioClasses=value=>root.RetouchResponsive.project(geometry.changeRatio(info.sourceClassName??classes,info.styleScope||'',value,el.ownerDocument),info.styleScope||'');
+    ratio.oninput=()=>ratio.setCustomValidity('');ratio.onchange=()=>{if(!ratioReady())return;try{save(ratioClasses(ratio.value));}catch(error){ratio.setCustomValidity(error.message);ratio.reportValidity();}};
+    const ratioRow=document.createElement('div');ratioRow.className='property-row';sec.append(ratioRow);I.field(ratioRow,'Frame aspect ratio',ratio);ratio.closest('.inspector-field').querySelector('span').textContent='Aspect ratio';
+    ratio.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){ratio.value=css.aspectRatio;ratio.setCustomValidity('');}ratio.blur();};
+    const resetRatio=I.button('Reset aspect ratio',()=>{if(ratioReady(true))save(ratioClasses(null));});resetRatio.setAttribute('aria-label','Reset aspect ratio');resetRatio.title='Reset aspect ratio';resetRatio.textContent='↺';resetRatio.classList.add('property-reset');resetRatio.disabled=!ratioReady(true)||ratioClasses(null)===classes;ratioRow.append(resetRatio);
+    I.note(sec,'Setting a ratio makes height automatic. Content and minimum sizes can still make the frame taller. Undo restores both settings.');
     const clipping=document.createElement('input');clipping.type='checkbox';
     clipping.checked=['hidden','clip'].includes(css.overflowX)&&['hidden','clip'].includes(css.overflowY);
     clipping.indeterminate=!clipping.checked&&!(css.overflowX==='visible'&&css.overflowY==='visible');
