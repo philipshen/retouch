@@ -23853,3 +23853,22 @@ All 1,815 unit tests passed; git diff --check passed. Evidence:
 /tmp/retouch-add-screen-result-chromium.png. agent-browser was unavailable, so the
 existing Playwright fixture provided browser verification. Full Figma parity and
 trusted desktop distribution remain incomplete. Committed locally; no push.
+
+### Keyboard access to new comparison screens
+
+Actions search now includes Add screen even when the comparison panel is closed.
+Command/Ctrl+K, search, Enter opens the comparison panel and the named-screen form
+without changing the selected layer. The command respects the eight-screen limit,
+loading/removal state, and existing modal ownership. Cancel preserves selection
+and returns focus to the panel's Add button.
+
+Chromium and WebKit passed the Actions-to-form flow, single-modal transition,
+selected-layer preservation on cancel, normal Add/validation/persistence behavior,
+and disabled execution at capacity. The existing Actions regression suite passed
+search, keyboard availability, iframe access, panels/presets, ordering, locks,
+copy/paste, deletion and source undo. All 1,815 unit tests passed. Evidence:
+/tmp/retouch-add-screen-actions-chromium.log,
+/tmp/retouch-add-screen-actions-webkit.log,
+/tmp/retouch-add-screen-actions-regression.log,
+/tmp/retouch-add-screen-actions-units.log. git diff --check passed. Full Figma parity
+and trusted desktop distribution remain incomplete. Committed locally; no push.

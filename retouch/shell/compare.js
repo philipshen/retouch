@@ -669,6 +669,8 @@
     if(hot?.status()==='idle')await hot.check(true);
   }
   window.RetouchComparisons={
+    canAddScreen:()=>sizes.length<8&&!toggle.disabled&&!loadingSet&&!removals,
+    addScreen(){if(!this.canAddScreen()||document.querySelector('dialog[open]'))return false;if(!open)toggle.click();openAddScreen();return !!addScreenDialog;},
     outlineViews:()=>open?cards.filter(card=>!card.previewBody.hidden&&!card.card.inert).map(card=>({frame:card.frame,canvas:card.viewport,clip:rail})):[],
     async syncClasses(entries){
       if(!open)return;const expectedRoute=path(),failures=[];
