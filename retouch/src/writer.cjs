@@ -280,7 +280,7 @@ function planOp(resolved, op) {
             throw refuseError('A kept element is not a descendant of the target in source; the edit cannot be mapped.');
           }
           seen.add(c.id);
-          const hrefEdit=Object.hasOwn(c,'href'),keptElement={node:kept},patchBlock=raw=>{if(Object.hasOwn(c,'tag'))raw=blocks.patchTag(raw,tagOf(kept),c.tag);if(c.paragraph==='inline')raw=require('./text-paragraphs.cjs').inline(raw,true);return c.marker?require('./list-markers.cjs').patch(raw,c.tag||tagOf(kept),c.marker,true):raw;};
+          const hrefEdit=Object.hasOwn(c,'href'),keptElement={node:kept},patchBlock=raw=>{if(Object.hasOwn(c,'tag'))raw=blocks.patchTag(raw,tagOf(kept),c.tag);if(Object.hasOwn(c,'start'))raw=require('./list-start.cjs').patch(raw,c.start,true);if(c.paragraph==='inline')raw=require('./text-paragraphs.cjs').inline(raw,true);return c.marker?require('./list-markers.cjs').patch(raw,c.tag||tagOf(kept),c.marker,true):raw;};
           if(hrefEdit&&!require('./link-source.cjs').literalHref(resolved,keptElement,'react'))throw refuseError('This link URL is controlled by its source.');
           if (!c.children) return patchBlock(hrefEdit?require('./link-source.cjs').patch(resolved,keptElement,'react',c.href):source.slice(kept.start, kept.end));
           if(tagOf(kept)==='a'&&hasLink(c.children))throw refuseError('Text links cannot be nested.');

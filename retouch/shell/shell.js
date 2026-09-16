@@ -771,7 +771,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
     if(rangeStyle){c.__rtRangeStyleValues={};for(const [property,value]of Object.entries(rangeStyle.properties||{[rangeStyle.property]:rangeStyle.value})){const probe=el.ownerDocument.createElement('span');probe.style.setProperty(property,value);const css=probe.style.getPropertyValue(property);if(c.style.getPropertyValue(property)===css){c.__rtRangeStyleValues[property]={value,css};if(property==='color'){c.__rtRangeStyleValue=value;c.__rtRangeStyleCSS=css;}}}}
 
     const cid = c.getAttribute('data-rt-keep') || c.getAttribute('data-rt') || c.getAttribute('data-rt-i');
-    if (cid) editing.snapshot.set(cid, {html:c.innerHTML,marker:c.style.listStyleType,tag:c.tagName.toLowerCase(),href:c.tagName==='A'?c.getAttribute('href'):undefined});
+    if (cid) editing.snapshot.set(cid, {html:c.innerHTML,marker:c.style.listStyleType,start:c.getAttribute('start'),tag:c.tagName.toLowerCase(),href:c.tagName==='A'?c.getAttribute('href'):undefined});
   }
   editing.originalTree = serializeChildren(el, editing.snapshot);
   // plaintext-only forces pre-wrap in Chromium even over author !important
@@ -1059,7 +1059,7 @@ function styleInsertedTextContent(current,start,end,properties,script,decoration
 }
 // Keep the actual nodes (and their source evidence) so restoring a local
 // insertion does not invalidate preceding native text undo transactions.
-const caretMetadataNames=['__rtParagraphInline','__rtSourceCopy','__rtListMarker','__rtListTemplate','__rtBlockTag','__rtLinkHref','__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
+const caretMetadataNames=['__rtListStart','__rtParagraphInline','__rtSourceCopy','__rtListMarker','__rtListTemplate','__rtBlockTag','__rtLinkHref','__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
 function captureCaretEdit(current){
   const d=current.el.ownerDocument,selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
   const capture=node=>({node,text:typeof node.data==='string'?node.data:null,attributes:node.nodeType===1?[...node.attributes].map(a=>[a.name,a.value]):null,metadata:Object.fromEntries(caretMetadataNames.filter(key=>Object.hasOwn(node,key)).map(key=>[key,structuredClone(node[key])])),children:[...node.childNodes].map(capture)});
@@ -1292,6 +1292,9 @@ function showInlineFormatToolbar(){
   const listStyle=document.createElement('select');listStyle.setAttribute('aria-label','Text layer list style');listStyle.title='Applies to all paragraphs in this text layer.';
   for(const [value,label]of [['none','No list'],['ul','Bulleted list'],['ol','Numbered list'],['mixed','Mixed']]){const option=document.createElement('option');option.value=value;option.textContent=label;option.disabled=value==='mixed';listStyle.append(option);}
   listStyle.onchange=()=>{if(savedRange&&editing){const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());applyTextList(listStyle.value);update();}};
+  const listStart=document.createElement('input');listStart.type='number';listStart.min='1';listStart.max='1000000';listStart.step='1';listStart.setAttribute('aria-label','List start number');listStart.title='Starting number for the ordered list containing the text cursor.';
+  const changeListStart=()=>{if(!savedRange||!editing||listStart.value===''||!listStart.checkValidity())return;const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());inlineFormattingTransaction(()=>RetouchListEditing.setStart(editing.el,Number(listStart.value)));update();};
+  listStart.onchange=changeListStart;listStart.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();event.stopPropagation();changeListStart();editing?.el.focus();}};
   const indentButtons=[['Decrease list indentation',true,'←'],['Increase list indentation',false,'→']].map(([label,outdent,text])=>{const button=document.createElement('button');button.type='button';button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M12 10h9M12 14h9M3 19h18 '+(outdent?'M8 12H2m3-3-3 3 3 3':'M2 12h6M5 9l3 3-3 3')+'"/></svg>';button.title=label+(outdent?' (Shift+Tab)':' (Tab)');button.setAttribute('aria-label',label);button.onpointerdown=event=>event.preventDefault();button.onclick=()=>{if(savedRange&&editing){const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());indentTextList(outdent);update();}};button.retouchOutdent=outdent;return button;});
   const indentControls=document.createElement('div');indentControls.className='range-indent-controls';indentControls.setAttribute('role','group');indentControls.setAttribute('aria-label','List indentation');indentControls.append(...indentButtons);
   let savedRange=null;const fields=[];
@@ -1390,6 +1393,7 @@ function showInlineFormatToolbar(){
     for(const control of bar.querySelectorAll('button,input,select'))if(!control.dataset.rangeAlwaysEnabled)control.disabled=!valid;
     for(const button of indentButtons)button.disabled=!valid||!RetouchListEditing.canIndent(editing?.el,button.retouchOutdent);
     listStyle.disabled=!valid||!RetouchListEditing.supported(editing?.el);listStyle.value=editing?RetouchListEditing.state(editing.el):'none';
+    const listContext=valid?RetouchListEditing.listContext(editing.el):null;listStart.disabled=!listContext||listContext.list.tagName!=='OL';if(d.activeElement!==listStart&&document.activeElement!==listStart)listStart.value=listStart.disabled?'':RetouchListEditing.startNumber(listContext.list);
     selectionNote.textContent=valid?(range.collapsed?'Text you type next':'Selected text'):'Select text to format';
     if(valid&&!editing.caretComposition&&editing.caretStyle&&!sameCaret(range,editing.caretStyle.range))editing.caretStyle=null;
     const selectedText=valid?selectedInlineTextNodes(editing.el,range):[];
@@ -1447,7 +1451,7 @@ function showInlineFormatToolbar(){
   const weight=fields.find(item=>item.property==='font-weight'&&item.field.tagName==='SELECT').field,style=fields.find(item=>item.property==='font-style').field,size=fields.find(item=>item.property==='font-size').field;
   const colorControls=document.createElement('div');colorControls.className='range-color-controls';colorControls.append(swatch,colorField);
   const scopeNote=document.createElement('small');scopeNote.className='range-scope-note';scopeNote.textContent='Applies across all screen sizes.';
-  bar.replaceChildren(header,row('Font',[familyButton],'range-family-field'),row('Weight',[weight,customWeight]),row('Size',[size]),row('Line height',[spacingFields['line-height']]),row('Letter spacing',[spacingFields['letter-spacing']]),row('Style',[style]),row('Color',[colorControls]),row('Case',[fields.find(item=>item.property==='text-transform').field]),row('Caps',[fields.find(item=>item.property==='font-variant-caps').field]),row('Link',[linkField,removeLink],'range-link-field'),...(RetouchListEditing.supported(editing.el)?[row('List',[listStyle],'range-list-field'),row('Indentation',[indentControls],'range-list-indent-field')]:[]),commands,scopeNote);
+  bar.replaceChildren(header,row('Font',[familyButton],'range-family-field'),row('Weight',[weight,customWeight]),row('Size',[size]),row('Line height',[spacingFields['line-height']]),row('Letter spacing',[spacingFields['letter-spacing']]),row('Style',[style]),row('Color',[colorControls]),row('Case',[fields.find(item=>item.property==='text-transform').field]),row('Caps',[fields.find(item=>item.property==='font-variant-caps').field]),row('Link',[linkField,removeLink],'range-link-field'),...(RetouchListEditing.supported(editing.el)?[row('List',[listStyle],'range-list-field'),row('Start at',[listStart],'range-list-start-field'),row('Indentation',[indentControls],'range-list-indent-field')]:[]),commands,scopeNote);
   const mount=()=>{
     const docked=!!section?.isConnected&&!panel.hidden,focused=bar.contains(document.activeElement)?document.activeElement:null;
     bar.classList.toggle('range-inspector',docked);if(section)section.toggleAttribute('data-range-editing',docked);

@@ -41,6 +41,7 @@
         var kept={t:'keep',id:id};
         if(n.__rtBlockTag&&n.__rtBlockTag!==(before&&before.tag))kept.tag=n.__rtBlockTag;
         if(/^(UL|OL|LI)$/.test(n.tagName)&&n.__rtListMarker&&n.__rtListMarker!==before.marker)kept.marker=n.__rtListMarker;
+        if(n.tagName==='OL'&&Object.prototype.hasOwnProperty.call(n,'__rtListStart')&&n.getAttribute('start')!==before.start)kept.start=n.__rtListStart;
         if(n.__rtParagraphInline)kept.paragraph='inline';
         if(!unchanged||n.__rtParagraphInline)kept.children=serializeChildren(n,snapshot);
         if(n.tagName==='A'&&Object.prototype.hasOwnProperty.call(n,'__rtLinkHref')&&(n.__rtLinkHref===null||links.valid(n.__rtLinkHref))&&!(before&&typeof before==='object'&&before.href===n.__rtLinkHref))kept.href=n.__rtLinkHref;

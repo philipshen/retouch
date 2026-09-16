@@ -41,6 +41,7 @@ function validateChildrenTree(children, depth, inLink=false, blockDepth=0, keptT
       const block=!c.paragraph&&['li','p','div'].includes(keptTag(c.id));
       const err=validateChildrenTree(c.children,depth+(block?0:1),inLink,blockDepth+(block?1:0),keptTag);if(err)return err;
     } else if (c.t === 'keep') {
+      if(Object.hasOwn(c,'start')&&(!keptTag||(c.tag||keptTag(c.id))!=='ol'||Object.hasOwn(c,'paragraph')||!require('./list-start.cjs').valid(c.start)))return 'Invalid ordered list start.';
       if(Object.hasOwn(c,'paragraph')&&(c.paragraph!=='inline'||!keptTag||!['span','li'].includes(keptTag(c.id))||Object.hasOwn(c,'tag')||Object.hasOwn(c,'marker')))return 'Invalid paragraph join.';
       if(Object.hasOwn(c,'marker')&&(!keptTag||!['ul','ol','div','p','li'].includes(keptTag(c.id))||!require('./list-markers.cjs').valid(c.tag||keptTag(c.id),c.marker)))return 'Invalid kept list marker.';
       if(Object.hasOwn(c,'tag')&&(!['p','ul','ol','li','div'].includes(c.tag)||Object.hasOwn(c,'href')))return 'Invalid kept paragraph/list tag.';

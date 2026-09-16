@@ -4,7 +4,7 @@
 const tags=new Set(['p','ul','ol','li']);
 const flow=new Set(['div','section','article','aside','nav','main','header','footer','blockquote','li','td','th','form','fieldset','figure','figcaption','details','dialog','body']);
 const phrasing=new Set(['span','a','strong','em','b','i','u','s','sup','sub','br','code','mark','small','abbr','time','img','input','label','button']);
-const contains=items=>Array.isArray(items)&&items.some(item=>item&&(item.t==='paragraph'||item.t==='block'||item.t==='copy'||item.t==='keep'&&(item.tag||item.paragraph)||contains(item.children)));
+const contains=items=>Array.isArray(items)&&items.some(item=>item&&(item.t==='paragraph'||item.t==='block'||item.t==='copy'||item.t==='keep'&&(item.tag||item.paragraph||Object.hasOwn(item,'start'))||contains(item.children)));
 function validateNode(node){
  if(!tags.has(node.tag)||Object.keys(node).some(key=>!['t','tag','children','start','template','marker'].includes(key)))return 'Unsupported paragraph or list node.';
  if(Object.hasOwn(node,'marker')&&!require('./list-markers.cjs').valid(node.tag,node.marker))return 'Invalid list marker.';

@@ -21725,3 +21725,35 @@ Arbitrary cascade/layout combinations and engines without usable Typed OM
 remain outside mode detection guarantees. Full Figma fidelity, arbitrary-site
 support and trusted Homebrew distribution remain incomplete. No desktop rebuild
 or push in this continuation.
+
+### Ordered list starting number
+
+Inline text editing now includes Start at beside the list selector. The control
+edits the ordered list containing the caret/selection, including nested lists,
+and is disabled outside an ordered list. Whole-number values from 1 through
+1,000,000 are supported. Implicit reversed lists display their direct-item
+count as the starting value. Local text history captures the start change;
+saving/reopening preserves it through the rich-text source protocol.
+
+The kept-node protocol and all three source writers now patch the original
+list's start attribute without reconstructing its children or unrelated
+attributes. Dynamic starts, JSX spreads, duplicate attributes and invalid
+values refuse source edits. New list nodes retain their existing start support.
+The browser workflow initially exposed Liquid's separate writer ignoring the
+new kept-node field; that path is fixed and all adapters now have a direct
+source-preservation test.
+
+Validation: 1,732 unit tests passed; all six targeted list-start tests passed
+again after checking self-closing JSX insertion. HTML/React Chromium 145 and
+Liquid WebKit 26 browser tests verify initial value, start 7, fractional-input
+refusal, local undo/redo, save/reopen, nested start 5 with outer start 7 retained,
+bulleted-list disabling, and exact source undo/redo. The React screenshot was
+inspected and shows outer marker 7 and nested marker e. Evidence:
+/tmp/retouch-list-start-{units,targeted,html,react,liquid}.log and
+/tmp/retouch-list-start.png.
+
+Zero/negative numbering, arbitrary CSS counters, per-item value overrides and
+all reversed-list browser combinations remain outside this control's verified
+scope. Paragraph spacing and full list-marker customization remain incomplete,
+as do full Figma fidelity, arbitrary-site support and trusted Homebrew
+distribution. No desktop rebuild or push in this continuation.

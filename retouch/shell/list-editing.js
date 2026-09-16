@@ -28,6 +28,12 @@
   if(from<0||to<from||items.some(node=>node.tagName!=='LI'))return null;
   return {items,list,range};
  }
+ function startNumber(list){const value=list.getAttribute('start');return value!==null?value:list.hasAttribute('reversed')?String([...list.children].filter(child=>child.tagName==='LI').length):'1';}
+ function setStart(el,value){
+  const context=listContext(el);if(!context||context.list.tagName!=='OL'||value!==null&&(!Number.isInteger(value)||value<1||value>1000000))return false;
+  const {list}=context,next=value===null?null:String(value);if(list.getAttribute('start')===next)return false;
+  if(next===null)list.removeAttribute('start');else list.setAttribute('start',next);list.__rtListStart=value;return true;
+ }
  function prefixContext(el,withSpace=false){
   if(!supported(el))return null;
   const d=el.ownerDocument,selection=d.getSelection();if(!selection.rangeCount)return null;
@@ -240,5 +246,5 @@
   if(kind!=='none')for(const item of el.querySelectorAll('li'))if(item.style.listStyleType){item.style.setProperty('list-style-type','inherit',item.style.getPropertyPriority('list-style-type'));item.__rtListMarker='inherit';}
   syncMarkers(el);restoreSelection(el,offsets);return true;
  }
- const api={supported,state,apply,prefixContext,prefix,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
+ const api={startNumber,setStart,supported,state,apply,prefixContext,prefix,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
 })(typeof window!=='undefined'?window:null);

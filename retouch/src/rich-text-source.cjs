@@ -65,7 +65,7 @@ function rewrite(value,sourceId,children,options) {
       const original=kept.get(item.id);
       if(!original||seen.has(item.id))throw new Error('A kept node is not unique to this text source.');
       seen.add(item.id);
-      const patch=raw=>{if(Object.hasOwn(item,'tag'))raw=blocks.patchTag(raw,original.tag,item.tag);if(item.paragraph==='inline')raw=require('./text-paragraphs.cjs').inline(raw);if(item.marker)raw=require('./list-markers.cjs').patch(raw,item.tag||original.tag,item.marker);if(!Object.hasOwn(item,'href'))return raw;if(!original.hrefSource)throw Error('This link URL is controlled by its source.');return raw.slice(0,original.hrefSource.start)+require('./link-source.cjs').attributePatch(original.hrefSource,item.href)+raw.slice(original.hrefSource.end);};
+      const patch=raw=>{if(Object.hasOwn(item,'tag'))raw=blocks.patchTag(raw,original.tag,item.tag);if(Object.hasOwn(item,'start'))raw=require('./list-start.cjs').patch(raw,item.start);if(item.paragraph==='inline')raw=require('./text-paragraphs.cjs').inline(raw);if(item.marker)raw=require('./list-markers.cjs').patch(raw,item.tag||original.tag,item.marker);if(!Object.hasOwn(item,'href'))return raw;if(!original.hrefSource)throw Error('This link URL is controlled by its source.');return raw.slice(0,original.hrefSource.start)+require('./link-source.cjs').attributePatch(original.hrefSource,item.href)+raw.slice(original.hrefSource.end);};
       if(!item.children)return patch(original.raw);
       if(/^<a(?:\s|>)/i.test(original.open||original.raw)&&hasLink(item.children))throw Error('Text links cannot be nested.');
       if(original.opaque||!original.close)throw new Error('This preserved node cannot have editable children.');
