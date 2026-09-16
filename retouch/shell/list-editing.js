@@ -180,7 +180,26 @@
   else {right.removeAttribute('data-retouch-paragraph');right.style.setProperty('display','inline',right.style.getPropertyPriority('display'));right.__rtParagraphInline=true;left.append(right);}
   const range=d.createRange();range.setStart(caretNode,offset);range.collapse(true);d.getSelection().removeAllRanges();d.getSelection().addRange(range);return true;
  }
+ function spacingParagraphs(el){
+  if(!el)return [];
+  const nodes=[...el.childNodes].filter(node=>node.nodeType!==8&&!(node.nodeType===3&&!node.textContent.trim()));
+  if(nodes.length<2||nodes.some(node=>node.nodeType!==1||!node.matches('p,div,span[data-retouch-paragraph]')||node.querySelector('p,div,ul,ol,table,span[data-retouch-paragraph]')))return [];
+  const view=el.ownerDocument.defaultView;if(/flex|grid/.test(view.getComputedStyle(el).display))return [];
+  if(nodes.some(node=>view.getComputedStyle(node).display!=='block'||[...node.style].some(name=>(name==='all'||name==='margin'||name.startsWith('margin-'))&&node.style.getPropertyPriority(name)==='important')))return [];
+  return nodes;
+ }
+ function setParagraphSpacing(el,value){
+  if(!Number.isFinite(value)||value<0||value>10000)return false;
+  const nodes=spacingParagraphs(el);if(!nodes.length)return false;
+  const original=nodes.map(node=>node.getAttribute('style')),ends=nodes.map((_,index)=>index===nodes.length-1?0:value);
+  nodes.forEach((node,index)=>{node.style.setProperty('margin-block-start','0px');node.style.setProperty('margin-block-end',ends[index]+'px');});
+  if(nodes.some((node,index)=>{const css=el.ownerDocument.defaultView.getComputedStyle(node);return Math.abs(parseFloat(css.marginBlockStart))>0.01||Math.abs(parseFloat(css.marginBlockEnd)-ends[index])>0.01;})){
+   nodes.forEach((node,index)=>{if(original[index]===null)node.removeAttribute('style');else node.setAttribute('style',original[index]);});return false;
+  }
+  let changed=false;nodes.forEach((node,index)=>{if(node.getAttribute('style')!==original[index]){node.__rtParagraphSpacing=ends[index];changed=true;}});return changed;
+ }
  function paragraph(el){
+  const spaced=spacingParagraphs(el),values=spaced.slice(0,-1).map(node=>node.style.marginBlockStart==='0px'?node.style.marginBlockEnd:''),spacing=values.length&&values.every(value=>value===values[0]&&/^\d+(?:\.\d+)?px$/.test(value))?parseFloat(values[0]):null;
   const d=el.ownerDocument,selection=d.getSelection();if(!selection.rangeCount)return false;
   let range=selection.getRangeAt(0);if(!el.contains(range.startContainer)||!el.contains(range.endContainer))return false;
   const element=node=>node.nodeType===1?node:node.parentElement;
@@ -200,7 +219,7 @@
   const first=top(range.startContainer),last=top(range.endContainer);if(!first||!last||!isParagraph(first)||!isParagraph(last))return false;
   const siblings=[...el.children],items=siblings.slice(siblings.indexOf(first),siblings.indexOf(last)+1);
   if(!items.length||items.some(node=>!isParagraph(node)))return false;
-  splitRange(items,range);return true;
+  splitRange(items,range);if(spacing!==null)setParagraphSpacing(el,spacing);return true;
  }
  function enter(el){
   const context=listContext(el);if(!context)return false;
@@ -246,5 +265,5 @@
   if(kind!=='none')for(const item of el.querySelectorAll('li'))if(item.style.listStyleType){item.style.setProperty('list-style-type','inherit',item.style.getPropertyPriority('list-style-type'));item.__rtListMarker='inherit';}
   syncMarkers(el);restoreSelection(el,offsets);return true;
  }
- const api={startNumber,setStart,supported,state,apply,prefixContext,prefix,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
+ const api={spacingParagraphs,setParagraphSpacing,startNumber,setStart,supported,state,apply,prefixContext,prefix,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
 })(typeof window!=='undefined'?window:null);

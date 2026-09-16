@@ -1,0 +1,19 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({page,app,kind,read,wait,settled})=>{
+ const target=app.locator('h1'),states=[read()],field=page.getByLabel('Paragraph spacing (px)',{exact:true}),button=name=>page.getByRole('button',{name,exact:true});
+ const open=async()=>{await target.dispatchEvent('dblclick');await wait(async()=>await target.getAttribute('contenteditable')==='true');};
+ const choose=async(text,offset)=>{await target.focus();await target.evaluate((el,[text,offset])=>{const d=el.ownerDocument,w=d.createTreeWalker(el,4);let node;while(node=w.nextNode())if(node.data===text)break;const range=d.createRange();range.setStart(node,offset);range.collapse(true);d.getSelection().removeAllRanges();d.getSelection().addRange(range);},[text,offset]);};
+ const save=async()=>{await button('Finish text editing').click();await wait(()=>read()!==states.at(-1));await settled();states.push(read());};
+ const geometry=()=>target.locator(':scope > [data-retouch-paragraph]').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {top:r.top,bottom:r.bottom,height:r.height,text:n.textContent};}));
+ const check=async gap=>{const boxes=await geometry();assert.equal(boxes.length,2);assert.equal(boxes.map(b=>b.text).join(''),'Headline');assert.ok(Math.abs(boxes[1].top-boxes[0].bottom-gap)<1,JSON.stringify(boxes));return boxes;};
+ await open();assert.equal(await field.isDisabled(),true);await choose('Headline',4);await page.keyboard.press('Enter');await wait(()=>field.isEnabled());const before=await target.innerHTML();await field.fill('32');await field.press('Enter');await check(32);assert.equal(read(),states.at(-1));const changed=await target.innerHTML();await button('Undo').click();assert.equal(await target.innerHTML(),before);await button('Redo').click();assert.equal(await target.innerHTML(),changed);await save();
+ await open();await choose('Head',4);await wait(()=>field.isEnabled());assert.equal(await field.inputValue(),'32');await check(32);await choose('line',4);await page.keyboard.press('Enter');await page.keyboard.insertText('Third');const extra=await geometry();assert.equal(extra.length,3);for(let i=1;i<extra.length;i++)assert.ok(Math.abs(extra[i].top-extra[i-1].bottom-32)<1);assert.equal(await target.locator(':scope > [data-retouch-paragraph]').last().evaluate(el=>getComputedStyle(el).marginBlockEnd),'0px');await button('Undo').click();await button('Undo').click();await check(32);await choose('Head',4);const heights=await geometry();await page.keyboard.press('Shift+Enter');const soft=await check(32);assert.ok(soft[0].height>heights[0].height*1.8);await save();
+ await open();await choose('line',0);await field.fill('12.5');await field.press('Enter');await check(12.5);await save();await open();await choose('line',0);await wait(()=>field.isEnabled());assert.equal(await field.inputValue(),'12.5');await check(12.5);
+ if(process.env.RT_E2E_PARAGRAPH_SPACING_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_PARAGRAPH_SPACING_SCREENSHOT,caret:'initial'});
+ await field.fill('-1');await field.press('Enter');await check(12.5);assert.equal(read(),states.at(-1));await field.fill('0');await field.press('Enter');await check(0);await save();await open();await choose('line',0);assert.equal(await field.inputValue(),'0');await check(0);
+ await button('Finish text editing').click();await settled();assert.equal(read(),states.at(-1));
+ for(let i=states.length-2;i>=0;i--){await button('Undo').click();await wait(()=>read()===states[i]);await settled();}
+ for(let i=1;i<states.length;i++){await button('Redo').click();await wait(()=>read()===states[i]);await settled();}
+ console.log('PARAGRAPH SPACING PASS '+kind+': paragraph gap geometry, soft line independence, fractional/zero spacing, negative refusal, local history, save/reopen and exact source undo/redo');
+};

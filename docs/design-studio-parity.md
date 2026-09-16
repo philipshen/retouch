@@ -21812,3 +21812,44 @@ This covers literal text handoffs in these fixtures, not every rich-text
 structural reload, route change, failed save, or arbitrary framework. Typing is
 still on the main canvas. Full Figma parity, arbitrary-site support and trusted
 Homebrew distribution remain incomplete. No desktop rebuild or push here.
+
+## Paragraph spacing in text editing (2026-09-16)
+
+The preceding turn was progress: 1f6ed8bb fixed pending-save comparison text
+entry and retained browser evidence. This turn adds the separate Paragraph
+spacing field described by Figma's text-property reference:
+https://help.figma.com/hc/en-us/articles/360039956634-Explore-text-properties
+
+The light inspector's inline typography controls now set spacing between
+explicit text paragraphs, independently of soft line breaks and line height.
+Values are bounded to 0–10,000 px, with fractional values supported. The edit
+normalizes paragraph block-start margins and sets block-end spacing, with zero
+after the final paragraph. Adding another paragraph inherits a uniform authored
+spacing value. It applies to the whole edited text layer across screen sizes.
+Native p/div paragraphs and explicit Retouch paragraph spans are eligible when
+they form a simple block text flow; nested blocks, flex/grid containers and
+important inline margin overrides are excluded. Ineffective cascade overrides
+restore the original inline styles instead of recording the attempted spacing.
+
+New/kept/copied paragraph serialization and React, HTML and Liquid source
+writers retain the spacing and unrelated content/attributes. Repeated spacing
+changes update canonical overrides instead of growing duplicate declarations.
+The inline history captures spacing metadata along with text and formatting.
+
+Validation: all 1,736 unit tests passed. Source tests cover bounds, unrelated
+styles/attributes, native paragraphs in all three adapters, template/spread
+refusals, and repeated edits. HTML/React Chromium 145 and Liquid WebKit 26
+browser flows cover 32/12.5/0 px geometry, soft-line independence, new-paragraph
+inheritance with no final margin, negative refusal, local undo/redo, save/reopen,
+and exact source undo/redo. Logs: /tmp/retouch-paragraph-spacing-{html,react,
+liquid,units,targeted}.log. The inspected screenshot is
+/tmp/retouch-paragraph-spacing.png, showing the light typography panel and its
+12.5 px paragraph-spacing field. The new source patch preserving a trailing list
+marker was validated by the final unit run.
+
+Remaining limits include spacing outside inline-edit mode, shared/multi-layer
+and responsive paragraph spacing, list-item spacing, mixed/nested layout flows,
+all source-relative units, and full paragraph-join normalization. The native
+paragraph source path is unit-tested; browser geometry evidence here uses
+explicit paragraph spans. Full Figma fidelity, arbitrary-site support and trusted
+Homebrew distribution remain unfinished. No desktop rebuild or push here.

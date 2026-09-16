@@ -59,3 +59,29 @@ test('list join patches use actual source tags and enforce inline content',()=>{
  assert.throws(()=>source.rewrite(raw,'join',[{t:'keep',id:item.id,paragraph:'inline'}],{parentTag:'ol'}),/Lists must/);
  assert.throws(()=>source.rewrite(raw,'join',[{t:'copy',id:item.id,paragraph:'inline',children:[{t:'block',tag:'ul',children:[]}]}],{parentTag:'li'}),/cannot contain/);
 });
+
+test('paragraph spacing validates bounds and preserves unrelated authored style',()=>{
+ const paragraphs=require('../src/text-paragraphs.cjs');
+ for(const value of [-1,NaN,Infinity,10001,'12',null]){assert.equal(paragraphs.validSpacing(value),false);assert.ok(rich.validateChildrenTree([{t:'paragraph',spacing:value,children:[]}],0));}
+ for(const value of [0,12.5,10000])assert.equal(paragraphs.validSpacing(value),true);
+ const raw='<p class="copy" title="Keep > this" style="color: red; margin: 4px !important">Text</p>',patched=paragraphs.patchSpacing(raw,12.5);
+ assert.ok(patched.includes('class="copy" title="Keep > this"'));assert.ok(patched.includes('color: red; margin: 4px !important'));assert.ok(patched.includes('margin-block-end: 12.5px !important;'));
+ const again=paragraphs.patchSpacing(patched,24);assert.equal((again.match(/margin-block-end:/g)||[]).length,1);assert.equal((again.match(/margin-block-start:/g)||[]).length,1);
+ const jsxRepeated=paragraphs.patchSpacing(paragraphs.patchSpacing('<p>Text</p>',12,true),24,true);assert.equal((jsxRepeated.match(/marginBlockEnd:/g)||[]).length,1);assert.equal((jsxRepeated.match(/marginBlockStart:/g)||[]).length,1);
+ assert.ok(paragraphs.patchSpacing('<p style="list-style-type: disc;">Text</p>',8).includes('list-style-type: disc;'));
+ assert.throws(()=>paragraphs.patchSpacing('<span>Inline</span>',12),/paragraph/);
+ assert.throws(()=>paragraphs.patchSpacing('<p style="{{ style }}">Text</p>',12),/template/);
+ assert.throws(()=>paragraphs.patchSpacing('<p {...props}>Text</p>',12,true),/explicit source style/);
+ const jsx=paragraphs.patchSpacing('<p style={{color:"red",...theme}}>Text</p>',12.5,true);assert.equal((jsx.match(/theme/g)||[]).length,1);assert.ok(jsx.includes('marginBlockEnd:"12.5px"'));
+});
+for(const kind of ['react','html','liquid'])test(kind+' paragraph spacing updates kept native paragraphs without rewriting their content',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),name=kind==='react'?'Text.tsx':kind==='html'?'index.html':'text.liquid';
+ const inner='<p title="One"><strong>First</strong></p><p title="Two">Second</p>',original=(kind==='react'?'export const Text = () => ':'')+'<div>'+inner+'</div>'+(kind==='react'?';':'');
+ const root=makeApp({[name]:original}),file=path.join(root,name);
+ try{
+  const index=new Index(root,adapter);index.scanAll();const elements=kind==='react'?id.collectElements(original,name).elements:adapter.collect(original,name).elements,tag=e=>kind==='react'?e.node.openingElement.name.name:e.tag,resolved=index.resolve(elements.find(e=>tag(e)==='div').id);
+  const items=kind==='html'?source.describe(inner,resolved.element.id).descriptor.children:elements.filter(e=>tag(e)==='p');
+  const result=(kind==='react'?writer:adapter).applyOp(resolved,{type:'setChildren',children:items.map((item,i)=>({t:'keep',id:item.id,spacing:i===0?12.5:0}))});assert.equal(result.ok,true,JSON.stringify(result));
+  const saved=fs.readFileSync(file,'utf8');assert.ok(saved.includes('<strong>First</strong>'));assert.ok(saved.includes('title="One"'));assert.ok(saved.includes('title="Two"'));assert.ok(saved.includes(kind==='react'?'marginBlockEnd:"12.5px"':'margin-block-end: 12.5px;'));assert.ok(saved.includes(kind==='react'?'marginBlockEnd:"0px"':'margin-block-end: 0px;'));
+ }finally{cleanup(root);}
+});

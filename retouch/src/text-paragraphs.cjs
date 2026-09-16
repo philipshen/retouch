@@ -1,8 +1,8 @@
 'use strict';
 // Logical text paragraphs use phrasing markup so a heading/label keeps its
 // semantic source element. The marker makes their boundaries addressable.
-function markup(content,jsx=false){return '<span data-retouch-paragraph="" '+(jsx?'style={{display:"block"}}':'style="display: block;"')+'>'+content+'</span>';}
-function validate(node){return Object.keys(node).some(key=>!['t','children'].includes(key))?'Invalid text paragraph.':null;}
+function markup(content,jsx=false,spacing){const raw= '<span data-retouch-paragraph="" '+(jsx?'style={{display:"block"}}':'style="display: block;"')+'>'+content+'</span>';return spacing===undefined?raw:patchSpacing(raw,spacing,jsx);}
+function validate(node){return Object.keys(node).some(key=>!['t','children','spacing'].includes(key))||Object.hasOwn(node,'spacing')&&!validSpacing(node.spacing)?'Invalid text paragraph.':null;}
 function inline(raw,jsx=false){
  let start,end,tag;
  if(jsx){
@@ -16,4 +16,14 @@ function inline(raw,jsx=false){
  if(tag==='li'){if(!/^<li(?=[\s>])/i.test(raw)||!/<\/li\s*>$/i.test(raw))throw Error('List joins require explicit source tags.');raw=raw.replace(/^<li(?=[\s>])/i,'<span').replace(/<\/li\s*>$/i,'</span>');}
  return require('./inline-source-property.cjs').patch(raw,'span','inline',jsx,'display');
 }
-module.exports={markup,validate,inline};
+function validSpacing(value){return Number.isFinite(value)&&value>=0&&value<=10000;}
+function patchSpacing(raw,value,jsx=false){
+ if(!validSpacing(value))throw Error('Invalid paragraph spacing.');
+ let tag,marked;
+ if(jsx){const opening=require('@babel/parser').parseExpression(raw,{plugins:['jsx','typescript']}).openingElement;tag=opening?.name.name;marked=opening?.attributes.some(a=>a.type==='JSXAttribute'&&a.name.name==='data-retouch-paragraph');}
+ else{const node=require('parse5').parseFragment(raw).childNodes[0];tag=node?.tagName;marked=node?.attrs?.some(a=>a.name==='data-retouch-paragraph');}
+ if(!['p','div'].includes(tag)&&!(tag==='span'&&marked))throw Error('Spacing needs a paragraph source element.');
+ const patch=require('./inline-source-property.cjs').patch;
+ return patch(patch(raw,tag,'0px',jsx,'margin-block-start'),tag,value+'px',jsx,'margin-block-end');
+}
+module.exports={markup,validate,inline,validSpacing,patchSpacing};
