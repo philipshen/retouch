@@ -115,10 +115,21 @@ function clone(resolved,range){
   if(scaleCopies.size){
    const tree=parse5.parse(source,{sourceCodeLocationInfo:true}),out=new MagicString(source);
    function copyMembership(node){
+    let releasedIds=null;
     if(attr(node,'data-rt-scale-set')!==undefined){
      if(node.tagName!=='script'||attr(node,'type')!=='application/json'||!node.sourceCodeLocation?.endTag)throw Error('Invalid released scale metadata.');
      const validate=require('../runtime/group-scale-bootstrap.js').members,ids=validate((node.childNodes||[]).map(child=>child.value||'').join('')),copies=ids.flatMap(id=>scaleCopies.has(id)?[scaleCopies.get(id)]:[]);
-     if(copies.length){const value=JSON.stringify([...ids,...copies]);validate(value);out.overwrite(node.sourceCodeLocation.startTag.endOffset,node.sourceCodeLocation.endTag.startOffset,value);}
+     releasedIds=[...ids,...copies];
+     if(copies.length){const value=JSON.stringify(releasedIds);validate(value);out.overwrite(node.sourceCodeLocation.startTag.endOffset,node.sourceCodeLocation.endTag.startOffset,value);}
+    }
+    const metadata=attr(node,'data-rt-scale');
+    if(metadata!==undefined){
+     const data=JSON.parse(metadata);if(data.steps?.some(step=>step.styles)){
+      const owned=new Set(),collect=node=>{const id=attr(node,'data-rt-scale-member');if(id)owned.add(id);for(const child of node.childNodes||[])collect(child);};
+      if(releasedIds){const find=node=>{if(releasedIds.includes(attr(node,'data-rt-scale-member')))collect(node);else for(const child of node.childNodes||[])find(child);};find(tree);}else if(attr(node,'data-rt-group')!==undefined)collect(node);
+      for(const step of data.steps)if(step.styles){for(const [old,id]of scaleCopies)if(owned.has(id)&&Object.hasOwn(step.styles,old))step.styles[id]=step.styles[old];step.styles=Object.fromEntries(Object.entries(step.styles).filter(([id])=>owned.has(id)));}
+      const value=JSON.stringify(data);require('../runtime/group-scale-bootstrap.js').parse(value);const location=node.sourceCodeLocation.attrs['data-rt-scale'];out.overwrite(location.startOffset,location.endOffset,'data-rt-scale="'+escape(value)+'"');
+     }
     }
     for(const child of node.childNodes||[])copyMembership(child);
    }

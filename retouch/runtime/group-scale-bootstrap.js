@@ -2,13 +2,27 @@
  'use strict';
  function parse(value){
   const data=JSON.parse(value);
-  if(!data||data.version!==1||Object.keys(data).some(key=>!['version','ranges','offsets','pixels'].includes(key))||!data.ranges||Array.isArray(data.ranges)||typeof data.ranges!=='object')throw Error('Invalid responsive scale metadata.');
+  if(!data||data.version!==1||Object.keys(data).some(key=>!['version','ranges','offsets','pixels','steps'].includes(key))||!data.ranges||Array.isArray(data.ranges)||typeof data.ranges!=='object')throw Error('Invalid responsive scale metadata.');
   const ranges=Object.entries(data.ranges).map(([width,factor])=>{
    if(!/^(0|[1-9][0-9]*)$/.test(width)||Number(width)>7680||typeof factor!=='number'||!Number.isFinite(factor)||factor<.01||factor>100)throw Error('Invalid responsive scale range.');
    return [Number(width),factor];
   }).sort((a,b)=>a[0]-b[0]);
   if(!ranges.length||ranges.length>100)throw Error('Provide 1–100 responsive scale ranges.');
   for(const stored of [data.offsets,data.pixels])if(stored!==undefined&&(!stored||Array.isArray(stored)||typeof stored!=='object'||Object.entries(stored).some(([width,pair])=>!Object.hasOwn(data.ranges,width)||!Array.isArray(pair)||pair.length!==2||pair.some(n=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>10000))))throw Error('Invalid responsive scale offsets.');
+  if(data.steps!==undefined){
+   if(!Array.isArray(data.steps)||data.steps.length>100)throw Error('Provide at most 100 transform steps.');
+   const pair=value=>Array.isArray(value)&&value.length===2&&value.every(n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=100000),width=n=>Number.isInteger(n)&&n>=0&&n<=7680;
+   for(const step of data.steps){
+    if(!step||typeof step!=='object'||Array.isArray(step))throw Error('Invalid transform step.');
+    if(Object.hasOwn(step,'styles')){
+     if(Object.keys(step).length!==1||!step.styles||typeof step.styles!=='object'||Array.isArray(step.styles)||Object.keys(step.styles).length>100)throw Error('Invalid member transform snapshot.');
+     for(const [id,rules]of Object.entries(step.styles)){
+      if(!/^[a-zA-Z0-9_-]{1,80}$/.test(id)||!rules||typeof rules!=='object'||Array.isArray(rules)||Object.keys(rules).length>100)throw Error('Invalid member transform identity.');
+      for(const [key,value]of Object.entries(rules))if(!/^(0|[1-9][0-9]*)$/.test(key)||!width(Number(key))||!value||Object.keys(value).some(key=>!['factor','move'].includes(key))||typeof value.factor!=='number'||!Number.isFinite(value.factor)||value.factor<.01||value.factor>100||!pair(value.move))throw Error('Invalid member transform values.');
+     }
+    }else if(Object.keys(step).some(key=>!['factor','min','max','offset','move'].includes(key))||!width(step.min)||step.max!==undefined&&(!width(step.max)||step.max<=step.min)||typeof step.factor!=='number'||!Number.isFinite(step.factor)||step.factor<.01||step.factor>100||!pair(step.offset)||!pair(step.move))throw Error('Invalid group transform step.');
+   }
+  }
   return ranges;
  }
  function members(value){
@@ -39,7 +53,7 @@
     if(active.has(el))continue;
     const {ranges,data,roots}=binding;
     const value=(map,fallback)=>{let result=fallback;for(const [width]of ranges){if(width>win.innerWidth)break;result=map[width]??fallback;}return result;};
-    const control=controller.mount({geometry,roots:()=>roots,identity:node=>node.getAttribute('data-rt-scale-member'),pixelOffset:()=>value(data.pixels||{},[0,0]),offset:()=>value(data.offsets||{},[0,0]),factor:()=>value(data.ranges,1),onError:error=>report(el,error)});
+    const control=controller.mount({geometry,steps:()=>data.steps||[],roots:()=>roots,identity:node=>node.getAttribute('data-rt-scale-member'),pixelOffset:()=>value(data.pixels||{},[0,0]),offset:()=>value(data.offsets||{},[0,0]),factor:()=>value(data.ranges,1),onError:error=>report(el,error)});
     active.set(el,{...binding,control});
    }
   }

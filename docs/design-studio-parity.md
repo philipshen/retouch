@@ -23134,3 +23134,35 @@ representation. The existing geometry planner can supply each operation's
 expected rectangles. This is a required composition fix, not a completed feature.
 No product behavior changed this turn and the new regression remains failing.
 Full parity and trusted desktop distribution remain unfinished. No push.
+
+### Ordered group and independent-child transforms
+
+The regression from 918b46ae now passes. HTML group metadata can retain ordered
+member-style snapshots and group transform steps. The saved runtime applies
+those operations in order, then applies later member edits as differences from
+the last snapshot. Scaling a group therefore scales its current arrangement,
+including earlier independent movement and scaling. Owned style writes restore
+in reverse order. Copy operations remap snapshot identities to the copied
+members. The prior runtime fingerprint is retained for source migration.
+
+Verified the sequence group scale -> child move -> child scale -> group scale,
+with exact source undo/redo and retained main/Phone/Tablet/Desktop documents, in
+Chromium and WebKit. Ordinary saved-page tests also cover responsive child
+movement/scaling, base-range and desktop-range group composition, and reloads
+at 390, 768, 1100, 1440 and 523 pixels in both browsers. The transformed test
+baseline now waits for fonts and animation-frame settlement before measurement.
+The Chromium saved-runtime upgrade editor regression passed. All 1,782 unit
+tests passed, including copied snapshots, invalid metadata, and an identity
+operation at the 100-step limit. git diff --check passed.
+
+Evidence: /tmp/retouch-group-composition-repeat.log,
+/tmp/retouch-group-composition-repeat-webkit.log,
+/tmp/retouch-group-composition-saved-new.log,
+/tmp/retouch-group-composition-saved-webkit.log,
+/tmp/retouch-group-composition-upgrade.log,
+/tmp/retouch-group-composition-final-units.log.
+
+Scope remains HTML source groups with supported literal member transforms.
+Metadata is bounded to 100 steps; general nested/overlapping groups, arbitrary
+CSS cascade/transform composition, React/Liquid persistence, full Figma parity,
+and trusted desktop distribution remain unfinished. No push.

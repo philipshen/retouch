@@ -3,6 +3,21 @@ const MagicString=require('magic-string'),parse5=require('parse5'),html=require(
 const attr=(node,name)=>node.attrs?.find(item=>item.name===name)?.value;
 const contains=(parent,node)=>{for(let current=node;current;current=current.parentNode)if(current===parent)return true;return false;};
 const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+function independentStyles(resolved,elements,group){
+ const snapshot=Object.create(null),css=require('./html-css.cjs'),keys=['--rt-scale-factor','--rt-scale-move-x','--rt-scale-move-y'];
+ for(const item of elements.filter(item=>item!==group&&contains(group.node,item.node))){
+  const id=attr(item.node,'data-rt-scale-member');if(!id)continue;
+  if(/--rt-scale-(?:factor|move-[xy])\s*:/.test(attr(item.node,'style')||''))throw Error('Resolve inline independent transforms before composing the group.');
+  const state=css.describe({...resolved,elements,element:item});if(state.cssReason)throw Error(state.cssReason);const values={};
+  for(const [width,rules]of Object.entries(state.cssRules||{}).sort(([a],[b])=>Number(a)-Number(b))){
+   if(!keys.some(key=>Object.hasOwn(rules,key)))continue;for(const key of keys)if(Object.hasOwn(rules,key))values[key]=rules[key];
+   const factor=Number(values[keys[0]]??1),move=keys.slice(1).map(key=>{const value=String(values[key]??'0px').trim();if(!/^[-+]?(?:\d*\.)?\d+px$/.test(value))throw Error('Resolve literal independent movement before composing the group.');return parseFloat(value);});
+   if(!Number.isFinite(factor)||factor<.01||factor>100||move.some(n=>!Number.isFinite(n)||Math.abs(n)>100000))throw Error('Resolve bounded independent transforms before composing the group.');
+   snapshot[id]??=Object.create(null);snapshot[id][width]={factor,move};
+  }
+ }
+ return snapshot;
+}
 function plan(resolved,op){
  try{
   if(op.fileHash!==resolved.hash)throw Error('The file changed. Re-select the group.');
@@ -24,13 +39,16 @@ function plan(resolved,op){
   checkReleased(root);
   const stored=attr(group.node,'data-rt-scale'),ranges=stored===undefined?[]:parse(stored);let current=1;
   for(const [width,value]of ranges)if(width<=op.width)current=value;
+  const prior=stored===undefined?null:JSON.parse(stored);for(const step of prior?.steps||[])if(!step.styles&&op.width>=step.min&&(step.max===undefined||op.width<step.max))current*=step.factor;
   const shift=op.offset??[0,0],move=op.move??[0,0];if([shift,move].some(pair=>!Array.isArray(pair)||pair.length!==2||pair.some(n=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>10000)))throw Error('Choose finite group offsets.');
+  if(source===originalSource&&op.factor===1&&[...shift,...move].every(n=>n===0))return {ok:true,hash:resolved.hash,edits:[]};
   const offsets=stored===undefined?{}:{...JSON.parse(stored).offsets};let currentOffset=[0,0];for(const [width]of ranges)if(width<=op.width)currentOffset=offsets[width]||[0,0];
   const nextOffset=currentOffset.map((n,i)=>n+current*shift[i]);if(nextOffset.some(n=>n!==0))offsets[op.width]=nextOffset;else delete offsets[op.width];
   const pixels=stored===undefined?{}:{...JSON.parse(stored).pixels};let currentPixels=[0,0];for(const [width]of ranges)if(width<=op.width)currentPixels=pixels[width]||[0,0];const nextPixels=currentPixels.map((n,i)=>n+move[i]);if(nextPixels.some(n=>n!==0))pixels[op.width]=nextPixels;else delete pixels[op.width];
   const values=Object.fromEntries(ranges);values[op.width]=current*op.factor;
-  const metadata=JSON.stringify({version:1,ranges:values,...(Object.keys(offsets).length?{offsets}:{}),...(Object.keys(pixels).length?{pixels}:{})});parse(metadata);
-  if(source===originalSource&&op.factor===1&&[...shift,...move].every(n=>n===0))return {ok:true,hash:resolved.hash,edits:[]};
+  let metadata=JSON.stringify({version:1,ranges:values,...(Object.keys(offsets).length?{offsets}:{}),...(Object.keys(pixels).length?{pixels}:{})});parse(metadata);
+  if(prior){const snapshot=independentStyles({...resolved,source},elements,group);if(prior.steps?.length||Object.keys(snapshot).length){const steps=[...(prior.steps||[])],last=steps.filter(step=>step.styles).at(-1)?.styles||{};if(JSON.stringify(snapshot)!==JSON.stringify(last))steps.push({styles:snapshot});const max=Math.min(...[...ranges.map(([width])=>width),...steps.filter(step=>!step.styles).map(step=>step.min)].filter(width=>width>op.width));steps.push({factor:op.factor,min:op.width,...(Number.isFinite(max)?{max}:{}),offset:shift,move});metadata=JSON.stringify({...prior,steps});parse(metadata);}}
+
   const tree=parse5.parse(source,{sourceCodeLocationInfo:true}),scripts=[];let bodyEnd=null;
   function walk(node){if(node.tagName==='body')bodyEnd=node.sourceCodeLocation?.endTag?.startOffset??null;if(attr(node,'data-rt-scale-runtime')!==undefined)scripts.push(node);for(const child of node.childNodes||[])walk(child);}
   walk(tree);if(bodyEnd===null)throw Error('Responsive scaling needs an explicit HTML body end tag.');

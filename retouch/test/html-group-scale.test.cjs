@@ -77,3 +77,17 @@ test('regrouping an entire released scale set restores editable group metadata',
  assert.equal(regrouped.ok,true,regrouped.reason);assert.equal(regrouped.edits[0].before,released);const restored=resolve(regrouped.edits[0].after);assert.equal(restored.source.includes('data-rt-scale-set='),false);assert.deepEqual(JSON.parse(restored.element.node.attrs.find(a=>a.name==='data-rt-scale').value).ranges,{0:1.5});
  const rescaled=plan(restored,{fileHash:restored.hash,width:0,factor:2});assert.equal(rescaled.ok,true,rescaled.reason);assert.deepEqual(JSON.parse(resolve(rescaled.edits[0].after).element.node.attrs.find(a=>a.name==='data-rt-scale').value).ranges,{0:3});
 });
+test('group edits snapshot independent styles in order and copies retain those snapshots',()=>{
+ const r=resolve(source),first=plan(r,{fileHash:r.hash,width:0,factor:1.5}),state=resolve(first.edits[0].after),heading=state.elements.find(item=>item.tag==='h1'),edited=require('../src/html-css.cjs').plan({...state,element:heading},{fileHash:state.hash,width:0,changes:{'--rt-scale-move-x':'23px','--rt-scale-move-y':'-9px','--rt-scale-factor':'1.2'}});assert.equal(edited.ok,true,edited.reason);
+ const ready=resolve(edited.edits[0].after),result=plan(ready,{fileHash:ready.hash,width:0,factor:1.5});assert.equal(result.ok,true,result.reason);assert.equal(result.edits[0].before,ready.source);const composed=resolve(result.edits[0].after),data=JSON.parse(composed.element.node.attrs.find(a=>a.name==='data-rt-scale').value),id=composed.elements.find(item=>item.tag==='h1').node.attrs.find(a=>a.name==='data-rt-scale-member').value;
+ assert.deepEqual(data.ranges,{0:1.5});assert.equal(data.steps.length,2);assert.deepEqual(data.steps[0].styles[id],{0:{factor:1.2,move:[23,-9]}});assert.deepEqual(data.steps[1],{factor:1.5,min:0,offset:[0,0],move:[0,0]});
+ for(const element of [composed.element,composed.elements.find(item=>item.tag==='h1')]){const copy=html.planOp({...composed,element},{type:'duplicateElement',fileHash:composed.hash});assert.equal(copy.ok,true,copy.reason);const elements=html.collect(copy.edits[0].after,'index.html').elements;
+  for(const group of elements.filter(item=>item.node.attrs.some(a=>a.name==='data-rt-group'))){const metadata=JSON.parse(group.node.attrs.find(a=>a.name==='data-rt-scale').value),headings=elements.filter(item=>item.tag==='h1'&&item.node.parentNode===group.node);assert.equal(Object.keys(metadata.steps[0].styles).length,headings.length);for(const child of headings){const identity=child.node.attrs.find(a=>a.name==='data-rt-scale-member').value;assert.deepEqual(metadata.steps[0].styles[identity],data.steps[0].styles[id]);}}
+ }
+});
+
+test('identity edits remain no-ops at the saved transform step limit',()=>{
+ const r=resolve(source),scaled=plan(r,{fileHash:r.hash,width:0,factor:1.5}).edits[0].after,state=resolve(scaled),location=state.element.location.attrs['data-rt-scale'],metadata={version:1,ranges:{0:1.5},steps:Array.from({length:100},()=>({factor:1,min:0,offset:[0,0],move:[0,0]}))},input=scaled.slice(0,location.startOffset)+'data-rt-scale="'+JSON.stringify(metadata).replace(/"/g,'&quot;')+'"'+scaled.slice(location.endOffset),full=resolve(input);
+ assert.deepEqual(plan(full,{fileHash:full.hash,width:0,factor:1}),{ok:true,hash:full.hash,edits:[]});
+ const overflow=plan(full,{fileHash:full.hash,width:0,factor:1.5});assert.equal(overflow.ok,false);assert.match(overflow.reason,/100 transform steps/);
+});
