@@ -458,3 +458,9 @@ test('shared vertical text classes preserve horizontal layout and responsive pri
  const el={style:{getPropertyPriority:key=>key==='place-content'?'important':'',getPropertyValue:()=>''}};assert.throws(()=>changeTextVertical('','','align-content','center',null,el),/important inline/);
  assert.throws(()=>changeTextVertical('','','color','center'));assert.throws(()=>changeTextVertical('','','align-content','bad'));
 });
+
+test('vertical text display distinguishes logical edges from reversed flex edges',()=>{
+ const {textVerticalValue}=require('../shell/inspector.js');
+ for(const reverse of [false,true]){assert.equal(textVerticalValue('start',reverse),'top');assert.equal(textVerticalValue('end',reverse),'bottom');assert.equal(textVerticalValue('center',reverse),'center');assert.equal(textVerticalValue('baseline',reverse),'custom');}
+ assert.equal(textVerticalValue('flex-start',true),'bottom');assert.equal(textVerticalValue('flex-end',true),'top');assert.equal(textVerticalValue('flex-start',false),'top');assert.equal(textVerticalValue('flex-end',false),'bottom');
+});

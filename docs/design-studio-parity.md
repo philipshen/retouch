@@ -21505,3 +21505,34 @@ Complex wrapping/grid/table content, arbitrary competing shorthands and writing
 modes remain outside this verification. Full Figma fidelity, arbitrary-site
 guarantees and trusted Homebrew distribution remain incomplete. No native
 rebuild or push.
+
+### Logical versus flex-relative vertical alignment
+
+Expanded shared vertical-text verification to important place-content and
+place-items shorthands, named utilities, flex rows and reverse-wrapped rows.
+The existing class edits preserved the untouched shorthand component. The
+expanded geometry fixture exposed a separate indicator bug: logical `start`
+was interpreted as `flex-start` in reversed layouts, so two top-aligned layers
+appeared Mixed. Single and shared typography now use a common value mapper
+that distinguishes logical start/end from flex-relative start/end. This follows
+CSS Box Alignment positional definitions:
+https://www.w3.org/TR/css-align-3/#positional-values
+
+Validation: 1,716 unit tests passed, including reversed/non-reversed logical
+and flex edge mappings. Browser checks pass arbitrary shorthand preservation
+on React Chromium 145, named start on React Chromium/Liquid WebKit 26, and
+named end with single-layer plus shared indicator checks on Liquid WebKit.
+Each checks actual top/middle/bottom geometry, retained box dimensions and the
+other shorthand component, reset, exact undo and inline guards. Initial block
+and reversed-column shorthand coverage also passed. Evidence:
+/tmp/retouch-vertical-shorthand-before.log,
+/tmp/retouch-vertical-row-shorthand-react.log,
+/tmp/retouch-vertical-logical-before.log (indicator failure),
+/tmp/retouch-vertical-logical-fixed.log,
+/tmp/retouch-vertical-logical-react.log,
+/tmp/retouch-vertical-logical-end.log,
+/tmp/retouch-vertical-logical-units.log.
+
+Writing modes outside horizontal text, baseline/overflow alignment, arbitrary
+selector combinations, full Figma fidelity and trusted Homebrew distribution
+remain incomplete. No native rebuild or push.
