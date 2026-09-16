@@ -122,6 +122,7 @@
     "bin/",
     "src/",
     "shell/",
+    "runtime/",
     "scripts/homebrew-formula.cjs",
     "README.md",
     "LICENSE",

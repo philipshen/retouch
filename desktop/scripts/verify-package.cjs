@@ -7,7 +7,7 @@ function verify(app){
  if(manifest.schemaVersion!==1||!Array.isArray(manifest.files)||!manifest.files.length)throw Error('Invalid build manifest');
  const expected=new Set(['package.json','package-lock.json','LICENSE','README.md']),cliRoot=path.join(resources,'retouch');
  function inventory(directory){for(const entry of fs.readdirSync(directory,{withFileTypes:true})){const file=path.join(directory,entry.name);if(entry.isDirectory())inventory(file);else if(entry.isFile())expected.add(path.relative(cliRoot,file).split(path.sep).join('/'));else throw Error('Unexpected packaged source symlink');}}
- for(const name of ['bin','src','shell'])inventory(path.join(cliRoot,name));
+ for(const name of ['bin','src','shell','runtime'])inventory(path.join(cliRoot,name));
  const seen=new Set();
  for(const entry of manifest.files){
   if(typeof entry.path!=='string'||!entry.path||path.isAbsolute(entry.path)||entry.path.split('/').some(part=>!part||part==='.'||part==='..')||entry.path.includes('\\')||!/^[a-f0-9]{64}$/.test(entry.sha256||'')||seen.has(entry.path))throw Error('Invalid manifest file entry');

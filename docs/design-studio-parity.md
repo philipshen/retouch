@@ -23756,3 +23756,41 @@ for the parent ID returned by released-root copying: a removed temporary group I
 must not resolve to another layer that reuses its AST path. All 1,810 unit tests
 passed again after that correction. git diff --check passed. Committed locally;
 no new push was requested.
+
+### Package the responsive runtime for installed users
+
+An actual npm pack inventory contained no runtime files. The release staging list,
+npm files manifest and desktop build all omitted runtime/, so checkout tests could
+pass while an installed build lacked required responsive-editing modules. All
+three now include the directory, and the desktop integrity manifest/verifier
+covers it. A new npm pack regression test checks shipped runtime files and entry
+points. The saved-page browser harness accepts RT_PACKAGE_ROOT to exercise an
+installed artifact without falling back to checkout source.
+
+Built /private/tmp/retouch-runtime-release/retouch-0.1.0.tgz and installed it with
+production dependencies in /private/tmp/retouch-runtime-install.IqJJNy. Also built
+/private/tmp/retouch-desktop-runtime-release/Retouch.app and
+Retouch-0.1.0-mac.zip (SHA256
+55590725e144ae8b8c755bdafe831b698bee2d4791c27b0847eff5a882666e87).
+The desktop archive is a development build from the working source snapshot:
+sourceCommit b6c43e6e94e084b51d8d6b0492929df07759e559, sourceTreeDirty true,
+universal arm64/x86_64, 275 inventoried source files, strict ad hoc signature.
+Native launch tests were skipped; no notarization or trusted-install claim.
+
+Both packaged runtimes passed source-edit lifecycle/exact undo checks. Chromium
+passed the saved-page geometry lifecycle against the npm-installed package;
+WebKit passed it against the desktop-bundled package. The desktop verifier rejected
+a changed runtime file and a missing runtime directory, then verified the restored
+copy and untouched original. All 1,811 unit tests passed. Evidence:
+/tmp/retouch-runtime-release-build.log,
+/tmp/retouch-desktop-runtime-release-build.log,
+/tmp/retouch-npm-runtime-functional.log,
+/tmp/retouch-desktop-runtime-functional.log,
+/tmp/retouch-npm-runtime-browser.log,
+/tmp/retouch-desktop-runtime-browser.log,
+/tmp/retouch-desktop-runtime-verifier.log,
+/tmp/retouch-package-runtime-units.log. git diff --check passed. Full Figma parity
+and trusted public desktop/Homebrew distribution remain unfinished. No push.
+
+All 32 desktop unit tests also passed:
+/tmp/retouch-package-desktop-units.log.

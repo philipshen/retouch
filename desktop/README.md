@@ -889,3 +889,23 @@ checks and log/script hashes. The first attempt failed in the harness's cask
 inventory query and cleaned up successfully; the corrected attempt passed.
 No native app was launched. These local ad hoc archives do not prove trusted
 public distribution, Intel runtime behavior or interrupted-upgrade recovery.
+
+### Verify the packaged editing runtime
+
+Both npm and desktop releases must include `retouch/runtime/`. The desktop source
+manifest covers that directory; `verify-package.cjs` checks it along with the
+remaining bundled source. Verify editing against the packaged modules from the
+repository root:
+
+```sh
+node retouch/test/packaging/verify.cjs /path/to/Retouch.app/Contents/Resources/retouch
+RT_PACKAGE_ROOT=/path/to/Retouch.app/Contents/Resources/retouch \
+  RT_INSPECTOR_FIXTURE=/path/to/installed-next-fixture \
+  node retouch/test/e2e/react-group-runtime.cjs
+```
+
+For an npm installation, set the package path to its `node_modules/retouch`.
+The first check performs source-edit operations and exact undo in a disposable
+project. The browser check generates saved pages with the packaged planners and
+runtime, then verifies responsive geometry. It launches Node and a test browser;
+it does not launch the native Retouch executable or establish macOS trust.

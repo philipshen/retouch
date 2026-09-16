@@ -27,7 +27,7 @@ const cli = path.join(resources, 'retouch');
 const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'retouch-desktop-cli-'));
 try {
   const source = path.resolve(root, '../retouch');
-  for (const name of ['bin', 'src', 'shell', 'package.json', 'package-lock.json', 'LICENSE', 'README.md']) {
+  for (const name of ['bin', 'src', 'shell', 'runtime', 'package.json', 'package-lock.json', 'LICENSE', 'README.md']) {
     fs.cpSync(path.join(source, name), path.join(staging, name), {recursive:true});
   }
   run('npm', ['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'], {cwd:staging,stdio:'inherit'});
@@ -55,7 +55,7 @@ function record(directory) {
     else throw Error('Unexpected source symlink in package: '+path.relative(cli,file));
   }
 }
-for(const name of ['bin','src','shell'])record(path.join(cli,name));
+for(const name of ['bin','src','shell','runtime'])record(path.join(cli,name));
 for(const name of ['package.json','package-lock.json','LICENSE','README.md'])files.push({path:name,sha256:digest(path.join(cli,name))});
 let sourceCommit=null,sourceTreeDirty=null;
 try {
