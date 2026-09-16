@@ -21065,3 +21065,32 @@ Screenshot: `/tmp/retouch-shared-alpha-html.png`.
 Linked decoration color styles, mixed length gestures, arbitrary cascade
 coverage, full Figma parity and trusted Homebrew distribution remain
 incomplete. No native rebuild or push.
+
+### Shared underline length dragging
+
+Shared underline thickness and offset now support label/Option dragging with
+per-layer deltas. Mixed explicit lengths retain their differences, preview
+without source writes, restore original styles on cancel and commit one batch
+for undo. The common helper accepts compatible displayed units and declines
+automatic/from-font values or incompatible units. Thickness is clamped at zero
+across the selection; offset can be negative. Existing property previews track
+scope and foreign changes.
+
+The first browser probes caught the readiness check rejecting the preview's
+own temporary important styles. Active drags now use the preview tracker's
+ownership checks; the original priority guard still applies before starting
+and after restoring the preview before commit.
+
+React, Liquid and HTML Chromium fixtures passed mixed thickness 3px/7px and
+offset 2px/8px, +6px previews, Escape with exact style restoration, batch commit,
+exact source undo/redo and refusal to drag automatic values. All 1,705 unit
+tests passed. Logs: `/tmp/retouch-underline-drag-react.log`,
+`/tmp/retouch-underline-drag-liquid.log`,
+`/tmp/retouch-underline-drag-html.log`,
+`/tmp/retouch-underline-drag-units.log`.
+
+Percentage/mixed-unit, bounds and foreign-change cases need dedicated browser
+coverage for this helper. It does not measure automatic underline metrics or
+preserve source-relative units that CSSOM reports as resolved lengths. Full
+Figma parity, arbitrary-site coverage and trusted Homebrew distribution remain
+incomplete. No native rebuild or push.

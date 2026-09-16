@@ -335,6 +335,7 @@
     if(relative)input.title+=' Use px or %; percentages follow each selected layer’s font size.';
     if(percentDisplay)input.retouchNumericRead=raw=>{try{const quantity=E.quantity(raw,'%');return quantity?.unit==='%'?{value:quantity.value,min:(property==='line-height'?0:-100)+(mixedPercentages&&input.value===''?percentages[0]-Math.min(...percentages):0),max:1000+(mixedPercentages&&input.value===''?percentages[0]-Math.max(...percentages):0),format:value=>E.decimal(value)+'%'}:null;}catch{return null;}};
    }
+   if(['text-decoration-thickness','text-underline-offset'].includes(property))I.sharedLengthDrag(input,()=>infos.map((_,i)=>liveElement(i)),property,()=>typeActive()&&infos.every((_,i)=>liveElement(i).style.getPropertyPriority(property)!=='important'),values=>write(values));
    if(!field.options&&!field.text){
     const format=value=>String(field.step===1?Math.round(value):value),minimum=sizing?Math.max(field.min??0,...elements.map(el=>decoration(el.ownerDocument.defaultView.getComputedStyle(el),property))):field.min??0;
     const mixedDelta=dimension||property==='font-size'||!percentDisplay&&['line-height','letter-spacing'].includes(property),readSize=css=>dimension?dimensionSize(css,property):property==='letter-spacing'&&css.letterSpacing==='normal'?0:parseFloat(css.getPropertyValue(property));
