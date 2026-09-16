@@ -14,6 +14,26 @@ function doctor(root = process.cwd()) {
     console.log(`Next: ${version} (${filename})`);
     console.log(/^16\.2\.\d+$/.test(version) ? 'Automatic hook: supported release line; verified on 16.2.5' : 'Automatic hook: unsupported version; use explicit config mode');
   } catch { console.log('Next: not found at this root. For a monorepo, pass an app directory.'); }
+  let vite;
+  try {
+    const filename = local.resolve('vite/package.json');
+    vite = JSON.parse(fs.readFileSync(filename, 'utf8'));
+    console.log(`Vite: ${vite.version} (${filename})`);
+    if (!/^8\.\d+\.\d+(?:[-+].*)?$/.test(vite.version)) {
+      console.log('Vite integration: this version is not verified; the explicit plugin requires Vite 8 (verified on 8.3.0).');
+    } else {
+      let react;
+      try { react = JSON.parse(fs.readFileSync(local.resolve('react/package.json'), 'utf8')); } catch {}
+      console.log(react ? `React: ${react.version}` : 'React: not found at this root. The Vite integration currently supports React JSX/TSX.');
+      const configs = ['js', 'mjs', 'ts', 'cjs', 'mts', 'cts'].map(ext => 'vite.config.' + ext).filter(file => fs.existsSync(path.join(root, file)));
+      console.log(configs.length ? `Vite configuration: ${configs.join(', ')}` : 'Vite configuration: no default config file found; a custom config may be selected by the startup command.');
+      console.log('Vite setup: install Retouch as a project dependency, then add retouch() from "retouch/vite" to your React Vite plugins, then run your usual dev command.');
+      console.log('The wrapper does not inject the Vite plugin. Finding a config file does not confirm that the plugin is enabled.');
+      console.log('Open the announced /rt URL. Public base paths and custom public directories are supported; keep the dev server on localhost or 127.0.0.1.');
+    }
+  } catch (error) {
+    console.log(error.code === 'MODULE_NOT_FOUND' ? 'Vite: not found at this root.' : `Vite: could not inspect its package metadata (${error.message}).`);
+  }
   console.log('Wrap the existing command: retouch -- <command> [args...]');
   console.log('Startup scripts must pass NODE_OPTIONS and RETOUCH_SESSION_* to Node children. Containers/remote hosts need Retouch inside that environment.');
 }

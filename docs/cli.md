@@ -184,3 +184,14 @@ exact undo, hot-update state/document retention, production exclusion, and
 immediate uploaded SVG decoding in Chromium/WebKit. The installed-package launch
 test also accepts `RT_VITE_BASE=/docs/` for startup and persisted undo checks.
 These checks do not establish complete React editing or native-app parity.
+
+
+### Vite setup diagnostics
+
+`retouch doctor <app-directory>` reports the installed Vite version and, for
+Vite 8 projects, the React version and default Vite config filenames. It explains
+the explicit project-dependency/plugin setup, base-path support and local-host
+requirement. Finding a config file is not reported as proof that Retouch is
+configured. Unverified versions and unreadable package metadata are distinguished
+from missing packages. The diagnostic reads metadata without evaluating Vite
+configuration or starting the application; existing Next diagnostics remain.
