@@ -21043,3 +21043,25 @@ compact notation/alpha row. Mixed-value length gestures, ancestor-propagated
 decoration and arbitrary shorthand/cascade coverage remain incomplete, along
 with full Figma parity and trusted Homebrew distribution. No native rebuild
 or push.
+
+### Compact shared decoration paint
+
+Shared decoration color now uses the compact paint row with swatch, color
+notation and an editable opacity percentage, matching the other shared paint
+controls. It reuses the established compact-paint behavior and per-layer color
+writes rather than introducing another opacity path.
+
+React, Liquid and HTML Chromium fixtures passed 50% decoration opacity,
+hex-color replacement preserving alpha, exact source undo, currentColor and
+picker preview/cancel/apply regressions, plus the existing underline controls.
+Initial assertions expected rgba serialization; the final tests compare parsed
+channels and alpha because the paint helper emits color(srgb ...). The rendered
+HTML row was inspected. All 1,705 unit tests passed.
+
+Evidence: `/tmp/retouch-shared-alpha-react.log`,
+`/tmp/retouch-shared-alpha-liquid.log`, `/tmp/retouch-shared-alpha-html.log`,
+`/tmp/retouch-shared-alpha-units.log`.
+Screenshot: `/tmp/retouch-shared-alpha-html.png`.
+Linked decoration color styles, mixed length gestures, arbitrary cascade
+coverage, full Figma parity and trusted Homebrew distribution remain
+incomplete. No native rebuild or push.
