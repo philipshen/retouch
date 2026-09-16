@@ -357,3 +357,10 @@ test('shared underline details preserve other decoration properties',()=>{
  }
  assert.throws(()=>change(source,'','text-decoration-thickness','-2px'));assert.throws(()=>change(source,'','text-underline-offset','2px; color:red'));
 });
+
+test('shared decoration color preserves thickness style and line properties',()=>{
+ const source='underline decoration-2 decoration-wavy decoration-red-500 md:decoration-blue-500';
+ assert.equal(change(source,'','text-decoration-color','currentColor'),'md:decoration-blue-500 underline decoration-2 decoration-wavy [text-decoration-color:currentColor]');
+ assert.equal(change(source,'','text-decoration-color',null),'md:decoration-blue-500 underline decoration-2 decoration-wavy');
+ assert.throws(()=>change(source,'','text-decoration-color','red; display:none'));
+});

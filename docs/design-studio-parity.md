@@ -21015,3 +21015,31 @@ Shared decoration color, mixed-value gesture editing of these new fields,
 ancestor-propagated decoration behavior and arbitrary shorthand/cascade
 coverage remain incomplete, along with full Figma parity and trusted Homebrew
 distribution. No native rebuild or push.
+
+### Shared decoration color
+
+Shared Underline details now includes a decoration color field and swatch in
+React, Liquid and HTML. It accepts literal CSS colors and currentColor, and
+uses the existing selection color picker for live preview, cancel and apply.
+Writes go through each adapter's existing batch/source guards. The new property
+uses the typography screen-range/inline priority policy; color replacement
+preserves decoration line, thickness and style.
+
+All three Chromium fixtures passed red decoration, currentColor, green picker
+preview without source writes, Cancel restoring rendered colors, picker apply,
+reset and exact source undo. Existing underline-detail and decoration-line
+checks passed too. One scope-state assertion was changed to await the
+asynchronous disabled state, and a unit expectation was corrected to the
+existing responsive class ordering. All 1,705 unit tests passed. The HTML
+popover render was inspected.
+
+Evidence: `/tmp/retouch-shared-color-react.log`,
+`/tmp/retouch-shared-color-liquid.log`, `/tmp/retouch-shared-color-html.log`,
+`/tmp/retouch-shared-decoration-color-units.log`.
+Screenshot: `/tmp/retouch-shared-color-html.png`.
+
+Decoration color does not yet expose the full linked color-style workflow or
+compact notation/alpha row. Mixed-value length gestures, ancestor-propagated
+decoration and arbitrary shorthand/cascade coverage remain incomplete, along
+with full Figma parity and trusted Homebrew distribution. No native rebuild
+or push.
