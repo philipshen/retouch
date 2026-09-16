@@ -20932,3 +20932,29 @@ those complete suites were not rerun in this pass.
 Shared Type settings tabs/preview and other visual and interaction parity
 remain unfinished. Full Figma parity, arbitrary-site support and trusted
 Homebrew distribution remain incomplete. No native rebuild or push.
+
+### Shared settings library and popover verification
+
+Completed the previously outstanding React and HTML text-style library flows
+against the consolidated typography layout. Both passed library creation,
+application, scoped inheritance, shared selection, local overrides, library
+updates, detach and undo/redo assertions. The library test opener now uses the
+inspector's reveal path before opening Saved text styles, so collapsed
+ancestors do not leave its name field hidden. The first runs timed out on that
+hidden field; both final runs passed.
+
+The React relative-typography calculation flow also passed expression edits,
+conversion validation, held-arrow grouping, shared relative line height and
+exact undo/redo. The HTML shared typography flow now explicitly checks that
+Type settings stays inside the viewport, Escape closes it and returns focus
+to its trigger, and opening/closing does not write source. Its popover screenshot
+was visually inspected. All processes completed and test fixtures cleaned up.
+
+Evidence: `/tmp/retouch-shared-settings-library-react.log`,
+`/tmp/retouch-shared-settings-library-html.log`,
+`/tmp/retouch-shared-settings-calc.log`,
+`/tmp/retouch-shared-settings-bounds.log`; popover screenshot:
+`/tmp/retouch-shared-settings-bounds.png.settings.png`.
+This pass changes browser verification only; no native rebuild or push.
+Full parity, arbitrary-site support and trusted Homebrew distribution remain
+incomplete.

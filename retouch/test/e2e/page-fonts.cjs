@@ -1722,6 +1722,10 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();assert.deepEqual(await measure(),initial);
    const openSharedType=async()=>{const opener=page.getByLabel('Shared type settings',{exact:true});if(!await page.getByRole('dialog',{name:'Type settings',exact:true}).isVisible())await opener.click();};
    const weightStyle=page.getByLabel('Shared Font weight style',{exact:true}),rawWeight=page.getByLabel(kind==='html'?'Shared Font weight':'Shared Font weight (1–1000)',{exact:true});
+   await openSharedType();const typeDialog=page.getByRole('dialog',{name:'Type settings',exact:true});
+   await wait(()=>typeDialog.evaluate(el=>{const b=el.getBoundingClientRect();return b.left>=0&&b.top>=0&&b.right<=innerWidth&&b.bottom<=innerHeight;}));
+   if(process.env.RT_E2E_SHARED_TYPE_SCREENSHOT)await typeDialog.screenshot({path:process.env.RT_E2E_SHARED_TYPE_SCREENSHOT+'.settings.png',caret:'initial'});
+   await page.getByLabel('Shared type settings',{exact:true}).focus();await page.keyboard.press('Escape');assert.equal(await typeDialog.isVisible(),false);assert.equal(await page.getByLabel('Shared type settings',{exact:true}).evaluate(el=>document.activeElement===el),true);assert.equal(read(),before);
    assert.equal(await weightStyle.locator('option:checked').innerText(),'Regular');
    await weightStyle.selectOption('700');await wait(()=>read()!==before);await settled();await wait(async()=>await app.locator('p').evaluateAll(nodes=>nodes.every(el=>getComputedStyle(el).fontWeight==='700')));assert.equal(await weightStyle.locator('option:checked').innerText(),'Bold');
    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();
@@ -1775,7 +1779,7 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
   }
   if(process.env.RT_E2E_TEXT_STYLES){
    const catalogFile=path.join(root,'.retouch/text-styles.json'),catalog=()=>JSON.parse(fs.readFileSync(catalogFile,'utf8'));
-   const openLibrary=async()=>{const summary=page.getByText('Saved text styles',{exact:true});if(!await summary.evaluate(el=>el.parentElement.open))await summary.click();await page.getByLabel('Text style name',{exact:true}).waitFor();};
+   const openLibrary=async()=>{const summary=page.getByText('Saved text styles',{exact:true});await summary.evaluate(el=>window.RetouchInspectorUI.reveal(el));if(!await summary.evaluate(el=>el.parentElement.open))await summary.click();await page.getByLabel('Text style name',{exact:true}).waitFor();};
    await openLibrary();await page.getByLabel('Text style name',{exact:true}).fill('Heading');await page.getByRole('button',{name:'Save current typography',exact:true}).click();
    await wait(()=>fs.existsSync(catalogFile)&&catalog().styles.length===1);await page.getByRole('button',{name:'Rename text style',exact:true}).waitFor();
    const saved=catalog().styles[0];assert.equal(saved.properties['font-size'],'32px');assert.equal(saved.properties['font-weight'],'700');assert.equal(saved.properties['font-family'],await family());assert.equal(read(),original);
