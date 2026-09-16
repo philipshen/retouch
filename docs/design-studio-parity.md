@@ -23726,3 +23726,33 @@ independent movement at 390/768/1100/1440/523 pixels and after reload. Evidence:
 /tmp/retouch-released-reorder-runtime.log. git diff --check passed. Committed locally;
 no new push was requested. Full Figma parity and trusted desktop distribution
 remain unfinished.
+
+### Editing nested layers in released React content
+
+Released ownership now resolves through native descendants. Nested Duplicate,
+sibling Paste, ordering and Delete use the same saved ownership record as their
+released root. Copy/order transactions retain the actual nested source parent;
+deletion prunes only removed descendant snapshots and retains surviving roots.
+Multi-selection edits retain their existing native-parent constraints. Duplicate
+persistent descendant IDs are refused, and invalid ownership disables paste.
+Regrouping still requires the complete direct-root set.
+
+All 1,810 unit tests passed, followed by a targeted ambiguous-descendant-identity
+check. Chromium passed nested copy/order/delete and exact undo/redo in all four
+previews. The saved-page fixture applies those operations after scaling and
+ungrouping, then compares both parent and child geometry against an unscaled
+reference at 390/768/1100/1440/523 pixels and after reload. These children inherit
+their root's group scale; the editor test was corrected to check the owning root's
+controller rather than incorrectly requiring a controller on each descendant.
+Evidence: /tmp/retouch-released-nested-units.log,
+/tmp/retouch-released-nested-targeted.log, /tmp/retouch-released-nested-editor.log,
+/tmp/retouch-released-nested-runtime.log. General nested independent transform
+composition, arbitrary generated source, full Figma parity and trusted desktop
+distribution remain unfinished.
+
+WebKit passed the nested copy/order/delete/history flow at the 1100 px edit range:
+/tmp/retouch-released-nested-webkit.log. Final review added a regression assertion
+for the parent ID returned by released-root copying: a removed temporary group ID
+must not resolve to another layer that reuses its AST path. All 1,810 unit tests
+passed again after that correction. git diff --check passed. Committed locally;
+no new push was requested.

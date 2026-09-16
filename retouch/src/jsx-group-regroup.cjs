@@ -8,15 +8,18 @@ function records(resolved){
   const value=released.value.expression,data=JSON.parse(resolved.source.slice(value.start,value.end));if(!data||Object.keys(data).sort().join(',')!=='id,members,metadata'||typeof data.id!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(data.id)||typeof data.metadata!=='string')throw Error('Invalid released React ownership record.');bootstrap.parse(data.metadata);bootstrap.members(JSON.stringify(data.members));found.push({element:elements.find(e=>e.node===p.node),data,binding:name.name});
  }});return {elements,found};
 }
+function owns(record,element,elements){return elements.some(root=>record.data.members.includes(member(root))&&root.node.start<=element.node.start&&root.node.end>=element.node.end);}
 function claim(resolved,ids){
- const {elements,found}=records(resolved),selected=elements.find(e=>e.id===resolved.element.id),id=member(selected),matches=found.filter(r=>r.data.members.includes(id));if(matches.length!==1)throw Error('Select one complete released React group.');const record=matches[0],parent=elements.find(e=>e.node.children?.includes(record.element.node));if(!parent||parent.kind!=='host')throw Error('Keep released members in their native parent.');
+ const {elements,found}=records(resolved),selected=elements.find(e=>e.id===resolved.element.id),matches=found.filter(r=>owns(r,selected,elements));if(matches.length!==1)throw Error('Select one complete released React group.');const record=matches[0],parent=elements.find(e=>e.node.children?.includes(record.element.node));if(!parent||parent.kind!=='host')throw Error('Keep released members in their native parent.');
  const roots=elements.filter(e=>e.kind==='host'&&parent.node.children.includes(e.node)&&record.data.members.includes(member(e))).sort((a,b)=>a.node.start-b.node.start),members=roots.map(member);if(members.length!==record.data.members.length||members.some((id,i)=>id!==record.data.members[i]))throw Error('Keep the complete released group in its saved order.');
  if(ids&&(!Array.isArray(ids)||new Set(ids).size!==roots.length||ids.length!==roots.length||roots.some(e=>!ids.includes(e.id))))throw Error('Select every direct member of the released group.');
  if(members.some(id=>elements.filter(e=>member(e)===id).length!==1))throw Error('Released members need distinct source identities.');
  for(let i=1;i<roots.length;i++)if(resolved.source.slice(roots[i-1].node.end,roots[i].node.start).trim())throw Error('Keep released group members adjacent.');
  if(record.element.node.start<roots.at(-1).node.end||resolved.source.slice(roots.at(-1).node.end,record.element.node.start).trim())throw Error('Keep the ownership record beside its released members.');
  const helper=path.join(path.dirname(resolved.file),'.retouch-group-scale.jsx');if(!fs.existsSync(helper)||fs.readFileSync(helper,'utf8')!==runtime.component())throw Error('Restore the current React scale helper before regrouping.');
- return {elements,record,parent,roots};
+ const owned=elements.filter(e=>e.kind==='host'&&roots.some(root=>root.node.start<=e.node.start&&root.node.end>=e.node.end));
+ const persistent=owned.map(member).filter(Boolean);if(new Set(persistent).size!==persistent.length||persistent.some(id=>elements.filter(e=>member(e)===id).length!==1))throw Error('Released descendants need distinct source identities.');
+ return {elements,record,parent,roots,owned};
 }
 function plan(resolved,op){try{
  if(op.fileHash!==resolved.hash)throw Error('The file changed. Re-select the released layers.');
@@ -27,6 +30,6 @@ function plan(resolved,op){try{
  require('./native-parent-proof.cjs').prove({...resolved,source:after,elements:final},[group],final.find(e=>e.id===mapping.get(parent.id)),'react');
  return {ok:true,hash:identity.contentHash(after),structural:true,parentId:mapping.get(parent.id),rootCount:roots.length,selectionIds:[group.id],sourceIdMap:[...mapping].filter(([before,after])=>before!==after),removedSourceIds:[],edits:[{file:resolved.file,before:source,after}]};
  }catch(error){return {ok:false,refused:true,reason:error.message};}}
-function applies(resolved){try{const id=member(resolved.element);return !!id&&records(resolved).found.some(r=>r.data.members.includes(id));}catch{return !!resolved.element.node.openingElement.attributes.some(a=>a.name?.name==='data-rt-scale-member');}}
-function describe(resolved){try{const {parent}=claim(resolved);return {canFrame:true,parentId:parent.id};}catch{return {};}}
+function applies(resolved){try{const id=member(resolved.element);const {elements,found}=records(resolved);return !!id&&found.some(r=>owns(r,resolved.element,elements));}catch{return !!resolved.element.node.openingElement.attributes.some(a=>a.name?.name==='data-rt-scale-member');}}
+function describe(resolved){try{const {parent,roots,elements}=claim(resolved),direct=roots.some(e=>e.id===resolved.element.id),container=elements.find(e=>e.node.children?.includes(elements.find(e=>e.id===resolved.element.id)?.node));return {canFrame:direct,canPaste:true,parentId:direct?parent.id:container?.id};}catch{return {canFrame:false,canPaste:false};}}
 module.exports={plan,applies,describe,claim,member};
