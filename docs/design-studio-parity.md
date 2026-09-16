@@ -23360,3 +23360,30 @@ records; current structural guards prevent that unsupported path. Liquid scaling
 still needs editor capability, class-member writer, preview/runtime refresh and
 history integration. General template geometry, React parity, full Figma parity
 and trusted desktop distribution remain unfinished. No push.
+
+### Regrouping released Liquid scale sets
+
+Grouping every member of an adjacent released Liquid set now transfers its
+metadata back onto the new wrapper and removes the inert ownership record in
+the same source transaction. Runtime validation and source-ID mapping account
+for record removal. The group retains ordered member snapshots and can receive
+subsequent responsive scale edits. Capability detection recognizes complete
+released sets. Partial sets, intervening content, duplicate ownership records,
+unknown scopes and malformed records remain refused.
+
+Chromium and WebKit saved-page tests verify group -> ungroup -> regroup geometry
+and another scale edit, including independent child transforms, desktop ranges,
+repeated sections and repeated instances sharing one parent. All five tested
+widths (390/768/1100/1440/523px) include reloads. Source tests verify exact input
+history, metadata retention, capability detection and invalid ownership cases.
+All 1,791 unit tests and git diff --check passed. Evidence:
+/tmp/retouch-liquid-regroup-targeted.log,
+/tmp/retouch-liquid-regroup-chromium.log,
+/tmp/retouch-liquid-regroup-webkit.log,
+/tmp/retouch-liquid-regroup-units.log.
+
+Copying/reordering members while they remain released still requires local
+ownership-record maintenance. Liquid scale editing still needs registration,
+class-member writes from gestures, runtime/preview synchronization and editor
+history integration. React support, arbitrary template handling, full Figma
+parity and trusted desktop distribution remain unfinished. No push.

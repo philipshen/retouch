@@ -46,6 +46,24 @@ function release(resolved){
  const id=liquid.contentHash(resolved.source+'|release|'+resolved.element.id).slice(0,10);
  return '{% raw %}<script type="application/json" data-rt-scale-set="'+id+'" data-rt-scale-scope="siblings" data-rt-scale="'+escape(data)+'">'+JSON.stringify(ids)+'</script>{% endraw %}';
 }
+function reclaim(resolved,roots,discover=false){
+ let ids=roots.map(e=>value(e,'data-rt-scale-member'));if(ids.some(id=>id==null))return null;
+ const bootstrap=require('../runtime/group-scale-bootstrap.js');bootstrap.members(JSON.stringify(ids));const records=[];
+ for(const match of resolved.source.matchAll(/\{% raw %\}([\s\S]*?)\{% endraw %\}/g)){
+  if(!/data-rt-scale-set\s*=/.test(match[1]))continue;
+  const fragment=require('parse5').parseFragment(match[1],{sourceCodeLocationInfo:true}),script=fragment.childNodes[0],attrs=Object.fromEntries((script?.attrs||[]).map(a=>[a.name,a.value]));
+  if(fragment.childNodes.length!==1||script?.tagName!=='script'||!script.sourceCodeLocation?.endTag||attrs.type!=='application/json'||attrs['data-rt-scale-scope']!=='siblings'||!/^[a-zA-Z0-9_-]{1,80}$/.test(attrs['data-rt-scale-set']||'')||Object.keys(attrs).some(key=>!['type','data-rt-scale-set','data-rt-scale-scope','data-rt-scale'].includes(key)))throw Error('Invalid released Liquid scale record.');
+  const members=bootstrap.members((script.childNodes||[]).map(n=>n.value||'').join(''));bootstrap.parse(attrs['data-rt-scale']);
+  if(!members.some(id=>ids.includes(id)))continue;
+  if(discover){const parent=roots[0].parent;roots=(resolved.elements||liquid.collect(resolved.source,resolved.relPath).elements).filter(e=>e.parent===parent&&members.includes(value(e,'data-rt-scale-member'))).sort((a,b)=>a.tagStart-b.tagStart);ids=roots.map(e=>value(e,'data-rt-scale-member'));}
+  if(members.length!==ids.length||members.some(id=>!ids.includes(id)))throw Error('Select every member of the released scale group.');
+  records.push({start:match.index,end:match.index+match[0].length,metadata:attrs['data-rt-scale']});
+ }
+ if(!records.length)return null;if(records.length!==1)throw Error('Released scale members have multiple owners.');
+ const record=records[0];if(roots.some((e,i)=>i&&resolved.source.slice(roots[i-1].closeEnd,e.tagStart).trim())||record.start<roots.at(-1).closeEnd||resolved.source.slice(roots.at(-1).closeEnd,record.start).trim())throw Error('Keep released scale members adjacent to their ownership record.');
+ const elements=resolved.elements||liquid.collect(resolved.source,resolved.relPath).elements;if(ids.some(id=>elements.filter(e=>value(e,'data-rt-scale-member')===id).length!==1))throw Error('Released scale members need distinct source identities.');runtime.upgrade(resolved.source);
+ return {...record,attribute:'data-rt-scale="'+escape(record.metadata)+'"'};
+}
 function clone(resolved,range){
  const elements=resolved.elements||liquid.collect(resolved.source,resolved.relPath).elements,chunk=new MagicString(resolved.source.slice(range.start,range.end)),copies=new Map(),identities=new Set(elements.map(e=>value(e,'data-rt-scale-member')).filter(Boolean));
  for(const element of elements){
@@ -69,4 +87,4 @@ function clone(resolved,range){
   return runtime.upgrade(out.toString());
  }};
 }
-module.exports={plan,clone,release};
+module.exports={plan,clone,release,reclaim};
