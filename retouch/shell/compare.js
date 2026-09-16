@@ -643,6 +643,17 @@
   window.addEventListener('retouch:viewport',updateControls);
   window.addEventListener('retouch:screen',updateControls);
   new ResizeObserver(()=>{if(open)layoutPreviews();}).observe(rail);
+  const developmentRuntimes=new WeakMap();
+  async function refreshClientClasses(frame){
+    const win=frame.contentWindow,d=frame.contentDocument;
+    // Next's server-component refresh does not replace stale client modules.
+    // Use its webpack HMR runtime only for the development version we verify.
+    if(!/^16\.2\./.test(win.next?.version||'')||!Array.isArray(win.webpackChunk_N_E))return;
+    let runtime=developmentRuntimes.get(d);
+    if(!runtime){win.webpackChunk_N_E.push([['__retouch_source_refresh__'],{},require=>{runtime=require;}]);if(runtime)developmentRuntimes.set(d,runtime);}
+    const hot=Object.values(runtime?.c||{}).find(module=>module.hot)?.hot;
+    if(hot?.status()==='idle')await hot.check(true);
+  }
   window.RetouchComparisons={
     outlineViews:()=>open?cards.filter(card=>!card.previewBody.hidden&&!card.card.inert).map(card=>({frame:card.frame,canvas:card.viewport,clip:rail})):[],
     async syncClasses(entries){
@@ -674,7 +685,9 @@
         }catch(error){if(open&&cards.includes(card))card.styleSyncError='Styles saved; comparison refresh failed: '+error.message;}
       }));
     },
-    async syncImage({select,matches,serverRendered=true,revisionAttribute,hash,onlyFrame}){
+    syncImage(options){return this.syncRendered(options);},
+    syncSource(options){return this.syncRendered({...options,kind:'Classes',serverRendered:false});},
+    async syncRendered({select,matches,serverRendered=true,revisionAttribute,hash,onlyFrame,kind='Image'}){
       if(!open)return;const expectedRoute=path(),failures=[];
       await Promise.all(cards.filter(card=>!onlyFrame||card.frame===onlyFrame).map(async card=>{
         const token=Symbol();card.imageSyncToken=token;card.retryImage=null;card.imageSyncError=null;card.retryImageControl.disabled=true;if(!onlyFrame)card.retryImageControl.hidden=true;
@@ -688,12 +701,14 @@
             if(!window.RetouchClientMount.ready(d))throw Error('Preview is still mounting.');
             // A comparison can mount after the source-change broadcast. Request fresh
             // server components through the verified development router, retaining React state.
+            if(kind==='Classes'&&!select(d).every(ready))await refreshClientClasses(card.frame);
             const next=card.frame.contentWindow.next;
             if(!select(d).every(ready)&&/^16\.2\./.test(next?.version||'')&&typeof next.router?.hmrRefresh==='function')next.router.hmrRefresh();
           }
           await RetouchRenderSync.sync({frame:card.frame,serverRendered,select,matches:ready,current:()=>card.imageSyncToken===token&&open&&cards.includes(card)&&path()===expectedRoute});
+          if(kind==='Classes'&&card.imageSyncToken===token&&card.frame.contentDocument===d)await RetouchRenderSync.refreshStyles(d,hash||Date.now().toString(36));
           if(card.imageSyncToken===token)card.retryImageControl.hidden=true;
-        }catch(error){if(open&&cards.includes(card)&&card.imageSyncToken===token&&path()===expectedRoute){card.imageSyncError='Image saved; comparison refresh failed: '+error.message;failures.push(card.frame.title||'Comparison');card.retryImageControl.hidden=false;card.retryImageControl.setAttribute('aria-label','Retry image in '+card.frame.title.replace(/ preview$/,''));card.retryImage=()=>{if(card.imageSyncToken!==token||path()!==expectedRoute||!open)return;return window.RetouchComparisons.syncImage({select,matches,serverRendered,revisionAttribute,hash,onlyFrame:card.frame});};}}
+        }catch(error){if(open&&cards.includes(card)&&card.imageSyncToken===token&&path()===expectedRoute){card.imageSyncError=kind+' saved; comparison refresh failed: '+error.message;failures.push(card.frame.title||'Comparison');card.retryImageControl.hidden=false;card.retryImageControl.textContent='Retry '+kind.toLowerCase();card.retryImageControl.setAttribute('aria-label','Retry '+kind.toLowerCase()+' in '+card.frame.title.replace(/ preview$/,''));card.retryImage=()=>{if(card.imageSyncToken!==token||path()!==expectedRoute||!open)return;return window.RetouchComparisons.syncRendered({select,matches,serverRendered,revisionAttribute,hash,onlyFrame:card.frame,kind});};}}
         finally{if(card.imageSyncToken===token)card.retryImageControl.disabled=false;}
       }));
       return {ok:!failures.length,failures};

@@ -22444,3 +22444,51 @@ verifies these appearance interactions directly.
 Full Figma parity, arbitrary-site support, the sizing indicator fallback without
 Typed OM, and trusted notarized Homebrew distribution remain unfinished.
 No push or desktop rebuild in this continuation.
+
+### React comparison freshness and restored selection regression (2026-09-16)
+
+The broader React selection test is current again: it locates the collapsed
+Layer actions control, preserves this fixture's disabled-deletion assertion and
+checks its no-op behavior, reveals appearance controls before editing, focuses
+the screen selector, accepts ordinary inline opacity, and preserves the caret
+in screenshots. Correction to the preceding entry: Delete layers still exists;
+it was hidden in the collapsed section, not removed from the application.
+
+Running the comparison variant exposed a real Chromium failure. A saved shared
+opacity edit updated the main canvas, but the tablet comparison retained the
+old classes and source revision. Explicit framework refresh alone was
+insufficient for this client-component fixture: the client module stayed stale.
+The guarded Next.js 16.2 webpack hot-update step refreshed the module, revealing
+a second stale layer: the comparison stylesheet still lacked the new utility.
+
+Class writes, shared writes, class scope reset and class history now synchronize
+comparison render revisions explicitly. For the verified Next.js 16.2 webpack
+development runtime, a stale client module receives a native hot-update check;
+server-component refresh remains available, and same-origin stylesheets are
+revalidated after the verified render. React-owned DOM is not replaced by a
+fetched HTML patch. Other framework/version behavior is not established by this
+fallback. Failed refreshes preserve saved source and expose Retry classes on
+the affected comparison, using the existing image refresh/retry mechanism.
+
+Final verification with Next.js 16.2.5 / React 19.2:
+- Full Chromium 145 selection suite passes, including source batching, stale
+  and no-op handling, mixed/shared appearance, screen isolation, canvas/range
+  selection, source history, comparison edits and empty-document/reload flow.
+- The Chromium comparison flow deliberately aborts a stylesheet refresh, then
+  verifies Retry classes, correct computed opacity, undo/redo, unchanged phone
+  scope, retained comparison document identity and retained input value.
+- WebKit 26 comparison edits/undo/redo pass with document and input retention.
+- The shared image crop comparison regression passes with retained documents
+  and inputs across Phone/Tablet/Desktop.
+- All 1,763 unit tests pass.
+
+Evidence: /tmp/retouch-selection-refresh-full.log,
+/tmp/retouch-selection-refresh-comparison-webkit.log,
+/tmp/retouch-selection-image-regression.log,
+/tmp/retouch-selection-refresh-units.log. A focused comparison option now avoids
+repeating unrelated UI steps during diagnosis; full-suite success is printed
+only when those steps actually run.
+
+Full Figma parity, arbitrary-site support, the Typed OM sizing indicator
+fallback, and trusted notarized Homebrew distribution remain unfinished.
+No push or desktop rebuild in this continuation.

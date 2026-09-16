@@ -166,7 +166,7 @@
       d.dispatchEvent(new frame.contentWindow.CustomEvent('retouch:render',{detail:{source:'server'}}));return {ok:true,method:'classes'};
     }finally{clearTimeout(timer);}
   }
-  const api = { capture, restore, reconcile, sync, syncCSS, syncClasses };
+  const api = { capture, restore, reconcile, sync, syncCSS, syncClasses, refreshStyles: revalidateStyles };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.RetouchRenderSync = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -927,7 +927,9 @@ function reloadFrame({keepDrawing=null,expectedTag=null}={}) {
 // A source write can finish before the framework invalidates its rendered
 // module. Wait for that revision, retaining the live session when HMR applies it.
 // Reload only when the renderer cannot confirm a matching live update.
-async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null,svgGeometry=false,imageSource=false}={}) {
+async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null,svgGeometry=false,imageSource=false,classSource=false}={}) {
+  if(classSource&&info.renderRevisionAttribute){await refreshWrittenElement(info,matches,{keepDrawing,expectedTag});const result=await window.RetouchComparisons?.syncSource({select:d=>matchingInDocument(d,info.id,info),matches,revisionAttribute:info.renderRevisionAttribute,hash:info.hash});if(result?.failures.length)throw Error('Retry the failed comparison previews.');return;}
+
   if(imageSource&&/\.(?:html?|liquid)$/i.test(info.file)&&matchingEls(info.id).length&&matchingEls(info.id).every(el=>el.tagName==='IMG')){const select=d=>matchingInDocument(d,info.id,info);await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select,matches});const comparisons=await window.RetouchComparisons?.syncImage({select,matches});if(comparisons?.failures.length)toast('Image saved. Retry the failed comparison previews.','err');return;}
   if(imageSource){await refreshWrittenElement(info,matches);const comparisons=await window.RetouchComparisons?.syncImage({select:d=>matchingInDocument(d,info.id,info),matches,serverRendered:false,revisionAttribute:info.renderRevisionAttribute,hash:info.hash});if(comparisons?.failures.length)toast('Image saved. Retry the failed comparison previews.','err');return;}
   const geometrySelection=[...new Map([info,...(sel?.multiple||[])].map(item=>[item.id,item])).values()];
@@ -3073,7 +3075,7 @@ async function setSelectionColorOverride(property,value,backgroundChanges,values
   const result=await api('POST','/rt/__api/op',{type:backgroundChanges?'setBackgroundPaintSelection':'setColorOverrideSelection',id:info.id,ids,fileHash:info.hash,...selectionSourceContexts(selection),scope:styleScope,...(backgroundChanges?{changesById:backgroundChanges}:{property,...(valuesById?{valuesById}:{value}),...(value===null?{}:selectionBackgroundStates(selection,property))})});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected paint.');
   if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':'setClassesSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
-  sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));renderPanel();
+  sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});renderPanel();
  }finally{busyPanel(false);}
 }
 function selectionSourceContexts(selection){
@@ -3163,7 +3165,7 @@ async function setReactClassesSelection(classesById,expected=null){
     if(!result?.ok){renderPanel();return toast(result?.reason||result?.error||'Could not style selected layers','err');}
     saved=true;const literalLiquid=info.contextSelection&&selection.every(item=>item.classSourceLiteral)&&result.selection.every(item=>item.classSourceLiteral),before=Object.fromEntries(selection.map(item=>[item.id,item.className])),after=Object.fromEntries(result.selection.map(item=>[item.id,item.className]));
     if(result.undoId)editorHistory.record({type:literalLiquid?'setLiquidClassesSelection':info.contextSelection?'collectionSelection':'setClassesSelection',id:info.id,selectionIds:selection.map(item=>item.id),...(literalLiquid?{classesBefore:before,classesAfter:after}:{}),undoId:result.undoId});
-    sel.info=result.element;sel.multiple=result.selection;if(literalLiquid){await refreshLiteralLiquidClasses(result.selection,before);}else if(info.contextSelection){await reloadFrame();await restoreLayerSelection(selection.map(item=>item.id));}else await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));
+    sel.info=result.element;sel.multiple=result.selection;if(literalLiquid){await refreshLiteralLiquidClasses(result.selection,before);}else if(info.contextSelection){await reloadFrame();await restoreLayerSelection(selection.map(item=>item.id));}else await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});
     if(expected){let ready=false;for(let attempt=0;attempt<50;attempt++){ready=Object.entries(expected).every(([id,g])=>{const el=matchingEls(id)[0];if(!el?.isConnected)return false;try{const actual=RetouchInspector.geometry(el,{allowRotation:Object.hasOwn(g,'rotation'),allowScale:Object.hasOwn(g,'scaleX')});return ['x','y','width','height'].every(key=>Math.abs(actual[key]-g[key])<.6);}catch{return false;}});if(ready)break;await new Promise(resolve=>setTimeout(resolve,100));}if(!ready){renderPanel();toast('Saved selection classes, but the bounds did not settle. Check responsive or inline overrides.','err');return false;}}
     renderPanel();toast('Selected layers updated','ok');return true;
   }catch(error){renderPanel();toast((saved?'Classes saved; preview refresh failed: ':'Could not save classes: ')+error.message,'err',saved?'class-preview':undefined);return false;}finally{busyPanel(false);}
@@ -3759,7 +3761,7 @@ async function writeClasses(classes, isUndo) {
     if(res.element)for(const key of ['colorStyleLinks','colorStyleOverrides','classColorStyles','colorStyleLinkReason','effectStyleLinks','effectStyleOverrides','classEffectStyles','effectStyleLinkReason','classVariables','variableLinks','variableOverrides','variableReason'])info[key]=res.element[key];
     try {
       if (literalLiquid) await refreshLiteralLiquidClasses([res.element],{[info.id]:prev});
-      else if (window.__RT_RENDERING?.reloadAfterWrite||info.renderRevisionAttribute) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
+      else if (window.__RT_RENDERING?.reloadAfterWrite||info.renderRevisionAttribute) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)),{classSource:true});
     } catch (error) {
       renderPanel();toast('Classes saved; preview refresh failed: '+error.message,'err','class-preview');return false;
     }
@@ -3939,7 +3941,7 @@ async function restoreHistory(direction,op) {
           return tokens(el.getAttribute('class')) === tokens(info.className);
         }
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
-      },{verifyText:op.type==='setText'&&!info.textSource,imageSource:op.type==='setSrc',svgGeometry:['setSVGGeometry','setSVGTransform','setSVGTransforms'].includes(op.type)});
+      },{classSource:['setClasses','setClassesSelection'].includes(op.type),verifyText:op.type==='setText'&&!info.textSource,imageSource:op.type==='setSrc',svgGeometry:['setSVGGeometry','setSVGTransform','setSVGTransforms'].includes(op.type)});
       if(op.type==='setImageFill'){await refreshLiquidImageFill(info);renderPanel();}
       else if(op.type==='setText'&&info.kind==='host'&&!info.textSource&&window.__RT_RENDERING?.reloadAfterWrite){
         await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info)});
