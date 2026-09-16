@@ -23872,3 +23872,18 @@ copy/paste, deletion and source undo. All 1,815 unit tests passed. Evidence:
 /tmp/retouch-add-screen-actions-regression.log,
 /tmp/retouch-add-screen-actions-units.log. git diff --check passed. Full Figma parity
 and trusted desktop distribution remain incomplete. Committed locally; no push.
+
+
+### Screen creation presets
+
+The Add screen dialog now offers standard and saved project sizes through
+**Start from**, with rotated portrait/landscape choices. Choosing a size fills
+both dimensions and suggests an unused name; a user-entered name is preserved.
+Typing dimensions switches the picker back to Custom size. Width/height and
+name validation still run before creating the comparison, and the main canvas
+size stays unchanged.
+
+The add-screen browser workflow covers preset dimensions, custom-name retention,
+saved-project preset creation, cancellation/focus, duplicate and range validation,
+reload persistence, comparison capacity, retained existing documents, Actions
+access, and the narrow-screen dialog layout in Chromium and WebKit.
