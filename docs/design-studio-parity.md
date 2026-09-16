@@ -22207,3 +22207,36 @@ Arbitrary logical sizing/cascade/bindings and writing-mode combinations remain
 outside this evidence. Full Figma parity, arbitrary-site support and trusted
 notarized Homebrew distribution remain unfinished. No desktop rebuild or push
 in this continuation.
+
+## Text sizing and shared aspect ratios (2026-09-16)
+
+The preceding turn was progress: f12c7426 kept size-limit edits and resets working
+after text presets. This continuation reproduced an authored aspect ratio forcing
+Auto-height text into a square instead of fitting its content. The failing
+rendered-height assertion is /tmp/retouch-text-sizing-ratio-before.log.
+
+Text sizing presets now clear aspect ratio in the selected screen range along
+with size limits. Scoped React/Liquid ratio classes are replaced while inherited
+and interaction variants remain. Important inline aspect ratios participate in
+the existing refusal guard. A constrained ratio no longer displays an active
+unconstrained sizing preset. A later shared ratio edit retains important priority
+so it can replace the preset's ratio override.
+
+HTML now has a shared Aspect ratio field and reset action. A non-auto ratio sets
+height automatic in the same multi-layer source transaction; the field supports
+mixed values and validates ratios, and refuses writes outside the previewed edit
+range or against important inline aspect/height rules. Reset restores the authored
+ratio while preserving the other current sizing overrides.
+
+All 1,760 unit tests pass. Chromium 145 browser checks pass for shared HTML,
+React and Liquid layers and single React text sizing. Shared flows verify fitting
+text, changing ratio to 2:1, resetting to the authored square ratio, exact undo,
+sizing-mode state, responsive isolation and important inline refusal. HTML also
+checks invalid ratio and inactive-range writes. The inspected screenshot
+/tmp/retouch-text-sizing-ratio.png shows fitted text layers and the shared ratio
+control in the light layout inspector. Logs:
+/tmp/retouch-text-sizing-ratio-{html,react,liquid,single,units,targeted}.log.
+
+Arbitrary cascade, intrinsic sizing, writing-mode combinations and universal
+source support remain unproven. Full Figma parity and trusted notarized Homebrew
+distribution remain unfinished. No desktop rebuild or push here.

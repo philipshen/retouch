@@ -281,6 +281,18 @@
 
   I.sharedTypographyPreview(typography,elements);
   I.sharedTextResizing(groups.layout,()=>elements,()=>elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth),changes=>save(null,null,width,Object.fromEntries(infos.map((info,index)=>[info.id,changes[index]]))));
+  if(elements.every(el=>el.namespaceURI==='http://www.w3.org/1999/xhtml')){
+   const values=computed.map(css=>css.aspectRatio),mixed=values.some(value=>value!==values[0]),ratio=document.createElement('input');ratio.type='text';ratio.value=mixed?'':values[0];ratio.placeholder=mixed?'Mixed':'auto, 1 / 1, 16 / 9';
+   const ready=()=>elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth),available=()=>ready()&&elements.every(el=>!['inline','contents','none'].includes(el.ownerDocument.defaultView.getComputedStyle(el).display)&&['aspect-ratio','height'].every(key=>el.style.getPropertyPriority(key)!=='important'));
+   ratio.disabled=!available();ratio.title='Set a shared ratio and make height automatic. Auto follows page layout.';
+   ratio.oninput=()=>ratio.setCustomValidity('');ratio.onchange=async()=>{
+    if(!available())return;const value=ratio.value.trim().replace(/\s*[:/]\s*/g,' / ');if(!valid('aspect-ratio',value)||!CSS.supports('aspect-ratio',value)){ratio.setCustomValidity('Use auto or a positive ratio such as 16 / 9.');ratio.reportValidity();return;}
+    try{window.RetouchPanelFocus?.queue(ratio);await save(null,null,width,Object.fromEntries(infos.map(info=>[info.id,value==='auto'?{'aspect-ratio':value}:{'aspect-ratio':value,height:'auto'}])));}catch(error){ratio.setCustomValidity(error.message);ratio.reportValidity();}
+   };
+   ratio.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();ratio.blur();}else if(event.key==='Escape'){event.preventDefault();ratio.value=mixed?'':values[0];ratio.setCustomValidity('');ratio.blur();}};
+   I.field(groups.layout,'Shared Aspect ratio',ratio);const field=ratio.closest('.inspector-field'),reset=I.button('↺',()=>{if(ready())save('aspect-ratio',null,width);});reset.setAttribute('aria-label','Reset shared aspect ratio');reset.title='Reset shared aspect ratio';reset.classList.add('property-reset');reset.disabled=!ready()||infos.every(info=>!Object.hasOwn(info.cssRules?.[width]||{},'aspect-ratio'));const row=document.createElement('div');row.className='property-row';field.before(row);row.append(field,reset);field.querySelector(':scope > span').textContent='Aspect ratio';
+  }
+
   I.sharedTruncationTypography(typography,()=>elements,()=>elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth),value=>save('line-clamp',value===null?null:String(value),width),infos.some(info=>Object.hasOwn(info.cssRules?.[width]||{},'line-clamp')));
   I.sharedVerticalAlignment(typography,()=>elements,(layouts,reset)=>elements.every((el,index)=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth&&(reset||!RetouchLayout.inlineAlignment(el,layouts[index].property,true))),changes=>save(null,null,width,Object.fromEntries(infos.map((info,index)=>[info.id,{[changes[index].property]:changes[index].value}]))),(index,property)=>Object.hasOwn(infos[index].cssRules?.[width]||{},property));
 

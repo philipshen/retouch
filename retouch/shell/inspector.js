@@ -352,12 +352,12 @@
   }
   const fontPositionToken=t=>/^\[font-variant-position:.+\]$/.test(t);
   const textSizeLimits=['min-width','min-height','max-width','max-height','min-inline-size','min-block-size','max-inline-size','max-block-size'];
-  const textResizeProperties=[...textSizeLimits,'width','height','inline-size','block-size','white-space','white-space-collapse','text-wrap','text-wrap-mode','text-wrap-style','flex','flex-grow','flex-shrink','flex-basis','align-self','justify-self','place-self'];
+  const textResizeProperties=[...textSizeLimits,'aspect-ratio','width','height','inline-size','block-size','white-space','white-space-collapse','text-wrap','text-wrap-mode','text-wrap-style','flex','flex-grow','flex-shrink','flex-basis','align-self','justify-self','place-self'];
   function textResizeChanges(css,mode,parent=null){
     if(!['width','height','fixed'].includes(mode))throw Error('Choose a supported text sizing mode.');
     const width=parseFloat(css.width),height=parseFloat(css.height);
     if(![width,height].every(value=>Number.isFinite(value)&&value>0&&value<=100000))throw Error('The text layer has no measurable size.');
-    const changes={...Object.fromEntries(textSizeLimits.map(key=>[key,key.startsWith('min-')?'0px':'none'])),width:mode==='width'?'max-content':width+'px',height:mode==='fixed'?height+'px':'auto','white-space':mode==='width'?'pre':'pre-wrap','text-wrap':(mode==='width'?'nowrap':'wrap')+(['balance','pretty','stable'].includes(css.getPropertyValue('text-wrap-style'))?' '+css.getPropertyValue('text-wrap-style'):'')};
+    const changes={'aspect-ratio':'auto',...Object.fromEntries(textSizeLimits.map(key=>[key,key.startsWith('min-')?'0px':'none'])),width:mode==='width'?'max-content':width+'px',height:mode==='fixed'?height+'px':'auto','white-space':mode==='width'?'pre':'pre-wrap','text-wrap':(mode==='width'?'nowrap':'wrap')+(['balance','pretty','stable'].includes(css.getPropertyValue('text-wrap-style'))?' '+css.getPropertyValue('text-wrap-style'):'')};
     if(parent&&/^(?:inline-)?flex$/.test(parent.display))Object.assign(changes,{'flex-grow':'0','flex-shrink':'0','flex-basis':'auto'});
     const axes=(root.RetouchLayout||require('./layout.js')).layoutAxes({writingMode:parent?.writingMode,direction:parent?.flexDirection});
     const property=parent&&/^(?:inline-)?grid$/.test(parent.display)?(axes.inline==='height'?'justify-self':'align-self'):parent&&/^(?:inline-)?flex$/.test(parent.display)&&axes.main==='width'?'align-self':null;
@@ -368,7 +368,7 @@
   function textResizeMode(sizes,css,parent=null){
     const fixed=value=>typeof value==='string'&&/^(?:\d+(?:\.\d+)?|\.\d+)px$/.test(value);
     const mode=sizes.width==='max-content'&&sizes.height==='auto'?'width':fixed(sizes.width)&&sizes.height==='auto'?'height':fixed(sizes.width)&&fixed(sizes.height)?'fixed':null;
-    if(!mode)return null;
+    if(!mode||css.aspectRatio&&css.aspectRatio!=='auto')return null;
     if(textSizeLimits.some(key=>{const value=css.getPropertyValue?.(key);return value&&(key.startsWith('min-')?!['0px','auto'].includes(value):value!=='none');}))return null;
     if(parent&&/^(?:inline-)?flex$/.test(parent.display)&&(Number(css.flexGrow)!==0||Number(css.flexShrink)!==0||css.flexBasis!=='auto'))return null;
     if(mode!=='fixed'){
@@ -390,7 +390,7 @@
     const row=document.createElement('div'),label=document.createElement('span'),group=document.createElement('div');row.className='text-resize-controls';label.className='hint';label.textContent=mixed?'Resizing · Mixed':'Resizing';group.className='layout-mode-segments';row.dataset.textSizingMode=mixed?'mixed':current||'custom';row.append(label,group);parent.append(row);
     for(const [mode,name]of [['width','Auto width'],['height','Auto height'],['fixed','Fixed size']]){
       const control=button(name,async()=>{if(!row.isConnected||!available())return;try{const changes=getElements().map(el=>textResizeChanges(el.ownerDocument.defaultView.getComputedStyle(el),mode,layoutParent(el)?el.ownerDocument.defaultView.getComputedStyle(layoutParent(el)):null));root.RetouchPanelFocus?.queue(control);await onChange(changes);}catch(error){note(parent,error.message,'refused');}});
-      control.setAttribute('aria-label','Shared '+name);control.setAttribute('aria-pressed',String(current===mode));control.disabled=!available();control.title=control.disabled?'Preview the selected edit range and resolve important inline sizing or wrapping rules.':mode==='width'?'Fit each layer to its own text, preserving explicit line breaks.':mode==='height'?'Keep each layer’s width and fit its height to wrapped text.':'Keep each layer’s current width and height.';if(!control.disabled)control.title+=' Clears minimum and maximum size limits in the selected screen range.';group.append(control);
+      control.setAttribute('aria-label','Shared '+name);control.setAttribute('aria-pressed',String(current===mode));control.disabled=!available();control.title=control.disabled?'Preview the selected edit range and resolve important inline sizing or wrapping rules.':mode==='width'?'Fit each layer to its own text, preserving explicit line breaks.':mode==='height'?'Keep each layer’s width and fit its height to wrapped text.':'Keep each layer’s current width and height.';if(!control.disabled)control.title+=' Clears size limits and aspect ratio in the selected screen range.';group.append(control);
     }
     root.RetouchInspectorUI?.keyboardToolbar(group,'Shared text resizing',{role:'group'});
   }

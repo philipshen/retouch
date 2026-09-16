@@ -483,7 +483,7 @@ test('shared text sizing preserves other scopes and replaces coupled sizing and 
 });
 test('text sizing captures each CSS box and preserves its wrap style',()=>{
  const {textResizeChanges}=require('../shell/inspector.js'),css={width:'220px',height:'140px',getPropertyValue:()=> 'balance'};
- assert.deepEqual(textResizeChanges(css,'height'),{...Object.fromEntries(require('../shell/inspector.js').textSizeLimits.map(key=>[key,key.startsWith('min-')?'0px':'none'])),width:'220px',height:'auto','white-space':'pre-wrap','text-wrap':'wrap balance'});
+ assert.deepEqual(textResizeChanges(css,'height'),{'aspect-ratio':'auto',...Object.fromEntries(require('../shell/inspector.js').textSizeLimits.map(key=>[key,key.startsWith('min-')?'0px':'none'])),width:'220px',height:'auto','white-space':'pre-wrap','text-wrap':'wrap balance'});
  assert.equal(textResizeChanges(css,'width').width,'max-content');assert.equal(textResizeChanges(css,'fixed').height,'140px');assert.throws(()=>textResizeChanges({...css,width:'auto'},'fixed'));
 });
 
@@ -554,4 +554,12 @@ test('size limits stay editable and resettable after text sizing clears logical 
  const first=R.change(preset,'md:','min-width',320);assert.doesNotThrow(()=>R.change(first,'md:','min-height',120));
  assert.equal(L.releaseNeutralLimitAliases('![min-width:0px] [min-inline-size:0px]','min-width'),'![min-width:0px] [min-inline-size:0px]');
  assert.ok(L.releaseNeutralLimitAliases('![min-width:0px] ![min-height:0px] [min-inline-size:30px]','min-width').includes('[min-inline-size:30px]'));
+});
+
+test('text sizing releases aspect ratios without preventing a later ratio edit',()=>{
+ const I=require('../shell/inspector.js'),R=require('../shell/react-selection.js'),css={width:'220px',height:'180px',aspectRatio:'1 / 1',getPropertyValue:()=>''},changes=I.textResizeChanges(css,'height');
+ assert.equal(changes['aspect-ratio'],'auto');assert.equal(I.textResizeMode({width:'220px',height:'auto'},css),null);
+ const source='p-4 aspect-square md:!aspect-video hover:aspect-auto',resized=R.changeTextResizing(source,'md:',changes);assert.ok(resized.includes('p-4 aspect-square'));assert.ok(resized.includes('hover:aspect-auto'));assert.ok(!resized.includes('md:!aspect-video'));assert.ok(resized.includes('md:![aspect-ratio:auto]'));
+ const ratio=R.changeRatio(resized,'md:','2 / 1');assert.ok(ratio.includes('md:![aspect-ratio:2_/_1]'));assert.ok(!ratio.includes('md:![aspect-ratio:auto]'));assert.equal(R.changeRatio(ratio,'md:','2 / 1'),ratio);
+ assert.throws(()=>R.changeTextResizing(source,'md:',{...changes,'aspect-ratio':'1 / 1'}),/supported/);assert.throws(()=>R.changeTextResizing(source,'md:',changes,{style:{getPropertyPriority:key=>key==='aspect-ratio'?'important':''}}),/important inline/);
 });
