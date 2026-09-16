@@ -122,14 +122,18 @@ Retouch uses the Vue plugin's template compiler options for source mapping.
 The initial adapter supports literal text, literal image sources, text-layer tag
 changes, layer names, and responsive CSS in `.vue` files. Layout, appearance and
 typography controls support individual layers and selections within one SFC.
-Layer ordering supports moving native siblings earlier/later or to either end,
-with exact undo and style ownership retained. Moving across control-flow,
-component-sibling, comment or mixed-text boundaries remains unavailable.
+Native sibling actions include duplicate, copy/paste, delete, and moving layers
+earlier/later or to either end. Copies receive independent responsive styles;
+deleting a subtree removes its owned styles. Exact undo restores source bytes.
+Structural edits across control-flow, component-sibling, comment or mixed-text
+boundaries remain unavailable. Copies containing IDs, refs, keys or unknown bound
+attributes need separate identity handling; multi-selection structural actions,
+insertion and reparenting remain incomplete.
 Retouch stores styles in a dedicated block while preserving authored script/style
 blocks and template expressions. During development, a stable CSS module lets Vite
 update styles independently without resetting component state; authored styles
-remain in production builds. Computed inline styles, other structural operations, linked
-style libraries, component-property edits, external templates, template
+remain in production builds. Computed inline styles, other structural operations,
+linked style libraries, component-property edits, external templates, template
 preprocessors and SSR editing remain incomplete.
 Broad or dynamically named bindings that can replace source markers are not
 editable yet. Repeated template elements share their authored source identity.
@@ -138,8 +142,10 @@ The browser fixture verifies repeated text edits, literal interpolation syntax,
 exact undo, compiler-normalized whitespace, retained preview documents and live
 Vue state, base paths, immediate image uploads, responsive padding and typography,
 same-SFC selection styling, comparison screens, sibling ordering and lock remapping,
-and production style retention with transient instrumentation excluded. Tested with Vite 8.3.0, Vue 3.5.42 and `@vitejs/plugin-vue` 6.0.9 in
-Chromium and WebKit. This does not establish compatibility with every Vue setup.
+duplicate/delete/copy/paste with independent styles and exact history, keyboard
+shortcuts with input-field guards, and production style retention with transient
+instrumentation excluded. Tested with Vite 8.3.0, Vue 3.5.42 and
+`@vitejs/plugin-vue` 6.0.9 in Chromium and WebKit. This does not establish compatibility with every Vue setup.
 
 ## Explicit config mode
 

@@ -40,7 +40,7 @@ function create(options = {}) {
     return {
       id: element.id, kind: 'host', tag: element.tag, file: resolved.relPath, hash: resolved.hash,
       renderRevisionAttribute: 'data-rt-revision',
-      linkedStyleAuthoring: false,
+      linkedStyleAuthoring: false, selectionStructureAuthoring: false,
       structure: require('../vue-structure.cjs').describe(resolved, adapter),
       className: attr(element, 'class')?.value || '', classNameDynamic: true,
       classNameReason: 'Use the responsive CSS properties for Vue styles.',
@@ -59,7 +59,7 @@ function create(options = {}) {
     if (op.fileHash && op.fileHash !== resolved.hash) return refuse('The file changed. Re-select the element.');
     if (op.type === 'setCSS') return require('../vue-css.cjs').plan(resolved, op, adapter);
     if (op.type === 'setCSSSelection') return require('../vue-css.cjs').planSelection(resolved, op, adapter);
-    if (op.type === 'moveElement') return require('../vue-structure.cjs').plan(resolved, op, adapter);
+    if (require('../vue-structure.cjs').types.includes(op.type)) return require('../vue-structure.cjs').plan(resolved, op, adapter);
     const element = resolved.element, info = describe(resolved), out = new MagicString(resolved.source);
     function setAttribute(name, value) {
       const old = attr(element, name), token = `${name}="${escapeAttr(value)}"`;
@@ -104,7 +104,7 @@ function create(options = {}) {
       return source.stamp(text, file, root, compilerOptions(), { revision: source.contentHash(text), transformDocument: out => require('../vue-css.cjs').warmInto(out, text, relative, options.styleModule?.(relative)) });
     }, contentHash: source.contentHash,
     assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets', imageOnly: true },
-    capabilities: { classAttr: 'class', ops: ['setText', 'setTag', 'setSrc', 'renameElement', 'setCSS', 'setCSSSelection', 'moveElement'] },
+    capabilities: { classAttr: 'class', ops: ['setText', 'setTag', 'setSrc', 'renameElement', 'setCSS', 'setCSSSelection', ...require('../vue-structure.cjs').types] },
     applyOp: (resolved, op) => require('../transactions.cjs').applyPlan(resolved.appRoot || path.dirname(resolved.file), planOp(resolved, op)),
   };
   return adapter;

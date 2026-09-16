@@ -4040,7 +4040,7 @@ routeInput.addEventListener('keydown', (e) => {
 });
 window.addEventListener('keydown', (e) => {
   if(e.key==='Escape'){vectorEntrySerial++;if(pendingVectorEntry){pendingVectorEntry=null;e.preventDefault();return;}}
-  if(groupNudgeShortcut(e)||vectorNudgeShortcut(e)||flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||(e.key==='Enter'&&e.target.closest?.('[role=treeitem][aria-selected="true"]')&&layerNavigationShortcut(e))||((e.metaKey||e.ctrlKey)&&['[',']','{','}'].includes(e.key)&&canvasLayerShortcut(e)))return;
+  if(groupNudgeShortcut(e)||vectorNudgeShortcut(e)||flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||(e.key==='Enter'&&e.target.closest?.('[role=treeitem][aria-selected="true"]')&&layerNavigationShortcut(e))||canvasLayerShortcut(e))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
   if(sourceHistoryShortcut(e))return;
@@ -4280,7 +4280,7 @@ function sharedNativeFraming(infos){
 }
 function sharedNativeOrdering(infos){
  const unavailable={before:false,after:false,first:false,last:false};
- if(infos.length<2||new Set(infos.map(info=>info.file+'#'+info.hash)).size!==1||infos.some(info=>info.kind!=='host'))return unavailable;
+ if(infos.length<2||new Set(infos.map(info=>info.file+'#'+info.hash)).size!==1||infos.some(info=>info.kind!=='host'||info.selectionStructureAuthoring===false))return unavailable;
  const matches=infos.map(info=>matchingEls(info.id));if(matches.some(nodes=>nodes.length!==1))return unavailable;const all=matches.map(nodes=>nodes[0]),nodes=all.filter(node=>!all.some(other=>other!==node&&other.contains(node))),roots=nodes.map(node=>infos[all.indexOf(node)]);
  if(new Set(roots.map(info=>info.structure?.parentId)).size!==1||roots.some(info=>!info.structure?.canDelete||!info.structure?.parentId))return unavailable;
  const parent=nodes[0]?.parentElement;if(!parent||nodes.some(node=>node.parentElement!==parent))return unavailable;
@@ -4434,6 +4434,7 @@ async function restoreLayerSelection(ids){
   const infos=selected.map(result=>result.element),first=infos[0];sel={hostId:first.id,instanceId:first.kind==='instance'?first.id:null,scope:first.kind==='instance'?'instance':'host',info:first,multiple:infos.length>1?infos:undefined};
 }
 async function structureSelection(action,extra={}){
+ if(sel?.info.selectionStructureAuthoring===false)return toast('Structural actions for multiple selected layers are not available in this file yet.','err');
   if(sel.multiple?.length>1&&!sel.info.cssAuthoring&&!['duplicateElement','deleteElement','moveSelection','reparentElement','frameSelection','groupSelection'].includes(action))return toast('This structural action is not available for these source layers yet.','err');
   const selection=sel.multiple||[sel.info],info=sel.info;busyPanel(true);
   try{

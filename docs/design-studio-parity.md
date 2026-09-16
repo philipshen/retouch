@@ -24017,3 +24017,45 @@ Vue counters. The combined browser fixture also passed responsive CSS,
 comparison-screen updates and production CSS retention/instrumentation exclusion.
 No native package, notarization, Homebrew installation or full-Figma completion
 claim is made by this checkpoint.
+
+
+### Vue duplicate, copy/paste and delete
+
+Native Vue sibling regions now support the existing Duplicate layer, Copy layer,
+Paste layer and Delete layer commands. Copy/paste requires an unchanged sibling
+from the same source parent. Cloning allocates independent style owners throughout
+the copied subtree and copies all responsive scopes. Deletion removes only the
+subtree's owned rules, including the managed style block when no rules remain.
+A managed block located before the template is supported. Surviving source IDs
+are remapped; deleted descendant IDs are reported for layer-lock history. Every
+operation is one atomic source transaction with exact snapshot undo/redo.
+
+Copies with IDs, refs, keys, computed style identities or unknown bound attributes
+are refused pending identity-aware duplication. Sibling control-flow, component,
+SVG, comment and mixed-text boundaries retain the existing structural limits.
+Vue multi-selection structural commands are now disabled explicitly, while
+multi-selection responsive CSS remains available. Insertion, reparenting,
+selection structure and broader control-flow editing remain unfinished parity.
+
+A browser-discovered shortcut gap is also fixed: when selection refresh leaves
+focus on the editor body, the shared layer shortcut handler now receives
+Duplicate, Copy/Paste, Delete and Rename as well as ordering commands. Its input,
+contenteditable and dialog guards remain in place. This avoids silently losing
+commands after selection refresh.
+
+Validation: the full unit suite passed 1,863 tests. The structural tests passed
+again after adding the computed-style-identity refusal. Chromium and WebKit
+passed the combined Vue browser flow: keyboard duplicate/delete, inspector
+input-field guards, independent clone padding, copy/paste, deletion of the last
+owned style, exact undo/redo, disabled unsupported multi-selection controls,
+retained documents and independent Vue counter state. Responsive CSS,
+comparison screens, ordering, lock remapping and production style retention also
+passed in those runs. The layer-interaction browser regression passed live
+refresh, modifier selection, retained button identity, rename focus, reparented
+navigation, search and disclosure. The full HTML-site browser regression also
+passed responsive styling, export, reset, text/image edits, assets, page navigation
+and exact undo.
+
+This source checkpoint does not rebuild or release the desktop app and does not
+establish full Figma parity, arbitrary-site compatibility, notarization or
+Homebrew installation.

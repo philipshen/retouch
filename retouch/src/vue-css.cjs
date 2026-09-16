@@ -108,6 +108,44 @@ function warm(text, relative, styleModule) {
   warmInto(out, text, relative, styleModule);
   return out.toString();
 }
+function structuralStyles(resolved, adapter, range, cloning) {
+  const state = documentState(resolved.source, resolved.relPath), parsed = adapter.collect(resolved.source, resolved.relPath);
+  const owners = new Map(), selected = [];
+  function visit(node) {
+    if (node.type === dom.NodeTypes.ELEMENT) {
+      const markers = node.props.filter(prop => prop.type === dom.NodeTypes.ATTRIBUTE && prop.name.toLowerCase() === 'data-rt-style');
+      if (markers.length > 1) throw Error('A Vue layer has duplicate style identities.');
+      const marker = markers[0], id = marker?.value?.content;
+      if (marker) {
+        if (!/^[a-f0-9]{10}$/.test(id || '')) throw Error('A Vue layer has an invalid style identity.');
+        owners.set(id, (owners.get(id) || 0) + 1);
+        const start = parsed.template.loc.start.offset + marker.loc.start.offset;
+        if (start >= range.start && start < range.end) selected.push({ id, marker, start });
+      }
+    }
+    for (const child of node.children || []) visit(child);
+  }
+  visit(parsed.ast);
+  for (const id of Object.keys(state.model.layers)) if (owners.get(id) !== 1) throw Error('A Vue responsive style has an ambiguous or missing source owner.');
+  const layers = { ...state.model.layers }, fragment = new MagicString(resolved.source.slice(range.start, range.end));
+  for (const { id, marker, start } of selected) {
+    if (owners.get(id) !== 1) throw Error('This Vue layer shares its style identity.');
+    if (cloning) {
+      let fresh, attempt = 0;
+      do { fresh = source.contentHash(resolved.source + '|vue-copy|' + id + '|' + attempt++).slice(0, 10); } while (owners.has(fresh) || Object.hasOwn(layers, fresh));
+      if (Object.hasOwn(layers, id)) layers[fresh] = layers[id];
+      fragment.overwrite(start - range.start, start - range.start + marker.loc.source.length, `data-rt-style="${fresh}"`);
+    } else delete layers[id];
+  }
+  return { fragment: fragment.toString(), model: { version: 1, layers: Object.fromEntries(Object.entries(layers).sort(([a], [b]) => a.localeCompare(b))) } };
+}
+function replaceModel(text, relative, model) {
+  const state = documentState(text, relative), out = new MagicString(text);
+  const replacement = Object.keys(model.layers).length ? blockText(relative, model) : '';
+  if (state.block) out.overwrite(state.block.loc.start.offset, state.block.loc.end.offset, replacement);
+  else if (replacement) out.append(replacement);
+  const after = out.toString(); documentState(after, relative); return after;
+}
 function planSelection(resolved, op, adapter) {
   const refuse = reason => ({ ok: false, refused: true, reason });
   if (op.fileHash !== resolved.hash) return refuse('The file changed. Re-select the layers.');
@@ -130,4 +168,4 @@ function planSelection(resolved, op, adapter) {
   const selection = op.ids.map(id => adapter.describe({ ...resolved, source: text, hash, elements, element: elements.find(element => element.id === id) }));
   return { ok: true, hash, selection, edits: text === resolved.source ? [] : [{ file: resolved.file, before: resolved.source, after: text }] };
 }
-module.exports = { describe, plan, planSelection, warm, warmInto, documentState, stylesheet: (text, relative) => body(relative, documentState(text, relative).model) };
+module.exports = { describe, plan, planSelection, warm, warmInto, documentState, structuralStyles, replaceModel, stylesheet: (text, relative) => body(relative, documentState(text, relative).model) };
