@@ -22293,3 +22293,30 @@ passes. Logs: /tmp/retouch-single-ratio-{html,react,liquid,units}.log and
 This closes the tested single-layer ratio control gap. Full Figma parity,
 arbitrary-site support, and trusted notarized Homebrew distribution remain
 unfinished. No desktop rebuild or push in this continuation.
+
+### HTML frame and text clipping boundaries (2026-09-16)
+
+Clip content is now available on HTML text layers as well as structural
+containers. The checkbox and reset disable outside the selected edit range;
+their handlers also check the current preview width and connected state before
+writing. Important inline overflow, overflow-x, or overflow-y disables edits,
+while an in-range reset can still remove Retouch's override. The prior HTML
+checkbox/reset lacked those checks, unlike the React/Liquid controls.
+
+The expanded html-frame-bounds browser flow covers overflow hit testing,
+responsive ratio/clipping overrides, out-of-range synthetic change/reset attempts,
+all three important inline overflow properties, text-layer clipping, and source
+undo/redo. Its screen-size helper now focuses the screen selector like a user
+interaction; selectOption alone had left focus in the inspector and deferred its
+viewport refresh in Chromium. Screenshots preserve the caret to avoid injected
+style mutations. All 1,760 unit tests pass; Chromium and WebKit browser results
+are retained in /tmp/retouch-frame-clipping-{chromium,webkit,units}.log. Inspected
+/tmp/retouch-frame-clipping.png confirms clipping at the square frame boundary.
+
+Text-sizing mode detection without computedStyleMap remains unresolved.
+getComputedStyle width/height are used dimensions for rendered boxes, so treating
+those pixel values as authored fixed sizing would mislabel automatic sizing.
+A reliable fallback must preserve that distinction without disturbing live
+layout. Reference: https://www.w3.org/TR/cssom-1/#resolved-values . No fallback
+was added in this change. Full Figma parity, arbitrary-site support and trusted
+notarized Homebrew distribution remain unfinished. No desktop rebuild or push.

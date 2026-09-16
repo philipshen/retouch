@@ -6,7 +6,7 @@ if(!['chromium','webkit'].includes(engine))throw Error('RT_E2E_BROWSER must be c
 const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-frame-bounds-'));
- const original='<html><head></head><body><main style="width:200px;height:80px;position:relative;background:#dbeafe"><div style="position:absolute;left:180px;top:20px;width:80px;height:40px;background:#f87171">Overflow</div></main></body></html>';
+ const original='<html><head></head><body><main style="width:200px;height:80px;position:relative;background:#dbeafe"><div style="position:absolute;left:180px;top:20px;width:80px;height:40px;background:#f87171">Overflow</div></main><p style="width:100px;height:20px;white-space:nowrap">Long text that overflows its box</p></body></html>';
  const file=path.join(root,'index.html');fs.writeFileSync(file,original);const read=()=>fs.readFileSync(file,'utf8');
  const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});await once(server,'listening');
  const browser=await browserType.launch(),page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -15,7 +15,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
  const settled=()=>wait(async()=>await page.locator('#panelBody').getAttribute('aria-busy')!=='true');
  try{
   await page.goto(`http://localhost:${server.address().port}/rt`);await page.getByRole('treeitem',{name:'main',exact:true}).click();await settled();
-  const size=async value=>{await page.getByLabel('Screen size',{exact:true}).selectOption(value);await wait(async()=>await app.locator('body').evaluate(()=>innerWidth)===Number(value.split('x')[0]));};
+  const size=async value=>{const screen=page.getByLabel('Screen size',{exact:true});await screen.focus();await screen.selectOption(value);await screen.focus();await wait(async()=>await app.locator('body').evaluate(()=>innerWidth)===Number(value.split('x')[0]));};
   const height=()=>app.locator('main').evaluate(el=>el.getBoundingClientRect().height);
   const outsideHit=()=>app.locator('main > div').evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.right-5,r.top+5)===el;});
   await size('390x844');assert.equal(await outsideHit(),true);
@@ -23,14 +23,30 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   await page.getByLabel('Clip content',{exact:true}).check();await wait(async()=>!await outsideHit());await settled();const clippedSource=read();
   await page.getByRole('button',{name:'Reset clipping',exact:true}).click();await wait(async()=>await outsideHit());await settled();
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===clippedSource);await wait(async()=>!await outsideHit());
-  if(process.env.RT_E2E_FRAME_BOUNDS_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_FRAME_BOUNDS_SCREENSHOT});
+  if(process.env.RT_E2E_FRAME_BOUNDS_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_FRAME_BOUNDS_SCREENSHOT,caret:'initial'});
   await size('768x1024');await page.getByLabel('Style screen scope').selectOption('min-[768px]:');await page.getByLabel('Frame aspect ratio',{exact:true}).fill('16/9');await page.getByLabel('Frame aspect ratio',{exact:true}).press('Tab');await wait(async()=>Math.abs(await height()-112.5)<1);await settled();
   await page.getByLabel('Clip content',{exact:true}).uncheck();await wait(async()=>await outsideHit());await settled();
   await size('390x844');await wait(async()=>await height()===200&&!await outsideHit());
+  await settled();const beforeOutside=read(),clip=page.getByLabel('Clip content',{exact:true}),resetClip=page.getByRole('button',{name:'Reset clipping',exact:true,includeHidden:true});
+  await wait(()=>clip.isDisabled());assert.equal(await resetClip.isDisabled(),true);
+  await clip.evaluate(el=>{el.checked=true;el.dispatchEvent(new Event('change',{bubbles:true}));});await resetClip.evaluate(el=>el.click());await settled();assert.equal(read(),beforeOutside);
+
   for(let i=0;i<3;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}await wait(()=>read()===ratioSource);await wait(async()=>await outsideHit());
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(async()=>await height()===80);
   await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===ratioSource);await wait(async()=>await height()===200);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
-  assert.deepEqual(errors,[]);console.log(engine+': PASS frame ratio dimensions, overflow hit-test clipping, responsive overrides, reset and exact atomic undo/redo');
+  await page.getByLabel('Style screen scope').selectOption('');await settled();
+  for(const property of ['overflow','overflow-x','overflow-y']){
+   await app.locator('main').evaluate((el,property)=>el.style.setProperty(property,'visible','important'),property);
+   await page.getByRole('treeitem',{name:'body',exact:true}).click();await page.getByRole('treeitem',{name:'main',exact:true}).click();await settled();
+   assert.equal(await clip.isDisabled(),true);await clip.evaluate(el=>{el.checked=true;el.dispatchEvent(new Event('change',{bubbles:true}));});await settled();assert.equal(read(),original);
+   await app.locator('main').evaluate(el=>el.setAttribute('style','width:200px;height:80px;position:relative;background:#dbeafe'));
+  }
+  await page.getByRole('treeitem',{name:'p · Long text that overflows its box',exact:true}).click();await settled();
+  await clip.check();await settled();await wait(async()=>await app.locator('p').evaluate(el=>getComputedStyle(el).overflowX)==='clip');const textClipped=read();assert.notEqual(textClipped,original);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(async()=>await app.locator('p').evaluate(el=>getComputedStyle(el).overflowX)==='visible');
+  await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===textClipped);
+  await resetClip.click();await settled();await wait(async()=>await app.locator('p').evaluate(el=>getComputedStyle(el).overflowX)==='visible');
+  assert.deepEqual(errors,[]);console.log(engine+': PASS frame ratio dimensions, overflow hit-test clipping, range guards, inline priority, text-layer clipping and exact atomic undo/redo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
