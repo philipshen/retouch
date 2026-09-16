@@ -20730,3 +20730,26 @@ tests passed. Logs: `/tmp/retouch-html-spacing-input-chromium-final.log`,
 
 Mixed relative-value dragging, full Figma fidelity/arbitrary-site compatibility
 and trusted Homebrew distribution remain incomplete. No native rebuild or push.
+
+### Mixed relative spacing drags preserve each layer's percentage
+
+Shared React/Liquid and HTML spacing fields now recognize mixed relative
+values. Dragging from Mixed applies one percentage-point delta to every
+selected value instead of making them uniform. Bounds clamp the selection
+together; previews and writes retain each layer's own font-size relationship.
+Commit uses one batch, Escape restores the original field and styles, and a
+zero delta does not create a source edit. Labels explain the percentage-point
+behavior. Explicit typed values still apply one shared absolute/relative value.
+
+Validation: React/Chromium, Liquid/WebKit and HTML/WebKit passed mixed tracking
+from 10%/20% to 20%/30% on 24px/32px text, yielding 4.8px/9.6px spacing. Tests
+cover live preview, Escape, lower-bound clamping, responsive fallback, exact
+source undo/redo and preservation of a foreign important tracking change.
+The existing uniform leading/spacing suite passed in the same runs. All 1,702
+unit tests passed. Logs: `/tmp/retouch-mixed-percent-react.log`,
+`/tmp/retouch-mixed-percent-liquid.log`, `/tmp/retouch-mixed-percent-html.log`,
+`/tmp/retouch-mixed-percent-units.log`. The final tooltip wording was added
+after these behavior checks.
+
+Mixed pixel/automatic spacing, full Figma fidelity, arbitrary-site compatibility
+and trusted Homebrew distribution remain incomplete. No native rebuild or push.
