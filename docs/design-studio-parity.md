@@ -21207,3 +21207,26 @@ Evidence: `/tmp/retouch-wrap-longhands-react.log`,
 `/tmp/retouch-wrap-longhands-units.log`.
 Arbitrary cascade/shorthand behavior, full Figma parity, arbitrary-site support
 and trusted Homebrew distribution remain incomplete. No native rebuild or push.
+
+### Shared capital forms and number position
+
+Added shared Capital forms and Number position controls to Type settings for
+React, Liquid and HTML selections, using the existing single-layer choices and
+friendly labels. Both properties participate in responsive range and important
+inline-rule guards. Class edits retain font/font-variant shorthand declarations
+and their unrelated features, and recognize their important priority when
+emitting a longhand override.
+
+Validation: 1,709 unit tests passed. New shared-font-variants browser coverage
+passed on React/HTML Chromium 145 and Liquid WebKit 26: small/all-small caps,
+super/subscript and normal values, computed styles on both selected elements,
+source writes, responsive fallback, disabled synthetic change refusal, reset,
+exact source undo and important inline refusal. Source-level tests cover
+shorthand retention and priority; browser cascade behavior with an important
+font-variant shorthand remains unverified. Glyph appearance depends on font
+support and has not been compared visually with Figma.
+
+Evidence: /tmp/retouch-shared-variants-all.log and
+/tmp/retouch-shared-variants-{react,html,liquid}.log.
+Full Figma fidelity, arbitrary-site behavior and trusted Homebrew distribution
+remain incomplete. No desktop rebuild or push in this continuation.

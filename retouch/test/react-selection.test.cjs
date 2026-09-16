@@ -387,3 +387,20 @@ test('shared wrap replaces mode/style classes and inherits their priority',()=>{
  assert.equal(change('![text-wrap-mode:nowrap] [text-wrap-style:balance]','md:','text-wrap','wrap'),'![text-wrap-mode:nowrap] [text-wrap-style:balance] md:![text-wrap:wrap]');
  assert.equal(change('text-wrap md:[text-wrap-mode:nowrap] md:[text-wrap-style:balance]','md:','text-wrap',null),'text-wrap');
 });
+
+test('shared capital forms and position preserve shorthand features and responsive priorities',()=>{
+ for(const [property,value]of [['font-variant-caps','all-small-caps'],['font-variant-position','super']]){
+  const shorthand='![font-variant:small-caps_oldstyle-nums]';
+  assert.equal(change(shorthand,'',property,value),shorthand+' !['+property+':'+value+']');
+  assert.equal(change(shorthand,'md:',property,value),shorthand+' md:!['+property+':'+value+']');
+  const source=shorthand+' md:['+property+':normal] hover:['+property+':normal]';
+  const next=change(source,'md:',property,value);
+  assert.ok(next.includes('md:!['+property+':'+value+']'));
+  assert.equal(change(next,'md:',property,null),shorthand+' hover:['+property+':normal]');
+  assert.throws(()=>change(source,'md:',property,'invalid'));
+  const el={style:{getPropertyPriority:key=>key===property?'important':'',getPropertyValue:()=>''}};
+  assert.throws(()=>change(source,'md:',property,value,null,false,el),/important inline/);
+  el.style.getPropertyPriority=()=>'';el.style.getPropertyValue=key=>key===property?'normal':'';
+  assert.equal(change('','',property,value,null,false,el),'!['+property+':'+value+']');
+ }
+});
