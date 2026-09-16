@@ -22819,3 +22819,22 @@ establish independent per-layer scaling, arbitrary reparenting, or copying a
 nested descendant outside its owning scale root. Live editor copy selection and
 history were not newly browser-tested here. Those cases, renderer parity,
 composed scaling, and trusted desktop distribution remain unfinished. No push.
+
+### Released-layer copy/delete history in the editor (2026-09-16)
+
+Added live editor coverage after scaled ungrouping: select the released heading,
+duplicate through the context menu, verify both headings' effective scale in
+main and Phone/Tablet/Desktop previews, and verify the copy becomes selected.
+Undo restores exact pre-copy source and geometry; redo restores exact copied
+source, geometry, and selected copy. Deleting the selected copy and undoing /
+redoing deletion also restores those source and geometry snapshots.
+
+Chromium passes all-size scaling. WebKit passes scaling scoped to 1100px and
+larger, including unscaled Phone/Tablet copies. Evidence:
+/tmp/retouch-released-copy-editor.log,
+/tmp/retouch-released-copy-editor-webkit.log.
+This is browser evidence for the existing implementation; no product changes
+were needed this turn. Structural operations use the existing document reload
+path. Multi-selection copy history, independent released-layer transforms, and
+arbitrary reparenting still need broader coverage/implementation. Full parity
+and trusted desktop distribution remain incomplete. No push.

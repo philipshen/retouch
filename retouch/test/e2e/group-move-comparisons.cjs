@@ -47,6 +47,24 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
   await page.getByRole('treeitem',{name:'div · Group',exact:true}).click({button:'right'});await page.getByRole('menu',{name:'Canvas actions',exact:true}).locator('[data-action-id="layer-removeFrame"]').click();await wait(()=>read()!==beforeUngroup);await settled();const released=read();await check(false);assert.equal(await page.getByRole('treeitem',{selected:true}).count(),2);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeUngroup);await settled();await check(true);
   await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===released);await settled();await check(false);
+  if(process.env.RT_E2E_RELEASED_COPY){
+   const heading=page.getByRole('treeitem',{name:/^h1 ·/}).first();await heading.click();await settled();await heading.click({button:'right'});
+   await page.getByRole('menu',{name:'Canvas actions',exact:true}).getByRole('menuitem',{name:'Duplicate layer',exact:true}).click();await wait(()=>read()!==released);await settled();const copied=read(),copiedBoxes=[];
+   for(let f=0;f<frames.length;f++){
+    const factor=!scoped||f===0||f===3?1.5:1;
+    await wait(async()=>await frames[f].locator('h1').count()===2);
+    await wait(async()=>await frames[f].locator('h1').evaluateAll((nodes,factor)=>nodes.every(node=>{const scale=getComputedStyle(node).scale;return Math.abs((scale==='none'?1:parseFloat(scale))-factor)<.001;}),factor));
+    copiedBoxes.push(await measure(frames[f]));
+   }
+   await wait(async()=>await page.getByRole('treeitem',{name:/^h1 ·/}).nth(1).getAttribute('aria-selected')==='true');
+   const checkCopy=async()=>{for(let f=0;f<frames.length;f++)await wait(async()=>{const boxes=await measure(frames[f]);return boxes.length===copiedBoxes[f].length&&boxes.every((r,i)=>r.every((n,j)=>Math.abs(n-copiedBoxes[f][i][j])<.1));});await wait(async()=>await page.getByRole('treeitem',{name:/^h1 ·/}).nth(1).getAttribute('aria-selected')==='true');};
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===released);await settled();await check(false);
+   await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===copied);await settled();await checkCopy();
+   await page.getByRole('treeitem',{selected:true}).press('Delete');await wait(()=>read()!==copied);await settled();const deleted=read();await check(false);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===copied);await settled();await checkCopy();
+   await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===deleted);await settled();await check(false);
+   console.log('RELEASED SCALE COPY DELETE HISTORY PASS',kind,{scoped});
+  }
   console.log('SCALED UNGROUP SOURCE AND GEOMETRY PASS',kind);
  }
  console.log('GROUP MOVE COMPARISONS PASS',kind,{scoped,scaling});
