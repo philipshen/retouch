@@ -11,9 +11,10 @@ function fixture({pathname='/rt',main=true,active=true,postMessage}={}) {
  return {window,open:options=>new window.RetouchNativeEyeDropper().open(options),get calls(){return calls;},resolve:value=>resolve(value),reject:error=>reject(error)};
 }
 test('native adapter is installed only in the editor main document',()=>{
- for(const pathname of ['/','/rt/site','/rt/__api/health','/rtevil'])assert.equal(fixture({pathname}).window.RetouchNativeEyeDropper,undefined);
+ for(const pathname of ['/','/rt/__api','/rt/__api/health','/rt/__assets/shell.js','/rt/%5f%5fapi/health','/rt/%5F%5Fassets/shell.js','/rtevil','/rt/%ZZ','/rt/a%5Cb','/rt/a%00b'])assert.equal(fixture({pathname}).window.RetouchNativeEyeDropper,undefined);
  assert.equal(fixture({main:false}).window.RetouchNativeEyeDropper,undefined);
- assert.equal(typeof fixture({pathname:'/rt/'}).window.RetouchNativeEyeDropper,'function');
+ for(const pathname of ['/rt','/rt/','/rt/site','/rt/docs/nested','/rt/my%20page','/rt/site/__api','/rt/__api-page'])assert.equal(typeof fixture({pathname}).window.RetouchNativeEyeDropper,'function');
+ assert.equal(fixture({main:false,pathname:'/rt/docs/'}).window.RetouchNativeEyeDropper,undefined);
 });
 test('native adapter requires activation and does not dispatch an already aborted request',async()=>{
  const inactive=fixture({active:false});await assert.rejects(inactive.open(),{name:'NotAllowedError'});assert.equal(inactive.calls,0);

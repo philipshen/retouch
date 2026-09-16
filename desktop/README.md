@@ -916,3 +916,19 @@ The first check performs source-edit operations and exact undo in a disposable
 project. The browser check generates saved pages with the packaged planners and
 runtime, then verifies responsive geometry. It launches Node and a test browser;
 it does not launch the native Retouch executable or establish macOS trust.
+
+### Eyedropper on nested editor routes (2026-09-17)
+
+The native color-sampler bridge now supports `/rt/docs/` and other editor page
+routes as well as `/rt`. Both the injected script and Swift policy exclude the
+editor's API and asset namespaces, including encoded equivalents. The native
+checks still require the connected origin and port, the main frame, and an
+active app window; the browser adapter still requires user activation.
+
+All 32 desktop tests, the extracted Swift policy checks, and headless native
+self-tests pass. The source compiles for arm64 and x86_64. The HTML fixture's
+`RT_E2E_NATIVE_DEEP_ROUTE=1 RT_E2E_NATIVE_SAMPLER=1 RT_E2E_EYEDROPPER=1` flow
+checks the real `/rt/docs/` route, exact injected bridge, color/alpha handling,
+source apply/undo, cancellation, error recovery and ignored late replies in
+Chromium and WebKit. Sampling replies are simulated in those browser checks.
+The macOS sampler UI and a rebuilt packaged app were not launched for this change.

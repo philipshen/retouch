@@ -30,7 +30,9 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
     // the result; Escape dismisses the system sampler. Keep one sampler at a time.
     static let colorSamplerScript = #"""
     (()=>{
-      if(window!==window.top||!['/rt','/rt/'].includes(location.pathname))return;
+      let pathname;try{pathname=decodeURIComponent(location.pathname);}catch{return;}
+      const editorPath=pathname==='/rt'||pathname.startsWith('/rt/')&&!['__api','__assets'].includes(pathname.slice(4).split('/')[0]);
+      if(window!==window.top||!editorPath||pathname.includes('\\')||pathname.includes('\0'))return;
       const handler=window.webkit?.messageHandlers?.retouchColorSampler;if(!handler)return;
       class NativeEyeDropper {
         open({signal}={}) {
@@ -56,11 +58,18 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
     static func acceptsColorSampling(frameURL: URL?, editorURL: URL?, mainFrame: Bool) -> Bool {
         guard mainFrame, let frame = frameURL, let editor = editorURL,
               Self.editorURL(frame.absoluteString) != nil,
-              ["/rt", "/rt/"].contains(frame.path),
+              isEditorDocumentPath(frame.path), isEditorDocumentPath(editor.path),
               frame.scheme?.lowercased() == editor.scheme?.lowercased(),
               frame.host?.lowercased() == editor.host?.lowercased() else { return false }
         let defaultPort = frame.scheme?.lowercased() == "https" ? 443 : 80
         return (frame.port ?? defaultPort) == (editor.port ?? defaultPort)
+    }
+    static func isEditorDocumentPath(_ path: String) -> Bool {
+        guard !path.contains("\\"), !path.contains("\0") else { return false }
+        if path == "/rt" { return true }
+        guard path.hasPrefix("/rt/") else { return false }
+        let first = path.dropFirst(4).components(separatedBy: "/")[0]
+        return !["__api", "__assets"].contains(first)
     }
     static func sampledHex(_ color: NSColor) -> String? {
         guard let rgb = color.usingColorSpace(.sRGB) else { return nil }

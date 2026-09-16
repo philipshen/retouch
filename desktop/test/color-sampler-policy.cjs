@@ -15,7 +15,12 @@ func accepts(_ frame: String?, editorURL: URL? = editor, main: Bool = true) -> B
 }
 precondition(accepts("http://localhost:3000/rt"))
 precondition(accepts("http://localhost:3000/rt/?screen=mobile"))
-for frame in [nil,"http://localhost:3001/rt","https://localhost:3000/rt","http://127.0.0.1:3000/rt","http://localhost:3000/rt/site","http://localhost:3000/rt/__api/health","http://localhost:3000/","https://example.com/rt","http://user@localhost:3000/rt","file:///rt"] as [String?] {
+for route in ["/rt/site", "/rt/docs/nested?screen=mobile#heading", "/rt/my%20page", "/rt/site/__api", "/rt/__api-page"] {
+    precondition(accepts("http://localhost:3000" + route))
+}
+precondition(accepts("http://localhost:3000/rt/docs/", editorURL:URL(string:"http://localhost:3000/rt/docs/")))
+precondition(!accepts("http://localhost:3000/rt/docs/", editorURL:URL(string:"http://localhost:3000/rt/__api/health")))
+for frame in [nil,"http://localhost:3001/rt","https://localhost:3000/rt","http://127.0.0.1:3000/rt","http://localhost:3000/rt/__api","http://localhost:3000/rt/__assets/shell.js","http://localhost:3000/rt/%5f%5fapi/health","http://localhost:3000/rt/%5F%5Fassets/shell.js","http://localhost:3000/rt/a%5Cb","http://localhost:3000/rt/a%00b","http://localhost:3000/rt/__api/health","http://localhost:3000/","https://example.com/rt","http://user@localhost:3000/rt","file:///rt"] as [String?] {
     precondition(!accepts(frame),frame ?? "nil frame")
 }
 precondition(!accepts(editor.absoluteString,main:false))
