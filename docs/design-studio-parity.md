@@ -21399,3 +21399,30 @@ glyph or fallback family. Cross-origin/CSP-limited metadata, live font-family
 replacement and named shared presets remain incomplete. Full Figma fidelity,
 arbitrary-site guarantees and trusted Homebrew distribution remain incomplete.
 No native rebuild or push.
+
+### Shared named font presets
+
+Shared Variable settings now offers named styles found in every inspected font
+file. Each layer receives its own font's coordinates for the chosen name;
+unrelated axis overrides remain intact. Presets with ambiguous duplicate names,
+unsupported coordinates or invalid ranges are omitted. The displayed selection
+recognizes an explicit matching preset across the layers. Applying a preset
+checks the current font families/files again, the edit range, inline priority,
+axis count and whether the originating controls are still connected.
+
+Validation: 1,713 unit tests passed, including same-name presets with different
+per-font coordinates, missing names, duplicates, invalid ranges and missing
+metadata. Embedded Geist browser checks with RT_E2E_SHARED_PRESETS passed on
+HTML/React Chromium 145 and Liquid WebKit 26: Bold applies Weight 700 while
+retaining different Width overrides, updates the selected preset, refuses
+out-of-range-screen changes, restores exact source with undo, and refuses a
+stale preset after an external font-family change. Additional HTML coverage
+confirms a detached preset control cannot write after the panel rebuilds.
+Evidence: /tmp/retouch-shared-presets-units.log,
+/tmp/retouch-shared-presets-{html,react,liquid}.log,
+/tmp/retouch-shared-presets-final.log.
+
+Name matching follows font metadata; it does not infer equivalent styles
+across differently named presets. Font fallback/glyph equivalence, full Figma
+fidelity, arbitrary-site guarantees and trusted Homebrew distribution remain
+incomplete. No desktop rebuild or push.

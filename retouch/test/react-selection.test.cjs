@@ -430,3 +430,13 @@ test('shared font metadata intersects supported axis ranges without inventing de
  assert.deepEqual(sharedAxisRanges([first,{axes:[]}]),[]);assert.deepEqual(sharedAxisRanges([first,null]),[]);assert.deepEqual(sharedAxisRanges([]),[]);
  assert.deepEqual(sharedAxisRanges([first,{axes:[{tag:'wght',min:950,max:1000}]}]),[]);
 });
+
+test('shared font presets use each font coordinates and reject ambiguous or invalid styles',()=>{
+ const {sharedFontPresets}=require('../shell/inspector.js');
+ const font=(value,name='Bold')=>({axes:[{tag:'wght',min:100,max:900}],instances:[{name,coordinates:[['wght',value]]}]});
+ assert.deepEqual(sharedFontPresets([font(700),font(650)]),[{name:'Bold',coordinates:[[['wght',700]],[['wght',650]]]}]);
+ assert.deepEqual(sharedFontPresets([font(700),font(650,'Strong')]),[]);
+ assert.deepEqual(sharedFontPresets([font(700),font(1000)]),[]);
+ const duplicate=font(700);duplicate.instances.push(duplicate.instances[0]);assert.deepEqual(sharedFontPresets([duplicate]),[]);
+ assert.deepEqual(sharedFontPresets([font(700),null]),[]);assert.deepEqual(sharedFontPresets([]),[]);
+});
