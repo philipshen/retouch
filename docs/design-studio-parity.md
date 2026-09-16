@@ -22320,3 +22320,29 @@ A reliable fallback must preserve that distinction without disturbing live
 layout. Reference: https://www.w3.org/TR/cssom-1/#resolved-values . No fallback
 was added in this change. Full Figma parity, arbitrary-site support and trusted
 notarized Homebrew distribution remain unfinished. No desktop rebuild or push.
+
+### Shared HTML clipping and compact controls (2026-09-16)
+
+HTML multi-selection now provides Clip content, including the indeterminate
+state for different overflow settings. A shared edit/reset sends overflow and
+both directional resets for every selected layer in one changesById transaction.
+This matches the existing React/Liquid behavior and keeps each operation one
+source undo step. Controls and handlers enforce preview range and connected
+state; important inline overflow on any selected layer refuses the whole edit.
+Reset remains available in range for removing an existing override.
+
+HTML, React and Liquid shared clipping now use the short Clip content caption
+and an inline reset icon, retaining distinct accessible names. The inspected
+/tmp/retouch-shared-clip.png shows the compact light inspector and clipped text.
+
+A new common browser flow, RT_E2E_CLIP_CONTENT=1 in page-fonts.cjs, reproduces
+the missing HTML checkbox before implementation. It checks mixed state, click
+and Space edits, reset, exact source undo, unchanged inline styles, an unaffected
+unselected layer, responsive isolation, synthetic out-of-range attempts, and all
+three important inline overflow properties. HTML passes Chromium 145 and WebKit
+26; React passes Chromium 145 and Liquid passes WebKit 26. All 1,760 unit tests
+pass. Logs: /tmp/retouch-shared-clip-{html,html-webkit,react,liquid,units}.log.
+
+Full Figma parity, arbitrary-site support, the sizing indicator fallback without
+Typed OM, and trusted notarized Homebrew distribution remain unfinished. No
+push or desktop rebuild in this continuation.
