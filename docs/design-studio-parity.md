@@ -20705,3 +20705,28 @@ The raw HTML inspector has a separate CSS input path; this change does not
 unify that path or add mixed relative-value dragging. Full Figma fidelity,
 arbitrary-site compatibility and trusted Homebrew distribution remain
 incomplete. No native rebuild or push.
+
+### HTML shared spacing matches direct percentage entry
+
+HTML shared line-height and letter-spacing fields now accept percentage values
+and calculations directly. Uniform effective relative values display as
+percentages; label drags preserve the displayed units, preview live, cancel and
+commit through one source edit. Explicit CSS lengths remain available. HTML
+single/shared readouts now recognize relative inline values and managed
+relative overrides when they match computed results. Shared pixel/percentage
+fields and automatic line height are guarded outside the selected screen range
+and against important inline spacing.
+
+Validation: Chromium and WebKit passed the expanded inline-spacing suite for
+HTML: single/shared pixel and percentage edits, percentage readouts, percent
+drag preview/cancel/commit, invalid input, original inline attributes, narrow
+screen fallback, reset and exact undo. Final runs also verify disabled shared
+spacing controls outside the edit range and refusal of a programmatically
+dispatched percentage edit. Important shared inline guards passed. Single HTML
+important-inline controls were not part of this guard change. All 1,702 unit
+tests passed. Logs: `/tmp/retouch-html-spacing-input-chromium-final.log`,
+`/tmp/retouch-html-spacing-input-webkit-final.log`,
+`/tmp/retouch-html-spacing-input-units.log`.
+
+Mixed relative-value dragging, full Figma fidelity/arbitrary-site compatibility
+and trusted Homebrew distribution remain incomplete. No native rebuild or push.

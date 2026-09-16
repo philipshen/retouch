@@ -4,6 +4,10 @@
  const {options,fields,svgFields,adaptiveColumns,parseAdaptiveColumns,stackLayout,childAlignment,alignmentProperties,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
  const stopRail=RetouchGradientStopRail;
  function inheritedVariables(info,width){return Object.entries(info.cssRules||{}).filter(([scope])=>Number(scope)<width).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,rules])=>Object.assign(all,rules),{});}
+ function effectiveSpacingPercent(info,el,width,property){
+  const inline=el.style.getPropertyValue(property),authored=info.cssRules?.[width]?.[property]??inheritedVariables(info,width)[property],raw=el.style.getPropertyPriority(property)==='important'?inline:authored??inline,percent=I.spacingPercent(property,raw),css=el.ownerDocument.defaultView.getComputedStyle(el);
+  return percent!==null&&Math.abs(percent/100*parseFloat(css.fontSize)-parseFloat(css.getPropertyValue(property)))<.02?percent:null;
+ }
  function mount(info,el,width,save,position=null,textStyleAction=null){
   const sec=I.section('CSS properties');
   if(info.cssReason||!el||!Number.isInteger(width)){I.note(sec,info.cssReason||'Choose a pixel screen scope.','refused');return sec;}
@@ -220,9 +224,8 @@
     }else save(property,value,width);};
    const target=property.endsWith('radius')?corners:/^(font-|line-height|letter-spacing|text-)/.test(property)||property==='color'?typography:sec;
    if(['line-height','letter-spacing'].includes(property)){
-    const authored=own[property]??inheritedVariables(info,width)[property],percent=I.spacingPercent(property,authored);
-    const expected=percent/100*parseFloat(css.fontSize),actual=parseFloat(css.getPropertyValue(property));
-    if(percent!==null&&!el.style.getPropertyValue(property)&&Number.isFinite(actual)&&Math.abs(expected-actual)<.02)input.retouchSpacingPercent=percent;
+    const percent=effectiveSpacingPercent(info,el,width,property);
+    if(percent!==null)input.retouchSpacingPercent=percent;
    }
    I.field(target,label+' (CSS)',input);if(spacing)I.fieldDraft(input);if(rangeGuarded){input.disabled=!spacingActive();if(input.disabled)input.title='Switch to a screen inside the selected edit range.';}
    if(['width','height'].includes(property))input.retouchDimension={target:el,axis:property,box:'css'};
@@ -269,12 +272,13 @@
   const families=computed.map(css=>css.fontFamily),mixedFamilies=families.some(value=>value!==families[0]);
   I.fontPicker(typography,elements[0].ownerDocument,mixedFamilies?'':families[0],value=>save('font-family',value,width),{mixed:mixedFamilies,label:'Shared Page font'});
   typography.querySelector('[aria-label="Shared Page font"]').closest('.inspector-field').querySelector(':scope > span').textContent='Font';
+  const typeRangeReady=property=>elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth&&el.style.getPropertyPriority(property)!=='important');
   for(const [property,label,min,max]of [['line-height','Shared Line height (%)',0,1000],['letter-spacing','Shared Letter spacing (%)',-100,1000]]){
    const values=computed.map(css=>{const size=parseFloat(css.fontSize),raw=css.getPropertyValue(property);return raw==='normal'&&property==='line-height'?NaN:(parseFloat(raw)||0)/size*100;}),mixed=values.some(value=>!Number.isFinite(value)||Math.abs(value-values[0])>.0001);
-   const input=I.relativeNumber(typography,label,mixed?NaN:values[0],min,max,value=>save(property,String(Math.round(value*1e6)/1e8)+(property==='letter-spacing'?'em':''),width));
+   const input=I.relativeNumber(typography,label,mixed?NaN:values[0],min,max,value=>{if(typeRangeReady(property))save(property,String(Math.round(value*1e6)/1e8)+(property==='letter-spacing'?'em':''),width);});input.disabled=!typeRangeReady(property);
    if(mixed)input.placeholder='Mixed';input.closest('.inspector-field').querySelector(':scope > span').textContent=property==='line-height'?'Line height %':'Spacing %';input.title='Relative to each selected layer’s own font size.';
   }
-  typography.append(I.button('Automatic shared line height',()=>save('line-height','normal',width)));
+  const automaticLineHeight=I.button('Automatic shared line height',()=>{if(typeRangeReady('line-height'))save('line-height','normal',width);});automaticLineHeight.disabled=!typeRangeReady('line-height');typography.append(automaticLineHeight);
   I.note(details(typography,'type-options','Typography options'),'Percentages follow each layer’s font size. Use the CSS fields below for fixed spacing.');
   const sharedFields=[['visibility','Visibility'],['opacity','Opacity (%)'],['rotate','Rotation (°)'],['mix-blend-mode','Blend mode'],['isolation','Blend group'],...fields,...(hasGrid?[['justify-items','Align columns']]:[]),...(elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg')?svgFields:[])];
   for(const [property,label]of sharedFields){
@@ -296,7 +300,23 @@
    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(rangeGuarded&&!spacingActive()||!input.value.trim()||!input.checkValidity())return;const value=property==='opacity'?String(Number(input.value)/100):property==='rotate'?input.value+'deg':input.value.trim();if(!valid(property,value)||!CSS.supports(property,value)){input.setCustomValidity('Enter a supported CSS value.');input.reportValidity();return;}save(property,value,width);};
    I.field(target,'Shared '+label,input);if(svgFields.some(([key])=>key===property)&&!['fill','stroke'].includes(property)){input.dataset.svgStroke=property;I.fieldDraft(input);if(property==='stroke-dasharray'){input.retouchPreviewDocument=elements[0].ownerDocument;input.retouchHasScopedValues=()=>infos.every(info=>info.cssRules?.[width]?.[property]!=null);input.retouchDashValues=()=>elements.map((el,i)=>infos[i].cssRules?.[width]?.[property]??el.ownerDocument.defaultView.getComputedStyle(el).strokeDasharray);input.retouchSetDashValues=values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,{[property]:values[i]}])));}}const field=input.closest('.inspector-field');field.querySelector(':scope > span').textContent=({'font-size':'Size','font-weight':'Weight','font-style':'Style','text-decoration-line':'Decoration','text-transform':'Case','text-align':'Alignment','background-color':'Color','border-color':'Color','border-width':'Width','border-style':'Style','border-radius':'Radius','mix-blend-mode':'Blend mode','isolation':'Blend group','opacity':'Opacity','rotate':'Rotation'})[property]||label;field.title='Shared '+label;
    if(['font-size','line-height','letter-spacing'].includes(property)){
-    RetouchNumericExpression.calculation(input,{unit:property==='line-height'?'':'px'});I.fieldDraft(input);
+    const relative=['line-height','letter-spacing'].includes(property),percentages=relative?infos.map((info,i)=>effectiveSpacingPercent(info,elements[i],width,property)):[],percentDisplay=relative&&percentages.every(value=>value!==null&&Math.abs(value-percentages[0])<.0001),ready=()=>spacingActive()&&elements.every(el=>el.style.getPropertyPriority(property)!=='important');
+    if(percentDisplay)input.value=RetouchNumericExpression.decimal(percentages[0])+'%';
+    const initial=input.value,relativeValue=value=>String(Math.round(value*1e6)/1e8)+(property==='letter-spacing'?'em':'');
+    if(relative){
+     input.disabled=!ready();
+     input.addEventListener('change',event=>{
+      if(input.disabled||!ready()){event.stopImmediatePropagation();return;}if(input.value===initial)return;
+      try{const quantity=RetouchNumericExpression.quantity(input.value,percentDisplay?'%':property==='line-height'?'':'px');if(quantity?.unit!=='%')return;event.stopImmediatePropagation();const min=property==='line-height'?0:-100;if(quantity.value<min||quantity.value>1000)throw Error('Enter a percentage from '+min+' to 1000.');if(!ready())return;input.setCustomValidity('');save(property,relativeValue(quantity.value),width);}catch(error){event.stopImmediatePropagation();input.setCustomValidity(error.message);input.reportValidity();}
+     },true);
+    }
+    RetouchNumericExpression.calculation(input,{unit:percentDisplay?'%':property==='line-height'?'':'px'});I.fieldDraft(input);
+    if(relative){
+     input.title+=' Use px or %; percentages follow each selected layer’s font size.';
+     let unit=percentDisplay?'%':property==='line-height'?'':'px';
+     I.numericLabelDrag(input,raw=>{try{const quantity=RetouchNumericExpression.quantity(raw,unit);if(!quantity)return null;unit=quantity.unit;const css=unit==='%'?relativeValue(quantity.value):RetouchNumericExpression.decimal(quantity.value)+unit;if(!valid(property,css)||!CSS.supports(property,css))return null;return {value:quantity.value,min:property==='line-height'?0:unit==='%'?-100:-100000,max:unit==='%'?1000:100000,format:value=>RetouchNumericExpression.decimal(value)+unit};}catch{return null;}});
+     input.retouchNumericPreview=()=>{const previews=elements.map(el=>RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}));return {current:()=>spacingActive()&&previews.every(preview=>preview.current()),update:value=>previews.forEach(preview=>preview.update(unit==='%'?relativeValue(value):RetouchNumericExpression.decimal(value)+unit)),restore:()=>previews.forEach(preview=>preview.restore())};};
+    }
    }
    if(rangeGuarded){input.disabled=!spacingActive();if(input.disabled)input.title='Switch to a screen inside the selected edit range.';}
    if(spacing){
