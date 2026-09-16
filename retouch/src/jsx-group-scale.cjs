@@ -47,7 +47,7 @@ function describe(resolved){
 }
 const structural=new Set(['frameSelection','groupSelection','removeFrame','reparentElement','reparentSelection','duplicateSelection','deleteSelection','moveSelection','insertElement','duplicateElement','pasteElement','deleteElement','moveElement','setChildren','setTag','createComponent','detachComponent','insertComponent','swapComponent','moveComponent','reparentComponentSelection','deleteComponent','deleteComponentSelection','duplicateComponent','duplicateComponentSelection']);
 function guard(resolved,op){
- if(!structural.has(op.type)||['duplicateElement','pasteElement','duplicateSelection','deleteElement','deleteSelection'].includes(op.type))return null;
+ if(!structural.has(op.type)||['duplicateElement','pasteElement','duplicateSelection','deleteElement','deleteSelection','moveElement','moveSelection'].includes(op.type))return null;
  const elements=resolved.elements||collectElements(resolved.source,resolved.relPath).elements,ids=new Set([resolved.element.id,...(Array.isArray(op.ids)?op.ids:[]),op.copiedId,op.parentId,op.targetId,op.destinationId]),selected=elements.filter(e=>ids.has(e.id));
  const owners=elements.filter(e=>attribute(e,'data-rt-scale'));
  if(owners.some(owner=>selected.some(e=>e.node.start<owner.node.end&&e.node.end>owner.node.start)))return {ok:false,refused:true,reason:'Responsive React groups need preserved scale ownership for this structural edit. Undo the group scaling first.'};

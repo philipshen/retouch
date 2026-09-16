@@ -23583,3 +23583,25 @@ other previously documented parity/distribution gaps remain unfinished. No push.
 
 WebKit also passed the complete editor group/child delete and undo/redo flow:
 /tmp/retouch-react-delete-webkit.log. git diff --check passed.
+
+### Reordering scaled React siblings
+
+Native children and complete scaled React groups can now move before/after their
+siblings or to the first/last position. Multi-selection ordering opts into the
+verified scale-aware source ranges, preserving the generated registration and
+remapping source IDs. Persistent member identities and saved independent-transform
+snapshots remain unchanged. The corresponding ordering controls are now available;
+reparenting, ungrouping and regrouping remain unfinished.
+
+All 1,803 unit tests passed, covering single-child, whole-group and multi-selection
+ordering with exact source undo and unchanged transform ownership. Chromium passed
+the editor ordering shortcut and undo/redo across all four previews. Saved-page
+verification reorders a child in a copied/rescaled group and compares its rendered
+geometry with a separately reordered unscaled reference at 390/768/1100/1440/523
+pixels and after reload. Evidence: /tmp/retouch-react-reorder-units.log,
+/tmp/retouch-react-reorder-editor.log, /tmp/retouch-react-reorder-runtime.log.
+Full Figma parity, arbitrary source structures and trusted desktop distribution
+remain unfinished. No push.
+
+WebKit also passed the saved reordered-copy geometry and reload checks:
+/tmp/retouch-react-reorder-webkit.log. git diff --check passed.

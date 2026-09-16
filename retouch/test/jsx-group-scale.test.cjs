@@ -22,7 +22,7 @@ test('React group and member copies remap snapshots and preserve independent own
   for(const group of next.filter(e=>attr(e,'data-rt-scale'))){const data=JSON.parse(attr(group,'data-rt-scale')),owned=members.filter(e=>e.node.start>group.node.start&&e.node.end<group.node.end&&e.node.openingElement.name.name==='h1');assert.equal(Object.keys(data.steps[0].styles).length,owned.length);for(const member of owned)assert.deepEqual(data.steps[0].styles[attr(member,'data-rt-scale-member')],{0:{factor:1.2,move:[23,0]}});}
   assert.equal(applyPlan(root,result).ok,true);assert.equal(applyPlan(root,{ok:true,edits:result.edits.map(e=>({...e,before:e.after,after:e.before}))}).ok,true);assert.equal(resolve().source,state.source);
  }
- assert.equal(adapter.describe(state).structure.canDuplicate,true);assert.equal(adapter.describe(state).structure.canDelete,true);assert.equal(adapter.describe(state).structure.canMoveAfter,false);fs.writeFileSync(path.join(root,'.retouch-group-scale.jsx'),'export default function Custom(){return null}');assert.equal(adapter.planOp(state,{type:'duplicateElement',fileHash:state.hash}).ok,false);assert.equal(adapter.describe(state).structure.canDuplicate,false);
+ assert.equal(adapter.describe(state).structure.canDuplicate,true);assert.equal(adapter.describe(state).structure.canDelete,true);assert.equal(adapter.describe(state).structure.canMoveAfter,true);fs.writeFileSync(path.join(root,'.retouch-group-scale.jsx'),'export default function Custom(){return null}');assert.equal(adapter.planOp(state,{type:'duplicateElement',fileHash:state.hash}).ok,false);assert.equal(adapter.describe(state).structure.canDuplicate,false);
 });
 
 test('deleting React members prunes saved snapshots and undo restores exact ownership',t=>{
@@ -30,6 +30,15 @@ test('deleting React members prunes saved snapshots and undo restores exact owne
  for(const [element,operation]of [[heading,{type:'deleteElement'}],[state.element,{type:'deleteElement'}],[heading,{type:'deleteSelection',ids:[heading.id,text.id]}]]){
   const result=adapter.planOp({...state,element},{...operation,fileHash:state.hash});assert.equal(result.ok,true,result.reason);const next=collectElements(result.edits[0].after,'Page.jsx').elements,group=next.find(e=>e.node.openingElement.name.name==='div');
   if(group){const data=JSON.parse(group.node.openingElement.attributes.find(a=>a.name?.name==='data-rt-scale').value.expression.value);if(operation.type==='deleteSelection')assert.deepEqual(data.steps[0].styles,{});else{assert.equal(Object.keys(data.steps[0].styles).length,1);assert.deepEqual(Object.values(data.steps[0].styles)[0],{0:{factor:1,move:[11,0]}});}assert.equal(next.filter(e=>e.node.openingElement.name.name==='h1').length,0);if(operation.type==='deleteSelection')assert.equal(next.filter(e=>e.node.openingElement.name.name==='p').length,0);}else assert.equal(element,state.element);
+  assert.equal(applyPlan(root,result).ok,true);assert.equal(applyPlan(root,{ok:true,edits:result.edits.map(e=>({...e,before:e.after,after:e.before}))}).ok,true);assert.equal(resolve().source,state.source);
+ }
+});
+
+test('React sibling reordering preserves member transforms and exact source undo',t=>{
+ const source=input.replace('<h1>','<h1 className="![--rt-scale-factor:1.2]">').replace('</p>','</p><aside>Third</aside>'),{root,resolve}=setup(t,source),adapter=require('../src/adapters/react.cjs');applyPlan(root,scale(resolve()));applyPlan(root,scale(resolve()));const state=resolve(),name=e=>e.node.openingElement.name.name,heading=state.elements.find(e=>name(e)==='h1'),text=state.elements.find(e=>name(e)==='p'),metadata=adapter.describe(state).groupScale.metadata,markers=adapter.describe(state).groupScale.members;
+ for(const [element,operation]of [[heading,{type:'moveElement',direction:'after'}],[state.element,{type:'moveElement',direction:'after'}],[heading,{type:'moveSelection',direction:'last',ids:[heading.id,text.id]}]]){
+  const result=adapter.planOp({...state,element},{...operation,fileHash:state.hash});assert.equal(result.ok,true,result.reason);const after=result.edits[0].after,collected=collectElements(after,'Page.jsx'),group=collected.elements.find(e=>name(e)==='div'),updated={...state,...collected,source:after,element:group,hash:contentHash(after)},description=adapter.describe(updated).groupScale;
+  assert.equal(description.metadata,metadata);assert.deepEqual(Object.values(description.members).sort(),Object.values(markers).sort());if(element===heading){const order=collected.elements.filter(e=>['h1','p','aside'].includes(name(e))).map(name);assert.deepEqual(order,operation.type==='moveSelection'?['aside','h1','p']:['p','h1','aside']);}
   assert.equal(applyPlan(root,result).ok,true);assert.equal(applyPlan(root,{ok:true,edits:result.edits.map(e=>({...e,before:e.after,after:e.before}))}).ok,true);assert.equal(resolve().source,state.source);
  }
 });

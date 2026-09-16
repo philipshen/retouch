@@ -111,5 +111,10 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
    await childCheck();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===deleted);await settled();await check(1);await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===childDeleted);await settled();await childCheck();console.log('REACT SCALED GROUP AND CHILD DELETE HISTORY PASS');
   }
  }
+ if(process.env.RT_E2E_REACT_SCALED_REORDER){
+  assert.equal(kind,'react');const before=read();await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await settled();await page.getByRole('treeitem',{selected:true}).press('Meta+]');await wait(()=>read()!==before);await settled();const moved=read();
+  const check=async order=>{for(const frame of frames)await wait(async()=>await frame.locator('[data-rt-group]').evaluate((group,order)=>{const children=[...group.querySelectorAll('h1,p')],runtime=group.ownerDocument[Symbol.for('retouch.group-scale.runtime')];return children.map(e=>e.tagName).join(',')===order&&children.every(e=>runtime?.manages(e));},order));};
+  await check('P,H1');await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();await check('H1,P');await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===moved);await settled();await check('P,H1');console.log('REACT SCALED CHILD REORDER HISTORY PASS');
+ }
  console.log('GROUP MOVE COMPARISONS PASS',kind,{scoped,scaling});
 };
