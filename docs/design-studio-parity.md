@@ -21936,3 +21936,30 @@ all indentation/outdent/reordering normalization cases, single-item future
 spacing, source-relative units and arbitrary cascade/layout combinations remain
 incomplete. Full Figma fidelity, arbitrary-site support and trusted Homebrew
 distribution remain unproven. No desktop rebuild or push here.
+
+## List spacing through indentation changes (2026-09-16)
+
+The preceding turn was progress: 4ae0f578 added independent list spacing. This
+continuation reproduced a trailing 18 px margin after indenting an item into a
+new nested list. Indent/outdent now capture known authored spacing before
+moving nodes, then normalize affected source/destination lists and any split
+trailing list. Existing uniform destination spacing takes precedence; new or
+single-item destinations inherit the source spacing. Final items get zero
+trailing margin. Existing multi-item destinations without a recognized uniform
+spacing are left outside automatic normalization, rather than flattening mixed
+or stylesheet-controlled gaps into the source list's value.
+
+Validation: all 1,743 unit tests pass. HTML/React Chromium 145 and Liquid WebKit
+26 pass the extended list spacing flow, including initial nested-list trailing
+margin, retained gap after adding another item, outdent destination gap, local
+undo/redo, save/reopen, and exact source undo/redo. A final HTML run also covers
+outdenting an earlier item while its following sibling becomes a nested trailing
+list; it includes the final mixed-destination guard. Logs:
+/tmp/retouch-list-spacing-moves-{before,html,react,liquid,units}.log. The before
+run failed on actual 18px versus expected 0px for the new nested list's last item.
+
+A separately authored spacing preference cannot yet persist on a single-item
+list independently of its zero trailing margin. Mixed spacing, every source
+cascade, arbitrary list reordering and responsive/shared controls remain
+incomplete. Full Figma parity, arbitrary-site support and trusted Homebrew
+distribution remain open. No desktop rebuild or push here.

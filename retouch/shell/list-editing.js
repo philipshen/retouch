@@ -82,17 +82,21 @@
  function indent(el,outdent=false){
   if(!canIndent(el,outdent))return false;
   const {items,list,range}=listContext(el),d=el.ownerDocument,caret={start:range.startContainer,from:range.startOffset,end:range.endContainer,to:range.endOffset},offsets=selectionOffsets(el);
+  const sourceSpacing=authoredListSpacing(list),spacingChanges=new Map([[list,sourceSpacing]]);
   if(outdent){
    const parent=list.parentElement,outer=parent.parentElement,anchor=parent.nextSibling,last=items.at(-1),following=[];
    for(let next=last.nextSibling;next;next=next.nextSibling)following.push(next);
-   if(following.some(node=>node.nodeType===1)){const tail=copiedList(list);tail.append(...following);last.append(tail);}
+   spacingChanges.set(outer,destinationListSpacing(outer,sourceSpacing));
+   if(following.some(node=>node.nodeType===1)){const tail=copiedList(list);tail.append(...following);last.append(tail);spacingChanges.set(tail,sourceSpacing);}
    for(const item of items)outer.insertBefore(item,anchor);
    if([...list.childNodes].every(node=>node.nodeType===3&&!node.textContent.trim()))list.remove();
   }else{
    const previous=items[0].previousElementSibling;let nested=previous.lastElementChild;
    if(nested?.tagName!==list.tagName||nested.nextSibling&&[...previous.childNodes].slice([...previous.childNodes].indexOf(nested)+1).some(node=>node.textContent.trim())){nested=copiedList(list);previous.append(nested);}
+   spacingChanges.set(nested,destinationListSpacing(nested,sourceSpacing));
    nested.append(...items);
   }
+  for(const [changedList,value]of spacingChanges)if(value!==null&&el.contains(changedList))setBlockSpacing(el,listSpacingNodes(changedList,1),value);
   syncMarkers(el);
   if(el.contains(caret.start)&&el.contains(caret.end)){const restored=d.createRange();restored.setStart(caret.start,caret.from);restored.setEnd(caret.end,caret.to);d.getSelection().removeAllRanges();d.getSelection().addRange(restored);}else restoreSelection(el,offsets);
   return true;
@@ -196,12 +200,18 @@
   if(nodes.some(node=>view.getComputedStyle(node).display!=='block'||[...node.style].some(name=>(name==='all'||name==='margin'||name.startsWith('margin-'))&&node.style.getPropertyPriority(name)==='important')))return [];
   return nodes;
  }
- function spacingListItems(el){
-  const context=listContext(el);if(!context)return [];
-  const nodes=[...context.list.children],view=el.ownerDocument.defaultView;
-  if(nodes.length<2||/flex|grid/.test(view.getComputedStyle(context.list).display)||nodes.some(node=>node.tagName!=='LI'||view.getComputedStyle(node).display!=='list-item'||[...node.style].some(name=>(name==='all'||name==='margin'||name.startsWith('margin-'))&&node.style.getPropertyPriority(name)==='important')))return [];
+ function listSpacingNodes(list,minimum=2){
+  if(!list)return [];
+  const nodes=[...list.children],view=list.ownerDocument.defaultView;
+  if(nodes.length<minimum||/flex|grid/.test(view.getComputedStyle(list).display)||nodes.some(node=>node.tagName!=='LI'||view.getComputedStyle(node).display!=='list-item'||[...node.style].some(name=>(name==='all'||name==='margin'||name.startsWith('margin-'))&&node.style.getPropertyPriority(name)==='important')))return [];
   return nodes;
  }
+ function authoredListSpacing(list){
+  const nodes=listSpacingNodes(list),values=nodes.slice(0,-1).map(node=>node.style.marginBlockStart==='0px'?node.style.marginBlockEnd:'');
+  return values.length&&values.every(value=>value===values[0]&&/^\d+(?:\.\d+)?px$/.test(value))?parseFloat(values[0]):null;
+ }
+ function destinationListSpacing(list,fallback){const value=authoredListSpacing(list);return value!==null?value:list.children.length<2?fallback:null;}
+ function spacingListItems(el){return listSpacingNodes(listContext(el)?.list);}
  function setParagraphSpacing(el,value){return setBlockSpacing(el,spacingParagraphs(el),value);}
  function setListSpacing(el,value){return setBlockSpacing(el,spacingListItems(el),value);}
  function setBlockSpacing(el,nodes,value){
