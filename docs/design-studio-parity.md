@@ -22614,3 +22614,36 @@ preset, or weakening the geometry assertion would not fix this defect.
 No production behavior changed in this investigation. No push or desktop
 rebuild. Full parity, responsive group scaling, arbitrary-site support, and
 trusted notarized Homebrew distribution remain unfinished.
+
+### Layout-aware scaling controller prototype (2026-09-16)
+
+Added runtime/group-scale.js, an opt-in controller using the existing group
+geometry engine. It restores its owned transform writes before measuring each
+current layout, then recalculates the proportional group scale and offsets.
+Viewport changes, element/ancestor resizing, DOM/style/content changes, resource
+loads, font loads, and media-range changes schedule a recalculation. Its own
+style writes are excluded from mutation observation; resize observations are
+retained without a disconnect/reobserve loop. Disposal restores only owned
+properties and removes listeners/observers. Host changes to translation and
+unrelated inline styles survive cleanup.
+
+The standalone browser test responsive-group-scale-runtime.cjs passes in
+Chromium and WebKit at 390/768/1100/1440/523px with 50/100/150/200% scale,
+column/row/grid layouts, unchanged outside siblings, live text wrapping,
+media-range activation/deactivation, DOM identity, clean inline-style removal,
+host property preservation, and bounded observer updates. The final roots
+validation guard was rechecked in Chromium. Evidence:
+/tmp/retouch-group-scale-runtime.log,
+/tmp/retouch-group-scale-runtime-webkit.log.
+
+This controller is NOT wired into source adapters or the editor. Saved group
+scaling therefore still has the failing regression documented above. Next:
+persist the scale intent and required runtime with the authored site, as one
+undoable source transaction; verify ordinary site loading without Retouch,
+then connect editor/comparison refresh. Current controller dependencies are
+translate-values.js, flip.js, and group-move.js, and geometry currently expects
+stable data-rt member identifiers. Integration must supply persistent identity
+rather than relying on editor-only instrumentation. Multiple overlapping
+controllers, animated layout, source round-trips, and host framework lifecycle
+have not yet been validated. No production behavior changed, desktop rebuild,
+or push in this continuation. The full goal remains unfinished.
