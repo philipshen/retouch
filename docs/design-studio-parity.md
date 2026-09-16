@@ -23635,3 +23635,21 @@ check that ordered member snapshots survive release unchanged. Evidence:
 
 WebKit also passed editor ungroup/undo/redo and preserved geometry in all four
 previews: /tmp/retouch-react-release-webkit.log. git diff --check passed.
+
+### Regrouping released responsive React content
+
+Selecting the complete adjacent set of released React roots now restores its
+contents group and client registration. Saved responsive metadata and subsequent
+member class edits survive regrouping and further scaling. Source identities are
+mapped through the wrapper insertion, and undo restores the exact released source.
+Partial sets, intervening content, duplicate ownership records and modified runtime
+helpers are refused. Arbitrary released-layer structural editing remains unfinished.
+
+All 1,806 unit tests passed. Chromium editor checks passed regroup/rescale and exact
+undo across main/Phone/Tablet/Desktop for both base and 1100 px scoped operations.
+Chromium and WebKit saved-page checks passed independent movement after release,
+regrouping, subsequent scaling at 390/768/1100/1440/523 pixels, and reload. Evidence:
+/tmp/retouch-react-regroup-units.log, /tmp/retouch-react-regroup-editor.log,
+/tmp/retouch-react-regroup-scoped.log, /tmp/retouch-react-regroup-runtime.log,
+/tmp/retouch-react-regroup-webkit.log. Full Figma parity and trusted desktop
+distribution remain incomplete.
