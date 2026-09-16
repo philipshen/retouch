@@ -21569,3 +21569,26 @@ responsive fallback, and support reset and exact source undo. Important inline
 longhand refusal still passes. Evidence: /tmp/retouch-trim-multiline-{html,react,liquid}.log.
 A fresh full unit run passed all 1,717 tests (/tmp/retouch-push-units.log).
 This fixture does not establish arbitrary script or fallback-font behavior.
+
+### Shared text resizing
+
+Multiple selected text layers now offer Auto width, Auto height, and Fixed size
+immediately below their Width/Height controls. Each action reads each layer's
+own current CSS dimensions and preserves its balance/pretty/stable wrapping
+style. Auto width uses max-content and preserves explicit line breaks; Auto
+height retains each width; Fixed size retains both dimensions. React/Liquid
+replace owned sizing and wrapping classes only within the selected scope,
+including coupled size classes. HTML saves the same per-layer property maps.
+The batch is one undo step. Inactive ranges, disconnected controls, and important
+inline physical/logical sizing or wrapping rules refuse the action.
+
+Validation: 1,719 unit tests passed. HTML/React Chromium 145 and Liquid WebKit 26
+verify rendered dimensions for all three actions on differently sized layers,
+retained text, responsive fallback, exact source undo, and inline-priority
+refusal. HTML reran successfully after repositioning the controls, and its
+screenshot was inspected. Evidence: /tmp/retouch-shared-resize-{units,html,react,liquid,layout}.log
+and /tmp/retouch-shared-resize-layout.png. Existing min/max constraints and layout
+participation remain in effect; this fixture does not establish all flex/grid,
+vertical-writing, or competing logical-size cascade behavior. Full Figma
+fidelity, arbitrary-site support, and trusted Homebrew distribution remain
+incomplete. No desktop rebuild or push in this continuation.

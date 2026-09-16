@@ -472,3 +472,17 @@ test('shared cap-height trimming replaces owned longhands and preserves responsi
  const el={style:{getPropertyPriority:key=>key==='text-box-edge'?'important':'',getPropertyValue:()=>''}};assert.throws(()=>change(source,'','text-box','normal',null,false,el),/important inline/);
  assert.throws(()=>change(source,'','text-box','bad'));assert.equal(change(source,'','text-box',null),'hover:[text-box-trim:none]');
 });
+
+test('shared text sizing preserves other scopes and replaces coupled sizing and wrapping',()=>{
+ const {changeTextResizing}=require('../shell/react-selection.js'),changes={width:'220px',height:'auto','white-space':'pre-wrap','text-wrap':'wrap balance'};
+ const next=changeTextResizing('p-4 size-20 md:!size-40 md:whitespace-nowrap md:[text-wrap-mode:nowrap] hover:w-20','md:',changes);
+ assert.ok(next.includes('p-4 size-20'));assert.ok(next.includes('hover:w-20'));assert.ok(!next.includes('md:!size-40'));assert.ok(!next.includes('md:whitespace-nowrap'));assert.ok(!next.includes('text-wrap-mode'));for(const token of ['md:![width:220px]','md:![height:auto]','md:![white-space:pre-wrap]','md:![text-wrap:wrap_balance]'])assert.ok(next.includes(token),next);
+ assert.equal(changeTextResizing(next,'md:',changes),next);
+ for(const value of ['-1px','100001px','1px;bad'])assert.throws(()=>changeTextResizing('','',{...changes,width:value}));
+ assert.throws(()=>changeTextResizing('','',changes,{style:{getPropertyPriority:key=>key==='inline-size'?'important':''}}),/important inline/);
+});
+test('text sizing captures each CSS box and preserves its wrap style',()=>{
+ const {textResizeChanges}=require('../shell/inspector.js'),css={width:'220px',height:'140px',getPropertyValue:()=> 'balance'};
+ assert.deepEqual(textResizeChanges(css,'height'),{width:'220px',height:'auto','white-space':'pre-wrap','text-wrap':'wrap balance'});
+ assert.equal(textResizeChanges(css,'width').width,'max-content');assert.equal(textResizeChanges(css,'fixed').height,'140px');assert.throws(()=>textResizeChanges({...css,width:'auto'},'fixed'));
+});

@@ -280,6 +280,7 @@
   }
 
   I.sharedTypographyPreview(typography,elements);
+  I.sharedTextResizing(groups.layout,()=>elements,()=>elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth),changes=>save(null,null,width,Object.fromEntries(infos.map((info,index)=>[info.id,changes[index]]))));
   I.sharedVerticalAlignment(typography,()=>elements,(layouts,reset)=>elements.every((el,index)=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth&&(reset||!RetouchLayout.inlineAlignment(el,layouts[index].property,true))),changes=>save(null,null,width,Object.fromEntries(infos.map((info,index)=>[info.id,{[changes[index].property]:changes[index].value}]))),(index,property)=>Object.hasOwn(infos[index].cssRules?.[width]||{},property));
 
   const families=computed.map(css=>css.fontFamily),mixedFamilies=families.some(value=>value!==families[0]);
