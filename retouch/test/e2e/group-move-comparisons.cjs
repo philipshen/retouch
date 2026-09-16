@@ -47,6 +47,16 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
   await page.getByRole('treeitem',{name:'div · Group',exact:true}).click({button:'right'});await page.getByRole('menu',{name:'Canvas actions',exact:true}).locator('[data-action-id="layer-removeFrame"]').click();await wait(()=>read()!==beforeUngroup);await settled();const released=read();await check(false);assert.equal(await page.getByRole('treeitem',{selected:true}).count(),2);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeUngroup);await settled();await check(true);
   await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===released);await settled();await check(false);
+  if(process.env.RT_E2E_REGROUP_SCALE){
+   await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Shift']});await settled();await app.locator('h1').click({button:'right'});await page.getByRole('menu',{name:'Canvas actions',exact:true}).locator('[data-action-id="layer-groupSelection"]').click();await wait(()=>read()!==released);await settled();const regrouped=read();await check(true);assert.equal(regrouped.includes('data-rt-scale-set='),false);
+   const scale=page.getByLabel('Scale selection (%)',{exact:true});await scale.fill('150');await scale.press('Enter');await wait(()=>read()!==regrouped);await settled();
+   for(let f=0;f<frames.length;f++){const factor=!scoped||f===0||f===3?1.5:1,visible=expected[f].slice(0,2).filter(r=>r[2]>0&&r[3]>0),left=Math.min(...visible.map(r=>r[0])),top=Math.min(...visible.map(r=>r[1])),boxes=expected[f].map((r,i)=>i>=2||!r[2]||!r[3]?r:[left+(r[0]-left)*factor,top+(r[1]-top)*factor,r[2]*factor,r[3]*factor]);await wait(async()=>(await measure(frames[f])).every((r,i)=>r.every((n,j)=>Math.abs(n-boxes[i][j])<.1)));}
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===regrouped);await settled();await check(true);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===released);await settled();await check(false);
+   await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===regrouped);await settled();await check(true);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===released);await settled();await check(false);
+   console.log('REGROUP RESPONSIVE SCALE PASS',kind,{scoped});
+  }
   if(process.env.RT_E2E_RELEASED_MOVE){
    await page.getByRole('treeitem',{name:/^h1 ·/}).first().click();await settled();
    const checkMove=async moved=>{for(let f=0;f<frames.length;f++){const active=!scoped||f===0||f===3;await wait(async()=>{const boxes=await measure(frames[f]);return boxes.length===expected[f].length&&boxes.every((r,i)=>r.every((n,j)=>Math.abs(n-expected[f][i][j]-(moved&&active&&i===0&&j===0?23:0))<.1));});}};

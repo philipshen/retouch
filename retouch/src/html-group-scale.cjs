@@ -61,4 +61,22 @@ function release(resolved){
  const id=html.contentHash(resolved.source+'|released-scale|'+resolved.element.id).slice(0,10);
  return {at:end,text:'<script type="application/json" data-rt-scale-set="'+id+'" data-rt-scale="'+escape(metadata)+'">'+JSON.stringify(ids)+'</script>'};
 }
-module.exports={plan,describe,release};
+function reclaim(resolved,roots){
+ const ids=roots.map(item=>attr(item.node,'data-rt-scale-member'));if(ids.some(id=>id===undefined))return null;
+ const validate=require('../runtime/group-scale-bootstrap.js').members;validate(JSON.stringify(ids));
+ const tree=parse5.parse(resolved.source,{sourceCodeLocationInfo:true}),sets=[],runtimes=[];
+ function walk(node){
+  if(attr(node,'data-rt-scale-runtime')!==undefined)runtimes.push(node);
+  if(attr(node,'data-rt-scale-set')!==undefined){
+   if(node.tagName!=='script'||attr(node,'type')!=='application/json'||!node.sourceCodeLocation?.endTag)throw Error('Invalid released scale metadata.');
+   const members=validate((node.childNodes||[]).map(child=>child.value||'').join(''));
+   if(members.length===ids.length&&members.every(id=>ids.includes(id))){const metadata=attr(node,'data-rt-scale');parse(metadata);sets.push({metadata,node});}
+  }
+  for(const child of node.childNodes||[])walk(child);
+ }
+ walk(tree);if(!sets.length)return null;if(sets.length!==1)throw Error('Released scale members have multiple owners.');
+ const elements=resolved.elements||html.collect(resolved.source,resolved.relPath).elements;if(ids.some(id=>elements.filter(item=>attr(item.node,'data-rt-scale-member')===id).length!==1))throw Error('Released scale members need distinct persistent identities.');
+ if(runtimes.length!==1)throw Error('The saved scale runtime changed outside the editor.');runtime.upgrade(resolved.source);
+ const {metadata,node}=sets[0];return {attribute:'data-rt-scale="'+escape(metadata)+'"',start:node.sourceCodeLocation.startOffset,end:node.sourceCodeLocation.endOffset};
+}
+module.exports={plan,describe,release,reclaim};

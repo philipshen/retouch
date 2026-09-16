@@ -23064,3 +23064,38 @@ Evidence: /tmp/retouch-hidden-group-edit-before.log,
 No runtime bundle change was required. Fully hidden selections, mixed hidden
 selections, nested scale composition, other renderers, CSP delivery, full Figma
 parity, and trusted notarized desktop distribution remain unfinished. No push.
+
+### Regrouping released responsive scale sets (2026-09-16)
+
+Grouping all roots of one released scale set now moves its responsive metadata
+onto the new transparent group and removes the inert set record in the same
+source transaction. The group can be scaled again. Persistent member identities
+are retained; duplicate set ownership and nonunique member identities are refused.
+Recognized legacy runtimes upgrade as part of regrouping with exact original
+bytes retained for history.
+
+A validated record is masked only in the temporary sibling-validation input,
+allowing it in the head, immediately before the roots, or between selected roots.
+The saved source removes the record. Source-offset mapping accounts for removal.
+Testing found and fixed removal order discarding the new opening tag when the
+record ended exactly at the group insertion point. General script restrictions
+remain; only the exact validated reclaimed record is exempted from that check.
+Partial-set grouping keeps the record rather than stealing its transform.
+
+Chromium and WebKit editor tests ungroup, regroup, scale again, and undo/redo
+exact source while verifying all four previews. Chromium covers base scope and
+WebKit min-1100 scope. Saved-page tests verify regroup geometry and reloads at
+five widths, then another base scale with desktop range inheritance intact.
+All 1,779 unit tests pass, including relocated records, partial sets, duplicate
+ownership, and legacy runtime source migration.
+
+Evidence: /tmp/retouch-regroup-scale-before.log,
+/tmp/retouch-regroup-scale-editor.log,
+/tmp/retouch-regroup-scale-editor-webkit.log,
+/tmp/retouch-regroup-scale-saved-final.log,
+/tmp/retouch-regroup-scale-saved-webkit.log,
+/tmp/retouch-regroup-scale-units-final.log.
+
+Partial-set scale composition, independent-offset composition when the shared
+factor changes, nested groups, arbitrary reparenting, other renderers, CSP,
+full Figma parity, and trusted desktop distribution remain unfinished. No push.
