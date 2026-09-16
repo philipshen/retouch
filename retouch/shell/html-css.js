@@ -3,6 +3,14 @@
  const openGridSections=new Set();
  const {options,fields,svgFields,adaptiveColumns,parseAdaptiveColumns,stackLayout,childAlignment,alignmentProperties,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
  const stopRail=RetouchGradientStopRail;
+ const coreTypography=['font-family','font-size','font-weight','font-style','line-height','letter-spacing'];
+ function typographyReady(elements,width,property,reset=false){return elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth&&(reset||el.style.getPropertyPriority(property)!=='important'));}
+ function typographyHint(elements,width){return elements.some(el=>width>el.ownerDocument.defaultView.innerWidth)?'Switch to a screen inside the selected edit range.':'An important inline rule controls this typography property.';}
+ function typographySave(save,infos,elements,width){return (...args)=>{
+  const [property,value,,perElement]=args,common=typeof property==='string'?{[property]:value}:property;
+  for(let i=0;i<elements.length;i++)for(const [key,next]of Object.entries(perElement?.[infos[i].id]??common??{}))if(coreTypography.includes(key)&&!typographyReady([elements[i]],width,key,next===null))return;
+  return save(...args);
+ };}
  function inheritedVariables(info,width){return Object.entries(info.cssRules||{}).filter(([scope])=>Number(scope)<width).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,rules])=>Object.assign(all,rules),{});}
  function effectiveSpacingPercent(info,el,width,property){
   const inline=el.style.getPropertyValue(property),authored=info.cssRules?.[width]?.[property]??inheritedVariables(info,width)[property],raw=el.style.getPropertyPriority(property)==='important'?inline:authored??inline,percent=I.spacingPercent(property,raw),css=el.ownerDocument.defaultView.getComputedStyle(el);
@@ -11,6 +19,7 @@
  function mount(info,el,width,save,position=null,textStyleAction=null){
   const sec=I.section('CSS properties');
   if(info.cssReason||!el||!Number.isInteger(width)){I.note(sec,info.cssReason||'Choose a pixel screen scope.','refused');return sec;}
+  save=typographySave(save,[info],[el],width);
   const css=el.ownerDocument.defaultView.getComputedStyle(el),own=info.cssRules?.[width]||{};
   let paint=null;
   if(el.namespaceURI==='http://www.w3.org/2000/svg'){
@@ -60,9 +69,9 @@
   window.RetouchTextStyles?.mount(typography,el,textStyleAction?{inherited:inheritedLink,link:info.textStyleLinks?.[width],overrides:info.textStyleOverrides?.[width]||[],reset:(styleId,libraryRevision)=>textStyleAction('resetTextStyle',width,{styleId,libraryRevision}),apply:(styleId,libraryRevision)=>textStyleAction('applyTextStyle',width,{styleId,libraryRevision}),update:(styleId,libraryRevision,name,properties)=>textStyleAction('updateTextStyle',width,{styleId,libraryRevision,name,properties}),detach:()=>textStyleAction('detachTextStyle',width)}:{});
   I.typographyPreview(typography,el);
   I.textResizing(typography,el,changes=>save(changes,null,width));
-  I.fontPicker(typography,el.ownerDocument,css.fontFamily,value=>save('font-family',value,width));
-  const relativeLineHeight=I.relativeNumber(typography,'Line height (%)',parseFloat(css.lineHeight)/parseFloat(css.fontSize)*100,0,1000,value=>save('line-height',String(Math.round(value*1e6)/1e8),width));relativeLineHeight.title='Relative to this layer’s font size.';if(css.lineHeight==='normal')relativeLineHeight.placeholder='Automatic';
-  I.relativeNumber(typography,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,value=>save('letter-spacing',`${Math.round(value*1e6)/1e8}em`,width)).title='Relative to this layer’s font size.';
+  const family=I.fontPicker(typography,el.ownerDocument,css.fontFamily,value=>save('font-family',value,width),{disabled:!typographyReady([el],width,'font-family')});if(family.disabled)family.title=typographyHint([el],width);
+  const relativeLineHeight=I.relativeNumber(typography,'Line height (%)',parseFloat(css.lineHeight)/parseFloat(css.fontSize)*100,0,1000,value=>save('line-height',String(Math.round(value*1e6)/1e8),width));relativeLineHeight.disabled=!typographyReady([el],width,'line-height');relativeLineHeight.title=relativeLineHeight.disabled?typographyHint([el],width):'Relative to this layer’s font size.';if(css.lineHeight==='normal')relativeLineHeight.placeholder='Automatic';
+  const relativeTracking=I.relativeNumber(typography,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,value=>save('letter-spacing',`${Math.round(value*1e6)/1e8}em`,width));relativeTracking.disabled=!typographyReady([el],width,'letter-spacing');relativeTracking.title=relativeTracking.disabled?typographyHint([el],width):'Relative to this layer’s font size.';
   I.opticalTypography(typography,css,value=>save('font-optical-sizing',value,width),()=>save('font-optical-sizing',null,width),Object.hasOwn(own,'font-optical-sizing'));
   I.variationTypography(typography,css,value=>save('font-variation-settings',value,width),()=>save('font-variation-settings',null,width),Object.hasOwn(own,'font-variation-settings'),el);
   I.fontPositionTypography(typography,css.fontVariantPosition,value=>save('font-variant-position',value,width),()=>save('font-variant-position',null,width),Object.hasOwn(own,'font-variant-position'));
@@ -208,7 +217,7 @@
 
   for(const [property,label] of [...fields,...(isGrid?[['justify-items','Align columns']]:[])]){
    const value=own[property]??css.getPropertyValue(property),input=document.createElement(options[property]?'select':'input');
-   const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),rangeGuarded=spacing||/^(?:min-|max-)?(?:width|height)$/.test(property)||['display','flex-direction','flex-wrap','align-items','align-content','justify-content','justify-items','grid-auto-flow'].includes(property),spacingActive=()=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth;
+   const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),rangeGuarded=coreTypography.includes(property)||spacing||/^(?:min-|max-)?(?:width|height)$/.test(property)||['display','flex-direction','flex-wrap','align-items','align-content','justify-content','justify-items','grid-auto-flow'].includes(property),spacingActive=()=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth;
    if(options[property])for(const item of new Set([value,...options[property]])){const option=document.createElement('option');option.value=item;option.textContent=item;input.append(option);}
    else input.type='text';
    if(property==='font-family'){input.placeholder='Inter, sans-serif';input.title='Use a font loaded by this page or installed on your computer.';}
@@ -227,7 +236,7 @@
     const percent=effectiveSpacingPercent(info,el,width,property);
     if(percent!==null)input.retouchSpacingPercent=percent;
    }
-   I.field(target,label+' (CSS)',input);if(spacing)I.fieldDraft(input);if(rangeGuarded){input.disabled=!spacingActive();if(input.disabled)input.title='Switch to a screen inside the selected edit range.';}
+   I.field(target,label+' (CSS)',input);if(spacing)I.fieldDraft(input);if(rangeGuarded){input.disabled=!spacingActive()||coreTypography.includes(property)&&!typographyReady([el],width,property);if(input.disabled)input.title=typographyHint([el],width);}
    if(['width','height'].includes(property))input.retouchDimension={target:el,axis:property,box:'css'};
    if(input.tagName==='INPUT'&&/^(?:font-size|font-weight|line-height|letter-spacing|text-indent|(?:min-|max-)?(?:width|height)|gap|(?:padding|margin)(?:-(?:top|right|bottom|left))?|border(?:-(?:top|right|bottom|left))?-width|border-(?:(?:top|bottom)-(?:left|right)-)?radius)$/.test(property)){
     let unit='';I.numericLabelDrag(input,raw=>{if(property==='gap'&&raw.trim()==='normal'){unit='px';return {value:0,min:0,max:100000,format:value=>value+'px'};}const match=/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(px|em|rem|%|ex|ch|vw|vh|vmin|vmax|pt|pc|in|cm|mm)?$/i.exec(raw.trim());if(!match||!CSS.supports(property,raw)||!valid(property,raw)||!match[2]&&!['font-weight','line-height'].includes(property))return null;unit=match[2]||'';return {value:Number(match[1]),format:value=>value+unit,min:property==='font-weight'?1:['letter-spacing','text-indent'].includes(property)||/^margin(?:-|$)/.test(property)?-100000:0,max:property==='font-weight'?1000:100000};});
@@ -236,7 +245,7 @@
 
    if(property==='background-color')RetouchBackgroundPaintUI.bind(info,el,input,changes=>save(changes,null,width),()=>RetouchBackgroundPaintUI.sourceState(info,width?'min-['+width+'px]:':''));
    if(['color','background-color','border-color'].includes(property)){I.fieldDraft(input);input.dataset.paintProperty=property;RetouchBackgroundPaintUI.bindSource(input,info,width?'min-['+width+'px]:':'',property,el);input.retouchPaintPreview??=()=>RetouchPaintPicker.propertyPreview({el,input,property});}
-   if(property==='line-height')target.append(I.button('Automatic line height',()=>save(property,'normal',width)));
+   if(property==='line-height'){const automatic=I.button('Automatic line height',()=>save(property,'normal',width));automatic.disabled=!typographyReady([el],width,property);target.append(automatic);}
    const reset=I.button('Reset '+label.toLowerCase(),()=>{if(!rangeGuarded||spacingActive())save(property,null,width);});reset.disabled=rangeGuarded&&!spacingActive()||!Object.hasOwn(own,property);target.append(reset);
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
@@ -252,6 +261,7 @@
  function mountSelection(infos,elements,width,save){
   const section=I.section('Shared styles');
   if(!Number.isInteger(width)||elements.some(el=>!el)||infos.some(info=>info.cssReason)){I.note(section,'Re-select the layers and choose a pixel screen scope.','refused');return section;}
+  save=typographySave(save,infos,elements,width);
   I.note(section,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Mixed values stay unchanged until edited. Each shared edit is one undo step.');
   section.append(RetouchSiteVariables.mount(elements,width,save,infos.map(info=>info.cssRules?.[width]||{}),changes=>save(null,null,width,Object.fromEntries(infos.map((info,index)=>[info.id,changes[index]]))),infos.map(info=>inheritedVariables(info,width))));
   const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el));
@@ -270,8 +280,9 @@
   }
 
   const families=computed.map(css=>css.fontFamily),mixedFamilies=families.some(value=>value!==families[0]);
-  I.fontPicker(typography,elements[0].ownerDocument,mixedFamilies?'':families[0],value=>save('font-family',value,width),{mixed:mixedFamilies,label:'Shared Page font'});
+  I.fontPicker(typography,elements[0].ownerDocument,mixedFamilies?'':families[0],value=>save('font-family',value,width),{mixed:mixedFamilies,label:'Shared Page font',disabled:!typographyReady(elements,width,'font-family')});
   typography.querySelector('[aria-label="Shared Page font"]').closest('.inspector-field').querySelector(':scope > span').textContent='Font';
+  if(!typographyReady(elements,width,'font-family'))typography.querySelector('[aria-label="Shared Page font"]').title=typographyHint(elements,width);
   const typeRangeReady=property=>elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth&&el.style.getPropertyPriority(property)!=='important');
   for(const [property,label,min,max]of [['line-height','Shared Line height (%)',0,1000],['letter-spacing','Shared Letter spacing (%)',-100,1000]]){
    const values=computed.map(css=>{const size=parseFloat(css.fontSize),raw=css.getPropertyValue(property);return raw==='normal'&&property==='line-height'?NaN:(parseFloat(raw)||0)/size*100;}),mixed=values.some(value=>!Number.isFinite(value)||Math.abs(value-values[0])>.0001);
@@ -292,7 +303,7 @@
    else if(['display','flex-direction','flex-wrap'].includes(property)||!hasFlex&&!hasGrid&&['align-items','align-content','justify-content','gap'].includes(property))target=details(groups.layout,'layout-options','Layout options');
 
    const values=infos.map((info,i)=>{const raw=info.cssRules?.[width]?.[property]??computed[i].getPropertyValue(property);return property==='rotate'?String(RetouchReactSelection.rotationDegrees(raw)):raw;}),mixed=values.some(value=>value!==values[0]),numeric=['opacity','rotate'].includes(property);
-   const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),rangeGuarded=spacing||/^(?:min-|max-)?(?:width|height)$/.test(property)||['display','flex-direction','flex-wrap','align-items','align-content','justify-content','justify-items','grid-auto-flow'].includes(property),spacingActive=()=>elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth);
+   const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),rangeGuarded=coreTypography.includes(property)||spacing||/^(?:min-|max-)?(?:width|height)$/.test(property)||['display','flex-direction','flex-wrap','align-items','align-content','justify-content','justify-items','grid-auto-flow'].includes(property),spacingActive=()=>elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth);
    const input=document.createElement(options[property]?'select':'input');
    if(options[property]){if(mixed){const option=document.createElement('option');option.value='';option.textContent='Mixed';option.disabled=true;input.append(option);}for(const value of new Set([...values,...options[property]])){const option=document.createElement('option');option.value=value;option.textContent=value;input.append(option);}}
    else {input.type=numeric?'number':'text';input.placeholder=mixed?'Mixed':'';if(numeric){input.min=property==='opacity'?0:-360;input.max=property==='opacity'?100:360;input.step='any';}}
@@ -319,7 +330,7 @@
      input.retouchNumericPreview=()=>{const relativeSizes=mixedPercent&&input.value===''?percentages:null,previews=elements.map(el=>RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}));return {current:()=>spacingActive()&&previews.every(preview=>preview.current()),update:value=>previews.forEach((preview,i)=>preview.update(unit==='%'?relativeValue(relativeSizes?relativeSizes[i]+value-relativeSizes[0]:value):RetouchNumericExpression.decimal(value)+unit)),...(relativeSizes?{commit:value=>{if(value===relativeSizes[0]){input.value='';return;}if(ready())save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,{[property]:relativeValue(relativeSizes[i]+value-relativeSizes[0])}])));}}:{}),restore:()=>previews.forEach(preview=>preview.restore())};};
     }
    }
-   if(rangeGuarded){input.disabled=!spacingActive();if(input.disabled)input.title='Switch to a screen inside the selected edit range.';}
+   if(rangeGuarded){input.disabled=!spacingActive()||coreTypography.includes(property)&&!typographyReady(elements,width,property);if(input.disabled)input.title=typographyHint(elements,width);}
    if(spacing){
     I.fieldDraft(input);input.disabled=!spacingActive();
     if(input.disabled)input.title='Switch to a screen inside the selected edit range.';

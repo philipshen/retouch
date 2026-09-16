@@ -20776,3 +20776,28 @@ All 1,702 unit tests passed. Logs: `/tmp/retouch-type-scope-face-final.log`,
 These guards cover core font fields, not every typography/library operation.
 Full Figma fidelity, arbitrary-site compatibility and trusted Homebrew
 distribution remain incomplete. No native rebuild or push.
+
+### HTML core typography guards at the save boundary
+
+HTML font family, size, weight, slant, line-height and letter-spacing controls
+now share screen-range and important-inline guards. Their save boundary checks
+single properties, property maps and per-element batches before any write, so
+one blocked selected layer cannot leave a partially changed selection. Reset
+remains available under important inline styles when the edit range is active.
+Font pickers and primary controls display the reason editing is unavailable.
+
+Validation: HTML/Chromium passed single/shared family, weight and slant edits,
+disabled controls/resets outside scope, synthetic-event refusal, important
+inline guards and exact undo. The final run changes inline priority while the
+inspector remains open, then dispatches all three shared edits; source remains
+unchanged. HTML/WebKit passed font-size and spacing suites, including mixed
+scrubbing, percentage controls, original inline attributes, responsive fallback,
+source undo and important inline guards. All 1,702 unit tests passed. Logs:
+`/tmp/retouch-html-type-scope-face-final.log`,
+`/tmp/retouch-html-type-scope-size.log`,
+`/tmp/retouch-html-type-scope-spacing.log`,
+`/tmp/retouch-html-type-scope-units.log`.
+
+The guard targets core typography properties; library operations and other
+fields need their own coverage. Full Figma fidelity, arbitrary-site compatibility
+and trusted Homebrew distribution remain incomplete. No native rebuild or push.
