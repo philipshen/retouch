@@ -41,7 +41,11 @@
     const raw=el.getAttribute('data-rt-scale'),ranges=parse(raw),data=JSON.parse(raw);let roots=[el],signature=raw;
     if(el.hasAttribute('data-rt-scale-set')){
      if(el.tagName!=='SCRIPT'||el.type!=='application/json')throw Error('Released scale metadata must be inert JSON.');
-     const ids=members(el.textContent),nodes=[...document.querySelectorAll('[data-rt-scale-member]')];signature+='|'+el.textContent;
+     const ids=members(el.textContent),scope=el.getAttribute('data-rt-scale-scope');let nodes;
+     if(scope===null)nodes=[...document.querySelectorAll('[data-rt-scale-member]')];
+     else if(scope==='siblings'){nodes=[];for(let node=el.previousElementSibling;node&&ids.includes(node.getAttribute('data-rt-scale-member'));node=node.previousElementSibling)nodes.push(node);}
+     else throw Error('Invalid released scale ownership scope.');
+     signature+='|'+el.textContent+'|'+scope;
      roots=ids.flatMap(id=>{const matches=nodes.filter(node=>node.getAttribute('data-rt-scale-member')===id);if(matches.length>1)throw Error('A released scale member has multiple owners.');return matches;});
     }else if(!el.hasAttribute('data-rt-group'))throw Error('Responsive scaling requires a group.');
     if(roots.length)candidates.set(el,{signature,ranges,data,roots});
@@ -58,7 +62,7 @@
    }
   }
   const observer=new win.MutationObserver(()=>{if(!disposed&&!pending)pending=win.requestAnimationFrame(()=>{pending=0;reconcile();});});
-  observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['data-rt-scale','data-rt-group','data-rt-scale-set','data-rt-scale-member']});reconcile();
+  observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['data-rt-scale','data-rt-group','data-rt-scale-set','data-rt-scale-scope','data-rt-scale-member']});reconcile();
   return {refresh(){reconcile();for(const entry of active.values())entry.control.refresh();},manages(el){return [...active.values()].some(entry=>entry.control.manages(el));},owns(el,property){return [...active.values()].some(entry=>entry.control.owns(el,property));},pause(elements){const releases=[...active.values()].filter(entry=>overlaps(entry.roots,elements)).map(entry=>entry.control.pause());return ()=>releases.forEach(release=>release());},dispose(){if(disposed)return;disposed=true;observer.disconnect();win.cancelAnimationFrame(pending);for(const entry of active.values())entry.control.dispose();active.clear();}};
  }
  const api={parse,members,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupScaleBootstrap=api;

@@ -23328,3 +23328,35 @@ ungrouping, runtime ownership through release, and editor integration remain
 unfinished. The source scaling prototype is still not advertised as an editor
 capability. Full Figma parity and trusted desktop distribution remain unfinished.
 No push.
+
+### Scaled Liquid ungrouping with per-instance ownership
+
+Removing a scaled Liquid wrapper now writes an inert, raw-block-protected record
+immediately after its children. The saved runtime resolves the record's members
+from adjacent preceding siblings, so repeated template instances can share the
+same source member IDs even under one HTML parent. Existing HTML records retain
+their document-wide lookup. Scope changes participate in runtime reconciliation.
+The previous complete runtime fingerprint is retained for source upgrades.
+
+The native remove-frame transaction validates the scaled group's own children
+and their browser-parsed parent relationship, preserves original source history,
+and accounts for the inserted record when mapping surviving source IDs. This
+allows a complete scaled group inside a parent that also contains an enclosing
+Liquid loop, without permitting edits across that loop's boundaries.
+
+Chromium and WebKit saved-page tests preserve geometry after ungrouping base,
+responsive and independently edited groups at 390/768/1100/1440/523px, with
+reloads. They cover repeated instances in separate section parents and under the
+same parent. The final Chromium extension also confirms that a later member
+class move applies the correct delta after ungrouping. The existing HTML saved
+runtime suite passed, and all 1,790 unit tests passed. git diff --check passed.
+Evidence: /tmp/retouch-liquid-ungroup-chromium.log,
+/tmp/retouch-liquid-ungroup-webkit.log,
+/tmp/retouch-liquid-ungroup-html-regression.log,
+/tmp/retouch-liquid-ungroup-units.log.
+
+Post-release structural copying/regrouping still needs to maintain these local
+records; current structural guards prevent that unsupported path. Liquid scaling
+still needs editor capability, class-member writer, preview/runtime refresh and
+history integration. General template geometry, React parity, full Figma parity
+and trusted desktop distribution remain unfinished. No push.

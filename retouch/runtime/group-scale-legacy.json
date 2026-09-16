@@ -26,5 +26,9 @@
   {
     "commit": "918b46ae",
     "sha256": "fb650a88f0c95b89df878ae4d02f0d4876a045acab2d4f1497e5881447d5e15f"
+  },
+  {
+    "commit": "4ad35d25",
+    "sha256": "e13b847a30851c4285700a3dac9f2db2bdf64cef65bf5c1bc6a2806ab46f122a"
   }
 ]

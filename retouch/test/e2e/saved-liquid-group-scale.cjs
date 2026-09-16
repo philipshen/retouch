@@ -35,5 +35,10 @@ const memberEdit=(source,scope,changes)=>{const r=resolve(source),element=r.elem
   await runCase(reference,copy(copyComposed,tag),group=>group);
  }
  }
+ const ungroup=source=>{const r=resolve(source),result=liquid.planOp(r,{type:'removeFrame',fileHash:r.hash});assert.equal(result.ok,true,result.reason);return result.edits[0].after;};
+ for(const grouped of [saved,scaledAgain])await runCase(grouped,ungroup(grouped),group=>group);
+ const releasedComposed=ungroup(scaledAgain),releasedMoved=memberEdit(releasedComposed,'',{'--rt-scale-move-x':'40px'});await runCase(releasedComposed,releasedMoved,(group,width)=>group.map((r,i)=>i?r:[r[0]+(width<1000?17:0),r[1],r[2],r[3]]));
+ const sameParent=template.replace('{% for item in items %}<section>','<section>{% for item in items %}').replace('</section>{% endfor %}','{% endfor %}</section>'),sameParentScaled=edit(memberEdit(edit(sameParent,0,1.5),'',{'--rt-scale-factor':'1.2','--rt-scale-move-x':'23px'}),0,1.5);
+ await runCase(sameParentScaled,ungroup(sameParentScaled),group=>group);
  assert.deepEqual(errors,[]);console.log('SAVED LIQUID GROUP SCALE AND MEMBER COMPOSITION PASS',engine);
  }finally{await browser?.close();if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}}})().catch(error=>{console.error(error);process.exitCode=1;});

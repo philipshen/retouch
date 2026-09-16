@@ -29,3 +29,8 @@ test('Liquid copies receive distinct scale identities and preserve member snapsh
   for(const group of next.elements.filter(e=>attr(e,'data-rt-scale')!==undefined)){const data=JSON.parse(decode(attr(group,'data-rt-scale'))),children=members.filter(e=>e.parent===group&&e.tag==='h1');assert.equal(Object.keys(data.steps[0].styles).length,children.length);for(const child of children)assert.deepEqual(data.steps[0].styles[attr(child,'data-rt-scale-member')],{0:{factor:1.2,move:[23,0]}});}
  }
 });
+test('Liquid ungrouping retains scale metadata with instance-local sibling ownership',()=>{
+ const input=source.replace('{{ item.text }}','{{ item.text | escape }}').replace('data-rt-group=','data-rt-frame="" data-rt-group='),r=resolve(input),scaled=plan(r,{fileHash:r.hash,width:0,factor:1.5}),state=resolve(scaled.edits[0].after),released=liquid.planOp(state,{type:'removeFrame',fileHash:state.hash});assert.equal(released.ok,true,released.reason);assert.equal(released.edits[0].before,state.source);const after=released.edits[0].after,elements=liquid.collect(after,state.relPath).elements;
+ assert.equal(elements.some(e=>e.attributes.some(a=>a.name==='data-rt-group')),false);assert.equal(released.selectionIds.length,2);assert.ok(released.selectionIds.every(id=>elements.some(e=>e.id===id)));assert.ok(after.includes('data-rt-scale-scope="siblings"'));assert.ok(after.includes('{% for item in items %}'));assert.ok(after.includes('{{ item.title | escape }}'));assert.equal((after.match(/data-rt-scale-runtime=/g)||[]).length,1);
+ const changed=resolve(state.source.replace('data-rt-scale-runtime="1"','data-rt-scale-runtime="2"'));assert.equal(liquid.planOp(changed,{type:'removeFrame',fileHash:changed.hash}).ok,false);
+});

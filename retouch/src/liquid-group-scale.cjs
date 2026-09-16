@@ -38,6 +38,14 @@ function plan(resolved,op){
   return {ok:true,hash:liquid.contentHash(after),edits:[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return {ok:false,refused:true,reason:error.message};}
 }
+function release(resolved){
+ const metadata=value(resolved.element,'data-rt-scale');if(metadata==null)return '';
+ const decode=text=>require('parse5').parseFragment('<textarea>'+text.replace(/</g,'&lt;')+'</textarea>').childNodes[0].childNodes[0]?.value||'',data=decode(metadata),bootstrap=require('../runtime/group-scale-bootstrap.js');bootstrap.parse(data);
+ if(!resolved.source.includes(runtime.script()))throw Error('Upgrade the saved scale runtime before ungrouping.');
+ const roots=resolved.elements.filter(e=>e.parent===resolved.element),ids=roots.map(e=>value(e,'data-rt-scale-member'));bootstrap.members(JSON.stringify(ids));
+ const id=liquid.contentHash(resolved.source+'|release|'+resolved.element.id).slice(0,10);
+ return '{% raw %}<script type="application/json" data-rt-scale-set="'+id+'" data-rt-scale-scope="siblings" data-rt-scale="'+escape(data)+'">'+JSON.stringify(ids)+'</script>{% endraw %}';
+}
 function clone(resolved,range){
  const elements=resolved.elements||liquid.collect(resolved.source,resolved.relPath).elements,chunk=new MagicString(resolved.source.slice(range.start,range.end)),copies=new Map(),identities=new Set(elements.map(e=>value(e,'data-rt-scale-member')).filter(Boolean));
  for(const element of elements){
@@ -61,4 +69,4 @@ function clone(resolved,range){
   return runtime.upgrade(out.toString());
  }};
 }
-module.exports={plan,clone};
+module.exports={plan,clone,release};
