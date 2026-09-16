@@ -47,7 +47,22 @@ function plan(resolved,op){
   const pixels=stored===undefined?{}:{...JSON.parse(stored).pixels};let currentPixels=[0,0];for(const [width]of ranges)if(width<=op.width)currentPixels=pixels[width]||[0,0];const nextPixels=currentPixels.map((n,i)=>n+move[i]);if(nextPixels.some(n=>n!==0))pixels[op.width]=nextPixels;else delete pixels[op.width];
   const values=Object.fromEntries(ranges);values[op.width]=current*op.factor;
   let metadata=JSON.stringify({version:1,ranges:values,...(Object.keys(offsets).length?{offsets}:{}),...(Object.keys(pixels).length?{pixels}:{})});parse(metadata);
-  if(prior){const snapshot=independentStyles({...resolved,source},elements,group);if(prior.steps?.length||Object.keys(snapshot).length){const steps=[...(prior.steps||[])],last=steps.filter(step=>step.styles).at(-1)?.styles||{};if(JSON.stringify(snapshot)!==JSON.stringify(last))steps.push({styles:snapshot});const max=Math.min(...[...ranges.map(([width])=>width),...steps.filter(step=>!step.styles).map(step=>step.min)].filter(width=>width>op.width));steps.push({factor:op.factor,min:op.width,...(Number.isFinite(max)?{max}:{}),offset:shift,move});metadata=JSON.stringify({...prior,steps});parse(metadata);}}
+  if(prior){
+   const snapshot=independentStyles({...resolved,source},elements,group);
+   if(prior.steps?.length||Object.keys(snapshot).length){
+    const steps=[...(prior.steps||[])],last=steps.filter(step=>step.styles).at(-1)?.styles||{};
+    if(JSON.stringify(snapshot)!==JSON.stringify(last))steps.push({styles:snapshot});
+    const max=Math.min(...[...ranges.map(([width])=>width),...steps.filter(step=>!step.styles).map(step=>step.min)].filter(width=>width>op.width));
+    const next={factor:op.factor,min:op.width,...(Number.isFinite(max)?{max}:{}),offset:shift,move},previous=steps.at(-1);
+    // Consecutive operations in the same range share their moving top-left
+    // anchor. The second fractional offset uses the first operation's size.
+    if(previous&&!previous.styles&&previous.min===next.min&&previous.max===next.max){
+     const merged={...next,factor:previous.factor*next.factor,offset:previous.offset.map((n,i)=>n+previous.factor*next.offset[i]),move:previous.move.map((n,i)=>n+next.move[i])};
+     if(merged.factor>=.01&&merged.factor<=100&&[...merged.offset,...merged.move].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))steps[steps.length-1]=merged;else steps.push(next);
+    }else steps.push(next);
+    metadata=JSON.stringify({...prior,steps});parse(metadata);
+   }
+  }
 
   const tree=parse5.parse(source,{sourceCodeLocationInfo:true}),scripts=[];let bodyEnd=null;
   function walk(node){if(node.tagName==='body')bodyEnd=node.sourceCodeLocation?.endTag?.startOffset??null;if(attr(node,'data-rt-scale-runtime')!==undefined)scripts.push(node);for(const child of node.childNodes||[])walk(child);}

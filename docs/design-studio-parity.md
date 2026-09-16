@@ -23166,3 +23166,30 @@ Scope remains HTML source groups with supported literal member transforms.
 Metadata is bounded to 100 steps; general nested/overlapping groups, arbitrary
 CSS cascade/transform composition, React/Liquid persistence, full Figma parity,
 and trusted desktop distribution remain unfinished. No push.
+
+### Repeated group edits without redundant runtime steps
+
+A new regression reproduced refusal on the 100th consecutive group move after
+an independent child edit. Consecutive group operations with identical screen
+ranges now combine into one saved transform, provided the result fits the
+existing metadata bounds. Fractional anchor offsets compose using the earlier
+factor; pixel movement accumulates separately. Member-style snapshots and range
+changes remain ordering boundaries. Each source transaction still has its own
+exact undo/redo history.
+
+The 120-move regression now passes and retains two runtime steps (the child
+snapshot and the combined group operation). Chromium and WebKit ordinary saved
+pages verify repeated anchored resizes and pixel offsets in base and desktop
+ranges at five widths, including reloads. The Chromium editor sequence now also
+covers a subsequent group move and resize, exact undo/redo for each, and retained
+main/Phone/Tablet/Desktop documents. All 1,783 unit tests and git diff --check
+passed. Evidence: /tmp/retouch-group-repeat-before.log,
+/tmp/retouch-group-repeat-after.log,
+/tmp/retouch-group-repeat-saved-chromium.log,
+/tmp/retouch-group-repeat-saved-webkit.log,
+/tmp/retouch-group-repeat-editor.log,
+/tmp/retouch-group-repeat-units.log.
+
+The 100-step bound still applies to non-combinable operation sequences. This
+change does not generalize nested group composition or other source adapters.
+Full Figma parity and trusted desktop distribution remain unfinished. No push.

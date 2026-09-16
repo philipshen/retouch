@@ -89,5 +89,10 @@ test('group edits snapshot independent styles in order and copies retain those s
 test('identity edits remain no-ops at the saved transform step limit',()=>{
  const r=resolve(source),scaled=plan(r,{fileHash:r.hash,width:0,factor:1.5}).edits[0].after,state=resolve(scaled),location=state.element.location.attrs['data-rt-scale'],metadata={version:1,ranges:{0:1.5},steps:Array.from({length:100},()=>({factor:1,min:0,offset:[0,0],move:[0,0]}))},input=scaled.slice(0,location.startOffset)+'data-rt-scale="'+JSON.stringify(metadata).replace(/"/g,'&quot;')+'"'+scaled.slice(location.endOffset),full=resolve(input);
  assert.deepEqual(plan(full,{fileHash:full.hash,width:0,factor:1}),{ok:true,hash:full.hash,edits:[]});
- const overflow=plan(full,{fileHash:full.hash,width:0,factor:1.5});assert.equal(overflow.ok,false);assert.match(overflow.reason,/100 transform steps/);
+ const overflow=plan(full,{fileHash:full.hash,width:1100,factor:1.5});assert.equal(overflow.ok,false);assert.match(overflow.reason,/100 transform steps/);
+});
+test('repeated group movement after a child edit does not exhaust transform history',()=>{
+ let state=resolve(source);state=resolve(plan(state,{fileHash:state.hash,width:0,factor:1.5}).edits[0].after);const heading=state.elements.find(item=>item.tag==='h1'),changed=require('../src/html-css.cjs').plan({...state,element:heading},{fileHash:state.hash,width:0,changes:{'--rt-scale-move-x':'23px'}});state=resolve(changed.edits[0].after);
+ for(let i=0;i<120;i++){const result=plan(state,{fileHash:state.hash,width:0,factor:1,move:[1,-1]});assert.equal(result.ok,true,'Edit '+(i+1)+': '+result.reason);assert.equal(result.edits[0].before,state.source);state=resolve(result.edits[0].after);}
+ const data=JSON.parse(state.element.node.attrs.find(a=>a.name==='data-rt-scale').value);assert.equal(data.steps.length,2);assert.deepEqual(data.steps[1],{factor:1,min:0,offset:[0,0],move:[120,-120]});
 });

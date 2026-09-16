@@ -6,7 +6,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-saved-scale-')),file=path.join(directory,'index.html');let browser,server;
  const original='<!doctype html><html><head><style>main{display:flex;flex-direction:column;gap:16px}h1{font:700 32px Georgia}p{font:16px Arial}@media(min-width:700px){main{flex-direction:row;gap:24px}}@media(min-width:1000px){main{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}}[data-rt-group]{display:contents}</style></head><body><main><div data-rt-frame data-rt-group><h1>Headline</h1><p>Other text</p></div><p>Named text</p></main></body></html>';
  const html=require('../../src/adapters/html.cjs'),planner=require('../../src/html-group-scale.cjs');
- const scale=(source,width,factor)=>{const relPath='index.html',elements=html.collect(source,relPath).elements,r={source,relPath,elements,element:elements.find(item=>item.tag==='div'),file,hash:html.contentHash(source)},result=planner.plan(r,{fileHash:r.hash,width,factor});assert.equal(result.ok,true,result.reason);return result.edits[0].after;};
+ const scale=(source,width,factor,extra={})=>{const relPath='index.html',elements=html.collect(source,relPath).elements,r={source,relPath,elements,element:elements.find(item=>item.tag==='div'),file,hash:html.contentHash(source)},result=planner.plan(r,{fileHash:r.hash,width,factor,...extra});assert.equal(result.ok,true,result.reason);return result.edits[0].after;};
  const saved=scale(scale(original,0,1.5),1000,4/3);fs.writeFileSync(file,saved);
  try{
   let baselineSource=original;server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/html');res.end(req.url==='/baseline'?baselineSource:fs.readFileSync(file));});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const url='http://127.0.0.1:'+server.address().port;
@@ -41,6 +41,13 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   for(const [scope,factor] of [[0,1.5],[1000,.5]]){
    baselineSource=composedBase;fs.writeFileSync(file,scale(composedBase,scope,factor));await baseline.reload();await page.reload();
    for(const width of [390,768,1100,1440,523]){await baseline.setViewportSize({width,height:900});await page.setViewportSize({width,height:900});const active=scope===0?width<1000:width>=1000;await verify(active?factor:1);await page.reload();await verify(active?factor:1);}
+   assert.deepEqual(await page.evaluate(()=>scaleErrors),[]);
+  }
+  for(const scope of [0,1000]){
+   const first=scale(composedBase,scope,1.5,{offset:[-.25,.125],move:[23,-9]}),second=scale(first,scope,.5,{offset:[.25,-.5],move:[-11,7]}),metadata=source=>JSON.parse(html.collect(source,'index.html').elements.find(item=>item.tag==='div').node.attrs.find(a=>a.name==='data-rt-scale').value);
+   assert.equal(metadata(first).steps.length,metadata(second).steps.length,'Consecutive same-range group operations combine without losing anchors');
+   baselineSource=first;fs.writeFileSync(file,second);await baseline.reload();await page.reload();
+   for(const width of [390,768,1100,1440,523]){await baseline.setViewportSize({width,height:900});await page.setViewportSize({width,height:900});const active=scope===0?width<1000:width>=1000;await verify(active?.5:1,active?[.25,-.5]:[0,0],active?[-11,7]:[0,0]);await page.reload();await verify(active?.5:1,active?[.25,-.5]:[0,0],active?[-11,7]:[0,0]);}
    assert.deepEqual(await page.evaluate(()=>scaleErrors),[]);
   }
   const duplicate=source=>{const relPath='index.html',elements=html.collect(source,relPath).elements,r={source,relPath,elements,element:elements.find(item=>item.tag==='h1'),file,hash:html.contentHash(source)},result=html.planOp(r,{type:'duplicateElement',fileHash:r.hash});assert.equal(result.ok,true,result.reason);return result.edits[0].after;};
