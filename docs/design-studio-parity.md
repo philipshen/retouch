@@ -22346,3 +22346,27 @@ pass. Logs: /tmp/retouch-shared-clip-{html,html-webkit,react,liquid,units}.log.
 Full Figma parity, arbitrary-site support, the sizing indicator fallback without
 Typed OM, and trusted notarized Homebrew distribution remain unfinished. No
 push or desktop rebuild in this continuation.
+
+### HTML visibility follows preview range and rendered state (2026-09-16)
+
+Single and shared HTML visibility controls now disable outside the selected
+screen range. Their change and reset handlers also recheck the live range and
+connected elements, preventing stale controls or synthetic events from writing
+outside that range. An important inline visibility rule refuses edits, while
+in-range reset remains available to remove Retouch's own override. Both single
+and shared displayed values use computed visibility rather than an override
+that may be masked by an important inline rule.
+
+The expanded html-visibility browser test reproduces the missing range guard
+before the change. Chromium and WebKit pass single/shared hide/show, layout
+preservation, hidden-layer selection, responsive overrides, disabled controls
+and synthetic events outside the range, inline-priority refusal, rendered-state
+feedback, reset under an inline override, and exact source undo. Reset of the
+last managed declaration is checked by absence of its override; Undo, rather
+than reset, is asserted to restore exact original source bytes. All 1,760 unit
+tests pass. Logs: /tmp/retouch-visibility-range-{chromium,webkit,units}.log.
+
+This verifies HTML visibility; React/Liquid visibility guards require a separate
+audit. Full Figma parity, arbitrary-site support, Typed OM sizing feedback
+fallback, and trusted notarized Homebrew distribution remain unfinished.
+No push or desktop rebuild in this continuation.
