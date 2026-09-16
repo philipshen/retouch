@@ -86,16 +86,21 @@ export default defineConfig({
 });
 ```
 
-Run your normal Vite dev command, then open `/rt` on its port. Keep the default
-`base: '/'` and a localhost or 127.0.0.1 host. The plugin stamps project `.jsx`
+Run your normal Vite dev command, then open `/rt` on its port. Use a localhost
+or 127.0.0.1 host. A public base such as `/docs/` opens `/rt/docs/` and loads the
+app at `/docs/`; query strings, fragments and deeper app routes are preserved.
+The `/rt/` namespace is reserved for the editor. The plugin stamps project `.jsx`
 and `.tsx` modules during development without saving instrumentation to source.
 It serves the editor and authenticated source API on the Vite origin and closes
 its writer when Vite shuts down. Production builds exclude the plugin.
 
 The browser fixture verifies text editing, exact source undo, and React state
 and document retention through hot updates. This is an explicit React integration;
-Vue, Svelte, SSR editing, non-root base paths, and universal hot-update retention
-are not covered. The runtime compiler requires Vite 8.
+Vue, Svelte, SSR editing, and universal hot-update retention are not covered.
+Image uploads use Vite's configured public directory and base URL. Generated
+upload URLs are served immediately, before Vite's file watcher catches up.
+With `publicDir: false`, uploading is unavailable; directories outside the source
+project cannot receive uploads. The runtime compiler requires Vite 8.
 
 ## Explicit config mode
 

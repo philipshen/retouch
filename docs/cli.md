@@ -161,3 +161,26 @@ The tested npm-packed source was `3c075ef8abb44ddca34289091d56f906d095bfcc`;
 tarball SHA-256:
 `b9feee599c1a144a4019cd3e388504c3b2118a1fcd2e357ad085175c2360ecc9`.
 This is local packaged-install evidence, not a published release.
+
+
+### Vite public bases and uploaded images
+
+The Vite plugin supports normalized public base paths, such as `/docs/`.
+Opening `/rt` redirects to `/rt/docs/`, preserving query parameters and fragments;
+explicit deeper editor paths continue to select the corresponding application
+route. API and editor asset paths stay under `/rt`. Vite normalizes full-URL
+and relative base configurations before the plugin runs, as described in its
+[base documentation](https://vite.dev/config/shared-options.html#base).
+Bases that collide with the editor's `/rt/` namespace are refused.
+
+Uploads use the configured public directory and base-prefixed URL. Retouch serves
+its generated upload files immediately to avoid an initial HTML fallback while
+Vite's public-file inventory updates. Disabled public directories and writes
+outside the project are refused. Other Vite files keep their normal serving path.
+
+The browser fixture accepts `RT_VITE_BASE=/docs/` and
+`RT_VITE_PUBLIC_DIR=static`. It verifies query/fragment retention, source edits,
+exact undo, hot-update state/document retention, production exclusion, and
+immediate uploaded SVG decoding in Chromium/WebKit. The installed-package launch
+test also accepts `RT_VITE_BASE=/docs/` for startup and persisted undo checks.
+These checks do not establish complete React editing or native-app parity.

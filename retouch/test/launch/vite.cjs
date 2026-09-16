@@ -11,6 +11,8 @@ const {setTimeout: delay} = require('node:timers/promises');
 const fixture = process.env.RT_VITE_FIXTURE;
 const browserFixture = process.env.RT_INSPECTOR_FIXTURE;
 const packageRoot = process.env.RT_PACKAGE_ROOT;
+const base = process.env.RT_VITE_BASE || '/';
+const healthURL = editor => new URL('/rt/__api/health', editor);
 if (!fixture || !browserFixture || !packageRoot) throw Error('Set RT_VITE_FIXTURE, RT_INSPECTOR_FIXTURE, and RT_PACKAGE_ROOT to an installed package');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'retouch-vite-launch-'));
 const cli = path.join(packageRoot, 'bin/retouch.cjs');
@@ -32,9 +34,9 @@ async function start() {
   child.stderr.on('data', b => { logs += b; });
   for (let n = 0; n < 150; n++) {
     if (child.exitCode !== null || child.signalCode !== null) throw Error('Startup exited\n' + logs);
-    const editor = logs.match(/\[retouch\] Open (http:\/\/localhost:\d+\/rt)/)?.[1];
+    const editor = logs.match(/\[retouch\] Open (http:\/\/localhost:\d+\/rt(?:\/[^\s]*)?)/)?.[1];
     if (editor) {
-      const health = await fetch(editor + '/__api/health', {signal: AbortSignal.timeout(2000)}).catch(() => null);
+      const health = await fetch(healthURL(editor), {signal: AbortSignal.timeout(2000)}).catch(() => null);
       if (health?.ok && (await health.json()).service === 'retouch') return editor;
     }
     await delay(100);
@@ -53,7 +55,7 @@ async function start() {
     fs.mkdirSync(path.join(modules, '.bin'));
     fs.symlinkSync(path.join(fixture, 'node_modules/vite/bin/vite.js'), path.join(modules, '.bin/vite'));
     const manifest = JSON.stringify({type: 'module', scripts: {dev: 'vite --host 127.0.0.1 --port 0'}});
-    const config = "import {defineConfig} from 'vite';import react from '@vitejs/plugin-react';import {retouch} from 'retouch/vite';export default defineConfig({plugins:[retouch(),react()]});\n";
+    const config = "import {defineConfig} from 'vite';import react from '@vitejs/plugin-react';import {retouch} from 'retouch/vite';export default defineConfig({base:"+JSON.stringify(base)+",plugins:[retouch(),react()]});\n";
     fs.writeFileSync(path.join(root, 'package.json'), manifest);
     fs.writeFileSync(path.join(root, 'vite.config.ts'), config);
     fs.writeFileSync(path.join(root, 'index.html'), '<html><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>');
@@ -74,7 +76,7 @@ async function start() {
     await app.locator('h1').waitFor();
     assert.match(await app.locator('h1').getAttribute('data-rt'), /^[a-f0-9]{10}$/);
     const live = await browser.newPage();
-    await live.goto(editor.replace(/\/rt$/, '/'));
+    await live.goto(new URL(base, editor).href);
     await live.getByRole('button', {name: 'Count 0'}).click();
     await live.evaluate(() => window.__originalDocument = document);
     await app.locator('h1').click();
@@ -88,7 +90,7 @@ async function start() {
     assert.deepEqual(errors, []);
     await browser.close(); browser = null;
     await stop();
-    await assert.rejects(fetch(editor + '/__api/health', {signal: AbortSignal.timeout(1000)}));
+    await assert.rejects(fetch(healthURL(editor), {signal: AbortSignal.timeout(1000)}));
     editor = await start();
     browser = await playwright[engine].launch();
     page = await browser.newPage();
@@ -106,7 +108,7 @@ async function start() {
     await page.screenshot({path: '/tmp/retouch-vite-launch-' + engine + '.png', caret: 'initial'});
     await browser.close(); browser = null;
     await stop();
-    await assert.rejects(fetch(editor + '/__api/health', {signal: AbortSignal.timeout(1000)}));
+    await assert.rejects(fetch(healthURL(editor), {signal: AbortSignal.timeout(1000)}));
     console.log('PASS installed Vite config, TSX edit, HMR state, restart source undo, unchanged config, and process shutdown:', engine);
   } catch (error) { console.error(logs); throw error; }
   finally { await browser?.close(); await stop(); fs.rmSync(root, {recursive: true, force: true}); }
