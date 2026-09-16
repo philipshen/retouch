@@ -105,6 +105,7 @@
   "exports": {
     ".": "./src/index.cjs",
     "./next": "./src/next.cjs",
+    "./vite": "./src/vite.cjs",
     "./loader": "./src/loader.cjs"
   },
   "dependencies": {

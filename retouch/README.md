@@ -69,6 +69,34 @@ For Docker, sudo, remote hosts, or dev containers, install and run Retouch
 loopback session URL and absolute preload path do not automatically work there.
 Do not expose the writer or registration service on a public interface.
 
+## Vite React projects
+
+Vite React projects can opt in with a locally installed Retouch package and an
+explicit plugin. This integration has been verified with Vite 8.3.0 and React 19.2.0:
+
+```js
+// vite.config.js
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { retouch } from 'retouch/vite';
+
+export default defineConfig({
+  plugins: [retouch(), react()],
+  server: { host: '127.0.0.1' },
+});
+```
+
+Run your normal Vite dev command, then open `/rt` on its port. Keep the default
+`base: '/'` and a localhost or 127.0.0.1 host. The plugin stamps project `.jsx`
+and `.tsx` modules during development without saving instrumentation to source.
+It serves the editor and authenticated source API on the Vite origin and closes
+its writer when Vite shuts down. Production builds exclude the plugin.
+
+The browser fixture verifies text editing, exact source undo, and React state
+and document retention through hot updates. This is an explicit React integration;
+Vue, Svelte, SSR editing, non-root base paths, and universal hot-update retention
+are not covered. The runtime compiler requires Vite 8.
+
 ## Explicit config mode
 
 The existing `withRetouch` export remains available for locally installed,
