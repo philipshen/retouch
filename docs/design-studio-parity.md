@@ -23193,3 +23193,42 @@ passed. Evidence: /tmp/retouch-group-repeat-before.log,
 The 100-step bound still applies to non-combinable operation sequences. This
 change does not generalize nested group composition or other source adapters.
 Full Figma parity and trusted desktop distribution remain unfinished. No push.
+
+### Liquid source scaling prototype and native-adapter parity evidence
+
+Fresh Chromium editor checks show the existing React and Liquid class-based
+scaling paths still misplace children in comparison previews. At Phone width
+390px, scaling the group to 150% from the desktop layout produced heading x
+-11.17px instead of 0 and text x177.50/y70 instead of x0/y96 in both adapters.
+These remain failing editor behaviors, not parity claims. Evidence:
+/tmp/retouch-liquid-group-parity-scale-before.log,
+/tmp/retouch-react-group-parity-scale-before.log.
+
+Added a Liquid source planner prototype that preserves Liquid expressions,
+schema content and source identities, writes responsive group metadata, and
+persists the existing private runtime in a raw block outside template control
+flow. An ordinary HTTP browser test renders two instances of the same group
+through LiquidJS. Both retain proportional geometry through column flex, row
+flex and grid at 390/768/1100/1440/523px, including reloads, in Chromium and
+WebKit. This proves local Liquid rendering and saved runtime behavior; it does
+not prove live Shopify deployment. Repeated/generated children inside a group,
+released ownership sets and ordered member snapshots remain unsupported by the
+prototype. It is not registered as an editor capability: class-based child edits,
+copying and ungrouping must preserve runtime ownership before registration.
+
+The full unit suite passed 1,785 tests. After replacing an incidental transitive
+entity-decoder dependency with the existing direct parse5 dependency, both new
+unit tests and the Chromium saved-page check passed again. WebKit passed before
+that decoder-only change. git diff --check passed. Evidence:
+/tmp/retouch-liquid-scale-prototype-units.log,
+/tmp/retouch-liquid-scale-final-targeted.log,
+/tmp/retouch-liquid-scale-prototype.log,
+/tmp/retouch-liquid-scale-prototype-webkit.log.
+
+Also corrected the group comparison harness so GROUP_SCALE_COMPARISONS alone
+selects the scale comparison test rather than silently running only grouping.
+Earlier runs without GROUP_MOVE_COMPARISONS proved only grouping; the failing
+adapter geometry evidence above used both flags. Next work is Liquid member
+class snapshots and source-operation ownership, followed by editor/history
+integration and React persistence. Full parity and trusted desktop distribution
+remain unfinished. No push.
