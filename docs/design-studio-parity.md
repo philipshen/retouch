@@ -21141,3 +21141,26 @@ Evidence: `/tmp/retouch-shared-indent-react.log`,
 Source-relative unit retention after CSSOM resolution, broader text flow and
 layout controls, full Figma parity, arbitrary-site coverage and trusted
 Homebrew distribution remain incomplete. No native rebuild or push.
+
+### Shared text wrapping
+
+Shared typography now includes Auto, Balance, Pretty and No wrap controls in
+React, Liquid and HTML. Writes and resets follow the selected screen scope.
+React/Liquid replacements preserve whitespace classes and unrelated scopes;
+ordinary inline wrap longhands receive important overrides. Important inline
+text-wrap-mode/style values are included in the shared guard, preventing a
+partially blocked shorthand edit from appearing successful.
+
+React, Liquid and HTML Chromium fixtures passed all four modes, narrow-screen
+fallback, inactive-scope dispatched-event refusal, reset and exact source
+undo, and important inline longhand refusal. All 1,707 unit tests passed,
+including unrelated whitespace preservation and inline longhand priority.
+Evidence: `/tmp/retouch-shared-wrap-react.log`,
+`/tmp/retouch-shared-wrap-liquid.log`, `/tmp/retouch-shared-wrap-html.log`,
+`/tmp/retouch-shared-wrap-units.log`.
+
+These probes verify applied wrapping properties and source behavior; they do
+not prove line-break quality for arbitrary content or all shorthand/cascade
+combinations. Broader typography/layout fidelity, full Figma parity,
+arbitrary-site coverage and trusted Homebrew distribution remain incomplete.
+No native rebuild or push.

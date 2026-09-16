@@ -372,3 +372,11 @@ test('shared paragraph indentation preserves unrelated and responsive classes',(
  assert.equal(change(source,'md:','text-indent',null),'indent-4 hover:indent-8 text-lg');
  assert.throws(()=>change(source,'','text-indent','auto'));assert.throws(()=>change(source,'','text-indent','12px; display:none'));
 });
+
+test('shared wrap style preserves whitespace and guards important inline longhands',()=>{
+ assert.equal(change('whitespace-pre-wrap text-balance md:text-nowrap','md:','text-wrap','pretty'),'whitespace-pre-wrap text-balance md:[text-wrap:pretty]');
+ assert.equal(change('!text-nowrap','md:','text-wrap','wrap'),'!text-nowrap md:![text-wrap:wrap]');
+ const el={style:{getPropertyPriority:key=>key==='text-wrap-mode'?'important':'',getPropertyValue:()=>''}};assert.throws(()=>change('','','text-wrap','wrap',null,false,el),/important inline/);
+ el.style.getPropertyPriority=()=>'';el.style.getPropertyValue=key=>key==='text-wrap-mode'?'nowrap':'';assert.equal(change('','','text-wrap','balance',null,false,el),'![text-wrap:balance]');
+ assert.throws(()=>change('','','text-wrap','invalid'));
+});
