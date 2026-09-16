@@ -23701,3 +23701,28 @@ Full Figma parity and trusted macOS/Homebrew distribution remain incomplete.
 WebKit passed the 1100 px scoped copy/delete/history flow across all four previews:
 /tmp/retouch-released-copy-webkit.log. git diff --check passed. This continuation
 is committed locally; no new push was requested.
+
+### Ordering released responsive React layers
+
+Released React roots now expose previous/next/first/last ordering within their
+saved ownership set, including multi-selection ordering. Copying and ordering
+share an in-memory regroup/edit/release planner, with one final source transaction.
+Ordering rewrites the member list in source order without changing transform
+snapshots, maps the selected roots through every intermediate plan, and preserves
+exact undo. Boundary actions are disabled; moving outside the released set or
+across parents still needs further work.
+
+All 1,809 unit tests passed, including ordered metadata preservation, single and
+multi-selection identity mapping, mixed-set refusal, boundary capabilities, exact
+undo, and existing released-copy regressions. Evidence:
+/tmp/retouch-released-reorder-units.log,
+/tmp/retouch-released-reorder-targeted.log.
+
+Chromium passed the ordering shortcut, selected-layer preservation, and exact
+undo/redo in all four previews. WebKit passed the corresponding 1100 px scoped
+flow. The standalone Chromium page passed reordered copied-layer geometry with
+independent movement at 390/768/1100/1440/523 pixels and after reload. Evidence:
+/tmp/retouch-released-reorder-editor.log, /tmp/retouch-released-reorder-webkit.log,
+/tmp/retouch-released-reorder-runtime.log. git diff --check passed. Committed locally;
+no new push was requested. Full Figma parity and trusted desktop distribution
+remain unfinished.
