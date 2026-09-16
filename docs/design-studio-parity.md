@@ -22144,3 +22144,35 @@ and universal text sizing remain outside this evidence. Mode recognition still
 uses computedStyleMap and returns custom when that API is unavailable. Full
 Figma parity, arbitrary-site support and trusted notarized Homebrew distribution
 remain unfinished. No desktop rebuild or push in this continuation.
+
+## Text sizing resolves logical source classes and remains editable (2026-09-16)
+
+The preceding turn was progress: 16f193b0 resolved physical/logical size limits.
+This continuation reproduced competing scoped inline-size/block-size classes:
+a React Auto height operation could not reach its expected sizing state. The
+failed browser evidence is /tmp/retouch-text-sizing-logical-before.log.
+
+Sizing presets now remove competing logical dimension classes only from the
+edited screen scope and author physical width/height as the editable dimensions.
+Inherited and interaction-variant source classes remain. The generic physical
+sizing guard recognizes neutral logical bounds and paired important physical
+overrides that supersede inherited logical dimensions; unresolved logical rules
+still refuse the edit. Subsequent numeric dimension changes retain important
+priority. The Auto sizing path validates before clearing the previous dimension,
+so the evidence that inherited logical rules are superseded remains available.
+
+Verification explicitly includes edits after applying a preset. Shared HTML,
+React and Liquid browser checks pass, as does the React single-layer flow, all
+in Chromium 145. They cover source geometry for all three sizing presets,
+follow-up width/height changes, Auto sizing for shared React/Liquid layers,
+preserved inherited rules and unselected layers, responsive-range isolation,
+exact source undo and important inline logical-size refusal. All 1,757 unit
+tests pass. The source tests also retain refusal for unresolved logical sizes,
+non-neutral bounds and incomplete physical overrides. Evidence:
+/tmp/retouch-text-sizing-logical-{html,react,liquid,single,units,targeted}.log.
+
+Universal sizing across arbitrary cascade/bindings, intrinsic dimensions and
+writing-mode combinations remains unproven. The presets continue to express
+physical width/height. The computedStyleMap mode-display limitation remains.
+Full Figma parity, arbitrary-site support and trusted notarized Homebrew
+installation are unfinished. No desktop rebuild or push in this continuation.

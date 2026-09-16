@@ -532,3 +532,14 @@ test('text sizing clears physical and logical limits only in the edited scope',(
  assert.ok(next.includes('min-h-20 max-w-md'));assert.ok(next.includes('hover:min-h-80'));for(const old of ['md:!min-h-40','md:max-w-lg','md:[min-inline-size:300px]','md:[max-block-size:200px]'])assert.ok(!next.includes(old));for(const property of I.textSizeLimits)assert.ok(next.includes('md:!['+property+':'+changes[property]+']'));
  assert.equal(changeTextResizing(next,'md:',changes),next);
 });
+
+test('text sizing resolves scoped logical dimensions and allows later physical resizing',()=>{
+ const I=require('../shell/inspector.js'),R=require('../shell/react-selection.js'),changes=I.textResizeChanges({width:'260px',height:'180px',getPropertyValue:()=>''},'height');
+ const source='p-4 ![inline-size:300px] ![block-size:180px] md:![inline-size:260px] md:![block-size:180px] hover:[block-size:50px]',result=R.changeTextResizing(source,'md:',changes);
+ assert.ok(result.includes('p-4 ![inline-size:300px]'));assert.ok(result.includes('hover:[block-size:50px]'));assert.ok(!result.includes('md:![inline-size:'));assert.ok(!result.includes('md:![block-size:'));assert.equal(R.changeTextResizing(result,'md:',changes),result);
+ const width=R.changeSizeMode(result,'md:','width','fixed',320);assert.ok(width.includes('md:!w-[320px]'));assert.ok(width.includes('md:![height:auto]'));
+ const automatic=R.changeSizeMode(result,'md:','width','auto',0);assert.ok(automatic.includes('md:!w-auto'));assert.ok(automatic.includes('md:![height:auto]'));
+ const height=R.changeSizeMode(width,'md:','height','fixed',90);assert.ok(height.includes('md:!h-[90px]'));assert.ok(height.includes('md:!w-[320px]'));assert.ok(height.includes('![inline-size:300px]'));
+ for(const logical of ['[inline-size:200px]','[min-inline-size:10px]','[max-block-size:300px]'])assert.throws(()=>R.changeSizeMode(logical,'','width','fixed',100),/logical sizing/);
+ assert.throws(()=>R.changeSizeMode('![inline-size:200px] md:![width:260px]','md:','width','fixed',100),/logical sizing/);
+});

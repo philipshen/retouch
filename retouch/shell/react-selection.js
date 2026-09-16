@@ -70,9 +70,20 @@
   const active=R.project(classes,scope).split(/\s+/).map(I.base).filter(Boolean);
   if(['font-family','font-size','font-weight','line-height','font-style'].includes(property)&&active.some(token=>/^\[font:/.test(token)))throw Error('A selected layer uses a font shorthand. Edit that shorthand before changing its typography.');
   const dimension=['width','height'].includes(property),sizing=dimension||field.constraint,shorthandMatch=token=>property.startsWith('font-variant-')&&/^\[font(?:-variant)?:/.test(token)||dimension&&/^size-/.test(token)||field.flexItem&&flexShorthand(token)||field.layoutItem&&(field.gridPlacement?/^\[grid-area:/.test(token):/^place-self-|^\[place-self:/.test(token)),priorityMatch=token=>field.matches(token)||shorthandMatch(token);
-  if(sizing&&value!==null&&[...active,...R.inherited(classes,scope,document).split(/\s+/).map(I.base)].some(token=>/^\[(?:(?:min|max)-)?(inline|block)-size:/.test(token||'')))throw Error('A selected layer uses logical sizing. Edit its inline or block size before setting a physical width or height.');
+  if(sizing&&value!==null){
+   const own=R.project(classes,scope).split(/\s+/),inherited=R.inherited(classes,scope,document).split(/\s+/),important=token=>/^!|!$/.test(token);
+   const physicalOverrides=['width','height'].every(axis=>own.some(token=>important(token)&&fields[axis].matches(I.base(token)||'')));
+   const neutral=token=>/^\[min-(?:inline|block)-size:(?:0|0px)\]$|^\[max-(?:inline|block)-size:none\]$/.test(I.base(token)||'');
+   const logical=token=>/^\[(?:(?:min|max)-)?(?:inline|block)-size:/.test(I.base(token)||'');
+   const unresolved=own.some(token=>logical(token)&&!neutral(token))||inherited.some(token=>{
+    if(!logical(token)||neutral(token))return false;
+    const property=I.base(token).split(':')[0];if(own.some(next=>important(next)&&neutral(next)&&I.base(next).split(':')[0]===property))return false;
+    return !(dimension&&physicalOverrides&&/^\[(?:inline|block)-size:/.test(I.base(token)));
+   });
+   if(unresolved)throw Error('A selected layer uses logical sizing. Edit its inline or block size before setting a physical width or height.');
+  }
   let addition=value===null?'':relative?'['+property+':'+Math.round(value*1e6)/1e8+(property==='letter-spacing'?'em':'')+']':property==='line-height'&&value==='normal'?'[line-height:normal]':field.token(value);if(scope&&value!==null&&R.inherited(classes,scope,document).split(/\s+/).some(token=>I.base(token)!==null&&priorityMatch(I.base(token))&&/^!|!$/.test(token)))addition='!'+addition;
-  if(addition&&R.project(classes,scope).split(/\s+/).some(token=>I.base(token)!==null&&shorthandMatch(I.base(token))&&/^!|!$/.test(token)))addition='!'+addition.replace(/^!/,'');
+  if(addition&&R.project(classes,scope).split(/\s+/).some(token=>I.base(token)!==null&&(shorthandMatch(I.base(token))||sizing&&field.matches(I.base(token)))&&/^!|!$/.test(token)))addition='!'+addition.replace(/^!/,'');
   if(addition&&document&&!['opacity','visibility','mix-blend-mode','isolation'].includes(property)&&I.catalog(document).some(name=>(classes||'').split(/\s+/).includes(name))&&!addition.startsWith('!'))addition='!'+addition;
   if(addition&&inlineTypography.includes(property)&&el&&typographyKeys(property).some(key=>el.style.getPropertyValue(key)))addition='!'+addition.replace(/^!|!$/g,'');
   const projected=R.project(classes,scope),expanded=property.startsWith('font-variant-')&&value!==null?expandVariantShorthand(projected,document):['font-size','line-height'].includes(property)?I.expandSizeLeading(projected):projected,next=I.replace(expanded,field.matches,addition);return next===projected?(classes||''):R.replaceScope(classes,next,scope);
@@ -89,7 +100,7 @@
   const dimension=value=>['auto','max-content'].includes(value)||/^\d+(?:\.\d+)?px$/.test(value)&&parseFloat(value)>0&&parseFloat(value)<=100000;
   if(!changes||!dimension(changes.width)||!dimension(changes.height)||!['pre','pre-wrap'].includes(changes['white-space'])||!/^(?:wrap|nowrap)(?: (?:balance|pretty|stable))?$/.test(changes['text-wrap'])||Object.keys(changes).some(key=>![...I.textSizeLimits,'width','height','white-space','text-wrap','flex-grow','flex-shrink','flex-basis','align-self','justify-self'].includes(key))||I.textSizeLimits.some(key=>changes[key]!==undefined&&changes[key]!== (key.startsWith('min-')?'0px':'none'))||['flex-grow','flex-shrink'].some(key=>changes[key]!==undefined&&changes[key]!=='0')||changes['flex-basis']!==undefined&&changes['flex-basis']!=='auto'||['align-self','justify-self'].some(key=>changes[key]!==undefined&&changes[key]!=='flex-start'))throw Error('Choose supported text sizing values.');
   const limits=I.textSizeLimits.filter(key=>Object.hasOwn(changes,key)),limitUtilities={'min-width':'min-w-','max-width':'max-w-','min-height':'min-h-','max-height':'max-h-'};
-  const match=token=>limits.some(key=>token.startsWith('['+key+':')||limitUtilities[key]&&token.startsWith(limitUtilities[key]))||/^(?:w|h|size|whitespace)-/.test(token)||/^\[(?:width|height|white-space(?:-collapse)?):/.test(token)||I.textWrapToken(token)||changes['flex-basis']&&(flexShorthand(token)||/^(?:grow|shrink)(?:-|$)|^basis-|^\[flex-(?:grow|shrink|basis):/.test(token))||changes['align-self']&&/^self-|^\[align-self:/.test(token)||changes['justify-self']&&/^justify-self-|^\[justify-self:/.test(token);
+  const match=token=>limits.some(key=>token.startsWith('['+key+':')||limitUtilities[key]&&token.startsWith(limitUtilities[key]))||/^(?:w|h|size|whitespace)-/.test(token)||/^\[(?:width|height|white-space(?:-collapse)?):/.test(token)||/^\[(?:inline|block)-size:/.test(token)||I.textWrapToken(token)||changes['flex-basis']&&(flexShorthand(token)||/^(?:grow|shrink)(?:-|$)|^basis-|^\[flex-(?:grow|shrink|basis):/.test(token))||changes['align-self']&&/^self-|^\[align-self:/.test(token)||changes['justify-self']&&/^justify-self-|^\[justify-self:/.test(token);
   return R.replaceScope(classes,I.replace(R.project(classes,scope),match,Object.entries(changes).map(([key,value])=>'!['+key+':'+value.replace(/ /g,'_')+']').join(' ')),scope);
  }
  function changeTextVertical(classes,scope,property,value,document=null,el=null){
@@ -131,11 +142,13 @@
   if(!['fixed','hug','fill','auto','reset'].includes(mode))throw Error('Choose a supported sizing mode.');
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   const inherited=R.inherited(classes,scope,document),context={...parent,inheritedClasses:inherited};
-  if(mode==='reset'||mode==='auto'){
-   const reset=R.replaceScope(classes,L.sizeClasses(R.project(classes,scope),axis,'reset',0,context),scope);
-   if(mode==='reset')return reset;
-   const next=change(reset,scope,axis,'auto',document);
-   return parent.inlineDimensions?.includes(axis)?R.replaceScope(next,inspector().replace(R.project(next,scope),fields[axis].matches,'!'+dimensionToken(axis==='width'?'w':'h','auto')),scope):next;
+  if(mode==='reset')return R.replaceScope(classes,L.sizeClasses(R.project(classes,scope),axis,'reset',0,context),scope);
+  if(mode==='auto'){
+   // Validate against the existing physical overrides before clearing the old
+   // size; those overrides may intentionally supersede inherited logical CSS.
+   const next=change(classes,scope,axis,'auto',document),active=R.project(next,scope),I=inspector();
+   const addition=active.split(/\s+/).filter(token=>fields[axis].matches(I.base(token)||'')).map(token=>parent.inlineDimensions?.includes(axis)?'!'+token.replace(/^!|!$/g,''):token).join(' ');
+   return R.replaceScope(next,I.replace(L.sizeClasses(active,axis,'reset',0,context),fields[axis].matches,addition),scope);
   }
   const normalized=change(classes,scope,axis,mode==='fixed'?value:mode==='hug'?'fit-content':'auto',document);
   return R.replaceScope(normalized,L.sizeClasses(R.project(normalized,scope),axis,mode,value,context),scope);
