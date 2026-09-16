@@ -20897,3 +20897,38 @@ panels were inspected. Evidence: `/tmp/retouch-shared-weight-react.log`,
 
 Shared Type settings consolidation and the broader full-parity, arbitrary-site
 and trusted Homebrew goals remain incomplete. No native rebuild or push.
+
+### Shared Type settings popover
+
+Shared typography now keeps the font, weight/size, spacing, alignment and color
+rows visible while secondary typography fields, font browsing and help live
+in a Type settings popover. The settings trigger sits beside alignment and
+uses the existing positioned, scrollable popover with close/Escape behavior.
+Choosing a custom weight opens its enclosing settings before focusing the
+numeric control. Original field handlers and resets remain intact.
+
+React and HTML shared typography browser flows passed named/custom weights,
+alignment clicks and keyboard focus, RTL/mixed direction, relative spacing,
+screen fallback and exact undo. React action search correctly revealed a
+shared relative-spacing field inside the new popover. HTML inline spacing
+passed pixel/percent editing, mixed percentage dragging, cancellation,
+automatic leading, scope isolation and important-inline guards. The first
+spacing run exposed a hidden-button test selector; it now finds then reveals
+the collapsed control. A render/click regression caught an alignment/settings
+overlap from reusing the single-selection label layout; the shared row now
+has its own flex class. Final React/HTML renders were inspected and all 1,702
+unit tests passed.
+
+Evidence: `/tmp/retouch-shared-settings-react.log`,
+`/tmp/retouch-shared-settings-html.log`,
+`/tmp/retouch-shared-settings-jump.log`,
+`/tmp/retouch-shared-settings-spacing.log`,
+`/tmp/retouch-shared-settings-units.log`; screenshots:
+`/tmp/retouch-shared-settings-react.png`,
+`/tmp/retouch-shared-settings-html.png`.
+Existing calculation/library probes were updated to reveal relocated fields;
+those complete suites were not rerun in this pass.
+
+Shared Type settings tabs/preview and other visual and interaction parity
+remain unfinished. Full Figma parity, arbitrary-site support and trusted
+Homebrew distribution remain incomplete. No native rebuild or push.

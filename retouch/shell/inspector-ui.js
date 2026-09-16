@@ -242,7 +242,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    if(!names.some(([value])=>value===current)){const option=document.createElement('option');option.value=current;option.textContent=current||'Mixed';option.disabled=true;select.prepend(option);}
    const option=document.createElement('option');option.value='custom';option.textContent='Custom…';select.append(option);select.value=current;
    field.before(cell);cell.append(select);custom.append(field);primary.after(custom);
-   select.onchange=()=>{if(rawWeight.disabled||!rawWeight.isConnected)return;if(select.value==='custom'){select.value=current;custom.open=true;rawWeight.focus();rawWeight.select();return;}rawWeight.value=select.value;rawWeight.dispatchEvent(new Event('change',{bubbles:true}));};
+   select.onchange=()=>{if(rawWeight.disabled||!rawWeight.isConnected)return;if(select.value==='custom'){select.value=current;custom.open=true;for(let parent=custom.parentElement;parent&&parent!==section;parent=parent.parentElement)parent.retouchOpen?.();rawWeight.focus();rawWeight.select();return;}rawWeight.value=select.value;rawWeight.dispatchEvent(new Event('change',{bubbles:true}));};
   }
 
   const align=find(['Text alignment']),alignment=row(align);
@@ -261,6 +261,10 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    field.classList.add('typography-spacing-cell');field.dataset.caption=title;
    const label=field.querySelector('.inspector-field > span')||field.querySelector(':scope > span');if(label)label.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+path+'"/></svg>';
   }
+  const settings=disclosure('Type settings','shared-type-settings');
+  for(const child of [...body.children])if(child!==primary&&!child.matches('[data-paint-property="color"]')&&!child.querySelector('[data-paint-property="color"]'))settings.append(child);
+  const tools=document.createElement('div');tools.className='typography-alignment-tools';primary.append(tools);if(alignment){alignment.classList.add('shared-typography-alignment');tools.append(alignment);}
+  strokePopover(settings,tools,'shared-type-settings','Type settings','Shared type settings');
  }
  function collapsibleSection(section){
   const heading=section.querySelector(':scope > h3');if(!heading)return;

@@ -995,7 +995,8 @@ html, body { overflow:clip; }
 .compact-paint-value:focus ~ .compact-paint-label { display:none; }
 
 .typography-alignment-tools { display:flex;align-items:flex-end;gap:8px; }
-.typography-alignment-tools > .typography-alignment { flex:1;min-width:0; }
+.typography-alignment-tools > .typography-alignment,
+.typography-alignment-tools > .shared-typography-alignment { flex:1;min-width:0; }
 .type-settings-popover > .stroke-settings-body { width:320px; }
 .typography-primary .type-settings-popover .inspector-field { margin:7px 0; }
 .settings-name { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
