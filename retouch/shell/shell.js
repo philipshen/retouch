@@ -114,7 +114,7 @@ function groupSelectionTarget(target,{enter=false}={}){
  const closed=[];for(let group=target.closest('[data-rt-group][data-rt]');group;group=group.parentElement?.closest('[data-rt-group][data-rt]')){if(selected&&selected!==group&&group.contains(selected))continue;if(!layerLocks.locked(group))closed.push(group);}
  if(enter)closed.pop();return closed.at(-1)||target;
 }
-window.RetouchCanvasSelection={marqueeTargets:resolveMarqueeTargets,pick:(node,x,y)=>pickLayer(node,x,y),selectable:node=>!layerLocks.locked(node),canMarquee:()=>window.__RT_RENDERING?.selectionStyling===true&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests};
+window.RetouchCanvasSelection={marqueeTargets:resolveMarqueeTargets,pick:(node,x,y,options)=>pickLayer(node,x,y,options),selectable:node=>!layerLocks.locked(node),canMarquee:()=>window.__RT_RENDERING?.selectionStyling===true&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests};
 const historyRoutes = new Map();
 function currentPageRoute(){try{const loc=iframe.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
 const editorHistory = RetouchHistory.createHistory({apply:restoreHistory,onChange:syncHistoryControls,storage:lockStorage,scope:window.__RT_RENDERING?.stateScope,initialState:window.__RT_RENDERING?.history,capture:entry=>({route:historyRoutes.get(entry.undoId)||currentPageRoute()})});
@@ -591,6 +591,7 @@ window.addEventListener('retouch:comparison-edit',async event=>{
   if(panelTasks||undoBusy||sourceRequests||!['width','height'].every(key=>Number.isInteger(detail[key])&&detail[key]>=240&&detail[key]<=7680))return;
   const validId=id=>id===null||id===undefined||/^[a-f0-9]{10}$/.test(id);
   if(!validId(detail.hostId)||!validId(detail.instanceId)||!Number.isInteger(detail.occurrence)||detail.occurrence<0||detail.occurrence>10000)return;
+  if(detail.textEdit!==undefined&&typeof detail.textEdit!=='boolean'||detail.textPoint&&(!detail.textEdit||!['x','y'].every(key=>Number.isFinite(detail.textPoint[key])&&detail.textPoint[key]>=0&&detail.textPoint[key]<=1)))return;
   const group=detail.selection;if(detail.component!==undefined&&typeof detail.component!=='boolean')return;
   if(group!==undefined&&(!Array.isArray(group)||group.length>100||group.some(item=>!item||!item.hostId||!validId(item.hostId)||!validId(item.instanceId)||!Number.isInteger(item.occurrence)||item.occurrence<0||item.occurrence>10000)))return;
   await commitInlineEdit();if(serial!==comparisonSelectionSerial)return;
@@ -622,6 +623,12 @@ window.addEventListener('retouch:comparison-edit',async event=>{
     const matches=[...doc().querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===detail.hostId&&el.getAttribute('data-rt-i')===detail.instanceId),target=matches[detail.occurrence];
     if(!target)continue;
     if(layerLocks.locked(target))return toast('This layer is locked. Select it in Layers to edit.','err');
+    if(detail.textEdit){
+      target.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});const box=target.getBoundingClientRect(),point=detail.textPoint?{clientX:box.left+detail.textPoint.x*box.width,clientY:box.top+detail.textPoint.y*box.height}:null;
+      await startInlineEdit(target,point,false);
+      if(serial===comparisonSelectionSerial&&sameRoute()&&editing?.el?.contains(target)&&!point){const range=doc().createRange();range.selectNodeContents(editing.el);doc().getSelection().removeAllRanges();doc().getSelection().addRange(range);}
+      return;
+    }
     if(detail.contextMenu&&sel?.multiple?.some(info=>matchingInDocument(doc(),info.id,info).includes(target))){renderPanel();openContext();return;}
     await select(target,{toggle:detail.toggle===true});if(serial!==comparisonSelectionSerial||classificationSerial!==classification+1)return;applyScope();target.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});openContext();return;
   }

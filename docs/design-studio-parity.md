@@ -21757,3 +21757,30 @@ all reversed-list browser combinations remain outside this control's verified
 scope. Paragraph spacing and full list-marker customization remain incomplete,
 as do full Figma fidelity, arbitrary-site support and trusted Homebrew
 distribution. No desktop rebuild or push in this continuation.
+
+### Enter text editing from a comparison preview
+
+Comparison previews now support double-click to open the picked layer for text
+editing on the main canvas at that preview's width and height. F2 on a focused
+preview opens the single selected text layer and selects its text. Picking uses
+the existing group-entry and lock logic. Pointer entry transfers a bounded
+relative point into the main layer for caret placement. The selected style
+scope stays unchanged; text content remains shared across screens. Comparison
+help documents both entry methods, and the out-of-range notice now explicitly
+refers to style changes.
+
+Validation: 1,732 unit tests passed. HTML/React Chromium 145 and Liquid WebKit 26
+browser flows pass pointer and F2 entry, exact Phone viewport dimensions, no
+source change on entry, preserved style scope after saving, comparison text
+convergence, multi-selection and inherited-lock refusal, and exact source
+undo/redo. React/Liquid refusal checks wait for the explicit preview message.
+The React screenshot was inspected: the main Phone canvas has the active text
+caret and formatting panel while the comparison remains visible. Evidence:
+/tmp/retouch-comparison-text-entry-{html,react,liquid,units}.log and
+/tmp/retouch-comparison-text-entry.png.
+
+This promotes editing to the main canvas; typing directly inside each
+comparison document, vector entry, arbitrary dynamic-source text and every
+scroll/transform/occurrence combination remain incomplete. Full Figma fidelity,
+arbitrary-site support and trusted Homebrew distribution remain incomplete.
+No desktop rebuild or push in this continuation.

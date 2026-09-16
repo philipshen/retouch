@@ -263,6 +263,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   if(process.env.RT_E2E_NATIVE_FRAME){await require('./native-frame-selection.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_NATIVE_REPARENT){await require('./native-reparent.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_NATIVE_NESTED_ORDER){await require('./native-nested-order.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
+  if(process.env.RT_E2E_COMPARISON_TEXT_ENTRY){await require('./comparison-text-entry.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_COMPARISON_CONTEXT){await require('./comparison-context.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_COMPARISON_DIMENSIONS){await require('./comparison-dimensions.cjs').run({page,app,file,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_FILTER_STACK){await require('./shared-filter-stack.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
