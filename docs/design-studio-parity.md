@@ -23006,3 +23006,35 @@ This covers display:none, not arbitrary zero-size/overflow or content-visibility
 geometry. Editor operations with hidden selected children remain guarded.
 Transform composition, nested groups, renderer parity, CSP delivery, full Figma
 parity, and trusted desktop distribution remain unfinished. No push.
+
+### Text sizing without CSS Typed OM (2026-09-16)
+
+Rechecked the earlier WebKit text-sizing gap: installed WebKit 26 supports
+computedStyleMap, and the unmodified shared text-sizing browser suite passed.
+The prior statement that WebKit necessarily lacked this API was stale for the
+installed engine. Added a compatibility fallback for engines where it is absent
+or throws, and explicitly disable the API in fallback browser tests.
+
+The fallback reads active author CSSOM declarations without changing the DOM.
+It handles media/supports/import conditions, inline priority, logical dimension
+mapping, and agreeing declarations. It reports custom/unknown for conflicting
+possible winners, inaccessible stylesheets, active animations, unsupported
+conditional/nested rules, and unresolved/nonliteral sizing. It does not infer
+auto sizing from getComputedStyle's used pixel width or height. Existing size
+limit, aspect-ratio, flex, and stretch checks still determine mode eligibility.
+
+With Typed OM disabled, WebKit verifies shared Auto height/Auto width/Fixed size,
+mixed modes, responsive scope, geometry, exact undo, and inline-priority refusal.
+Chromium verifies the same fallback with row-flex layout. All 1,778 unit tests
+pass; fallback unit coverage includes conflicting declarations, inactive media,
+inline important priority, inaccessible sheets, animation, and logical axes.
+Evidence: /tmp/retouch-webkit-text-sizing-before.log (native WebKit pass),
+/tmp/retouch-text-sizing-fallback-webkit.log,
+/tmp/retouch-text-sizing-fallback-flex.log,
+/tmp/retouch-text-sizing-fallback-unit.log,
+/tmp/retouch-text-sizing-fallback-units.log.
+
+This is conservative author-CSS detection, not a complete cascade/provenance
+engine. No older macOS binary was exercised; missing-API behavior was simulated
+in current browsers. Full Figma parity, arbitrary-site coverage, and trusted
+notarized desktop distribution remain unfinished. No push.

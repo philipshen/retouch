@@ -271,3 +271,19 @@ test('relative spacing readouts require matching computed values and honor inlin
  assert.equal(effectiveSpacingPercent('![line-height:2]','',el('1.5','','35px'),'line-height'),null);
  assert.equal(effectiveSpacingPercent('','![letter-spacing:0.1em]',el('','','2px'),'letter-spacing'),10);
 });
+
+test('text sizing CSSOM fallback reports only unambiguous active declarations without mutation',()=>{
+ const {specifiedTextSizes}=require('../shell/inspector.js');
+ const style=values=>Object.assign(Object.keys(values),{getPropertyValue:key=>(values[key]||'').replace(/ !important$/,''),getPropertyPriority:key=>values[key]?.endsWith(' !important')?'important':''});
+ const rule=values=>({type:1,selectorText:'h1',style:style(values)}),rules=[rule({width:'220px',height:'180px'})],d={styleSheets:[{cssRules:rules}],defaultView:{getComputedStyle:()=>({writingMode:'horizontal-tb'}),matchMedia:query=>({matches:query==='active'}),CSS:{supports:query=>query==='supported'}}},el={ownerDocument:d,getRootNode:()=>d,getAnimations:()=>[],matches:selector=>selector==='h1',style:style({})};
+ assert.deepEqual(specifiedTextSizes(el),{width:'220px',height:'180px'});
+ rules.push(rule({width:'max-content !important',height:'auto !important'}));assert.deepEqual(specifiedTextSizes(el),{width:'max-content',height:'auto'});
+ rules.push({type:4,conditionText:'inactive',cssRules:[rule({width:'99px !important'})]});assert.equal(specifiedTextSizes(el).width,'max-content');rules.at(-1).conditionText='active';assert.equal(specifiedTextSizes(el),null);
+ el.style=style({width:'40px !important',height:'20px !important'});assert.deepEqual(specifiedTextSizes(el),{width:'40px',height:'20px'});
+ el.style=style({});rules.pop();rules.push(rule({'inline-size':'33px !important'}));assert.equal(specifiedTextSizes(el),null);rules.pop();
+ d.styleSheets.push({get cssRules(){throw Error('cross origin');}});assert.equal(specifiedTextSizes(el),null);d.styleSheets.pop();
+ el.getAnimations=()=>[{}];assert.equal(specifiedTextSizes(el),null);el.getAnimations=()=>[];
+ rules.length=0;rules.push(rule({width:'50%',height:'auto'}));assert.equal(specifiedTextSizes(el),null);
+ rules[0]=rule({'inline-size':'200px','block-size':'auto'});assert.deepEqual(specifiedTextSizes(el),{width:'200px',height:'auto'});
+ d.defaultView.getComputedStyle=()=>({writingMode:'vertical-rl'});assert.deepEqual(specifiedTextSizes(el),{width:'auto',height:'200px'});
+});

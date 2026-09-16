@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict');
 module.exports=async({page,app,kind,read,wait,settled})=>{
  const prefix=process.env.RT_E2E_RESIZE_SINGLE?'':'Shared ',original=read(),nodes=app.locator(process.env.RT_E2E_RESIZE_SINGLE?'h1':'h1,p.other-font'),screen=page.getByLabel('Screen size',{exact:true});
+ if(process.env.RT_E2E_NO_TYPED_OM)assert.equal(await nodes.first().evaluate(el=>typeof el.computedStyleMap),'undefined');
  const measure=()=>nodes.evaluateAll(nodes=>nodes.map(el=>{const css=getComputedStyle(el);return {width:parseFloat(css.width),height:parseFloat(css.height),text:el.textContent,wrap:css.getPropertyValue('text-wrap-mode')};}));
  const group=async()=>{await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();if(!process.env.RT_E2E_RESIZE_SINGLE)await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Shift']});await settled();};
  const initial=await measure();await screen.selectOption('768x1024');await settled();await page.getByLabel('Style screen scope').selectOption(kind==='html'?'min-[768px]:':'md:');await settled();await group();

@@ -379,8 +379,32 @@
     }
     return mode;
   }
+  function specifiedTextSizes(el){
+    // CSSOM fallback: only report a size when all possible winning author
+    // declarations agree. Never infer auto sizing from a used pixel dimension.
+    try{
+      const d=el.ownerDocument,w=d.defaultView;if(el.getRootNode()!==d||el.getAnimations?.().length)return null;
+      const vertical=/^(vertical|sideways)/.test(w.getComputedStyle(el).writingMode),names={width:vertical?'block-size':'inline-size',height:vertical?'inline-size':'block-size'},candidates={width:[],height:[]},seen=new Set();
+      const collect=(style,inline=false)=>{for(const axis of ['width','height']){
+        const values=[];for(let i=0;i<style.length;i++){const property=style[i];if(property!==axis&&property!==names[axis]&&property!=='all')continue;const raw=style.getPropertyValue(property).trim(),value=['initial','unset'].includes(raw)?'auto':raw;values.push({value:property==='all'?'unknown':value,important:style.getPropertyPriority(property)==='important',inline});}
+        const priority=values.some(item=>item.important);const last=values.filter(item=>item.important===priority).at(-1);if(last)candidates[axis].push(last);
+      }};
+      const rules=list=>{for(const rule of list){
+        if(rule.type===3){if(rule.supportsText&&!w.CSS.supports(rule.supportsText))continue;if(!rule.media?.mediaText||w.matchMedia(rule.media.mediaText).matches)sheet(rule.styleSheet);continue;}
+        if(rule.type===4){if(w.matchMedia(rule.conditionText).matches)rules(rule.cssRules);continue;}
+        if(rule.type===12){if(w.CSS.supports(rule.conditionText))rules(rule.cssRules);continue;}
+        if(rule.type===7)continue;
+        if(rule.type===1){if(el.matches(rule.selectorText))collect(rule.style);if(rule.cssRules?.length)throw Error('Nested sizing needs cascade resolution.');continue;}
+        if(rule.cssRules?.length){if(rule.constructor?.name==='CSSLayerBlockRule')rules(rule.cssRules);else throw Error('Conditional sizing needs cascade resolution.');}
+      }};
+      const sheet=value=>{if(!value||seen.has(value)||value.disabled)return;seen.add(value);if(value.media?.mediaText&&!w.matchMedia(value.media.mediaText).matches)return;rules(value.cssRules);};
+      for(const value of [...d.styleSheets,...(d.adoptedStyleSheets||[])])sheet(value);collect(el.style,true);
+      const result={};for(const axis of ['width','height']){let values=candidates[axis],important=values.some(item=>item.important);values=values.filter(item=>item.important===important);if(values.some(item=>item.inline))values=values.filter(item=>item.inline);const distinct=[...new Set(values.map(item=>item.value))];if(distinct.length>1)return null;result[axis]=distinct[0]||'auto';if(!/^(?:auto|max-content|(?:\d+(?:\.\d+)?|\.\d+)px)$/.test(result[axis]))return null;}
+      return result;
+    }catch{return null;}
+  }
   function currentTextResizeMode(el){
-    try{const styles=el.computedStyleMap(),parent=layoutParent(el),view=el.ownerDocument.defaultView;return textResizeMode({width:styles.get('width').toString(),height:styles.get('height').toString()},view.getComputedStyle(el),parent?view.getComputedStyle(parent):null);}catch{return null;}
+    try{let sizes;try{const styles=el.computedStyleMap();sizes={width:styles.get('width').toString(),height:styles.get('height').toString()};}catch{sizes=specifiedTextSizes(el);}if(!sizes)return null;const parent=layoutParent(el),view=el.ownerDocument.defaultView;return textResizeMode(sizes,view.getComputedStyle(el),parent?view.getComputedStyle(parent):null);}catch{return null;}
   }
   function sharedTextResizing(parent,getElements,ready,onChange){
     const eligible=el=>el?.isConnected&&isTextLayer(el.localName)&&el.namespaceURI==='http://www.w3.org/1999/xhtml'&&!['inline','contents','none'].includes(el.ownerDocument.defaultView.getComputedStyle(el).display);
@@ -1235,6 +1259,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={textSizeLimits,textResizeMode,truncationProperties,sharedTruncationTypography,textResizeChanges,textResizeProperties,sharedTextResizing,textVerticalValue,sharedVerticalAlignment,sharedFontPresets,sharedAxisRanges,sharedVariationTypography,sharedTypographyPreview,sharedFeatureTypography,sharedLengthDrag,effectiveSpacingPercent,localPositionCorners,positionGeometry,localPositionGeometry,textResizing,textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={specifiedTextSizes,textSizeLimits,textResizeMode,truncationProperties,sharedTruncationTypography,textResizeChanges,textResizeProperties,sharedTextResizing,textVerticalValue,sharedVerticalAlignment,sharedFontPresets,sharedAxisRanges,sharedVariationTypography,sharedTypographyPreview,sharedFeatureTypography,sharedLengthDrag,effectiveSpacingPercent,localPositionCorners,positionGeometry,localPositionGeometry,textResizing,textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);
