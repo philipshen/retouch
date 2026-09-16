@@ -23099,3 +23099,38 @@ Evidence: /tmp/retouch-regroup-scale-before.log,
 Partial-set scale composition, independent-offset composition when the shared
 factor changes, nested groups, arbitrary reparenting, other renderers, CSP,
 full Figma parity, and trusted desktop distribution remain unfinished. No push.
+
+### Regression: group scaling after independent transforms (2026-09-16)
+
+Added a deliberately failing browser regression for the remaining composition
+problem. The fixture uses actual source planners to scale a group to 150%, then
+moves its heading 23px/-9px and gives it an independent factor of 1.2. In the
+editor, another 150% group scale must transform the arrangement currently shown,
+including the independent movement. The test measures all four preview documents,
+checks they remain retained, and includes exact undo/redo checks after geometry
+passes. Those later history checks are currently unreached because geometry fails.
+
+Chromium and WebKit both fail in main/Phone/Tablet/Desktop. Dimensions scale
+correctly and the outside sibling stays fixed, but child positions drift. In
+Phone view, the heading is 11.5px short horizontally and the other group child
+is 4.5px short vertically. Main/Tablet/Desktop also drift, including an 11.5px
+horizontal error on the other group child. Evidence:
+/tmp/retouch-group-composition-before.log,
+/tmp/retouch-group-composition-webkit-before.log,
+/tmp/retouch-group-composition-failure-chromium.png,
+/tmp/retouch-group-composition-failure-webkit.png.
+
+The current representation always applies independent offsets after the group's
+factor. Updating that factor therefore applies transforms in a different order
+from the user's operation. A pixel offset multiplied by the next group scale
+cannot remain the same post-scale offset. Recomputing only a fixed anchor in the
+active viewport also cannot reproduce different responsive layouts.
+
+Next implementation work must preserve operation order across group and member
+transforms, with responsive scope and stable member identities. Runtime cleanup
+must restore owned writes in reverse order; source history must retain exact
+transactions; copy/regroup operations must preserve membership through the new
+representation. The existing geometry planner can supply each operation's
+expected rectangles. This is a required composition fix, not a completed feature.
+No product behavior changed this turn and the new regression remains failing.
+Full parity and trusted desktop distribution remain unfinished. No push.
