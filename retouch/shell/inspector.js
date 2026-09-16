@@ -822,7 +822,7 @@
     if(colorAction)note(sec,'Clear removes paint from this screen scope to reveal inherited styles. Saved color links stay attached; reset them from the palette.');
     const appearanceReady=(reset=false,property='visibility')=>el.isConnected&&(!info.styleScope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false')&&(reset||el.style.getPropertyPriority(property)!=='important');
     function writeAppearance(property,value){
-      if(['visibility','opacity'].includes(property)&&!appearanceReady(value===null,property))return;
+      if(['visibility','opacity','mix-blend-mode','isolation'].includes(property)&&!appearanceReady(value===null,property))return;
       let next=root.RetouchReactSelection.change(info.className,'',property,value,el.ownerDocument,false,el);
       const matches=token=>property==='visibility'?/^(visible|invisible|collapse)$|^\[visibility:/.test(token):property==='opacity'?/^opacity-|^\[opacity:/.test(token):property==='mix-blend-mode'?/^mix-blend-|^\[mix-blend-mode:/.test(token):/^(isolate|isolation-auto)$|^\[isolation:/.test(token);
       if(value!==null&&tokens(info.anchorInheritedClasses).some(token=>/^!|!$/.test(token)&&matches(base(token)||'')))next=replace(next,matches,'!'+(property==='visibility'?({visible:'visible',hidden:'invisible',collapse:'collapse'})[value]:property==='opacity'?'opacity-['+value/100+']':property==='mix-blend-mode'?'mix-blend-'+value:value==='auto'?'isolation-auto':'isolate'));
@@ -841,7 +841,7 @@
       const choices=[...new Set([current,...values])].filter(value=>el.ownerDocument.defaultView.CSS.supports(property,value));
       const control=select(sec,label,choices.map(value=>[value,property==='isolation'?(value==='isolate'?'Isolate children':'Blend with surroundings'):value]),current,write);
       const reset=button('Reset '+label.toLowerCase(),()=>write(null));reset.disabled=root.RetouchReactSelection.change(info.className,'',property,null)===info.className;sec.append(reset);
-      if(property==='visibility'){control.disabled=!appearanceReady();reset.disabled||=!appearanceReady(true);if(control.disabled)control.title='Preview the selected edit range and resolve important inline visibility rules.';}else if(el.style.getPropertyValue(property)){control.disabled=true;reset.disabled=true;note(sec,'An inline '+label.toLowerCase()+' controls this layer.');}
+      control.disabled=!appearanceReady(false,property);reset.disabled||=!appearanceReady(true,property);if(control.disabled)control.title='Preview the selected edit range and resolve important inline '+label.toLowerCase()+' rules.';
       if(property==='visibility')note(sec,'Hidden layers keep their layout space. Select them in Layers to show them again.');
     }
     const widthToken=borderWidthToken;

@@ -581,3 +581,12 @@ test('opacity edits retain priority over ordinary inline opacity and permit rese
  assert.throws(()=>change('','md:','opacity',50,null,false,important),/important inline/);
  assert.equal(change('opacity-80 md:!opacity-50','md:','opacity',null,null,false,important),'opacity-80');
 });
+
+test('blend and isolation preserve priority and reset without changing inline compositing',()=>{
+ const el={style:{getPropertyValue:()=> 'screen',getPropertyPriority:()=>''}},important={style:{getPropertyValue:()=> 'screen',getPropertyPriority:()=> 'important'}};
+ assert.equal(change('mix-blend-screen md:mix-blend-normal','md:','mix-blend-mode','multiply',null,false,el),'mix-blend-screen md:!mix-blend-multiply');
+ assert.equal(change('md:!mix-blend-multiply','md:','mix-blend-mode','overlay'),'md:!mix-blend-overlay');
+ assert.equal(change('md:!isolate','md:','isolation','auto'),'md:!isolation-auto');
+ for(const property of ['mix-blend-mode','isolation'])assert.throws(()=>change('','md:',property,property==='isolation'?'isolate':'multiply',null,false,important),/important inline/);
+ assert.equal(change('isolate md:!isolation-auto','md:','isolation',null,null,false,important),'isolate');
+});

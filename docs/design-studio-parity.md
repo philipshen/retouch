@@ -22416,3 +22416,31 @@ All 1,762 unit tests pass, including opacity source-priority coverage. Logs:
 This covers tested opacity interactions, not full Figma or arbitrary-site parity.
 The Typed OM sizing indicator fallback and trusted notarized Homebrew delivery
 remain unfinished. No push or desktop rebuild in this continuation.
+
+### Blend mode and isolation appearance parity (2026-09-16)
+
+Single/shared blend mode and isolation controls now share visibility/opacity's
+preview-range and inline-priority handling across HTML, React and Liquid.
+Ordinary inline compositing declarations remain intact while scoped overrides
+apply; important inline declarations refuse edits. Existing important class
+priority survives subsequent edits. In-range reset remains available under an
+inline rule. HTML feedback reflects computed values, including masked overrides.
+
+RT_E2E_BLEND_CONTENT exercises single and shared blend mode and isolation,
+mixed values, responsive isolation, synthetic out-of-range events, ordinary
+inline overrides, important inline refusal, reset under important inline rules,
+unchanged inline source and exact undo. HTML and React pass Chromium 145;
+Liquid passes WebKit 26. All 1,763 unit tests pass, including new class-priority
+checks. Logs: /tmp/retouch-blend-{html,react,liquid,units}.log.
+
+The older react-selection.cjs inline-control expectations were updated for the
+now-editable ordinary inline styles. Its broader run did not finish: an earlier
+assertion at line 21 waits for an obsolete Delete layers inspector button.
+No browser errors were reported at that point, and source/geometry were intact.
+This legacy-suite gap is recorded in /tmp/retouch-blend-selection-regression.log;
+the broader suite is not claimed as passing. The dedicated new browser flow
+verifies these appearance interactions directly.
+
+Full Figma parity, arbitrary-site support, the sizing indicator fallback without
+Typed OM, and trusted notarized Homebrew distribution remain unfinished.
+No push or desktop rebuild in this continuation.
