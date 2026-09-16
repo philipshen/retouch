@@ -22546,3 +22546,32 @@ The scenario covers base-range translation; it does not independently prove
 all responsive group scaling/spacing combinations. Full Figma parity,
 arbitrary-site support, and trusted notarized Homebrew distribution remain
 unfinished. No push or desktop rebuild in this continuation.
+
+### Group controls respect the previewed edit range (2026-09-16)
+
+Group position, alignment, spacing, and movement controls now disable outside
+the selected responsive edit range, consistently with scaling. Scrub-preview
+creation and live gesture validity also check the active range; saved writes
+retain their existing range guard. Returning to an applicable preview restores
+the controls. The shared range helper is named selectionEditRangeActive.
+
+Extended comparison movement coverage to a 1100px-and-larger range. The main
+1100px canvas and Desktop move 23px; Phone and Tablet retain their geometry.
+Undo/redo preserves exact source and the per-screen positions. Switching to
+Phone verifies disabled position/move/scale controls, rejection of a forced
+scrub preview, and no source change from a synthetic change event. Returning
+to 1100px verifies controls become usable again. Before the change, the test
+failed because Group X remained enabled on Phone.
+
+Scoped comparison movement passes for React in Chromium 145 and WebKit 26,
+and HTML/Liquid in Chromium. The final return-to-range checks ran in WebKit
+and HTML; all 1,763 unit tests pass. The disabled inspector was visually
+inspected at /tmp/retouch-group-range-html.png (the synthetic event intentionally
+sets its disabled input to 999 without modifying source).
+Evidence: /tmp/retouch-group-range-before.log,
+/tmp/retouch-group-range-react.log, /tmp/retouch-group-range-webkit.log,
+/tmp/retouch-group-range-html.log, /tmp/retouch-group-range-liquid.log,
+/tmp/retouch-group-range-units.log.
+
+Full Figma parity, arbitrary-site support, and trusted notarized Homebrew
+distribution remain unfinished. No push or desktop rebuild in this continuation.
