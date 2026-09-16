@@ -21645,3 +21645,28 @@ Vertical text itself, multi-line flex wrapping, competing logical-size rules,
 and all parent alignment combinations remain unverified. Full Figma fidelity,
 arbitrary-site support and trusted Homebrew distribution remain incomplete.
 No desktop rebuild or push in this continuation.
+
+### Shared text truncation
+
+Shared Type settings now include Truncate text and Max lines. The checkbox
+shows a mixed enabled state; differing line limits show Mixed without silently
+normalizing them. Enabling applies three lines, entering a whole-number limit
+applies it to every selected text layer, and disabling restores full visibility.
+Reset removes only owned truncation in the active screen scope. Each action is
+one batch/undo step. Inactive ranges, detached controls and important inline
+clamp/display/overflow/orientation rules refuse edits. Text content is retained.
+
+Validation: 1,724 unit tests passed. HTML/React Chromium 145 and Liquid WebKit 26
+browser tests start with one authored two-line clamp and one unclamped layer;
+verify mixed controls, three/two-line rendered heights, unchanged widths and
+full text, fractional-input refusal, responsive fallback, disabled synthetic
+changes, off/reset, exact undo and important inline overflow refusal. The React
+screenshot was inspected: both layers render two-line ellipses, and the controls
+appear in the Basics tab of the light Type settings popover. Evidence:
+/tmp/retouch-shared-truncation-{html,react,liquid,units}.log and
+/tmp/retouch-shared-truncation.png.
+
+The clamp follows CSS legacy box behavior; nested layout containers, explicit
+heights, unusual writing modes and all competing cascade combinations remain
+unverified. Full Figma fidelity, arbitrary-site support and trusted Homebrew
+distribution remain incomplete. No desktop rebuild or push in this continuation.

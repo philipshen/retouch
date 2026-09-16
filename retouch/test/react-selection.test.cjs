@@ -505,3 +505,13 @@ test('text sizing follows physical height through vertical flex and grid axes',(
  assert.equal(textResizeChanges({...css,justifySelf:'center'},'height',parent)['justify-self'],undefined);
  assert.throws(()=>changeTextResizing('','',grid,{style:{getPropertyPriority:key=>key==='justify-self'?'important':''}}));
 });
+
+test('shared truncation owns its screen scope and refuses invalid or inline-conflicting edits',()=>{
+ const {changeTextTruncation}=require('../shell/react-selection.js'),source='p-4 line-clamp-2 md:line-clamp-4 hover:line-clamp-1';
+ assert.equal(changeTextTruncation(source,'md:',3),'p-4 line-clamp-2 hover:line-clamp-1 md:!line-clamp-3');
+ assert.equal(changeTextTruncation(source,'md:','none'),'p-4 line-clamp-2 hover:line-clamp-1 md:!line-clamp-none');
+ assert.equal(changeTextTruncation(source,'md:',null),'p-4 line-clamp-2 hover:line-clamp-1');
+ assert.equal(changeTextTruncation('p-4 md:[-webkit-line-clamp:4]','md:',2),'p-4 md:!line-clamp-2');
+ for(const value of [0,-1,1.5,1001,NaN,'3','bad'])assert.throws(()=>changeTextTruncation(source,'md:',value));
+ for(const property of ['display','overflow','overflow-x','overflow-y','-webkit-box-orient','-webkit-line-clamp','line-clamp']){const el={style:{getPropertyPriority:key=>key===property?'important':''}};assert.throws(()=>changeTextTruncation(source,'md:',2,el),/important inline/);assert.equal(changeTextTruncation(source,'md:',null,el),'p-4 line-clamp-2 hover:line-clamp-1');}
+});

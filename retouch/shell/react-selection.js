@@ -77,6 +77,12 @@
   if(addition&&inlineTypography.includes(property)&&el&&typographyKeys(property).some(key=>el.style.getPropertyValue(key)))addition='!'+addition.replace(/^!|!$/g,'');
   const projected=R.project(classes,scope),expanded=property.startsWith('font-variant-')&&value!==null?expandVariantShorthand(projected,document):['font-size','line-height'].includes(property)?I.expandSizeLeading(projected):projected,next=I.replace(expanded,field.matches,addition);return next===projected?(classes||''):R.replaceScope(classes,next,scope);
  }
+ function changeTextTruncation(classes,scope,value,el=null){
+  const I=inspector(),R=root.RetouchResponsive||require('./responsive.js');
+  if(value!==null&&value!=='none'&&(!Number.isInteger(value)||value<1||value>1000))throw Error('Choose a whole number of lines between 1 and 1000.');
+  if(value!==null&&el&&I.truncationProperties.some(key=>el.style.getPropertyPriority(key)==='important'))throw Error('An important inline rule controls text truncation.');
+  return R.replaceScope(classes,I.replace(R.project(classes,scope),I.truncationToken,value===null?'':'!line-clamp-'+value),scope);
+ }
  function changeTextResizing(classes,scope,changes,el=null){
   const I=inspector(),R=root.RetouchResponsive||require('./responsive.js');
   if(el&&I.textResizeProperties.some(key=>el.style.getPropertyPriority(key)==='important'))throw Error('An important inline rule controls text sizing.');
@@ -321,6 +327,7 @@
   I.note(groups.typography,'Relative spacing follows each layer’s own font size. Pixel controls and resets are available below.');
   I.sharedTypographyPreview(groups.typography,elements);
   I.sharedTextResizing(groups.layout,()=>infos.map((_,i)=>liveElement(i)),typeActive,changes=>save(Object.fromEntries(infos.map((info,i)=>[info.id,changeTextResizing(info.className,scope,changes[i],liveElement(i))]))));
+  I.sharedTruncationTypography(groups.typography,()=>infos.map((_,i)=>liveElement(i)),typeActive,value=>save(Object.fromEntries(infos.map((info,i)=>[info.id,changeTextTruncation(info.className,scope,value,liveElement(i))]))),infos.some(info=>changeTextTruncation(info.className,scope,null)!==info.className));
   I.sharedVerticalAlignment(groups.typography,()=>infos.map((_,i)=>liveElement(i)),(layouts,reset)=>typeActive()&&layouts.every((layout,i)=>reset||!root.RetouchLayout.inlineAlignment(liveElement(i),layout.property,true)),changes=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i),change=changes[i];return [info.id,changeTextVertical(info.className,scope,change.property,change.value,el.ownerDocument,el)];})));}catch(error){I.note(groups.typography,error.message,'refused');}},(index,property)=>changeTextVertical(infos[index].className,scope,property,null)!==infos[index].className);
 
   for(const [property,field]of Object.entries(fields).filter(([,field])=>!field.constraint).flatMap(entry=>['width','height'].includes(entry[0])?[entry,...['min-','max-'].map(prefix=>[prefix+entry[0],fields[prefix+entry[0]]])]:[entry])){
@@ -458,5 +465,5 @@
   if(layoutOptions.children.length>1)groups.layout.append(layoutOptions);
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={changeTextResizing,changeTextVertical,resetContainerAlignment,changeStack,changeAdaptiveGrid,sharedGroups,rotationDegrees,changeRotation,changeSizeMode,changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={changeTextTruncation,changeTextResizing,changeTextVertical,resetContainerAlignment,changeStack,changeAdaptiveGrid,sharedGroups,rotationDegrees,changeRotation,changeSizeMode,changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);
