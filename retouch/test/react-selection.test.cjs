@@ -486,3 +486,12 @@ test('text sizing captures each CSS box and preserves its wrap style',()=>{
  assert.deepEqual(textResizeChanges(css,'height'),{width:'220px',height:'auto','white-space':'pre-wrap','text-wrap':'wrap balance'});
  assert.equal(textResizeChanges(css,'width').width,'max-content');assert.equal(textResizeChanges(css,'fixed').height,'140px');assert.throws(()=>textResizeChanges({...css,width:'auto'},'fixed'));
 });
+
+test('text sizing releases flex growth and automatic cross-axis stretch',()=>{
+ const {textResizeChanges}=require('../shell/inspector.js'),{changeTextResizing}=require('../shell/react-selection.js');
+ const css={width:'315px',height:'180px',alignSelf:'auto',getPropertyValue:()=> 'balance'},parent={display:'flex',flexDirection:'row',alignItems:'stretch'};
+ const changes=textResizeChanges(css,'height',parent);assert.equal(changes['flex-grow'],'0');assert.equal(changes['flex-shrink'],'0');assert.equal(changes['flex-basis'],'auto');assert.equal(changes['align-self'],'flex-start');
+ const next=changeTextResizing('md:!flex-1 md:grow-2 md:shrink-0 md:basis-20 md:self-stretch hover:flex-1','md:',changes);for(const token of ['md:!flex-1','md:grow-2','md:shrink-0','md:basis-20','md:self-stretch'])assert.ok(!next.includes(token),next);assert.ok(next.includes('hover:flex-1'));assert.ok(next.includes('md:![flex-basis:auto]'));
+ assert.equal(textResizeChanges(css,'fixed',parent)['align-self'],undefined);assert.equal(textResizeChanges({...css,alignSelf:'center'},'height',parent)['align-self'],undefined);assert.equal(textResizeChanges(css,'height',{...parent,flexDirection:'column'})['align-self'],undefined);
+ assert.throws(()=>changeTextResizing('','',{...changes,'flex-grow':'2'}));assert.throws(()=>changeTextResizing('','',changes,{style:{getPropertyPriority:key=>key==='flex'?'important':''}}));
+});

@@ -351,12 +351,17 @@
     return input;
   }
   const fontPositionToken=t=>/^\[font-variant-position:.+\]$/.test(t);
-  const textResizeProperties=['width','height','inline-size','block-size','white-space','white-space-collapse','text-wrap','text-wrap-mode','text-wrap-style'];
-  function textResizeChanges(css,mode){
+  const textResizeProperties=['width','height','inline-size','block-size','white-space','white-space-collapse','text-wrap','text-wrap-mode','text-wrap-style','flex','flex-grow','flex-shrink','flex-basis','align-self','place-self'];
+  function textResizeChanges(css,mode,parent=null){
     if(!['width','height','fixed'].includes(mode))throw Error('Choose a supported text sizing mode.');
     const width=parseFloat(css.width),height=parseFloat(css.height);
     if(![width,height].every(value=>Number.isFinite(value)&&value>0&&value<=100000))throw Error('The text layer has no measurable size.');
-    return {width:mode==='width'?'max-content':width+'px',height:mode==='fixed'?height+'px':'auto','white-space':mode==='width'?'pre':'pre-wrap','text-wrap':(mode==='width'?'nowrap':'wrap')+(['balance','pretty','stable'].includes(css.getPropertyValue('text-wrap-style'))?' '+css.getPropertyValue('text-wrap-style'):'')};
+    const changes={width:mode==='width'?'max-content':width+'px',height:mode==='fixed'?height+'px':'auto','white-space':mode==='width'?'pre':'pre-wrap','text-wrap':(mode==='width'?'nowrap':'wrap')+(['balance','pretty','stable'].includes(css.getPropertyValue('text-wrap-style'))?' '+css.getPropertyValue('text-wrap-style'):'')};
+    if(parent&&/^(?:inline-)?flex$/.test(parent.display))Object.assign(changes,{'flex-grow':'0','flex-shrink':'0','flex-basis':'auto'});
+    const alignment=css.alignSelf==='auto'?parent?.alignItems:css.alignSelf;
+    const heightOnCrossAxis=parent&&(/^(?:inline-)?grid$/.test(parent.display)||/^(?:inline-)?flex$/.test(parent.display)&&!parent.flexDirection.startsWith('column'));
+    if(mode!=='fixed'&&heightOnCrossAxis&&['normal','stretch'].includes(alignment))changes['align-self']='flex-start';
+    return changes;
   }
   function sharedTextResizing(parent,getElements,ready,onChange){
     const eligible=el=>el?.isConnected&&isTextLayer(el.localName)&&el.namespaceURI==='http://www.w3.org/1999/xhtml'&&!['inline','contents','none'].includes(el.ownerDocument.defaultView.getComputedStyle(el).display);
@@ -364,18 +369,16 @@
     const available=()=>ready()&&getElements().every(el=>eligible(el)&&textResizeProperties.every(key=>el.style.getPropertyPriority(key)!=='important'));
     const row=document.createElement('div'),label=document.createElement('span'),group=document.createElement('div');row.className='text-resize-controls';label.className='hint';label.textContent='Resizing';group.className='layout-mode-segments';row.append(label,group);parent.append(row);
     for(const [mode,name]of [['width','Auto width'],['height','Auto height'],['fixed','Fixed size']]){
-      const control=button(name,async()=>{if(!row.isConnected||!available())return;try{const changes=getElements().map(el=>textResizeChanges(el.ownerDocument.defaultView.getComputedStyle(el),mode));root.RetouchPanelFocus?.queue(control);await onChange(changes);}catch(error){note(parent,error.message,'refused');}});
+      const control=button(name,async()=>{if(!row.isConnected||!available())return;try{const changes=getElements().map(el=>textResizeChanges(el.ownerDocument.defaultView.getComputedStyle(el),mode,layoutParent(el)?el.ownerDocument.defaultView.getComputedStyle(layoutParent(el)):null));root.RetouchPanelFocus?.queue(control);await onChange(changes);}catch(error){note(parent,error.message,'refused');}});
       control.setAttribute('aria-label','Shared '+name);control.disabled=!available();control.title=control.disabled?'Preview the selected edit range and resolve important inline sizing or wrapping rules.':mode==='width'?'Fit each layer to its own text, preserving explicit line breaks.':mode==='height'?'Keep each layer’s width and fit its height to wrapped text.':'Keep each layer’s current width and height.';group.append(control);
     }
     root.RetouchInspectorUI?.keyboardToolbar(group,'Shared text resizing',{role:'group'});
   }
-  function textResizing(parent,el,onChange){
-    if(!el||!isTextLayer(el.localName)||el.namespaceURI!=='http://www.w3.org/1999/xhtml')return;
-    const css=el.ownerDocument.defaultView.getComputedStyle(el);if(['inline','contents','none'].includes(css.display))return;
-    const row=document.createElement('div'),label=document.createElement('span'),group=document.createElement('div');row.className='text-resize-controls';label.className='hint';label.textContent='Resizing';group.className='layout-mode-segments';group.setAttribute('role','group');group.setAttribute('aria-label','Text resizing');row.append(label,group);parent.append(row);
-    for(const [mode,name,title]of [['width','Auto width','Fit width and height to text, preserving explicit line breaks.'],['height','Auto height','Keep the current width and fit height to wrapped text.'],['fixed','Fixed size','Keep the current width and height.']]){
-      const control=button(name,async()=>{if(!el.isConnected)return;const current=el.ownerDocument.defaultView.getComputedStyle(el),width=parseFloat(current.width),height=parseFloat(current.height);if(![width,height].every(value=>Number.isFinite(value)&&value>0&&value<=100000))return;root.RetouchPanelFocus?.queue(control);await onChange({width:mode==='width'?'max-content':width+'px',height:mode==='fixed'?height+'px':'auto','white-space':mode==='width'?'pre':'pre-wrap','text-wrap':(mode==='width'?'nowrap':'wrap')+(['balance','pretty','stable'].includes(current.getPropertyValue('text-wrap-style'))?' '+current.getPropertyValue('text-wrap-style'):'')});});control.setAttribute('aria-label',name);control.title=title;group.append(control);
-    }
+  function textResizing(parent,el,onChange,ready=()=>true){
+    sharedTextResizing(parent,()=>[el],ready,changes=>onChange(changes[0]));
+    const row=parent.querySelector('.text-resize-controls');if(!row)return;
+    row.querySelector('[role="group"]')?.setAttribute('aria-label','Text resizing');
+    for(const button of row.querySelectorAll('button'))button.setAttribute('aria-label',button.getAttribute('aria-label').replace(/^Shared /,''));
   }
   function wrapTypography(parent,css,onChange,onReset,canReset){
     const value=css.getPropertyValue('text-wrap'),choices=[['wrap','Auto'],['balance','Balance'],['pretty','Pretty'],['nowrap','No wrap']].filter(([key])=>CSS.supports('text-wrap',key));
@@ -1095,7 +1098,7 @@
     note(sec,`${css.fontFamily} · ${css.fontSize} / ${css.lineHeight} · ${css.fontWeight}`,'computed-value');
     typographyPreview(sec,el);
     if(!locked(sec,info)) {
-      textResizing(sec,el,changes=>{let next=replace(info.className,t=>/^(?:w|h|size)-/.test(t)||/^\[(?:width|height):/.test(t),'!w-'+(changes.width==='max-content'?'max':'['+changes.width+']')+' !h-'+(changes.height==='auto'?'auto':'['+changes.height+']'));next=replace(next,t=>/^whitespace-/.test(t)||/^\[white-space:/.test(t)||textWrapToken(t),(changes['white-space']==='pre'?'!whitespace-pre':'!whitespace-pre-wrap')+' ![text-wrap:'+changes['text-wrap'].replace(/ /g,'_')+']');return save(next);});
+      textResizing(sec,el,changes=>save(root.RetouchReactSelection.changeTextResizing(info.className,'',changes,el)),typeActive);
       const names=catalog(d), current=tokens(info.className).filter(t=>names.includes(t));
       if(names.length && !info.styleScope) {
         select(sec,'Typography class',[['','Choose a project style…'],...names.map(n=>[n,n])],current.length===1?current[0]:'',value=>{

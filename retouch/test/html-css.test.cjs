@@ -310,3 +310,9 @@ test('HTML sizing preserves logical inline values and refuses important logical 
   assert.equal(edit(input.replace('140px"','140px !important"'),768,'180px',physical).refused,true);
  }
 });
+
+test('HTML text sizing saves cross-axis alignment with independent flex sizing',()=>{
+ const changes={width:'315px',height:'auto','flex-grow':'0','flex-shrink':'0','flex-basis':'auto','align-self':'flex-start','white-space':'pre-wrap','text-wrap':'wrap'};
+ const result=css.plan(resolve(original),{width:768,changes});const source=result.edits[0].after;for(const [key,value]of Object.entries(changes))assert.ok(source.includes(key+':'+value+' !important'),source);
+ assert.equal(css.plan(resolve(original),{width:768,changes:{'align-self':'url(bad)'}}).ok,false);
+});

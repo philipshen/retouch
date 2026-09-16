@@ -21592,3 +21592,28 @@ participation remain in effect; this fixture does not establish all flex/grid,
 vertical-writing, or competing logical-size cascade behavior. Full Figma
 fidelity, arbitrary-site support, and trusted Homebrew distribution remain
 incomplete. No desktop rebuild or push in this continuation.
+
+### Text sizing inside growing, stretched flex rows
+
+A new flex-row browser fixture reproduced Auto height leaving text stretched to
+its parent's height. Text sizing now explicitly releases flex growth/shrink and
+basis, and automatic height releases cross-axis stretch when required. Explicit
+center/end alignment is retained. Single-layer resizing now uses the same
+calculation and priority/range guards as shared resizing. The HTML adapter now
+accepts validated align-self values, enabling its source edits to represent the
+same cross-axis behavior. React/Liquid replace owned flex sizing longhands and
+shorthands while preserving other scopes. Important inline flex/alignment rules
+are included in the refusal guard.
+
+Validation: 1,721 unit tests passed. Shared HTML Chromium 145 and Liquid WebKit
+26, plus single HTML/React Chromium 145 browser checks passed all three sizing
+modes on a 600px flex row with flex-growing children. Assertions cover each
+layer's rendered dimensions, unchanged text, inactive-range refusal, responsive
+fallback, exact source undo, and important inline wrapping refusal. Evidence:
+/tmp/retouch-resize-flex-before.log (original geometry failure),
+/tmp/retouch-resize-flex-{html,liquid,single-html,single-react,units}.log.
+
+Column/reversed/wrapped flex, grid and vertical-writing geometry remain to be
+verified; existing min/max constraints still apply. Full Figma fidelity,
+arbitrary-site support and trusted Homebrew distribution remain incomplete.
+No desktop rebuild or push in this continuation.

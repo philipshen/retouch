@@ -81,8 +81,8 @@
   const I=inspector(),R=root.RetouchResponsive||require('./responsive.js');
   if(el&&I.textResizeProperties.some(key=>el.style.getPropertyPriority(key)==='important'))throw Error('An important inline rule controls text sizing.');
   const dimension=value=>['auto','max-content'].includes(value)||/^\d+(?:\.\d+)?px$/.test(value)&&parseFloat(value)>0&&parseFloat(value)<=100000;
-  if(!changes||!dimension(changes.width)||!dimension(changes.height)||!['pre','pre-wrap'].includes(changes['white-space'])||!/^(?:wrap|nowrap)(?: (?:balance|pretty|stable))?$/.test(changes['text-wrap'])||Object.keys(changes).length!==4)throw Error('Choose supported text sizing values.');
-  const match=token=>/^(?:w|h|size|whitespace)-/.test(token)||/^\[(?:width|height|white-space(?:-collapse)?):/.test(token)||I.textWrapToken(token);
+  if(!changes||!dimension(changes.width)||!dimension(changes.height)||!['pre','pre-wrap'].includes(changes['white-space'])||!/^(?:wrap|nowrap)(?: (?:balance|pretty|stable))?$/.test(changes['text-wrap'])||Object.keys(changes).some(key=>!['width','height','white-space','text-wrap','flex-grow','flex-shrink','flex-basis','align-self'].includes(key))||['flex-grow','flex-shrink'].some(key=>changes[key]!==undefined&&changes[key]!=='0')||changes['flex-basis']!==undefined&&changes['flex-basis']!=='auto'||changes['align-self']!==undefined&&changes['align-self']!=='flex-start')throw Error('Choose supported text sizing values.');
+  const match=token=>/^(?:w|h|size|whitespace)-/.test(token)||/^\[(?:width|height|white-space(?:-collapse)?):/.test(token)||I.textWrapToken(token)||changes['flex-basis']&&(flexShorthand(token)||/^(?:grow|shrink)(?:-|$)|^basis-|^\[flex-(?:grow|shrink|basis):/.test(token))||changes['align-self']&&/^self-|^\[align-self:/.test(token);
   return R.replaceScope(classes,I.replace(R.project(classes,scope),match,Object.entries(changes).map(([key,value])=>'!['+key+':'+value.replace(/ /g,'_')+']').join(' ')),scope);
  }
  function changeTextVertical(classes,scope,property,value,document=null,el=null){
