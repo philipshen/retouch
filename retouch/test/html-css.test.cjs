@@ -316,3 +316,7 @@ test('HTML text sizing saves cross-axis alignment with independent flex sizing',
  const result=css.plan(resolve(original),{width:768,changes});const source=result.edits[0].after;for(const [key,value]of Object.entries(changes))assert.ok(source.includes(key+':'+value+' !important'),source);
  assert.equal(css.plan(resolve(original),{width:768,changes:{'align-self':'url(bad)'}}).ok,false);
 });
+
+test('HTML text sizing supports validated grid inline-axis alignment',()=>{
+ const result=css.plan(resolve(original),{width:768,changes:{height:'auto','justify-self':'flex-start'}});assert.equal(result.ok,true);assert.ok(result.edits[0].after.includes('justify-self:flex-start !important'));assert.equal(css.plan(resolve(original),{width:768,changes:{'justify-self':'stretch;display:none'}}).ok,false);
+});

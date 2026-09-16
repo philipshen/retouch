@@ -495,3 +495,13 @@ test('text sizing releases flex growth and automatic cross-axis stretch',()=>{
  assert.equal(textResizeChanges(css,'fixed',parent)['align-self'],undefined);assert.equal(textResizeChanges({...css,alignSelf:'center'},'height',parent)['align-self'],undefined);assert.equal(textResizeChanges(css,'height',{...parent,flexDirection:'column'})['align-self'],undefined);
  assert.throws(()=>changeTextResizing('','',{...changes,'flex-grow':'2'}));assert.throws(()=>changeTextResizing('','',changes,{style:{getPropertyPriority:key=>key==='flex'?'important':''}}));
 });
+
+test('text sizing follows physical height through vertical flex and grid axes',()=>{
+ const {textResizeChanges}=require('../shell/inspector.js'),{changeTextResizing}=require('../shell/react-selection.js');
+ const css={width:'220px',height:'180px',alignSelf:'auto',justifySelf:'auto',getPropertyValue:()=> 'wrap'},parent={display:'grid',writingMode:'vertical-rl',alignItems:'stretch',justifyItems:'normal'};
+ const grid=textResizeChanges(css,'height',parent);assert.equal(grid['justify-self'],'flex-start');assert.equal(grid['align-self'],undefined);
+ const next=changeTextResizing('md:justify-self-stretch md:self-center hover:justify-self-end','md:',grid);assert.ok(!next.includes('md:justify-self-stretch'));assert.ok(next.includes('md:self-center'));assert.ok(next.includes('hover:justify-self-end'));assert.ok(next.includes('md:![justify-self:flex-start]'));
+ for(const writingMode of ['vertical-rl','vertical-lr','sideways-rl'])for(const flexDirection of ['row','row-reverse','column','column-reverse']){const changes=textResizeChanges(css,'height',{...parent,display:'flex',writingMode,flexDirection});assert.equal(changes['align-self'],flexDirection.startsWith('column')?'flex-start':undefined);assert.equal(changes['justify-self'],undefined);}
+ assert.equal(textResizeChanges({...css,justifySelf:'center'},'height',parent)['justify-self'],undefined);
+ assert.throws(()=>changeTextResizing('','',grid,{style:{getPropertyPriority:key=>key==='justify-self'?'important':''}}));
+});

@@ -21617,3 +21617,31 @@ Column/reversed/wrapped flex, grid and vertical-writing geometry remain to be
 verified; existing min/max constraints still apply. Full Figma fidelity,
 arbitrary-site support and trusted Homebrew distribution remain incomplete.
 No desktop rebuild or push in this continuation.
+
+### Text sizing across surrounding layout axes
+
+A vertical-writing grid fixture exposed Auto height releasing align-self while
+height was stretched by justify-self. Text resizing now uses the existing layout
+axis model to select the alignment property controlling physical height. This
+also corrects vertical-writing flex rows/columns. The HTML source adapter
+accepts validated justify-self values, React/Liquid preserve unrelated
+align-self classes when editing justify-self, and important inline justify-self
+participates in the refusal guard. Explicit alignment remains unchanged.
+
+Validation: 1,723 unit tests passed. Browser fixtures use horizontal text inside
+fixed-size parents to isolate surrounding layout axes. Shared HTML Chromium 145
+and Liquid WebKit 26 vertical-grid checks passed; Liquid also verifies important
+inline justify-self refusal. Shared React Chromium column-reverse, Liquid
+WebKit vertical-column, and single HTML Chromium horizontal-grid checks passed.
+All exercise Auto width, Auto height and Fixed size, per-layer rendered sizes,
+responsive fallback, inactive-range refusal, unchanged text and exact source
+undo. Evidence: /tmp/retouch-resize-vertical-grid-before.log (reproduction),
+/tmp/retouch-resize-vertical-grid-{html,liquid}.log,
+/tmp/retouch-resize-column-reverse-react.log,
+/tmp/retouch-resize-vertical-column-liquid.log,
+/tmp/retouch-resize-grid-single-html.log and /tmp/retouch-resize-axes-units.log.
+
+Vertical text itself, multi-line flex wrapping, competing logical-size rules,
+and all parent alignment combinations remain unverified. Full Figma fidelity,
+arbitrary-site support and trusted Homebrew distribution remain incomplete.
+No desktop rebuild or push in this continuation.

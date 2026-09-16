@@ -351,16 +351,17 @@
     return input;
   }
   const fontPositionToken=t=>/^\[font-variant-position:.+\]$/.test(t);
-  const textResizeProperties=['width','height','inline-size','block-size','white-space','white-space-collapse','text-wrap','text-wrap-mode','text-wrap-style','flex','flex-grow','flex-shrink','flex-basis','align-self','place-self'];
+  const textResizeProperties=['width','height','inline-size','block-size','white-space','white-space-collapse','text-wrap','text-wrap-mode','text-wrap-style','flex','flex-grow','flex-shrink','flex-basis','align-self','justify-self','place-self'];
   function textResizeChanges(css,mode,parent=null){
     if(!['width','height','fixed'].includes(mode))throw Error('Choose a supported text sizing mode.');
     const width=parseFloat(css.width),height=parseFloat(css.height);
     if(![width,height].every(value=>Number.isFinite(value)&&value>0&&value<=100000))throw Error('The text layer has no measurable size.');
     const changes={width:mode==='width'?'max-content':width+'px',height:mode==='fixed'?height+'px':'auto','white-space':mode==='width'?'pre':'pre-wrap','text-wrap':(mode==='width'?'nowrap':'wrap')+(['balance','pretty','stable'].includes(css.getPropertyValue('text-wrap-style'))?' '+css.getPropertyValue('text-wrap-style'):'')};
     if(parent&&/^(?:inline-)?flex$/.test(parent.display))Object.assign(changes,{'flex-grow':'0','flex-shrink':'0','flex-basis':'auto'});
-    const alignment=css.alignSelf==='auto'?parent?.alignItems:css.alignSelf;
-    const heightOnCrossAxis=parent&&(/^(?:inline-)?grid$/.test(parent.display)||/^(?:inline-)?flex$/.test(parent.display)&&!parent.flexDirection.startsWith('column'));
-    if(mode!=='fixed'&&heightOnCrossAxis&&['normal','stretch'].includes(alignment))changes['align-self']='flex-start';
+    const axes=(root.RetouchLayout||require('./layout.js')).layoutAxes({writingMode:parent?.writingMode,direction:parent?.flexDirection});
+    const property=parent&&/^(?:inline-)?grid$/.test(parent.display)?(axes.inline==='height'?'justify-self':'align-self'):parent&&/^(?:inline-)?flex$/.test(parent.display)&&axes.main==='width'?'align-self':null;
+    const own=property==='justify-self'?css.justifySelf:css.alignSelf,alignment=own==='auto'?(property==='justify-self'?parent?.justifyItems:parent?.alignItems):own;
+    if(mode!=='fixed'&&property&&['normal','stretch'].includes(alignment))changes[property]='flex-start';
     return changes;
   }
   function sharedTextResizing(parent,getElements,ready,onChange){
