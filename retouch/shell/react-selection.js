@@ -1,7 +1,7 @@
 (function(root){
  'use strict';
- const inlineTypography=['font-family','font-size','font-weight','font-style','line-height','letter-spacing','text-decoration-line','text-decoration-style','text-decoration-thickness','text-underline-offset','text-decoration-skip-ink','text-decoration-color','text-indent','text-wrap','font-variant-caps','font-variant-position','font-variant-numeric','font-variant-ligatures','font-variation-settings','font-optical-sizing'];
- const typographyKeys=property=>property==='text-wrap'?['text-wrap','text-wrap-mode','text-wrap-style']:[property];
+ const inlineTypography=['font-family','font-size','font-weight','font-style','line-height','letter-spacing','text-decoration-line','text-decoration-style','text-decoration-thickness','text-underline-offset','text-decoration-skip-ink','text-decoration-color','text-indent','text-wrap','font-variant-caps','font-variant-position','font-variant-numeric','font-variant-ligatures','font-variation-settings','font-optical-sizing','text-box'];
+ const typographyKeys=property=>property==='text-wrap'?['text-wrap','text-wrap-mode','text-wrap-style']:property==='text-box'?['text-box','text-box-trim','text-box-edge']:[property];
  const fields={opacity:{label:'Opacity (%)',matches:t=>/^opacity-|^\[opacity:/.test(t),token:v=>'opacity-['+v/100+']'},visibility:{label:'Visibility',matches:t=>/^(visible|invisible|collapse)$|^\[visibility:/.test(t),options:['visible','hidden','collapse'],token:v=>({visible:'visible',hidden:'invisible',collapse:'collapse'})[v]},'mix-blend-mode':{label:'Blend mode',matches:t=>/^mix-blend-|^\[mix-blend-mode:/.test(t),options:(root.RetouchHTMLCSSValues||require('./html-css-values.js')).options['mix-blend-mode'],token:v=>'mix-blend-'+v},isolation:{label:'Blend group',matches:t=>/^(isolate|isolation-auto)$|^\[isolation:/.test(t),options:['auto','isolate'],token:v=>v==='auto'?'isolation-auto':'isolate'}};
  function rotationDegrees(value){
   if(value==='none')return 0;
@@ -32,6 +32,7 @@
   'text-align':{label:'Text alignment',matches:t=>inspector().textAlignToken(t),options:['left','center','right','justify','start','end'],token:v=>'[text-align:'+v+']'},
   'font-style':{label:'Font slant',matches:t=>inspector().fontStyleToken(t),options:['normal','italic','oblique'],token:v=>'[font-style:'+v+']'},
   'text-decoration-line':{label:'Text decoration',matches:t=>inspector().decorationToken(t),options:['none','underline','line-through','overline','underline line-through','underline overline','overline line-through','underline overline line-through'],token:v=>'[text-decoration-line:'+v.replace(/ /g,'_')+']'},
+  'text-box':{label:'Vertical trim',matches:t=>inspector().textBoxToken(t),options:['normal','trim-both cap alphabetic'],optionLabels:{normal:'None','trim-both cap alphabetic':'Cap height'},read:css=>css.getPropertyValue('text-box-trim')==='none'?'normal':css.getPropertyValue('text-box'),token:value=>'[text-box:'+value.replace(/ /g,'_')+']'},
   'font-optical-sizing':{label:'Optical sizing',matches:t=>inspector().opticalToken(t),options:['auto','none'],optionLabels:{auto:'Automatic',none:'Off'},token:value=>'[font-optical-sizing:'+value+']'},
   'font-variation-settings':{label:'Font axes',feature:'variation',matches:t=>inspector().variationToken(t),valid:value=>(root.RetouchHTMLCSSValues||require('./html-css-values.js')).parseVariations(value)!==null,token:value=>'[font-variation-settings:'+value.replace(/ /g,'_')+']'},
   'font-variant-numeric':{label:'Number formatting',feature:'numeric',matches:t=>inspector().numericToken(t),valid:value=>(root.RetouchHTMLCSSValues||require('./html-css-values.js')).numericValid(value),token:value=>'[font-variant-numeric:'+value.replace(/ /g,'_')+']'},
@@ -315,6 +316,7 @@
 
   for(const [property,field]of Object.entries(fields).filter(([,field])=>!field.constraint).flatMap(entry=>['width','height'].includes(entry[0])?[entry,...['min-','max-'].map(prefix=>[prefix+entry[0],fields[prefix+entry[0]]])]:[entry])){
    if(!elements.every(el=>itemApplies(el,field)))continue;
+   if(property==='text-box'&&!elements.every(el=>el.ownerDocument.defaultView.CSS.supports('text-box','trim-both cap alphabetic')))continue;
    const sec=field.svg?groups.stroke:field.constraint||field.ratio||['width','height'].includes(property)?groups.size:field.flexItem||field.layoutItem?groups.item:['opacity','rotate','visibility','mix-blend-mode','isolation'].includes(property)?groups.appearance:groups.typography;
    if(field.feature){
     const ready=(reset=false)=>typeActive()&&infos.every((_,i)=>{const el=liveElement(i);return el?.isConnected&&(reset||el.style.getPropertyPriority(property)!=='important');});
@@ -443,7 +445,7 @@
    const hints=[...body.children].filter(el=>el.classList.contains('hint')&&!el.classList.contains('refused')&&!el.hasAttribute('role'));
    if(hints.length){const details=root.document.createElement('details'),summary=root.document.createElement('summary');details.className='inspector-disclosure';summary.textContent='Details';details.append(summary,...hints);body.append(details);}
   }
-  if(!typeActive())for(const control of groups.typography.querySelectorAll('input,select,button')){const name=control.getAttribute('aria-label')||control.textContent;if(/^(?:Shared (?:Page font$|Font (?:size|weight|slant)|Line height|Letter spacing|Text decoration|Underline|Paragraph indent|Wrap style|Capital forms|Number position|Optical sizing)|Automatic shared line height$|Reset shared (?:font (?:family|size|weight|slant)|line height|letter spacing|text decoration|underline|paragraph indent|wrap style|capital forms|number position|optical sizing))/i.test(name)){control.disabled=true;control.title='Switch to a screen inside the selected edit range.';}}
+  if(!typeActive())for(const control of groups.typography.querySelectorAll('input,select,button')){const name=control.getAttribute('aria-label')||control.textContent;if(/^(?:Shared (?:Page font$|Font (?:size|weight|slant)|Line height|Letter spacing|Text decoration|Underline|Paragraph indent|Wrap style|Capital forms|Number position|Optical sizing|Vertical trim)|Automatic shared line height$|Reset shared (?:font (?:family|size|weight|slant)|line height|letter spacing|text decoration|underline|paragraph indent|wrap style|capital forms|number position|optical sizing|vertical trim))/i.test(name)){control.disabled=true;control.title='Switch to a screen inside the selected edit range.';}}
   if(layoutOptions.children.length>1)groups.layout.append(layoutOptions);
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }

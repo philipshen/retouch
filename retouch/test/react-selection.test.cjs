@@ -464,3 +464,11 @@ test('vertical text display distinguishes logical edges from reversed flex edges
  for(const reverse of [false,true]){assert.equal(textVerticalValue('start',reverse),'top');assert.equal(textVerticalValue('end',reverse),'bottom');assert.equal(textVerticalValue('center',reverse),'center');assert.equal(textVerticalValue('baseline',reverse),'custom');}
  assert.equal(textVerticalValue('flex-start',true),'bottom');assert.equal(textVerticalValue('flex-end',true),'top');assert.equal(textVerticalValue('flex-start',false),'top');assert.equal(textVerticalValue('flex-end',false),'bottom');
 });
+
+test('shared cap-height trimming replaces owned longhands and preserves responsive priority',()=>{
+ const source='[text-box-trim:trim-start] [text-box-edge:cap_alphabetic] hover:[text-box-trim:none]';
+ assert.equal(change(source,'','text-box','normal'),'hover:[text-box-trim:none] [text-box:normal]');
+ assert.equal(change('![text-box-trim:none]','md:','text-box','trim-both cap alphabetic'),'![text-box-trim:none] md:![text-box:trim-both_cap_alphabetic]');
+ const el={style:{getPropertyPriority:key=>key==='text-box-edge'?'important':'',getPropertyValue:()=>''}};assert.throws(()=>change(source,'','text-box','normal',null,false,el),/important inline/);
+ assert.throws(()=>change(source,'','text-box','bad'));assert.equal(change(source,'','text-box',null),'hover:[text-box-trim:none]');
+});

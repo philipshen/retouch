@@ -21536,3 +21536,25 @@ and reversed-column shorthand coverage also passed. Evidence:
 Writing modes outside horizontal text, baseline/overflow alignment, arbitrary
 selector combinations, full Figma fidelity and trusted Homebrew distribution
 remain incomplete. No native rebuild or push.
+
+### Shared cap-height trimming
+
+Shared Type settings now offers Vertical trim: None / Cap height for supported
+preview engines. It uses the same text-box values as single-layer editing.
+React/Liquid replace owned shorthand or trim/edge longhand classes and preserve
+inherited priority. Both source paths guard important inline text-box longhands
+and inactive screen ranges; unsupported engines omit the control.
+
+Validation: 1,717 unit tests passed, including longhand replacement, inherited
+priority, reset and invalid/important-inline refusal. HTML/React Chromium 145
+and Liquid WebKit 26 browser tests verify that cap trimming measurably reduces
+both selected boxes' rendered heights while retaining their exact text and
+64px line height. None restores full height; responsive fallback, disabled
+synthetic changes, reset, exact source undo and important inline edge refusal
+also pass. Evidence: /tmp/retouch-shared-trim-units.log and
+/tmp/retouch-shared-trim-{html,react,liquid}.log.
+
+Mixed scripts/font fallback metrics and arbitrary inline formatting remain
+outside this geometry fixture. Full Figma fidelity, arbitrary-site guarantees
+and trusted Homebrew distribution remain incomplete. No desktop rebuild or
+push.
