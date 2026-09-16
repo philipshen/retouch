@@ -438,21 +438,19 @@
     const values=elements.map(el=>{const value=Number(el.ownerDocument.defaultView.getComputedStyle(el).getPropertyValue('-webkit-line-clamp'));return Number.isInteger(value)&&value>0?value:0;}),mixed=values.some(value=>value!==values[0]),active=values.some(Boolean);
     const group=document.createElement('div');group.dataset.typeTruncation='true';parent.append(group);
     const available=reset=>ready()&&getElements().every(el=>el?.isConnected&&(reset||truncationProperties.every(key=>el.style.getPropertyPriority(key)!=='important')));
+    const refusal=()=>!ready()?'Switch to a screen inside the selected edit range.':'An important inline rule controls text truncation.';
     const write=value=>{if(!group.isConnected||!available(value===null)||value!==null&&value!=='none'&&(!Number.isInteger(value)||value<1||value>1000))return;return onChange(value);};
-    const toggle=document.createElement('input');toggle.type='checkbox';toggle.checked=values.every(Boolean);toggle.indeterminate=active&&!toggle.checked;toggle.disabled=!available(false);toggle.onchange=()=>write(toggle.checked?3:'none');field(group,'Shared Truncate text',toggle);toggle.closest('.inspector-field').querySelector('span').textContent='Truncate text';toggle.title='Limit visible text on every selected layer without deleting its content.';
-    const maximum=number(group,'Shared Max lines',mixed?NaN:values[0]||3,1,1000,write);maximum.step='1';maximum.disabled=!active||!available(false);maximum.placeholder=mixed?'Mixed':'';maximum.closest('.inspector-field').querySelector('span').textContent='Max lines';fieldDraft(maximum);
+    const toggle=document.createElement('input');toggle.type='checkbox';toggle.checked=values.every(Boolean);toggle.indeterminate=active&&!toggle.checked;toggle.disabled=!available(false);toggle.onchange=()=>write(toggle.checked?3:'none');field(group,'Shared Truncate text',toggle);toggle.closest('.inspector-field').querySelector('span').textContent='Truncate text';toggle.title=toggle.disabled?refusal():'Limit visible text on every selected layer without deleting its content.';
+    const maximum=number(group,'Shared Max lines',mixed?NaN:values[0]||3,1,1000,write);maximum.step='1';maximum.disabled=!active||!available(false);maximum.title=!available(false)?refusal():active?'Maximum visible lines for the selected screen scope.':'Enable truncation to set a line limit.';maximum.placeholder=mixed?'Mixed':'';maximum.closest('.inspector-field').querySelector('span').textContent='Max lines';fieldDraft(maximum);
     const reset=button('↺',()=>write(null));reset.setAttribute('aria-label','Reset shared text truncation');reset.title='Reset shared text truncation';reset.classList.add('property-reset');reset.disabled=!canReset||!available(true);
     const row=toggle.closest('.inspector-field'),holder=document.createElement('div');holder.className='property-row';row.before(holder);holder.append(row,reset);
   }
-  function truncationTypography(parent,css,onChange,onReset,canReset){
-    if(!CSS.supports('-webkit-line-clamp','3'))return;
-    const group=document.createElement('div');group.dataset.typeTruncation='true';parent.append(group);
-    const current=Number(css.getPropertyValue('-webkit-line-clamp')),active=Number.isInteger(current)&&current>0;
-    const toggle=document.createElement('input');toggle.type='checkbox';toggle.checked=active;toggle.onchange=()=>onChange(toggle.checked?3:null);field(group,'Truncate text',toggle);
-    toggle.title='Limit visible text without deleting its content.';
-    const maximum=number(group,'Max lines',active?current:3,1,1000,onChange);maximum.step='1';maximum.disabled=!active;fieldDraft(maximum);maximum.title='Maximum visible lines for the selected screen scope.';
-    const reset=button('↺',onReset);reset.setAttribute('aria-label','Reset text truncation');reset.title='Reset text truncation';reset.classList.add('property-reset');reset.disabled=!canReset;
-    const row=toggle.closest('.inspector-field'),holder=document.createElement('div');holder.className='property-row';row.before(holder);holder.append(row,reset);
+  function truncationTypography(parent,el,ready,onChange,canReset){
+    sharedTruncationTypography(parent,()=>[el],ready,onChange,canReset);
+    const group=parent.querySelector('[data-type-truncation]');if(!group)return;
+    for(const control of group.querySelectorAll('[aria-label]'))control.setAttribute('aria-label',control.getAttribute('aria-label').replace(/^Shared /,'').replace(/^Reset shared /,'Reset '));
+    const toggle=group.querySelector('input[type="checkbox"]');if(!toggle.disabled)toggle.title='Limit visible text without deleting its content.';
+    group.querySelector('.property-reset').title='Reset text truncation';
   }
   function underlineTypography(parent,css,onChange,onReset,hasOwn,el){
     const details=document.createElement('details'),summary=document.createElement('summary');details.className='underline-typography';details.open=underlineExpanded;details.ontoggle=()=>{if(details.isConnected)underlineExpanded=details.open;};summary.textContent='Underline details';details.append(summary);parent.append(details);
@@ -1154,7 +1152,7 @@
       verticalAlignmentTypography(sec,css,(property,value)=>change(verticalAlignmentMatchers[property],`[${property}:${value}]`),property=>save(replace(info.className,verticalAlignmentMatchers[property],'')),property=>tokens(info.className).map(base).some(t=>t&&verticalAlignmentMatchers[property](t)));
       wrapTypography(sec,css,value=>change(textWrapToken,`[text-wrap:${value}]`),()=>save(replace(info.className,textWrapToken,'')),tokens(info.className).map(base).some(t=>t&&textWrapToken(t)));
       verticalTrimTypography(sec,css,value=>change(textBoxToken,`[text-box:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,textBoxToken,'')),tokens(info.className).map(base).some(t=>t&&textBoxToken(t)));
-      truncationTypography(sec,css,value=>save(replace(info.className,truncationToken,'!line-clamp-'+(value===null?'none':value))),()=>save(replace(info.className,truncationToken,'')),tokens(info.className).map(base).some(t=>t&&truncationToken(t)));
+      truncationTypography(sec,el,typeActive,value=>save(root.RetouchReactSelection.changeTextTruncation(info.className,'',value,el)),tokens(info.className).map(base).some(t=>t&&truncationToken(t)));
       select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(textAlignToken,'text-'+v)).dataset.textDirection=css.direction;
       resetProperty('Reset text alignment',textAlignToken);
       const fontSlant=select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(fontStyleToken,v==='italic'?'italic':'not-italic'));fontSlant.disabled=el.style.getPropertyPriority('font-style')==='important';

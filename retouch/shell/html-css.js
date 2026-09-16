@@ -80,7 +80,7 @@
   I.verticalAlignmentTypography(typography,css,(property,value)=>save(property,value,width),property=>save(property,null,width),property=>Object.hasOwn(own,property));
   I.wrapTypography(typography,css,value=>save('text-wrap',value,width),()=>save('text-wrap',null,width),Object.hasOwn(own,'text-wrap'));
   I.verticalTrimTypography(typography,css,value=>save('text-box',value,width),()=>save('text-box',null,width),Object.hasOwn(own,'text-box'));
-  I.truncationTypography(typography,css,value=>save('line-clamp',value===null?'none':String(value),width),()=>save('line-clamp',null,width),Object.hasOwn(own,'line-clamp'));
+  I.truncationTypography(typography,el,()=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth,value=>save('line-clamp',value===null?null:String(value),width),Object.hasOwn(own,'line-clamp'));
   I.underlineTypography(typography,css,(property,value)=>save(property,value,width),property=>save(property,null,width),property=>Object.hasOwn(own,property),el);
   I.numericTypography(typography,css.fontVariantNumeric,value=>save('font-variant-numeric',value,width),()=>save('font-variant-numeric',null,width),Object.hasOwn(own,'font-variant-numeric'));
   const visible=document.createElement('input');visible.type='checkbox';visible.checked=(own.visibility??css.visibility)==='visible';visible.onchange=()=>save('visibility',visible.checked?'visible':'hidden',width);I.field(appearance,'Visible layer',visible);

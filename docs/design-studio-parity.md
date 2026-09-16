@@ -21670,3 +21670,27 @@ The clamp follows CSS legacy box behavior; nested layout containers, explicit
 heights, unusual writing modes and all competing cascade combinations remain
 unverified. Full Figma fidelity, arbitrary-site support and trusted Homebrew
 distribution remain incomplete. No desktop rebuild or push in this continuation.
+
+### Consistent single-layer truncation guards
+
+The single-layer truncation fixture reproduced a control remaining editable
+outside its selected screen range. Single-layer truncation now uses the shared
+control and validation path while retaining its existing labels and source
+scope behavior. Toggle, line-count and reset actions check range/connection at
+commit time; active edits also refuse important inline clamp, overflow, display
+and orientation conflicts. Disabled controls explain whether to switch screens
+or resolve an inline rule. React/Liquid use the same validated source-class
+writer as shared truncation.
+
+Validation: 1,724 unit tests passed. New single-layer HTML/React Chromium 145
+and Liquid WebKit 26 checks pass three/two-line geometry, retained text/width,
+fractional refusal, inactive toggle and line-count synthetic event refusal,
+responsive fallback, off/reset, exact undo and important inline overflow
+refusal. The existing HTML single truncation regression also passed preview,
+one/two/three-line geometry, reset, exact undo/redo and page-font checks.
+Evidence: /tmp/retouch-single-truncation-before.log (inactive-control failure),
+/tmp/retouch-single-truncation-{html,react,liquid,units}.log and
+/tmp/retouch-truncation-regression-html.log.
+
+Full Figma fidelity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete. No desktop rebuild or push in this continuation.

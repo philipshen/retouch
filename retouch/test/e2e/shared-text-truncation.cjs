@@ -1,22 +1,22 @@
 'use strict';
 const assert=require('node:assert/strict');
 module.exports=async({page,app,kind,read,wait,settled})=>{
- const nodes=app.locator('h1,p.other-font'),screen=page.getByLabel('Screen size',{exact:true}),states=[read()];
+ const single=!!process.env.RT_E2E_TRUNCATION_SINGLE,prefix=single?'':'Shared ',nodes=app.locator(single?'p.other-font':'h1,p.other-font'),screen=page.getByLabel('Screen size',{exact:true}),states=[read()];
  const measure=()=>nodes.evaluateAll(nodes=>nodes.map(el=>{const css=getComputedStyle(el);return {height:el.getBoundingClientRect().height,lineHeight:parseFloat(css.lineHeight),width:el.getBoundingClientRect().width,text:el.textContent,clamp:css.getPropertyValue('-webkit-line-clamp')};}));
  const show=control=>wait(()=>control.evaluate(el=>{window.RetouchInspectorUI.reveal(el);return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r(el.isConnected&&el.getClientRects().length>0))));}));
- const group=async()=>{await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Shift']});await settled();};
+ const group=async()=>{if(!single)await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click(single?{}:{modifiers:['Shift']});await settled();};
  const record=async()=>{await wait(()=>read()!==states.at(-1));await settled();states.push(read());};
- const baseline=await measure();assert.equal(baseline[0].height,48);assert.ok(baseline[1].height>72);
+ const baseline=await measure();if(single)assert.ok(baseline[0].height>72);else{assert.equal(baseline[0].height,48);assert.ok(baseline[1].height>72);}
  await screen.selectOption('768x1024');await settled();await page.getByLabel('Style screen scope').selectOption(kind==='html'?'min-[768px]:':'md:');await settled();await group();
- const toggle=page.getByLabel('Shared Truncate text',{exact:true}),maximum=page.getByLabel('Shared Max lines',{exact:true});await show(toggle);assert.equal(await toggle.evaluate(el=>el.indeterminate),true);assert.equal(await maximum.inputValue(),'');
+ const toggle=page.getByLabel(prefix+'Truncate text',{exact:true}),maximum=page.getByLabel(prefix+'Max lines',{exact:true});await show(toggle);assert.equal(await toggle.evaluate(el=>el.indeterminate),!single);assert.equal(await maximum.inputValue(),single?'3':'');
  const check=async lines=>{await wait(async()=>(await measure()).every(value=>value.clamp===String(lines)&&Math.abs(value.height-lines*value.lineHeight)<1));for(const [i,item]of(await measure()).entries()){assert.equal(item.text,baseline[i].text);assert.equal(item.width,baseline[i].width);}};
  await toggle.check();await record();await check(3);await show(maximum);await maximum.fill('2');await maximum.press('Enter');await record();await check(2);
  if(process.env.RT_E2E_TRUNCATION_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_TRUNCATION_SCREENSHOT,caret:'initial'});
  await show(maximum);await maximum.fill('1.5');await maximum.press('Enter');assert.equal(await maximum.evaluate(el=>el.validity.stepMismatch),true);assert.equal(read(),states.at(-1));await maximum.press('Escape');
- await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await screen.focus();await screen.selectOption('390x844');await settled();await screen.focus();await wait(()=>toggle.isDisabled());assert.deepEqual(await measure(),baseline);await toggle.evaluate(el=>{el.checked=false;el.dispatchEvent(new Event('change',{bubbles:true}));});assert.equal(read(),states.at(-1));await screen.selectOption('768x1024');await settled();await check(2);
+ await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await screen.focus();await screen.selectOption('390x844');await settled();await screen.focus();await wait(()=>toggle.isDisabled());assert.deepEqual(await measure(),baseline);await toggle.evaluate(el=>{el.checked=false;el.dispatchEvent(new Event('change',{bubbles:true}));});assert.equal(await maximum.isDisabled(),true);await maximum.evaluate(el=>{el.value='1';el.dispatchEvent(new Event('change',{bubbles:true}));});assert.equal(read(),states.at(-1));await screen.selectOption('768x1024');await settled();await check(2);
  await show(toggle);await toggle.uncheck();await record();assert.ok((await measure()).every(value=>value.height>72));
- const reset=page.getByRole('button',{name:'Reset shared text truncation',exact:true,includeHidden:true});await show(reset);await reset.click();await record();assert.deepEqual(await measure(),baseline);
+ const reset=page.getByRole('button',{name:single?'Reset text truncation':'Reset shared text truncation',exact:true,includeHidden:true});await show(reset);await reset.click();await record();assert.deepEqual(await measure(),baseline);
  for(let n=states.length-2;n>=0;n--){await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===states[n]);await settled();}assert.deepEqual(await measure(),baseline);
  await nodes.first().evaluate(el=>el.style.setProperty('overflow','visible','important'));await group();assert.equal(await toggle.isDisabled(),true);await toggle.evaluate(el=>{el.checked=true;el.dispatchEvent(new Event('change',{bubbles:true}));});assert.equal(read(),states[0]);
- console.log(kind+': PASS shared truncation mixed values, rendered line limits, full content, responsive scope, off/reset, exact undo and inline refusal');
+ console.log(kind+': PASS '+(single?'single':'shared')+' truncation initial values, rendered line limits, full content, responsive scope, off/reset, exact undo and inline refusal');
 };
