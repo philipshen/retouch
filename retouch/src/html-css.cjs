@@ -94,11 +94,11 @@ function plan(resolved,op){
 function clone(resolved,range){
  const chunk=new MagicString(resolved.source.slice(range.start,range.end)),styles=[];
  const elements=resolved.elements||html.collect(resolved.source,resolved.relPath).elements;
- const allocated=new Set(),scaleIdentities=new Set(elements.map(element=>attr(element.node,'data-rt-scale-member')).filter(Boolean));
+ const scaleCopies=new Map(),allocated=new Set(),scaleIdentities=new Set(elements.map(element=>attr(element.node,'data-rt-scale-member')).filter(Boolean));
  for(const element of elements){
   const scaleMarker=element.location.attrs?.['data-rt-scale-member'];
   if(scaleMarker&&scaleMarker.startOffset>=range.start&&scaleMarker.endOffset<=range.end){
-   let id,counter=0;do{id=html.contentHash(resolved.source+'|scale-copy|'+element.id+'|'+counter++).slice(0,10);}while(scaleIdentities.has(id));scaleIdentities.add(id);
+   let id,counter=0;do{id=html.contentHash(resolved.source+'|scale-copy|'+element.id+'|'+counter++).slice(0,10);}while(scaleIdentities.has(id));scaleIdentities.add(id);scaleCopies.set(attr(element.node,'data-rt-scale-member'),id);
    chunk.overwrite(scaleMarker.startOffset-range.start,scaleMarker.endOffset-range.start,`data-rt-scale-member="${id}"`);
   }
   const marker=element.location.attrs?.['data-rt-style'];
@@ -110,6 +110,18 @@ function clone(resolved,range){
   for(const block of state.blocks.sort((a,b)=>a.width-b.width))styles.push(`<style data-rt-css="${id}" data-rt-width="${block.width}" data-rt-values="${escape(JSON.stringify(block.values))}">${rule(id,block.width,block.values)}</style>`);
  }
  return {chunk:chunk.toString(),append(source){
+  if(scaleCopies.size){
+   const tree=parse5.parse(source,{sourceCodeLocationInfo:true}),out=new MagicString(source);
+   function copyMembership(node){
+    if(attr(node,'data-rt-scale-set')!==undefined){
+     if(node.tagName!=='script'||attr(node,'type')!=='application/json'||!node.sourceCodeLocation?.endTag)throw Error('Invalid released scale metadata.');
+     const validate=require('../runtime/group-scale-bootstrap.js').members,ids=validate((node.childNodes||[]).map(child=>child.value||'').join('')),copies=ids.flatMap(id=>scaleCopies.has(id)?[scaleCopies.get(id)]:[]);
+     if(copies.length){const value=JSON.stringify([...ids,...copies]);validate(value);out.overwrite(node.sourceCodeLocation.startTag.endOffset,node.sourceCodeLocation.endTag.startOffset,value);}
+    }
+    for(const child of node.childNodes||[])copyMembership(child);
+   }
+   copyMembership(tree);source=out.toString();
+  }
   if(!styles.length)return source;
   const tree=parse5.parse(source,{sourceCodeLocationInfo:true});let end=source.length;
   function walk(node){if(node.tagName==='head'&&node.sourceCodeLocation?.endTag)end=node.sourceCodeLocation.endTag.startOffset;for(const child of node.childNodes||[])walk(child);}

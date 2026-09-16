@@ -51,3 +51,11 @@ test('scaling refuses a new wrapper overlapping released scale members',()=>{
  const wrapped=resolve(released.replace('<main>','<main><div data-rt-frame data-rt-group style="display:contents">').replace('</main>','</div></main>'));
  const result=plan(wrapped,{fileHash:wrapped.hash,width:0,factor:2});assert.equal(result.ok,false);assert.match(result.reason,/Overlapping/);assert.equal(result.edits,undefined);
 });
+
+test('copies of released scale roots join the saved responsive set with fresh identities',()=>{
+ const r=resolve(source),scaled=plan(r,{fileHash:r.hash,width:0,factor:1.5}).edits[0].after,next=resolve(scaled);
+ const released=require('../src/html-frame-selection.cjs').plan(next,{type:'removeFrame',fileHash:next.hash}).edits[0].after;
+ const elements=html.collect(released,'index.html').elements,heading=elements.find(item=>item.tag==='h1'),text=elements.find(item=>item.tag==='p'),state={...next,source:released,elements,element:heading,hash:html.contentHash(released)};
+ const results=[html.planOp(state,{type:'duplicateElement',fileHash:state.hash}),html.planOp({...state,element:text},{type:'pasteElement',fileHash:state.hash,copiedHash:state.hash,copiedId:heading.id}),require('../src/html-structure-selection.cjs').plan(state,{type:'duplicateSelection',fileHash:state.hash,ids:[heading.id,text.id]})];
+ for(const result of results){assert.equal(result.ok,true,result.reason);const after=result.edits[0].after,ids=JSON.parse(after.match(/<script type="application\/json" data-rt-scale-set=[^>]+>([^<]+)<\/script>/)[1]),members=html.collect(after,'index.html').elements.flatMap(item=>item.node.attrs.filter(a=>a.name==='data-rt-scale-member').map(a=>a.value));assert.deepEqual(new Set(ids),new Set(members));assert.equal(ids.length,members.length);}
+});

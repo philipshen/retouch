@@ -25,6 +25,9 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   for(const width of [390,768,1100,1440,523]){await baseline.setViewportSize({width,height:900});await page.setViewportSize({width,height:900});await verify(width>=1000?2:1.5);await page.reload();await verify(width>=1000?2:1.5);}
   assert.deepEqual(await page.evaluate(()=>scaleErrors),[]);
   const duplicate=source=>{const relPath='index.html',elements=html.collect(source,relPath).elements,r={source,relPath,elements,element:elements.find(item=>item.tag==='h1'),file,hash:html.contentHash(source)},result=html.planOp(r,{type:'duplicateElement',fileHash:r.hash});assert.equal(result.ok,true,result.reason);return result.edits[0].after;};
+  baselineSource=duplicate(ungroup(original));fs.writeFileSync(file,duplicate(ungroup(saved)));await baseline.reload();await page.reload();
+  for(const width of [390,768,1100,1440,523]){await baseline.setViewportSize({width,height:900});await page.setViewportSize({width,height:900});await verify(width>=1000?2:1.5);await page.reload();await verify(width>=1000?2:1.5);}
+  assert.deepEqual(await page.evaluate(()=>scaleErrors),[]);
   baselineSource=duplicate(original);fs.writeFileSync(file,duplicate(saved));await baseline.reload();await page.reload();
   for(const width of [390,768,1100,1440,523]){await baseline.setViewportSize({width,height:900});await page.setViewportSize({width,height:900});await verify(width>=1000?2:1.5);}
   const identities=await page.locator('h1').evaluateAll(nodes=>nodes.map(el=>el.getAttribute('data-rt-scale-member')));assert.equal(new Set(identities).size,2);assert.equal(await page.locator('[data-rt]').count(),0);

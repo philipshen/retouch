@@ -22796,3 +22796,26 @@ and validation; copying a released member does not yet copy its set membership.
 Composed scaling, React/Liquid parity, runtime migration, CSP-restricted delivery,
 full Figma parity, and trusted notarized Homebrew distribution remain unfinished.
 No push or desktop rebuild in this continuation.
+
+### Copying released responsive scale roots (2026-09-16)
+
+The HTML clone path now adds copied released roots to their existing responsive
+scale set using fresh persistent IDs. Membership and copied markup are saved in
+one source edit. Sequential multi-selection clones preserve earlier additions.
+The regression failed before the change because the set omitted the copied ID.
+Source coverage exercises duplicate, sibling paste, and multi-layer duplication.
+Chromium and WebKit saved-page coverage duplicates a released heading through
+the source adapter, compares against an equally duplicated unscaled baseline at
+390/768/1100/1440/523px, reloads at every width, and checks runtime errors. Both
+pass. All 1,774 unit tests pass. Evidence:
+/tmp/retouch-released-copy-before.log,
+/tmp/retouch-released-copy-targeted.log,
+/tmp/retouch-released-copy-chromium.log,
+/tmp/retouch-released-copy-webkit.log,
+/tmp/retouch-released-copy-units.log.
+
+The copy participates in the shared set's responsive geometry. This does not
+establish independent per-layer scaling, arbitrary reparenting, or copying a
+nested descendant outside its owning scale root. Live editor copy selection and
+history were not newly browser-tested here. Those cases, renderer parity,
+composed scaling, and trusted desktop distribution remain unfinished. No push.
