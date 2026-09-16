@@ -21119,3 +21119,25 @@ This pass changes browser verification only. Source-relative units resolved
 by CSSOM, automatic underline metrics, full Figma parity, arbitrary-site
 support and trusted Homebrew distribution remain incomplete. No native
 rebuild or push.
+
+### Shared paragraph indentation
+
+React and Liquid shared typography now includes Paragraph indent with literal
+length/percentage input and reset. HTML's existing shared field now uses the
+same typography scope/inline guards. All three support mixed-value indentation
+drags through the shared length helper, preserving differences between layers
+and one source transaction per gesture. Negative values create hanging indents.
+
+React, Liquid and HTML Chromium fixtures passed 24px, -12px and 10% edits,
+narrow-screen fallback, dispatched-event refusal outside the selected scope,
+reset and exact undo. Mixed 3px/7px indents previewed and committed as 9px/13px;
+Escape restored exact inline attributes, and important inline indentation
+refused shared writes. All 1,706 unit tests passed, including scoped replacement,
+reset and invalid-value rejection.
+
+Evidence: `/tmp/retouch-shared-indent-react.log`,
+`/tmp/retouch-shared-indent-liquid.log`, `/tmp/retouch-shared-indent-html.log`,
+`/tmp/retouch-shared-indent-units.log`.
+Source-relative unit retention after CSSOM resolution, broader text flow and
+layout controls, full Figma parity, arbitrary-site coverage and trusted
+Homebrew distribution remain incomplete. No native rebuild or push.

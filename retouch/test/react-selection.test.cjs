@@ -364,3 +364,11 @@ test('shared decoration color preserves thickness style and line properties',()=
  assert.equal(change(source,'','text-decoration-color',null),'md:decoration-blue-500 underline decoration-2 decoration-wavy');
  assert.throws(()=>change(source,'','text-decoration-color','red; display:none'));
 });
+
+test('shared paragraph indentation preserves unrelated and responsive classes',()=>{
+ const source='indent-4 md:-indent-2 hover:indent-8 text-lg';
+ assert.equal(change(source,'md:','text-indent','-12px'),'indent-4 hover:indent-8 text-lg md:[text-indent:-12px]');
+ assert.equal(change(source,'md:','text-indent','10%'),'indent-4 hover:indent-8 text-lg md:[text-indent:10%]');
+ assert.equal(change(source,'md:','text-indent',null),'indent-4 hover:indent-8 text-lg');
+ assert.throws(()=>change(source,'','text-indent','auto'));assert.throws(()=>change(source,'','text-indent','12px; display:none'));
+});
