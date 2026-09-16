@@ -23605,3 +23605,33 @@ remain unfinished. No push.
 
 WebKit also passed the saved reordered-copy geometry and reload checks:
 /tmp/retouch-react-reorder-webkit.log. git diff --check passed.
+
+### Ungrouping saved responsive React content
+
+React ungrouping now replaces a plain contents wrapper with a client-managed
+sibling ownership record. The record retains responsive ranges, ordered transform
+snapshots and direct-root member identities; the shared runtime registers the
+record only after mounting and resolves its adjacent siblings. Source identities
+are remapped, released native children become the selection, and undo restores the
+exact original wrapper and registration. Recognized older generated helpers upgrade
+in the same transaction and are restored exactly by undo; modified helpers are
+refused. The prior helper is fingerprinted and archived as a regression fixture.
+
+The release planner currently requires a native div group/frame with className
+contents and no additional wrapper styling or behavior. Empty groups, wrappers
+with extra styles/events, generated children, component subtrees and arbitrary
+selector/inheritance effects need further work. Regrouping and structural editing
+of the released set are not enabled yet. The broader Figma/distribution goal remains
+unfinished.
+
+Chromium passed saved released-layout geometry at 390/768/1100/1440/523 pixels and
+a fresh reload, plus editor ungroup/undo/redo across main/Phone/Tablet/Desktop. A
+1100 px scoped editor run additionally passed independent released-child movement
+and scaling with exact undo/redo. All 1,805 unit tests passed, followed by a focused
+check that ordered member snapshots survive release unchanged. Evidence:
+/tmp/retouch-react-release-runtime.log, /tmp/retouch-react-release-editor.log,
+/tmp/retouch-react-release-scoped.log, /tmp/retouch-react-release-final-units.log,
+/tmp/retouch-react-release-snapshot-tests.log. No push.
+
+WebKit also passed editor ungroup/undo/redo and preserved geometry in all four
+previews: /tmp/retouch-react-release-webkit.log. git diff --check passed.

@@ -47,6 +47,7 @@ function describe(resolved){
 }
 const structural=new Set(['frameSelection','groupSelection','removeFrame','reparentElement','reparentSelection','duplicateSelection','deleteSelection','moveSelection','insertElement','duplicateElement','pasteElement','deleteElement','moveElement','setChildren','setTag','createComponent','detachComponent','insertComponent','swapComponent','moveComponent','reparentComponentSelection','deleteComponent','deleteComponentSelection','duplicateComponent','duplicateComponentSelection']);
 function guard(resolved,op){
+ if(op.type==='removeFrame'&&attribute(resolved.element,'data-rt-scale'))return null;
  if(!structural.has(op.type)||['duplicateElement','pasteElement','duplicateSelection','deleteElement','deleteSelection','moveElement','moveSelection'].includes(op.type))return null;
  const elements=resolved.elements||collectElements(resolved.source,resolved.relPath).elements,ids=new Set([resolved.element.id,...(Array.isArray(op.ids)?op.ids:[]),op.copiedId,op.parentId,op.targetId,op.destinationId]),selected=elements.filter(e=>ids.has(e.id));
  const owners=elements.filter(e=>attribute(e,'data-rt-scale'));
@@ -55,7 +56,7 @@ function guard(resolved,op){
 }
 function anchors(ast,resolved){
  if(!ast.program.body.some(n=>n.type==='ImportDeclaration'&&n.source.value===moduleName))return new Set();
- const helper=path.join(path.dirname(resolved.file),'.retouch-group-scale.jsx');if(!fs.existsSync(helper)||fs.readFileSync(helper,'utf8')!==runtime.component())return new Set();
+ const helper=path.join(path.dirname(resolved.file),'.retouch-group-scale.jsx');if(!fs.existsSync(helper)||!runtime.recognized(fs.readFileSync(helper,'utf8')))return new Set();
  const result=new Set(),traverse=require('@babel/traverse').default;
  traverse(ast,{JSXElement(p){const opening=p.node.openingElement,name=opening.name;if(name.type!=='JSXIdentifier'||!opening.selfClosing||opening.attributes.length)return;const binding=p.scope.getBinding(name.name),imported=binding?.path;if(imported?.node.type!=='ImportDefaultSpecifier'||imported.parent.source?.value!==moduleName)return;const parent=p.parentPath.node;if(parent.type==='JSXElement'&&parent.openingElement.attributes.some(a=>a.name?.name==='data-rt-scale'))result.add(p.node.start);}});
  return result;

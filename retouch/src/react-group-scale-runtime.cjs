@@ -16,10 +16,11 @@ function install(host){
  control.register=node=>{registrations.set(node,(registrations.get(node)||0)+1);control.refresh();let disposed=false;return ()=>{if(disposed)return;disposed=true;const count=registrations.get(node)||0;if(count<=1)registrations.delete(node);else registrations.set(node,count-1);control.refresh();};};
  document[key]=control;return control;
 }
-export default function RetouchScaleRuntime({warm=false}){
+export default function RetouchScaleRuntime({warm=false,released=null}){
  const anchor=useRef(null);
- useLayoutEffect(()=>{const node=anchor.current,group=node?.parentElement;const release=group?.hasAttribute('data-rt-group')?install(group.ownerDocument.defaultView).register(group):null;node?.removeAttribute('data-rt-react-scale-pending');return ()=>{node?.setAttribute('data-rt-react-scale-pending','');release?.();};},[warm]);
- return warm?null:<script ref={anchor} type="application/json" data-rt-react-scale-anchor="" data-rt-react-scale-pending="" />;
+ useLayoutEffect(()=>{const node=anchor.current,group=node?.parentElement;const owner=released?node:group?.hasAttribute('data-rt-group')?group:null,release=owner?install(owner.ownerDocument.defaultView).register(owner):null;node?.removeAttribute('data-rt-react-scale-pending');return ()=>{node?.setAttribute('data-rt-react-scale-pending','');release?.();};},[warm,released?.id]);
+ return warm?null:<script ref={anchor} type="application/json" data-rt-react-scale-anchor="" data-rt-react-scale-pending="" data-rt-scale-set={released?.id} data-rt-scale-scope={released?"siblings":undefined} data-rt-scale={released?.metadata}>{released?JSON.stringify(released.members):null}</script>;
 }
 `;}
-module.exports={component};
+function recognized(source){return source===component()||require('../runtime/react-group-scale-legacy.json').some(entry=>entry.sha256===require('node:crypto').createHash('sha256').update(source).digest('hex'));}
+module.exports={component,recognized};

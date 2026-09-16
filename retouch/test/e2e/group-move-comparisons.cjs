@@ -41,7 +41,7 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
   assert.equal(await page.getByLabel('Group X (px)',{exact:true}).isDisabled(),false);assert.equal(await page.getByRole('button',{name:'Move group on canvas',exact:true}).isDisabled(),false);assert.equal(read(),moved);
 
  }
- if(scaling&&['html','liquid'].includes(kind)&&process.env.RT_E2E_SCALED_UNGROUP){
+ if(scaling&&['html','liquid','react'].includes(kind)&&process.env.RT_E2E_SCALED_UNGROUP){
   const beforeUngroup=read(),expected=[];for(const frame of frames)expected.push(await measure(frame));
   const check=async grouped=>{for(let f=0;f<frames.length;f++){await wait(async()=>await frames[f].locator('[data-rt-group]').count()===(grouped?1:0));await wait(async()=>{const boxes=await measure(frames[f]);return boxes.length===expected[f].length&&boxes.every((r,i)=>r.every((n,j)=>Math.abs(n-expected[f][i][j])<.1));});}};
   await page.getByRole('treeitem',{name:'div · Group',exact:true}).click({button:'right'});await page.getByRole('menu',{name:'Canvas actions',exact:true}).locator('[data-action-id="layer-removeFrame"]').click();await wait(()=>read()!==beforeUngroup);await settled();const released=read();await check(false);assert.equal(await page.getByRole('treeitem',{selected:true}).count(),2);

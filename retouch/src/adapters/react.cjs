@@ -35,11 +35,13 @@ module.exports = {
     const svgDeletion=svgDelete.describe(resolved),svgMovement=svgMove.describe(resolved),svgDuplication=svgDuplicate.describe(resolved);
     const base={...structure.describe(resolved,'react',{scaleChildren:true}),...require('../native-frame-selection.cjs').describe(resolved,'react'),...require('../native-insert.cjs').describe(resolved,'react'),...svgMovement};
     for(const [flag,type]of Object.entries({canReparent:'reparentElement',canFrame:'frameSelection',canRemoveFrame:'removeFrame',canDelete:'deleteElement',canMoveBefore:'moveElement',canMoveAfter:'moveElement',canMoveFirst:'moveElement',canMoveLast:'moveElement'}))if(require('../jsx-group-scale.cjs').guard(resolved,{type}))base[flag]=false;
+    if(require('../jsx-group-release.cjs').applies(resolved))base.canRemoveFrame=require('../jsx-group-release.cjs').plan(resolved,{fileHash:resolved.hash}).ok;
     return {...require('../jsx-group-scale.cjs').describe(resolved),svgBooleanGroup:require('../svg-boolean-group.cjs').describe(resolved,'react'),svgBooleanOwner:require('../svg-boolean-group.cjs').owner(resolved,'react'),svgMask:require('../jsx-svg-mask.cjs').describe(resolved),svgBooleanReplacement:require('../svg-combine-selection.cjs').describe(resolved,'react'),componentMovement:resolved.element.kind==='instance'?require('../move-component.cjs').describe(resolved):null,...describeElement(resolved),...require('../jsx-layer-name.cjs').describe(resolved),...require('../jsx-text-styles.cjs').describe(resolved),...require('../jsx-color-styles.cjs').describe(resolved),...require('../jsx-effect-styles.cjs').describe(resolved),...require('../jsx-variable-bindings.cjs').describe(resolved),classSelection:resolved.element.kind==='host',canCreateComponent:resolved.element.kind==='host',canInsertComponent:require('../insert-component.cjs').canContain(resolved),svgDeletion,svgMovement,svgDuplication,context:resolved.context||null,
       structure:svgDeletion?{...base,canDelete:true,canDuplicate:!!svgDuplication||base.canDuplicate,canCopy:base.canDuplicate,canPaste:base.canPaste,parentId:svgDeletion.parentId,reason:base.reason?'SVG structural actions depend on the selected source subtree.':null}:base};
   },
   applyOp: (resolved,op) => {
     const scaled=require('../jsx-group-scale.cjs').guard(resolved,op);if(scaled)return scaled;
+    if(op.type==='removeFrame'&&require('../jsx-group-release.cjs').applies(resolved))return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../jsx-group-release.cjs').plan(resolved,op));
     if(['frameSelection','groupSelection','removeFrame'].includes(op.type))return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../native-frame-selection.cjs').plan(resolved,op,'react'));
     if(['reparentElement','reparentSelection'].includes(op.type))return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../native-reparent.cjs').plan(resolved,op,'react'));
     if(['duplicateSelection','deleteSelection','moveSelection'].includes(op.type))return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../native-structure-selection.cjs').plan(resolved,op,'react'));
@@ -60,6 +62,7 @@ module.exports = {
   },
   planOp: (resolved,op) => {
     const scaled=require('../jsx-group-scale.cjs').guard(resolved,op);if(scaled)return scaled;
+    if(op.type==='removeFrame'&&require('../jsx-group-release.cjs').applies(resolved))return require('../jsx-group-release.cjs').plan(resolved,op);
     if(['frameSelection','groupSelection','removeFrame'].includes(op.type))return require('../native-frame-selection.cjs').plan(resolved,op,'react');
     if(['reparentElement','reparentSelection'].includes(op.type))return require('../native-reparent.cjs').plan(resolved,op,'react');
     if(['duplicateSelection','deleteSelection','moveSelection'].includes(op.type))return require('../native-structure-selection.cjs').plan(resolved,op,'react');
