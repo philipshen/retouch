@@ -27,7 +27,7 @@
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       if (n.__rtCaretPlaceholder) continue;
-      if(snapshot&&n.__rtSourceCopy&&!n.__rtReplaceRangeStyle){var copied={t:'copy',id:n.__rtSourceCopy,children:serializeChildren(n,snapshot)};if(n.tagName==='A'&&Object.prototype.hasOwnProperty.call(n,'__rtLinkHref'))copied.href=n.__rtLinkHref;if(n.tagName==='LI'&&n.__rtListMarker)copied.marker=n.__rtListMarker;if(n.__rtParagraphInline)copied.paragraph='inline';else if(Object.prototype.hasOwnProperty.call(n,'__rtParagraphSpacing'))copied.spacing=n.__rtParagraphSpacing;append(copied,block(n));continue;}
+      if(snapshot&&n.__rtSourceCopy&&!n.__rtReplaceRangeStyle){var copied={t:'copy',id:n.__rtSourceCopy,children:serializeChildren(n,snapshot)};if(n.__rtBlockTag&&n.__rtBlockTag!==snapshot.get(n.__rtSourceCopy)?.tag)copied.tag=n.__rtBlockTag;if(n.tagName==='A'&&Object.prototype.hasOwnProperty.call(n,'__rtLinkHref'))copied.href=n.__rtLinkHref;if(n.tagName==='LI'&&n.__rtListMarker)copied.marker=n.__rtListMarker;if(n.__rtParagraphInline)copied.paragraph='inline';else if(Object.prototype.hasOwnProperty.call(n,'__rtParagraphSpacing'))copied.spacing=n.__rtParagraphSpacing;append(copied,block(n));continue;}
       if (n.__rtKeep) { append({ t: 'keep', id: n.__rtKeep },block(n)); continue; }
       if (n.nodeType === 3) {
         if (n.textContent) append({ t: 'text', value: n.textContent });
@@ -77,8 +77,8 @@
         append({ t: 'break' });
         continue;
       }
-      if(/^(UL|OL|LI)$/.test(n.tagName)||n.tagName==='P'&&n.__rtBlockTag==='p'){
-        var list={t:'block',tag:n.tagName.toLowerCase(),children:serializeChildren(n,snapshot)};if(['P','LI'].includes(n.tagName)&&n.style?.marginBlockStart==='0px'&&/^\d+(?:\.\d+)?(?:e-\d+)?px$/.test(n.style.marginBlockEnd))list.spacing=parseFloat(n.style.marginBlockEnd);
+      if(/^(UL|OL|LI)$/.test(n.tagName)||['P','DIV'].includes(n.tagName)&&n.__rtBlockTag===n.tagName.toLowerCase()){
+        var list={t:'block',tag:n.tagName.toLowerCase(),children:serializeChildren(n,snapshot)};if(['P','DIV','LI'].includes(n.tagName)&&n.style?.marginBlockStart==='0px'&&/^\d+(?:\.\d+)?(?:e-\d+)?px$/.test(n.style.marginBlockEnd))list.spacing=parseFloat(n.style.marginBlockEnd);
         if(/^(UL|OL)$/.test(n.tagName)&&n.style&&['disc','decimal','lower-alpha','lower-roman'].includes(n.style.listStyleType))list.marker=n.style.listStyleType;
         if(n.tagName==='LI'&&n.style&&['none','inherit'].includes(n.style.listStyleType))list.marker=n.style.listStyleType;
         if(/^(UL|OL)$/.test(n.tagName)&&n.getAttribute('data-retouch-list-spacing')!==null)list.listSpacing=Number(n.getAttribute('data-retouch-list-spacing'));

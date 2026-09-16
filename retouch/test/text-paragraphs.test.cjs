@@ -118,3 +118,15 @@ for(const kind of ['react','html','liquid'])test(kind+' kept list item spacing l
   const saved=fs.readFileSync(file,'utf8');assert.ok(saved.includes('<ul><li>Nested</li></ul>'));assert.ok(saved.includes('<a href="/kept">Last</a>'));assert.equal((saved.match(kind==='react'?/marginBlockEnd:/g:/margin-block-end:/g)||[]).length,2);assert.ok(saved.includes(kind==='react'?'marginBlockEnd:"18px"':'margin-block-end: 18px;'));
  }finally{cleanup(root);}
 });
+
+for(const kind of ['react','html','liquid'])test(kind+' unsaved split list items can become spaced paragraphs without duplicating identity',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),name=kind==='react'?'Text.tsx':kind==='html'?'index.html':'text.liquid',attr=kind==='react'?'className':'class',inner='<ol><li id="original" '+attr+'="copy" title="Keep">One</li></ol>',original=(kind==='react'?'export const Text = () => ':'')+'<div>'+inner+'</div>'+(kind==='react'?';':'');
+ const root=makeApp({[name]:original}),file=path.join(root,name);
+ try{
+  const index=new Index(root,adapter);index.scanAll();const elements=kind==='react'?id.collectElements(original,name).elements:adapter.collect(original,name).elements,tag=e=>kind==='react'?e.node.openingElement.name.name:e.tag,resolved=index.resolve(elements.find(e=>tag(e)==='div').id),tree=kind==='html'?source.describe(inner,resolved.element.id).descriptor.children:null,list=tree?tree[0]:elements.find(e=>tag(e)==='ol'),item=tree?list.children[0]:elements.find(e=>tag(e)==='li');
+  const result=(kind==='react'?writer:adapter).applyOp(resolved,{type:'setChildren',children:[{t:'keep',id:list.id},{t:'copy',id:item.id,tag:'div',spacing:7.5,children:[text('Two')]}]});assert.equal(result.ok,true,JSON.stringify(result));const saved=fs.readFileSync(file,'utf8');assert.ok(saved.includes(inner));assert.equal((saved.match(/id="original"/g)||[]).length,1);assert.ok(saved.includes('<div '+attr+'="copy" title="Keep"'));assert.ok(saved.includes('>Two</div>'));assert.ok(saved.includes(kind==='react'?'marginBlockEnd:"7.5px"':'margin-block-end: 7.5px;'));
+ }finally{cleanup(root);}
+});
+test('new unlisted paragraph blocks preserve boundaries and reject inline placement',()=>{
+ const tree=[{t:'block',tag:'div',children:[text('First')]},{t:'block',tag:'div',children:[text('Second')]}];assert.equal(source.rewrite('Before','id',tree,{parentTag:'div'}),'<div>First</div><div>Second</div>');assert.throws(()=>source.rewrite('Before','id',tree,{parentTag:'p'}),/cannot contain/);
+});

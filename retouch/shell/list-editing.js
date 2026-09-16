@@ -1,7 +1,7 @@
 (function(root){
  const containers=new Set(['DIV','SECTION','ARTICLE','ASIDE','NAV','MAIN','HEADER','FOOTER','BLOCKQUOTE','LI','TD','TH','FORM','FIELDSET','FIGURE','FIGCAPTION','DETAILS','DIALOG','BODY']);
  function supported(el){return !!el&&containers.has(el.tagName);}
- function state(el){const lists=[...el.querySelectorAll('ul,ol')];if(!lists.length)return 'none';return lists.every(node=>node.tagName===lists[0].tagName)?lists[0].tagName.toLowerCase():'mixed';}
+ function state(el){const context=wholeTextSelected(el)?null:listContext(el);if(context)return context.list.tagName.toLowerCase();const selection=el?.ownerDocument.getSelection();if(selection?.isCollapsed)return 'none';const lists=[...el.querySelectorAll('ul,ol')];if(!lists.length)return 'none';return lists.every(node=>node.tagName===lists[0].tagName)?lists[0].tagName.toLowerCase():'mixed';}
  function rename(node,tag){
   if(node.tagName.toLowerCase()===tag)return node;
   const next=node.ownerDocument.createElement(tag);
@@ -59,8 +59,8 @@
   list.append(item);placeholder(block.matches('span[data-retouch-paragraph]')?block:item);syncMarkers(el);caret(item);return true;
  }
  function listDepth(list,el){let depth=0;for(let node=list;node&&node!==el;node=node.parentElement)if(/^(UL|OL)$/.test(node.tagName))depth++;return depth;}
- function syncMarkers(el){
-  for(const list of el.querySelectorAll('ul,ol')){
+ function syncMarkers(el,lists=el.querySelectorAll('ul,ol')){
+  for(const list of lists){
    const marker=list.tagName==='UL'?'disc':['decimal','lower-alpha','lower-roman'][(listDepth(list,el)-1)%3];
    list.style.setProperty('list-style-type',marker,list.style.getPropertyPriority('list-style-type'));
    list.__rtListMarker=marker;
@@ -268,8 +268,42 @@
   }
   splitRange(items,range);if(spacing!==null)setListSpacing(el,spacing);syncMarkers(el);return true;
  }
+ function wholeTextSelected(el){const range=el?.ownerDocument.getSelection();if(!range?.rangeCount||range.isCollapsed)return false;const offsets=selectionOffsets(el);return !!offsets&&offsets[0]===0&&offsets[1]===el.textContent.length;}
+ function canApply(el){
+  if(!supported(el))return false;
+  const context=listContext(el);if(context)return !context.list.hasAttribute('reversed')&&![...context.list.children].some(item=>item.hasAttribute('value'));
+  return wholeTextSelected(el)||!el.querySelector('ul,ol')&&el.querySelectorAll(':scope > p,:scope > div,:scope > span[data-retouch-paragraph]').length<2;
+ }
+ function applyListSelection(el,kind,context){
+  const {list,items}=context,offsets=selectionOffsets(el),siblings=[...list.children],from=siblings.indexOf(items[0]),to=siblings.indexOf(items.at(-1)),start=Number(startNumber(list));
+  if(kind===list.tagName.toLowerCase()){
+   let changed=false;for(const item of items)if(item.style.listStyleType&&item.style.listStyleType!=='inherit'){item.style.setProperty('list-style-type','inherit',item.style.getPropertyPriority('list-style-type'));item.__rtListMarker='inherit';changed=true;}return changed;
+  }
+  if(list.tagName==='OL'&&(!Number.isInteger(start)||start<1||start+siblings.length-1>1000000))return false;
+  const spacing=authoredListSpacing(list),before=siblings.slice(0,from),after=siblings.slice(to+1);
+  let tail=null;
+  if(after.length&&before.length){tail=copiedList(list);tail.append(...after);if(list.tagName==='OL')tail.setAttribute('start',String(start+to+1));list.after(tail);}
+  let result;
+  if(kind==='none'){
+   const fragment=el.ownerDocument.createDocumentFragment();for(const item of items)fragment.append(rename(item,'div'));
+   if(before.length)list.after(fragment);else list.before(fragment);
+  }else if(!before.length&&!after.length){result=rename(list,kind);}
+  else{
+   result=copiedList(list);if(result.tagName.toLowerCase()!==kind)result=renameDetachedList(result,kind);
+   result.append(...items);if(before.length)list.after(result);else list.before(result);
+  }
+  if(!before.length&&after.length&&list.tagName==='OL'){list.setAttribute('start',String(start+to+1));list.__rtListStart=start+to+1;}
+  if(!list.children.length)list.remove();
+  if(result)for(const item of items)if(item.style.listStyleType){item.style.setProperty('list-style-type','inherit',item.style.getPropertyPriority('list-style-type'));item.__rtListMarker='inherit';}
+  // Preserve authored item gaps through the split; the list's stored preference
+  // remains available for later item insertion and explicit spacing changes.
+  if(result&&spacing!==null)result.setAttribute('data-retouch-list-spacing',String(spacing));
+  syncMarkers(el,result?[result]:[]);restoreSelection(el,offsets);return true;
+ }
+ function renameDetachedList(list,kind){const result=list.ownerDocument.createElement(kind);for(const attr of list.attributes)result.setAttribute(attr.name,attr.value);if(list.__rtListTemplate)result.__rtListTemplate=list.__rtListTemplate;return result;}
  function apply(el,kind){
-  if(!supported(el)||!['none','ul','ol'].includes(kind))return false;
+  if(!canApply(el)||!['none','ul','ol'].includes(kind))return false;
+  const context=wholeTextSelected(el)?null:listContext(el);if(context)return applyListSelection(el,kind,context);
   const offsets=selectionOffsets(el),d=el.ownerDocument;
   if(kind==='none'){
    for(const list of [...el.querySelectorAll('ul,ol')].reverse())rename(list,'div');
@@ -299,5 +333,5 @@
   if(kind!=='none')for(const item of el.querySelectorAll('li'))if(item.style.listStyleType){item.style.setProperty('list-style-type','inherit',item.style.getPropertyPriority('list-style-type'));item.__rtListMarker='inherit';}
   syncMarkers(el);restoreSelection(el,offsets);return true;
  }
- const api={authoredListSpacing,spacingListItems,setListSpacing,spacingParagraphs,setParagraphSpacing,startNumber,setStart,supported,state,apply,prefixContext,prefix,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
+ const api={authoredListSpacing,spacingListItems,setListSpacing,spacingParagraphs,setParagraphSpacing,startNumber,setStart,supported,state,canApply,apply,prefixContext,prefix,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
 })(typeof window!=='undefined'?window:null);

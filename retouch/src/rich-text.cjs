@@ -33,9 +33,10 @@ function validateChildrenTree(children, depth, inLink=false, blockDepth=0, keptT
     } else if (c.t === 'copy') {
       if(Object.hasOwn(c,'spacing')&&(!keptTag||!['p','div','span','li'].includes(c.tag||keptTag(c.id))||Object.hasOwn(c,'paragraph')||!require('./text-paragraphs.cjs').validSpacing(c.spacing)))return 'Invalid paragraph spacing.';
 
-      if(!/^[0-9a-f]{10}$/.test(c.id||'')||!keptTag||!require('./rich-text-copy.cjs').tags.has(keptTag(c.id))||Object.keys(c).some(key=>!['t','id','children','href','marker','paragraph','spacing'].includes(key)))return 'Invalid split text source.';
+      if(!/^[0-9a-f]{10}$/.test(c.id||'')||!keptTag||!require('./rich-text-copy.cjs').tags.has(keptTag(c.id))||Object.keys(c).some(key=>!['t','id','children','href','marker','paragraph','spacing','tag'].includes(key)))return 'Invalid split text source.';
+      if(Object.hasOwn(c,'tag')&&(!['li','p','div'].includes(keptTag(c.id))||!['li','p','div'].includes(c.tag)||Object.hasOwn(c,'href')))return 'Invalid split paragraph/list tag.';
       if(Object.hasOwn(c,'paragraph')&&(c.paragraph!=='inline'||!keptTag||!['span','li','p','div'].includes(keptTag(c.id))||Object.hasOwn(c,'tag')||Object.hasOwn(c,'marker')))return 'Invalid paragraph join.';
-      if(Object.hasOwn(c,'marker')&&!require('./list-markers.cjs').valid(keptTag(c.id),c.marker))return 'Invalid split list marker.';
+      if(Object.hasOwn(c,'marker')&&!require('./list-markers.cjs').valid(c.tag||keptTag(c.id),c.marker))return 'Invalid split list marker.';
       if(Object.hasOwn(c,'href')&&(keptTag(c.id)!=='a'||c.href!==null&&!links.valid(c.href)))return 'Invalid split link URL.';
       if(inLink&&keptTag(c.id)==='a')return 'Text links cannot be nested.';
       const nestedLink=items=>Array.isArray(items)&&items.some(item=>item.t==='link'||['keep','copy'].includes(item.t)&&keptTag(item.id)==='a'||nestedLink(item.children));

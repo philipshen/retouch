@@ -1299,6 +1299,7 @@ function inlineListShortcut(event){
 }
 function applyTextList(kind){
   const current=editing;if(!current||!RetouchListEditing.supported(current.el))return false;
+  if(!RetouchListEditing.canApply(current.el)){toast('Select items in one list or select all text to change list style.','err');return false;}
   const result=inlineFormattingTransaction(()=>RetouchListEditing.apply(current.el,kind));
   current.el.ownerDocument.dispatchEvent(new Event('selectionchange'));return result;
 }
@@ -1307,7 +1308,7 @@ function showInlineFormatToolbar(){
   inlineFormatCleanup();if(!editing||editing.info.canSetChildren===false)return;
   const d=doc(),bar=document.createElement('div');bar.className='inline-format-toolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Selected text formatting');
   for(const [tag,label,text]of [['strong','Bold selected text','B'],['em','Italic selected text','I'],['u','Underline selected text','U'],['s','Strikethrough selected text','S'],['sup','Superscript selected text','x²'],['sub','Subscript selected text','x₂']]){const button=document.createElement('button');button.type='button';button.textContent=text;button.dataset.formatTag=tag;if(tag==='u'||tag==='s')button.style.textDecoration=tag==='u'?'underline':'line-through';button.setAttribute('aria-label',label);button.title=label;button.onpointerdown=event=>event.preventDefault();button.onclick=()=>{toggleWrap(tag);update();};bar.append(button);}
-  const listStyle=document.createElement('select');listStyle.setAttribute('aria-label','Text layer list style');listStyle.title='Applies to all paragraphs in this text layer.';
+  const listStyle=document.createElement('select');listStyle.setAttribute('aria-label','Text layer list style');listStyle.title='Applies to selected list items. Select all text to change the whole text layer.';
   for(const [value,label]of [['none','No list'],['ul','Bulleted list'],['ol','Numbered list'],['mixed','Mixed']]){const option=document.createElement('option');option.value=value;option.textContent=label;option.disabled=value==='mixed';listStyle.append(option);}
   listStyle.onchange=()=>{if(savedRange&&editing){const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());applyTextList(listStyle.value);update();}};
   const paragraphSpacing=document.createElement('input');paragraphSpacing.type='number';paragraphSpacing.min='0';paragraphSpacing.max='10000';paragraphSpacing.step='any';paragraphSpacing.setAttribute('aria-label','Paragraph spacing (px)');paragraphSpacing.title='Space between paragraphs in this text layer. Soft line breaks use line height.';
@@ -1416,7 +1417,7 @@ function showInlineFormatToolbar(){
     const selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null,valid=editing&&range&&editing.el.contains(range.startContainer)&&editing.el.contains(range.endContainer)&&!(range.collapsed&&(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer).closest('[contenteditable="false"]'));
     for(const control of bar.querySelectorAll('button,input,select'))if(!control.dataset.rangeAlwaysEnabled)control.disabled=!valid;
     for(const button of indentButtons)button.disabled=!valid||!RetouchListEditing.canIndent(editing?.el,button.retouchOutdent);
-    listStyle.disabled=!valid||!RetouchListEditing.supported(editing?.el);listStyle.value=editing?RetouchListEditing.state(editing.el):'none';
+    listStyle.disabled=!valid||!RetouchListEditing.canApply(editing?.el);listStyle.value=editing?RetouchListEditing.state(editing.el):'none';
     const paragraphs=valid?RetouchListEditing.spacingParagraphs(editing.el):[];paragraphSpacing.disabled=!paragraphs.length;
     if(document.activeElement!==paragraphSpacing){const values=paragraphs.slice(0,-1).map(node=>d.defaultView.getComputedStyle(node).marginBlockEnd),same=values.length&&values.every(value=>value===values[0]);paragraphSpacing.value=same?parseFloat(values[0]):'';paragraphSpacing.placeholder=values.length?'Mixed':'—';paragraphSpacing.title=paragraphs.length?'Space between paragraphs in this text layer. Soft line breaks use line height.':'Select a simple text flow with at least two paragraphs. Enter creates a paragraph.';}
     const spacedItems=valid?RetouchListEditing.spacingListItems(editing.el):[];listSpacing.disabled=!spacedItems.length;

@@ -21997,3 +21997,45 @@ items outside Retouch are not automatically normalized. Responsive/shared
 spacing, all mixed/cascade layouts and dynamic-source bindings remain incomplete.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain unfinished. No desktop rebuild or push here.
+
+## List formatting for selected items (2026-09-16)
+
+The preceding turn was progress: 429a07f0 persisted single-item list spacing.
+This continuation follows Figma's individual-text-selection list behavior:
+https://help.figma.com/hc/en-us/articles/360040449773-Create-bulleted-and-numbered-lists
+
+Changing list style inside an existing list now targets the selected items.
+Partially changing a list splits the source into the required list/paragraph
+segments while retaining other items and their ordered counters. A selection
+ending at the next item's start excludes that item. No list converts selected
+items to ordinary block text. The inspector reads the active list's style;
+selecting the entire text layer retains the whole-layer operation. Unsupported
+partial selections across separate lists/paragraphs are disabled instead of
+falling back to rewriting the whole layer. Reversed and per-item counters remain
+outside selected-list conversion support.
+
+Source serialization now represents newly unlisted div paragraphs and changes
+to split/copied paragraph tags. The copy writer also applies its validated
+spacing option, previously omitted, and retains source attributes while avoiding
+duplicate identities. List-style synchronization touches the changed list rather
+than rewriting markers on unrelated lists.
+
+Validation: all 1,751 unit tests passed. Added source tests cover unsaved copied
+items becoming spaced paragraphs in all three adapters, retained attributes,
+no duplicate ids, and valid block placement. HTML/React Chromium 145 and Liquid
+WebKit 26 browser flows pass selection-scoped conversion/removal, preserved
+counters, local history, save/reopen, unsaved split-item removal, whole-layer
+selection, and exact source undo/redo. HTML list controls and persistent spacing
+regressions also pass. Final HTML verification includes explicit whole-text
+selection routing; final unit/targeted runs include effective copied-tag marker
+validation. Evidence: /tmp/retouch-list-selection-{html,react,liquid,units,
+targeted,controls-regression,spacing-regression}.log. The inspected screenshot
+/tmp/retouch-list-selection.png shows 7, a bullet, 9 and 10 in the mixed list.
+The two-digit outside marker exposes the existing fixed list-padding/clipping
+limit at the left canvas edge; marker/hanging-list fidelity remains unfinished.
+
+Remaining work includes arbitrary mixed-range list creation, reversed/per-item
+counters, adjacent-list merging, all authored margin/selector effects, and
+universal framework/binding support. This does not prove full Figma parity,
+arbitrary-site support or trusted Homebrew distribution. No desktop rebuild or
+push here.

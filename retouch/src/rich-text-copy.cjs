@@ -22,6 +22,8 @@ function markup(raw,content,jsx=false,options={}){
  }
  if(Object.hasOwn(options,'href')){if(tag!=='a'||options.href!==null&&!require('../shell/link-values.js').valid(options.href))throw Error('Invalid split link URL.');if(options.href!==null)copied.push('href='+require('./rich-text.cjs').hrefMarkup(options.href,jsx));}
  let result='<'+tag+(copied.length?' '+copied.join(' '):'')+'>'+content+'</'+tag+'>';
+ if(Object.hasOwn(options,'tag')){if(!['li','p','div'].includes(tag)||!['li','p','div'].includes(options.tag))throw Error('Invalid split paragraph/list tag.');result=require('./rich-text-blocks.cjs').patchTag(result,tag,options.tag);tag=options.tag;}
+ if(Object.hasOwn(options,'spacing'))result=require('./text-paragraphs.cjs').patchSpacing(result,options.spacing,jsx);
  if(options.paragraph==='inline')result=require('./text-paragraphs.cjs').inline(result,jsx);
  return Object.hasOwn(options,'marker')?require('./list-markers.cjs').patch(result,tag,options.marker,jsx):result;
 }

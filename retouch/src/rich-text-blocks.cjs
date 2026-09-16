@@ -1,14 +1,14 @@
 'use strict';
 // Semantic text blocks. Source writers validate placement against the actual
 // parent and preserved descendants before producing any edit.
-const tags=new Set(['p','ul','ol','li']);
+const tags=new Set(['p','div','ul','ol','li']);
 const flow=new Set(['div','section','article','aside','nav','main','header','footer','blockquote','li','td','th','form','fieldset','figure','figcaption','details','dialog','body']);
 const phrasing=new Set(['span','a','strong','em','b','i','u','s','sup','sub','br','code','mark','small','abbr','time','img','input','label','button']);
 const contains=items=>Array.isArray(items)&&items.some(item=>item&&(item.t==='paragraph'||item.t==='block'||item.t==='copy'||item.t==='keep'&&(item.tag||item.paragraph||Object.hasOwn(item,'start')||Object.hasOwn(item,'spacing')||Object.hasOwn(item,'listSpacing'))||contains(item.children)));
 function validateNode(node){
  if(!tags.has(node.tag)||Object.keys(node).some(key=>!['t','tag','children','start','template','marker','spacing','listSpacing'].includes(key)))return 'Unsupported paragraph or list node.';
  if(Object.hasOwn(node,'listSpacing')&&(!['ul','ol'].includes(node.tag)||!require('./list-spacing.cjs').valid(node.listSpacing)))return 'Invalid list spacing preference.';
- if(Object.hasOwn(node,'spacing')&&(!['p','li'].includes(node.tag)||!require('./text-paragraphs.cjs').validSpacing(node.spacing)))return 'Invalid paragraph spacing.';
+ if(Object.hasOwn(node,'spacing')&&(!['p','div','li'].includes(node.tag)||!require('./text-paragraphs.cjs').validSpacing(node.spacing)))return 'Invalid paragraph spacing.';
  if(Object.hasOwn(node,'marker')&&!require('./list-markers.cjs').valid(node.tag,node.marker))return 'Invalid list marker.';
  if(Object.hasOwn(node,'template')&&(!['ul','ol'].includes(node.tag)||!/^[0-9a-f]{10}$/.test(node.template||'')))return 'Invalid list appearance source.';
  if(Object.hasOwn(node,'start')&&(node.tag!=='ol'||!Number.isInteger(node.start)||node.start<1||node.start>1000000))return 'Invalid ordered list start.';
