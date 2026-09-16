@@ -34,7 +34,7 @@ test('paragraph joining preserves authored attributes and rejects unmarked sourc
  assert.ok(html.includes('id="right" class="copy"'));assert.ok(html.includes('color:red'));assert.ok(html.includes('display: inline;'));assert.ok(!html.includes('data-retouch-paragraph'));
  const jsx=inline('<span data-retouch-paragraph="" className={styles.copy} style={{display:"block",...appearance}}>Text</span>',true);assert.ok(jsx.includes('className={styles.copy}'));assert.equal((jsx.match(/appearance/g)||[]).length,1);assert.ok(jsx.includes('display:"inline"'));
  assert.throws(()=>inline('<span style="display:block">Text</span>'),/explicit text paragraphs/);
- assert.throws(()=>inline('<p data-retouch-paragraph="">Text</p>'),/explicit text paragraphs/);
+ assert.match(inline('<p data-retouch-paragraph="">Text</p>'),/^<span /);
 });
 
 for(const kind of ['react','html','liquid'])test(kind+' list joins retain source appearance and links in inline runs',()=>{
@@ -83,5 +83,21 @@ for(const kind of ['react','html','liquid'])test(kind+' paragraph spacing update
   const items=kind==='html'?source.describe(inner,resolved.element.id).descriptor.children:elements.filter(e=>tag(e)==='p');
   const result=(kind==='react'?writer:adapter).applyOp(resolved,{type:'setChildren',children:items.map((item,i)=>({t:'keep',id:item.id,spacing:i===0?12.5:0}))});assert.equal(result.ok,true,JSON.stringify(result));
   const saved=fs.readFileSync(file,'utf8');assert.ok(saved.includes('<strong>First</strong>'));assert.ok(saved.includes('title="One"'));assert.ok(saved.includes('title="Two"'));assert.ok(saved.includes(kind==='react'?'marginBlockEnd:"12.5px"':'margin-block-end: 12.5px;'));assert.ok(saved.includes(kind==='react'?'marginBlockEnd:"0px"':'margin-block-end: 0px;'));
+ }finally{cleanup(root);}
+});
+
+for(const kind of ['react','html','liquid'])test(kind+' native paragraph joins preserve p/div appearance and refuse nested block contents',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),name=kind==='react'?'Text.tsx':kind==='html'?'index.html':'text.liquid';
+ const inner='<p title="first"><strong>First</strong></p><p title="second"><a href="/kept">Second</a></p><div title="third">Third</div><div title="nested"><p>Nested</p></div>',original=(kind==='react'?'export const Text = () => ':'')+'<div>'+inner+'</div>'+(kind==='react'?';':'');
+ const root=makeApp({[name]:original}),file=path.join(root,name);
+ try{
+  const index=new Index(root,adapter);index.scanAll();const elements=kind==='react'?id.collectElements(original,name).elements:adapter.collect(original,name).elements,tag=e=>kind==='react'?e.node.openingElement.name.name:e.tag,selected=index.resolve(elements.find(e=>tag(e)==='div').id),tree=kind==='html'?source.describe(inner,selected.element.id).descriptor.children:null;
+  const paragraphs=tree?tree.slice(0,2):elements.filter(e=>tag(e)==='p').slice(0,2),divs=tree?tree.slice(2):elements.filter(e=>tag(e)==='div').slice(1),strong=tree?tree[0].children[0]:elements.find(e=>tag(e)==='strong');
+  let resolved=selected;
+  const apply=children=>(kind==='react'?writer:adapter).applyOp(resolved,{type:'setChildren',children});
+  const rejected=apply([{t:'keep',id:paragraphs[0].id,children:[{t:'keep',id:divs[1].id,paragraph:'inline'}]}]);assert.equal(rejected.ok,false);assert.equal(fs.readFileSync(file,'utf8'),original);
+  fs.writeFileSync(file,original.replace('<div title="nested"><p>Nested</p></div>',''));index.indexFile(file);resolved=index.resolve(selected.element.id);
+  const result=apply([{t:'keep',id:paragraphs[0].id,children:[{t:'keep',id:strong.id},{t:'keep',id:paragraphs[1].id,paragraph:'inline'},{t:'keep',id:divs[0].id,paragraph:'inline'}]}]);assert.equal(result.ok,true,JSON.stringify(result));
+  const saved=fs.readFileSync(file,'utf8');assert.ok(saved.includes('<p title="first"><strong>First</strong>'));assert.ok(saved.includes('<span title="second"'));assert.ok(saved.includes('<a href="/kept">Second</a>'));assert.ok(saved.includes('<span title="third"'));assert.equal((saved.match(kind==='react'?/display:"inline"/g:/display: inline;/g)||[]).length,2);
  }finally{cleanup(root);}
 });

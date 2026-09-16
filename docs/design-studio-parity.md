@@ -21875,3 +21875,32 @@ Arbitrary selection deletion, native p/div joining, responsive/shared spacing,
 list spacing and all cascade/layout combinations remain incomplete. Full Figma
 parity, arbitrary-site support and trusted Homebrew distribution remain open.
 No desktop rebuild or push here.
+
+## Joining existing native paragraphs (2026-09-16)
+
+The previous turn was progress: 480afcbc corrected trailing spacing after joins.
+This continuation extends boundary Delete/Backspace from explicit Retouch
+paragraphs to native p and text-only div paragraphs inside the edited text layer.
+The right paragraph becomes an inline span when needed, preserving its source
+attributes and descendants. The source protocol now permits these p/div joins
+in React, HTML and Liquid, while existing placement validation refuses nested
+block contents. Native joins require direct block siblings in a text flow;
+flex/grid parents and nested block/layout descendants are excluded. Native
+paragraphs inside list items continue through the existing list-join path.
+
+Validation: 1,739 unit tests passed. New adapter tests preserve strong text,
+links, titles and right-paragraph attributes, and refuse nested-block joins
+without changing the file. HTML/React Chromium 145 and Liquid WebKit 26 browser
+flows pass p-to-p forward Delete and p/div backward Backspace, local undo/redo,
+save/reopen, same-line text geometry, attribute/link retention, and exact source
+undo/redo. The HTML list-join regression also passes new/saved items,
+marker-then-Backspace, Delete, beforeinput, links and held-deletion history.
+Evidence: /tmp/retouch-native-paragraph-join-{html,react,liquid,units}.log and
+/tmp/retouch-native-paragraph-list-regression.log.
+
+The native fixture uses a div text container. HTML section roots remain outside
+its current structured-text whitelist. Arbitrary tag-dependent stylesheet
+appearance, native paragraph joins across complex wrappers, responsive/shared
+spacing and arbitrary selection deletion remain unproven. This does not prove
+full Figma parity or arbitrary-site support. Trusted Homebrew distribution is
+still incomplete. No desktop rebuild or push here.

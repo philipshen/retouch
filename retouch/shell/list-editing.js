@@ -149,12 +149,16 @@
   const d=el.ownerDocument,selection=d.getSelection();if(!selection.rangeCount)return null;
   const range=selection.getRangeAt(0);if(!range.collapsed||!el.contains(range.startContainer))return null;
   const node=range.startContainer.nodeType===1?range.startContainer:range.startContainer.parentElement;
-  const current=node.closest('span[data-retouch-paragraph]');if(!current||current===el||!el.contains(current))return listJoinContext(el,backward);
+  const current=node.closest('p,div,span[data-retouch-paragraph]');if(!current||current===el||!el.contains(current))return listJoinContext(el,backward);
+  const native=current.tagName!=='SPAN',plain=node=>node?.nodeType===1&&node.matches('p,div,span[data-retouch-paragraph]')&&!node.querySelector('p,div,ul,ol,table,section,article,span[data-retouch-paragraph]')&&d.defaultView.getComputedStyle(node).display==='block'&&[...node.querySelectorAll('*')].every(child=>!/^(?:block|flow-root|flex|grid|table|list-item)/.test(d.defaultView.getComputedStyle(child).display));
+  if(native&&current.parentElement!==el)return listJoinContext(el,backward);
+  if(native&&(!plain(current)||/flex|grid/.test(d.defaultView.getComputedStyle(el).display)))return null;
   const edge=d.createRange();edge.selectNodeContents(current);if(backward)edge.setEnd(range.startContainer,range.startOffset);else edge.setStart(range.startContainer,range.startOffset);
   const fragment=edge.cloneContents();if(fragment.textContent.length||fragment.querySelector('img,input,svg,canvas,video,audio,iframe,object,embed,hr,button,select,textarea,ul,ol')||fragment.querySelectorAll('br').length>(backward?0:1))return null;
   const gap=[];let other=backward?current.previousSibling:current.nextSibling;
   while(other?.nodeType===3&&!other.textContent.trim()){gap.push(other);other=backward?other.previousSibling:other.nextSibling;}
-  if(other?.nodeType!==1||!other.matches('span[data-retouch-paragraph]'))return listJoinContext(el,backward);
+  if(other?.nodeType!==1||!other.matches('p,div,span[data-retouch-paragraph]'))return listJoinContext(el,backward);
+  if((native||other.tagName!=='SPAN')&&(!plain(other)||!plain(current)||current.parentElement!==el||/flex|grid/.test(d.defaultView.getComputedStyle(el).display)))return null;
   return {left:backward?other:current,right:backward?current:other,gap};
  }
  function join(el,backward=true){
@@ -177,7 +181,7 @@
   const appearance=node=>JSON.stringify([...node.attributes].filter(attr=>attr.name!=='id'&&!/^on/i.test(attr.name)&&!/^data-rt(?:-|$)/.test(attr.name)).map(attr=>[attr.name,attr.value]).sort(([a],[b])=>a.localeCompare(b)));
   const sameOrigin=source(left)?right.__rtSourceCopy===source(left):!source(right);
   const flatten=sameOrigin&&appearance(left)===appearance(right);
-  if(context.listItem&&!flatten){const span=d.createElement('span');for(const attr of right.attributes)span.setAttribute(attr.name,attr.value);for(const key of Object.keys(right))if(key.startsWith('__rt'))span[key]=right[key];span.append(...right.childNodes);right.replaceWith(span);right=span;delete right.__rtBlockTag;delete right.__rtListMarker;}
+  if(right.tagName!=='SPAN'&&!flatten){const span=d.createElement('span');for(const attr of right.attributes)span.setAttribute(attr.name,attr.value);for(const key of Object.keys(right))if(key.startsWith('__rt'))span[key]=right[key];span.append(...right.childNodes);right.replaceWith(span);right=span;delete right.__rtBlockTag;delete right.__rtListMarker;}
   for(const node of gap)node.remove();
   if(flatten){left.append(...right.childNodes);right.remove();}
   else {right.removeAttribute('data-retouch-paragraph');right.style.setProperty('display','inline',right.style.getPropertyPriority('display'));right.__rtParagraphInline=true;left.append(right);}

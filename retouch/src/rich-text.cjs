@@ -34,7 +34,7 @@ function validateChildrenTree(children, depth, inLink=false, blockDepth=0, keptT
       if(Object.hasOwn(c,'spacing')&&(!keptTag||!['p','div','span'].includes(c.tag||keptTag(c.id))||Object.hasOwn(c,'paragraph')||!require('./text-paragraphs.cjs').validSpacing(c.spacing)))return 'Invalid paragraph spacing.';
 
       if(!/^[0-9a-f]{10}$/.test(c.id||'')||!keptTag||!require('./rich-text-copy.cjs').tags.has(keptTag(c.id))||Object.keys(c).some(key=>!['t','id','children','href','marker','paragraph','spacing'].includes(key)))return 'Invalid split text source.';
-      if(Object.hasOwn(c,'paragraph')&&(c.paragraph!=='inline'||!keptTag||!['span','li'].includes(keptTag(c.id))||Object.hasOwn(c,'tag')||Object.hasOwn(c,'marker')))return 'Invalid paragraph join.';
+      if(Object.hasOwn(c,'paragraph')&&(c.paragraph!=='inline'||!keptTag||!['span','li','p','div'].includes(keptTag(c.id))||Object.hasOwn(c,'tag')||Object.hasOwn(c,'marker')))return 'Invalid paragraph join.';
       if(Object.hasOwn(c,'marker')&&!require('./list-markers.cjs').valid(keptTag(c.id),c.marker))return 'Invalid split list marker.';
       if(Object.hasOwn(c,'href')&&(keptTag(c.id)!=='a'||c.href!==null&&!links.valid(c.href)))return 'Invalid split link URL.';
       if(inLink&&keptTag(c.id)==='a')return 'Text links cannot be nested.';
@@ -46,7 +46,7 @@ function validateChildrenTree(children, depth, inLink=false, blockDepth=0, keptT
       if(Object.hasOwn(c,'spacing')&&(!keptTag||!['p','div','span'].includes(c.tag||keptTag(c.id))||Object.hasOwn(c,'paragraph')||!require('./text-paragraphs.cjs').validSpacing(c.spacing)))return 'Invalid paragraph spacing.';
 
       if(Object.hasOwn(c,'start')&&(!keptTag||(c.tag||keptTag(c.id))!=='ol'||Object.hasOwn(c,'paragraph')||!require('./list-start.cjs').valid(c.start)))return 'Invalid ordered list start.';
-      if(Object.hasOwn(c,'paragraph')&&(c.paragraph!=='inline'||!keptTag||!['span','li'].includes(keptTag(c.id))||Object.hasOwn(c,'tag')||Object.hasOwn(c,'marker')))return 'Invalid paragraph join.';
+      if(Object.hasOwn(c,'paragraph')&&(c.paragraph!=='inline'||!keptTag||!['span','li','p','div'].includes(keptTag(c.id))||Object.hasOwn(c,'tag')||Object.hasOwn(c,'marker')))return 'Invalid paragraph join.';
       if(Object.hasOwn(c,'marker')&&(!keptTag||!['ul','ol','div','p','li'].includes(keptTag(c.id))||!require('./list-markers.cjs').valid(c.tag||keptTag(c.id),c.marker)))return 'Invalid kept list marker.';
       if(Object.hasOwn(c,'tag')&&(!['p','ul','ol','li','div'].includes(c.tag)||Object.hasOwn(c,'href')))return 'Invalid kept paragraph/list tag.';
       if(inLink)return 'Source-owned nodes cannot be moved inside a new text link.';
