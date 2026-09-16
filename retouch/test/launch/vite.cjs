@@ -23,6 +23,7 @@ async function stop() {
   if (active.exitCode === null && active.signalCode === null) active.kill('SIGTERM');
   await Promise.race([exited, delay(15000, null, {ref: false}).then(() => { throw Error('Retouch launch process did not stop\n' + logs); })]);
   child = null;
+  assert.doesNotMatch(logs, /No supported app has connected|Command exited without connecting/, 'A working Vite editor must be recognized by the wrapper');
 }
 async function start() {
   logs = '';

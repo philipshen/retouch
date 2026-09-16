@@ -90,3 +90,23 @@ test('signal termination preserves the conventional shell exit status', async ()
   const child = spawn(process.execPath, [cli, '--', process.execPath, '-e', "process.kill(process.pid, 'SIGKILL')"], { stdio: 'pipe' });
   assert.equal((await once(child, 'exit'))[0], 137);
 });
+
+test('externally owned writers register without creating a duplicate writer',async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-owned-writer-')),session=await startSession({root});
+ const post=(app,secret=session.env.RETOUCH_SESSION_SECRET)=>fetch(session.env.RETOUCH_SESSION_URL+'/connected',{method:'POST',headers:{authorization:`Bearer ${secret}`},body:JSON.stringify({root:app})});
+ try{
+  assert.equal((await post(root,'wrong')).status,403);assert.equal((await post(os.tmpdir())).status,400);assert.equal(session.connectedRoots.size,0);
+  for(let i=0;i<2;i++)assert.equal((await post(root)).status,200);
+  assert.equal(session.connectedRoots.size,1);assert.equal(session.apps.size,0);
+ }finally{await session.close();fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('a plugin-owned connection suppresses the false disconnected exit notice',async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-connected-notice-'));
+ try{
+  const client=path.resolve(__dirname,'../src/session-client.cjs');
+  const child=spawn(process.execPath,[cli,'--',process.execPath,'-e',`require(process.argv[1]).notifyConnected(process.cwd()).catch(e=>{console.error(e);process.exitCode=1})`,client],{cwd:root,stdio:['ignore','pipe','pipe']});
+  let output='';child.stdout.on('data',b=>output+=b);child.stderr.on('data',b=>output+=b);
+  assert.equal((await once(child,'exit'))[0],0,output);assert.doesNotMatch(output,/without connecting|No supported app/);
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});

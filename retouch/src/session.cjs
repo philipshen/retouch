@@ -10,11 +10,12 @@ async function startSession({ root = process.cwd() } = {}) {
   root = fs.realpathSync(root);
   const secret = crypto.randomBytes(32).toString('hex');
   const apps = new Map();
+  const connectedRoots = new Set();
   let closed = false;
   const broker = http.createServer(async (req, res) => {
     const reply = (status, value) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(value)); };
     if (req.headers.authorization !== `Bearer ${secret}` || !/^127\.0\.0\.1:\d+$/.test(req.headers.host || '')) return reply(403, { error: 'forbidden' });
-    if (req.method !== 'POST' || req.url !== '/register') return reply(404, { error: 'not found' });
+    if (req.method !== 'POST' || !['/register','/connected'].includes(req.url)) return reply(404, { error: 'not found' });
     try {
       let body = '';
       for await (const chunk of req) {
@@ -26,6 +27,7 @@ async function startSession({ root = process.cwd() } = {}) {
       const relative = path.relative(root, appRoot);
       if (relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) throw new Error('application is outside the session root');
       if (closed) throw new Error('session is closing');
+      if(req.url==='/connected'){connectedRoots.add(appRoot);return reply(200,{root:appRoot});}
       if (!apps.has(appRoot)) {
         const pending = (async () => {
           const server = require('./server.cjs').startServer({ appRoot, port: 0, quiet: true });
@@ -38,13 +40,14 @@ async function startSession({ root = process.cwd() } = {}) {
         pending.catch(() => apps.delete(appRoot));
       }
       const server = await apps.get(appRoot);
+      connectedRoots.add(appRoot);
       reply(200, { port: server.address().port, root: appRoot });
     } catch (err) { reply(400, { error: err.message }); }
   });
   broker.listen(0, '127.0.0.1');
   await once(broker, 'listening');
   return {
-    apps,
+    apps, connectedRoots,
     env: { RETOUCH_SESSION_URL: `http://127.0.0.1:${broker.address().port}`, RETOUCH_SESSION_SECRET: secret },
     async close() {
       closed = true;
@@ -90,7 +93,7 @@ async function run(command, args, { root = process.cwd() } = {}) {
   process.on('SIGINT', interrupt);
   process.on('SIGTERM', terminate);
   const notice = setTimeout(() => {
-    if (!session.apps.size) console.warn('[retouch] No supported app has connected yet. Startup continues. Environment must reach the Node build process; Docker, sudo, remote commands and environment filters need explicit integration.');
+    if (!session.connectedRoots.size) console.warn('[retouch] No supported app has connected yet. Startup continues. Environment must reach the Node build process; Docker, sudo, remote commands and environment filters need explicit integration.');
   }, 10000);
   notice.unref();
   try {
@@ -107,7 +110,7 @@ async function run(command, args, { root = process.cwd() } = {}) {
     const reap = setTimeout(() => killGroup('SIGKILL'), 500);
     await new Promise(resolve => setTimeout(resolve, 510));
     clearTimeout(reap);
-    if (!session.apps.size) console.warn('[retouch] Command exited without connecting a supported app.');
+    if (!session.connectedRoots.size) console.warn('[retouch] Command exited without connecting a supported app.');
   }
 }
 module.exports = { startSession, childEnvironment, run };

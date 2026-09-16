@@ -211,3 +211,15 @@ without manually refreshing the editor: edit source, change the Vite config,
 wait for a new editor token, undo and redo, then stop/start the process and undo
 again. This verifies saved source/history recovery; preserving unsaved drafts
 through a configuration restart is not established.
+
+### Vite connections inside the command wrapper
+
+The explicit Vite plugin now notifies the active command session after its
+writer starts. The authenticated broker validates the project root and records
+the connection without creating another writer. Next's broker-owned writers
+continue to use their existing registration path. This prevents the wrapper's
+"no supported app connected" notices for a working Vite editor. If registration
+fails, the plugin closes its writer before failing startup.
+
+The installed Vite launch test checks that those false notices do not appear
+through editing, configuration restart, normal process restart and shutdown.

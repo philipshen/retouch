@@ -1,10 +1,10 @@
 'use strict';
 const http = require('node:http');
-function register(root) {
+function request(root, endpoint) {
   const url = new URL(process.env.RETOUCH_SESSION_URL);
   if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1') throw new Error('Retouch session must be on loopback');
   return new Promise((resolve, reject) => {
-    const req = http.request(new URL('/register', url), {
+    const req = http.request(new URL(endpoint, url), {
       method: 'POST', headers: { authorization: `Bearer ${process.env.RETOUCH_SESSION_SECRET}`, 'content-type': 'application/json' },
     }, res => {
       let body = '';
@@ -22,9 +22,11 @@ function register(root) {
     req.end(JSON.stringify({ root }));
   });
 }
+function register(root) { return request(root, '/register'); }
+function notifyConnected(root) { return request(root, '/connected'); }
 async function connectNext(config, root) {
   const { composeNext } = require('./next.cjs');
   const registered = await register(root);
   return composeNext(config, { appRoot: registered.root, port: registered.port });
 }
-module.exports = { register, connectNext };
+module.exports = { register, notifyConnected, connectNext };

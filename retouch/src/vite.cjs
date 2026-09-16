@@ -3,6 +3,7 @@ const fs=require('node:fs'),path=require('node:path'),{once}=require('node:event
 const virtual='virtual:retouch-group-scale.jsx',resolvedVirtual='\0retouch-group-scale.jsx';
 function retouch(){
  let config,sidecar;
+ async function closeSidecar(){if(!sidecar)return;const active=sidecar;sidecar=null;active.retouchIndex.close();active.closeAllConnections();await new Promise(resolve=>active.close(resolve));}
  return {
   name:'vite-plugin-react-retouch',apply:'serve',enforce:'pre',
   configResolved(value){
@@ -19,6 +20,7 @@ function retouch(){
    const react=require('./adapter.cjs').getAdapter('react'),adapter={...react,assets:config.publicDir?{...react.assets,directory:path.relative(config.root,config.publicDir),urlPrefix:config.base}:undefined};
    sidecar=require('./server.cjs').startServer({appRoot:config.root,port:0,adapter,rendering:{reloadOnServerRestart:true},quiet:true});
    if(!sidecar.listening)await once(sidecar,'listening');
+   if(process.env.RETOUCH_SESSION_URL){try{await require('./session-client.cjs').notifyConnected(config.root);}catch(error){await closeSidecar();throw error;}}
    server.middlewares.use((req,res,next)=>{
     // The editor owns /rt independently of Vite's public base. Deep editor URLs
     // already map to the full application pathname in the shared shell.
@@ -40,7 +42,7 @@ function retouch(){
     return require('./stamp.cjs').stamp(source,real,config.root,{groupScaleRuntime:virtual,redirectGroupScaleRuntime:fs.existsSync(helper)&&fs.readFileSync(helper,'utf8')===runtime.component()});
    }catch(error){this.warn('[retouch] Stamping skipped for '+id+': '+error.message);return null;}
   },
-  async closeBundle(){if(!sidecar)return;const active=sidecar;sidecar=null;active.retouchIndex.close();active.closeAllConnections();await new Promise(resolve=>active.close(resolve));}
+  closeBundle:closeSidecar
  };
 }
 module.exports={retouch};module.exports.default=retouch;
