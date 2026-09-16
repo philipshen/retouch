@@ -23455,3 +23455,33 @@ This is a runtime foundation only. JSX source planning, generated helper ownersh
 editor integration, production builds, HMR and delayed Suspense hydration remain
 unverified or unimplemented. React still uses its existing editor scaling path.
 Full Figma parity and trusted desktop distribution remain unfinished.
+
+### React source-backed group scaling planner
+
+Added a JSX source planner that persists responsive metadata and member identities,
+appends a client registration without shifting existing layer IDs, and creates a
+sibling .retouch-group-scale.jsx helper through the shared multi-file transaction.
+It preserves directives, avoids new binding collisions, rejects shadowed existing
+imports and refuses an externally changed or incompatible helper. Exact undo
+restores both the original source and helper absence. A helper creation race is
+checked before any source write. Literal member transforms are snapshotted when
+composing later group operations.
+
+The planner is not registered in the React adapter yet. Native literal subtrees
+are supported; generated JSX children, component children, spreads, inline member
+styles, dynamic classes and nested scale ownership still need broader handling.
+Helper migration, copy/release/regroup ownership and editor synchronization remain
+to be integrated. Full Figma parity and arbitrary-site coverage remain unfinished.
+
+The browser fixture now loads JSX and a helper actually emitted by the planner,
+compares saved output with its unscaled reference at 390/768/1100/1440/523 pixels,
+and reloads the saved route. This runs separately from the existing lifecycle and
+SPA-navigation fixture: reusing its page exposed a pending WebKit navigation back
+to the root that interrupted the new navigation. Moving route creation before
+startup alone did not resolve that test interaction.
+
+Validation: all 1,796 unit tests passed; generated-source and lifecycle checks
+passed in Chromium and WebKit; git diff --check passed. Evidence:
+/tmp/retouch-react-source-final-units.log,
+/tmp/retouch-react-source-chromium-isolated.log,
+/tmp/retouch-react-source-webkit-isolated.log. Local commit only; no push.
