@@ -1720,6 +1720,12 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
     await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),linked);await wait(async()=>(await measure()).every(v=>v.family==='monospace'));
    }
    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();assert.deepEqual(await measure(),initial);
+   const weightStyle=page.getByLabel('Shared Font weight style',{exact:true}),rawWeight=page.getByLabel(kind==='html'?'Shared Font weight':'Shared Font weight (1–1000)',{exact:true});
+   assert.equal(await weightStyle.locator('option:checked').innerText(),'Regular');
+   await weightStyle.selectOption('700');await wait(()=>read()!==before);await settled();await wait(async()=>await app.locator('p').evaluateAll(nodes=>nodes.every(el=>getComputedStyle(el).fontWeight==='700')));assert.equal(await weightStyle.locator('option:checked').innerText(),'Bold');
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();
+   await weightStyle.selectOption('custom');assert.equal(read(),before);assert.equal(await rawWeight.evaluate(el=>document.activeElement===el),true);await rawWeight.fill('450');await rawWeight.press('Tab');await wait(()=>read()!==before);await settled();await wait(async()=>await app.locator('p').evaluateAll(nodes=>nodes.every(el=>getComputedStyle(el).fontWeight==='450')));assert.equal(await weightStyle.locator('option:checked').innerText(),'450');
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();
    const alignment=page.getByRole('toolbar',{name:'Selected text alignment buttons'}),center=page.getByRole('button',{name:'Align selected text center',exact:true});
    assert.equal(await page.getByRole('button',{name:'Align selected text left',exact:true}).getAttribute('aria-pressed'),'true');
    await center.click();await wait(()=>read()!==before);await settled();await wait(async()=>await app.locator('p').evaluateAll(nodes=>nodes.every(el=>getComputedStyle(el).textAlign==='center')));

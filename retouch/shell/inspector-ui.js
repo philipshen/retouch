@@ -233,6 +233,18 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   font.classList.add('typography-family');primary.append(font);
   const pair=(rows,name)=>{const group=document.createElement('div');group.className='property-pair '+name;rows.forEach(row=>group.append(row));primary.append(group);return group;};
   pair([weight,size],'typography-size');pair([leading,tracking],'typography-spacing');
+  const rawWeight=find(['Font weight (1–1000)','Font weight']);
+  if(rawWeight){
+   const field=rawWeight.closest('.inspector-field'),custom=disclosure('Custom font weight','shared-custom-font-weight'),cell=document.createElement('label'),select=document.createElement('select');
+   cell.className='inspector-field typography-weight-style';select.setAttribute('aria-label','Shared Font weight style');select.disabled=rawWeight.disabled;select.title=rawWeight.disabled?rawWeight.title:'Choose a weight; use Custom for a numeric value.';
+   const current=rawWeight.value,names=[['100','Thin'],['200','Extra Light'],['300','Light'],['400','Regular'],['500','Medium'],['600','Semi Bold'],['700','Bold'],['800','Extra Bold'],['900','Black']];
+   for(const [value,name]of names){const option=document.createElement('option');option.value=value;option.textContent=name;select.append(option);}
+   if(!names.some(([value])=>value===current)){const option=document.createElement('option');option.value=current;option.textContent=current||'Mixed';option.disabled=true;select.prepend(option);}
+   const option=document.createElement('option');option.value='custom';option.textContent='Custom…';select.append(option);select.value=current;
+   field.before(cell);cell.append(select);custom.append(field);primary.after(custom);
+   select.onchange=()=>{if(rawWeight.disabled||!rawWeight.isConnected)return;if(select.value==='custom'){select.value=current;custom.open=true;rawWeight.focus();rawWeight.select();return;}rawWeight.value=select.value;rawWeight.dispatchEvent(new Event('change',{bubbles:true}));};
+  }
+
   const align=find(['Text alignment']),alignment=row(align);
   if(align&&alignment){
    const field=align.closest('.inspector-field'),group=document.createElement('div');field.classList.add('text-align-modes');group.className='layout-mode-segments';

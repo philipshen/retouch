@@ -20874,3 +20874,26 @@ Screenshots: `/tmp/retouch-shared-align-react.png`,
 Shared named-weight menus and consolidated Type settings remain unfinished,
 as do the broader full-parity, arbitrary-site and trusted Homebrew goals.
 No native rebuild or push.
+
+### Named weights for shared typography
+
+Shared text selections now show Thin through Black in the primary weight menu,
+with Mixed and custom numeric readouts preserved. Choosing Custom opens and
+focuses the original numeric field without writing source. The reset remains
+beside the named control, and the menu mirrors the numeric field's disabled
+state and reason. Existing adapter handlers still perform the write.
+
+React and HTML Chromium checks passed named Bold, custom 450, custom-field
+focus without mutation, exact undo, and the existing shared typography flow.
+The inline font-face suites also passed using the new shared named menu,
+covering ordinary inline styles, inactive screen-range refusal, important
+inline guards, reset and exact undo. All 1,702 unit tests passed. Both rendered
+panels were inspected. Evidence: `/tmp/retouch-shared-weight-react.log`,
+`/tmp/retouch-shared-weight-html.log`,
+`/tmp/retouch-shared-weight-face-react.log`,
+`/tmp/retouch-shared-weight-face-html.log`,
+`/tmp/retouch-shared-weight-units.log`; screenshots:
+`/tmp/retouch-shared-weight-react.png`, `/tmp/retouch-shared-weight-html.png`.
+
+Shared Type settings consolidation and the broader full-parity, arbitrary-site
+and trusted Homebrew goals remain incomplete. No native rebuild or push.
