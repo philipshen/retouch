@@ -20,3 +20,8 @@ test('doctor retains Next diagnostics and reports malformed Vite metadata accura
  const root=fixture(t,{next:'16.2.5',vite:'8.3.0'});fs.writeFileSync(path.join(root,'node_modules/vite/package.json'),'broken');
  const output=inspect(root);assert.match(output,/Next: 16\.2\.5/);assert.match(output,/Automatic hook: supported release line/);assert.match(output,/Vite: could not inspect its package metadata/);
 });
+test('doctor distinguishes Vue dependencies from an enabled editor and reports current editing limits',t=>{
+ const root=fixture(t,{vite:'8.3.0',vue:'3.5.42','@vitejs/plugin-vue':'6.0.9'});
+ const output=inspect(root);assert.match(output,/Vue: 3\.5\.42/);assert.match(output,/Vue Vite plugin: 6\.0\.9/);assert.match(output,/Styling and structural operations remain incomplete/);assert.match(output,/does not confirm that the plugin is enabled/);
+ const missing=inspect(fixture(t,{vite:'8.3.0',vue:'3.5.42'}));assert.match(missing,/install @vitejs\/plugin-vue/);
+});

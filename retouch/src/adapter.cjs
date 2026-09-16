@@ -60,5 +60,6 @@ function getAdapter(name) {
 register(require('./adapters/react.cjs'));
 register(require('./adapters/liquid.cjs'));
 register(require('./adapters/html.cjs'));
+register(require('./adapters/vue.cjs'));
 
 module.exports = { register, getAdapter, defaultAdapter: () => getAdapter('react') };

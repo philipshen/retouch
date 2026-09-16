@@ -982,6 +982,9 @@ async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawin
   }
   // The running framework can confirm an edit without a concurrent server render.
   // Avoid forcing render requests while its development compiler is rebuilding.
+  // SPA adapters may provide compiler-normalized literal text. A matching
+  // compiled revision and exact text can prove restoration without SSR HTML.
+  if(verifyText&&typeof info.renderedText==='string'&&await liveUpdateReady(info.renderedText))return;
   if(!verifyText&&await liveUpdateReady())return;
   for (let attempt = 0; attempt < 20; attempt++) {
     if (!current()) return;

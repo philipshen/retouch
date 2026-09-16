@@ -95,12 +95,42 @@ It serves the editor and authenticated source API on the Vite origin and closes
 its writer when Vite shuts down. Production builds exclude the plugin.
 
 The browser fixture verifies text editing, exact source undo, and React state
-and document retention through hot updates. This is an explicit React integration;
-Vue, Svelte, SSR editing, and universal hot-update retention are not covered.
+and document retention through hot updates. Svelte, SSR editing, and universal
+hot-update retention are not covered. Initial Vue support is described below.
 Image uploads use Vite's configured public directory and base URL. Generated
 upload URLs are served immediately, before Vite's file watcher catches up.
 With `publicDir: false`, uploading is unavailable; directories outside the source
 project cannot receive uploads. The runtime compiler requires Vite 8.
+
+## Vite Vue projects (initial support)
+
+Vue projects can use the same explicit integration:
+
+```js
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import { retouch } from 'retouch/vite';
+
+export default defineConfig({
+  plugins: [retouch({ adapter: 'vue' }), vue()],
+  server: { host: '127.0.0.1' },
+});
+```
+
+With `@vitejs/plugin-vue` present, `retouch()` also selects Vue automatically.
+Retouch uses the Vue plugin's template compiler options for source mapping.
+The initial adapter supports literal text, literal image sources, text-layer tag
+changes and layer names in `.vue` files. It preserves script/style blocks and
+template expressions. Styling, structural operations, component-property edits,
+external templates, template preprocessors and SSR editing remain incomplete.
+Broad or dynamically named bindings that can replace source markers are not
+editable yet. Repeated template elements share their authored source identity.
+
+The browser fixture verifies repeated text edits, literal interpolation syntax,
+exact undo, compiler-normalized whitespace, retained preview documents and live
+Vue state, base paths, immediate image uploads, and production instrumentation
+exclusion. Tested with Vite 8.3.0, Vue 3.5.42 and `@vitejs/plugin-vue` 6.0.9 in
+Chromium and WebKit. This does not establish compatibility with every Vue setup.
 
 ## Explicit config mode
 

@@ -3,6 +3,27 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 function fixture(t){const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-vite-plugin-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));const file=path.join(root,'App.jsx'),source='export default function App(){return <main><h1>Hello</h1></main>}';fs.writeFileSync(file,source);return {root,file,source,config:{root,base:'/',command:'serve',server:{host:'127.0.0.1'}}};}
 test('Vite stamps only project JSX in development and preserves the source',t=>{const {root,file,source,config}=fixture(t),plugin=retouch(),warnings=[],context={addWatchFile(){},warn:m=>warnings.push(m)};assert.equal(plugin.apply,'serve');plugin.configResolved(config);const outside=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-vite-outside-'));t.after(()=>fs.rmSync(outside,{recursive:true,force:true}));fs.writeFileSync(path.join(outside,'Outside.jsx'),source);const stamped=plugin.transform.call(context,source,file);assert.match(stamped.code,/data-rt="[a-f0-9]{10}"/);assert.match(stamped.code,/virtual:retouch-group-scale.jsx/);assert.equal(fs.readFileSync(file,'utf8'),source);for(const id of [file+'?raw',path.join(root,'node_modules/Package.jsx'),path.join(outside,'Outside.jsx')])assert.equal(plugin.transform.call(context,source,id),null);assert.equal(plugin.transform.call(context,source,file,{ssr:true}),null);assert.equal(plugin.transform.call(context,'<broken',file),null);assert.equal(warnings.length,1);plugin.configResolved({...config,command:'build'});assert.equal(plugin.transform.call(context,source,file),null);assert.equal(plugin.resolveId('virtual:retouch-group-scale.jsx'),undefined);});
 test('Vite refuses reserved or malformed bases and externally bound editor hosts',t=>{const {config}=fixture(t);for(const change of [{base:'/rt/'},{base:'/%72t/'},{base:'//other/'},{base:'/docs/?x'},{base:'/a/../b/'},{server:{host:true}},{server:{host:'0.0.0.0'}}])assert.throws(()=>retouch().configResolved({...config,...change}),/\[retouch\]/);});
+test('Vite Vue integration uses matching compiler options and preserves hot-template markers',async t=>{
+ const {root,config}=fixture(t),file=path.join(root,'App.vue'),source='<template><x-card><p>[[ title ]]</p></x-card></template>';
+ fs.writeFileSync(file,source);
+ const vue={name:'vite:vue',api:{options:{template:{compilerOptions:{isCustomElement:tag=>tag==='x-card',delimiters:['[[',']]']}}}}};
+ const plugin=retouch();plugin.configResolved({...config,plugins:[vue]});
+ const context={warn:message=>assert.fail(message)},initial=plugin.transform.call(context,source,file);
+ assert.match(initial.code,/<x-card data-rt=/);assert.match(initial.code,/\[\[ title \]\]/);
+ const update={file,read:async()=>source};plugin.handleHotUpdate(update);assert.equal(await update.read(),initial.code);
+ assert.ok(initial.code.includes('data-rt-revision="'+require('../src/vue-source.cjs').contentHash(source)+'"'));
+ assert.equal(plugin.transform.call(context,source,file+'?vue&type=template'),null);
+ assert.equal(plugin.transform.call(context,source,file,{ssr:true}),null);
+ assert.equal(plugin.resolveId('virtual:retouch-group-scale.jsx'),undefined);
+ assert.equal(await plugin.load('\0retouch-group-scale.jsx'),null);
+ const unsupported='<template lang="pug">p Hello</template>',warnings=[],updateUnsupported={file,read:async()=>unsupported,server:{config:{logger:{warn:message=>warnings.push(message)}}}};
+ plugin.handleHotUpdate(updateUnsupported);assert.equal(await updateUnsupported.read(),unsupported);assert.equal(warnings.length,1);
+ const external={file:path.join(root,'node_modules/App.vue'),read:async()=>source},read=external.read;plugin.handleHotUpdate(external);assert.equal(external.read,read);
+ assert.throws(()=>retouch({adapter:'vue'}).configResolved(config),/plugin-vue/);
+ assert.throws(()=>retouch({adapter:'unknown'}),/source adapter/);
+ const react=retouch({adapter:'react'});react.configResolved({...config,plugins:[vue]});assert.equal(react.transform.call(context,source,file),null);
+ plugin.configResolved({...config,command:'build'});assert.equal(plugin.transform.call(context,source,file),null);
+});
 test('Vite same-origin middleware preserves API authentication and closes cleanly',async t=>{const {config}=fixture(t),plugin=retouch();plugin.configResolved(config);let middleware;const server=http.createServer((req,res)=>middleware(req,res,()=>{res.writeHead(404);res.end('app route');}));t.after(async()=>{await plugin.closeBundle();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));});await plugin.configureServer({middlewares:{use(fn){middleware=fn;}},httpServer:server,config:{logger:{info(){}}}});server.listen(0,'127.0.0.1');await once(server,'listening');const url='http://127.0.0.1:'+server.address().port;assert.equal((await fetch(url+'/rt/__api/health')).status,200);assert.equal((await fetch(url+'/rtother')).status,404);const shell=await fetch(url+'/rt');assert.equal(shell.status,200);assert.match(await shell.text(),/Retouch/);assert.equal((await fetch(url+'/rt/__api/op',{method:'POST',headers:{'content-type':'application/json'},body:'{}'})).status,401);});
 
 test('Vite base paths route the editor to the app while preserving query and API paths',async t=>{

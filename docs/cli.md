@@ -60,7 +60,7 @@ Run Retouch inside that environment, next to its source and dev process.
 ## Limits
 
 - Automatic instrumentation currently supports Next.js, not arbitrary bundlers.
-- Vite React has an explicit `retouch/vite` plugin (Vite 8; see the package README). It is not injected automatically by the wrapper. Additional languages still need their own build integrations.
+- Vite React and initial Vue SFC editing have an explicit `retouch/vite` plugin (Vite 8; see the package README for Vue's current limits). It is not injected automatically by the wrapper. Additional languages still need their own build integrations.
 - Shopify retains `retouch shopify <theme-dir>` and its isolation protections;
   arbitrary `shopify` child processes are not intercepted.
 - Windows process-group management is not implemented.

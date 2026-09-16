@@ -1131,7 +1131,10 @@
     preview.onload=()=>{
       const pd=preview.contentDocument;if(!pd||!preview.isConnected||!el.isConnected||!d.location)return;
       const base=pd.createElement('base');base.href=d.location.href;pd.head.append(base);
-      for(const s of d.querySelectorAll('link[rel="stylesheet"],style')){const copy=pd.importNode(s,true);copy.addEventListener('load',()=>fit());pd.head.append(copy);}
+      // WebKit blocks DOM event callbacks on stylesheets in a script-disabled
+      // sandbox. Font readiness and ResizeObserver below handle layout changes
+      // without enabling scripts in the typography preview.
+      for(const s of d.querySelectorAll('link[rel="stylesheet"],style'))pd.head.append(pd.importNode(s,true));
       pd.documentElement.style.overflow='hidden';pd.body.style.cssText='margin:0;padding:12px;background:#fff;color:#181818;overflow-wrap:anywhere;';
       sample=pd.createElement('div');renderSample();
       for(const p of typeProperties)sample.style.setProperty(p,css.getPropertyValue(p));
@@ -1141,7 +1144,7 @@
       if(clamped){for(const p of ['width','overflow','-webkit-box-orient','-webkit-line-clamp'])sample.style.setProperty(p,css.getPropertyValue(p));sample.style.display='-webkit-box';}
       sample.style.transformOrigin='top left';pd.body.append(sample);
       fit=()=>{if(!preview.isConnected||!sample)return;const width=pd.documentElement.clientWidth-24,height=pd.documentElement.clientHeight-24;if(width<=0||height<=0)return;sample.style.transform='scale('+Math.min(1,width/Math.max(1,sample.scrollWidth),height/Math.max(1,clamped?sample.offsetHeight:sample.scrollHeight))+')';};
-      const observer=new pd.defaultView.ResizeObserver(fit);observer.observe(sample);pd.defaultView.addEventListener('resize',fit);pd.fonts.ready.then(fit);fit();
+      const observer=new pd.defaultView.ResizeObserver(fit);observer.observe(sample);observer.observe(pd.documentElement);pd.fonts.ready.then(fit);fit();
     };
     preview.srcdoc='<!doctype html><html><head></head><body></body></html>';
     return preview;

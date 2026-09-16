@@ -23920,3 +23920,37 @@ conditional content. The full unit suite passed 1,838 tests. This is an internal
 mapping foundation: a Vue write adapter, Vite integration, browser editing/HMR
 verification and compiler-version compatibility are still required before Vue
 projects can be edited through the UI. Full Figma parity remains incomplete.
+
+### Initial Vue editing through Vite
+
+The registered Vue adapter now writes literal text, image sources, text-layer
+tags and layer names through the existing source transactions and exact history.
+It preserves expressions and bindings, refuses dynamic/responsive image source
+replacement, and entity-encodes interpolation delimiters in literal text edits.
+Styling, rich text, structural operations and component-property editing still
+need Vue implementations; the inspector states that style editing is unavailable.
+
+The Vite plugin selects Vue when `@vitejs/plugin-vue` is present, or accepts
+`retouch({adapter:'vue'})`. It uses that plugin's template compiler options and
+stamps hot-update reads as well as initial transforms, keeping Vue's cached
+template modules mapped. Compiler revision attributes and normalized literal
+text let source undo verify a live SPA update without demanding SSR HTML or
+reloading the document. Unsupported template preprocessing leaves ordinary Vite
+compilation in charge. Production builds exclude the instrumentation.
+
+Chromium and WebKit passed repeated text edits (including literal `{{ }}`), exact
+undo with normalized whitespace, live Vue state and document retention, repeated
+template identities, `/docs/` routing, immediate uploaded-image decoding, and
+production output checks. A separate React Vite browser regression passed. The
+full unit suite passed 1,846 tests. Browser testing used Vite 8.3.0, Vue 3.5.42
+and `@vitejs/plugin-vue` 6.0.9. These are checkout tests, not a new desktop package
+or Homebrew release. Broader Vue configurations remain unverified.
+
+The WebKit test also exposed blocked stylesheet-load callbacks in the sandboxed
+typography preview. A minimal browser reproduction isolated that callback. The
+preview now relies on font readiness and resize observation, preserving its
+script-disabled sandbox; the complete Vue browser flow passes without console
+errors. Screenshots: `/tmp/retouch-vite-vue-chromium.png` and
+`/tmp/retouch-vite-vue-webkit.png`. Logs: `/tmp/retouch-vite-vue-chromium.log`,
+`/tmp/retouch-vite-vue-webkit.log`, `/tmp/retouch-vue-react-regression.log`, and
+`/tmp/retouch-vue-adapter-units.log`. Full Figma parity remains incomplete.
