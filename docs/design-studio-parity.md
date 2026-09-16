@@ -21426,3 +21426,30 @@ Name matching follows font metadata; it does not infer equivalent styles
 across differently named presets. Font fallback/glyph equivalence, full Figma
 fidelity, arbitrary-site guarantees and trusted Homebrew distribution remain
 incomplete. No desktop rebuild or push.
+
+### Shared variable-axis drag previews
+
+Dragging a shared axis label (or Alt-dragging its field) now previews a common
+delta on all selected layers while preserving their other coordinates. The
+allowed delta keeps every value inside the field's inspected common range.
+Explicit, in-range values are required on every layer; font-default values are
+not guessed. Release saves one per-layer batch; Escape, range changes, detached
+controls, foreign property writes and font-family changes cancel previews.
+
+Browser testing exposed a duplicate field-change commit that flattened mixed
+coordinates after a drag. Gesture preview now suppresses that delayed field
+change until the next real input event, leaving the gesture batch as the only
+source write. HTML/React Chromium 145 and Liquid WebKit 26 checks with
+RT_E2E_SHARED_AXIS_DRAG pass preview without source writes, exact style
+restoration on Escape, preserved 400/700 to 450/750 differences, one-step exact
+undo, upper-range clamping to 600/900, no-op gestures and foreign axis-write
+cancellation. React/Liquid additionally cover font-family interruption.
+All 1,713 unit tests pass. Evidence:
+/tmp/retouch-shared-axis-drag-html-debug.log (initial duplicate-commit failure),
+/tmp/retouch-shared-axis-drag-html-fixed.log,
+/tmp/retouch-shared-axis-drag-{react,liquid}.log,
+/tmp/retouch-shared-axis-drag-units.log.
+
+Dragging automatic/default coordinates, resolved glyph fallback fidelity,
+full Figma parity, arbitrary-site guarantees and trusted Homebrew distribution
+remain incomplete. No native rebuild or push.
