@@ -26,7 +26,7 @@ let renderedSelection=null; // Live DOM anchor for the explicitly chosen occurre
 let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
 let inlineFormatCleanup=()=>{};
 let editing = null; // { el, id, info, original, originalHTML, snapshot, originalTree } during inline text editing
-let inspectorTextCommit=null,inspectorSelectionSerial=0;
+let inspectorTextCommit=null,inlineTextCommit=null,inspectorSelectionSerial=0;
 let hoverEl = null;
 let measuring = false;
 let selectionMarquee=null,stopMarquee=null,stopDrawing=null,stopSVGDrag=null,stopGroupDrag=null,frameRefreshDrawing=null;
@@ -587,6 +587,7 @@ window.addEventListener('retouch:comparison-edit',async event=>{
   const contextOpener=document.activeElement;
   if(detail.contextMenu&&(!Number.isFinite(detail.contextMenu.x)||!Number.isFinite(detail.contextMenu.y)))return;
   if(inspectorTextCommit)await inspectorTextCommit;
+  if(inlineTextCommit)await inlineTextCommit;
   if(serial!==comparisonSelectionSerial||selectionSerial!==inspectorSelectionSerial)return;
   if(panelTasks||undoBusy||sourceRequests||!['width','height'].every(key=>Number.isInteger(detail[key])&&detail[key]>=240&&detail[key]<=7680))return;
   const validId=id=>id===null||id===undefined||/^[a-f0-9]{10}$/.test(id);
@@ -800,7 +801,16 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
   } catch {}
 }
 
-async function commitInlineEdit() {
+function commitInlineEdit() {
+  // Focusout and comparison click/double-click can all request the same save.
+  // Retain its promise after editing is cleared so later intents wait for it.
+  if(inlineTextCommit)return inlineTextCommit;
+  if(!editing)return Promise.resolve();
+  const task=Promise.resolve().then(persistInlineEdit).finally(()=>{if(inlineTextCommit===task)inlineTextCommit=null;});
+  inlineTextCommit=task;return task;
+}
+
+async function persistInlineEdit() {
   if (!editing) return;
   const ed = editing;
   normalizeCaretPlaceholders(ed);
@@ -843,11 +853,12 @@ async function commitInlineEdit() {
       if (structural) {
         await reloadFrame();
         await refreshWrittenElement(ed.info,el=>JSON.stringify(serializeChildren(el))===expectedFormatting);
-      } else if (window.__RT_RENDERING?.reloadAfterWrite) reloadFrame();
+      } else if (window.__RT_RENDERING?.reloadAfterWrite) await reloadFrame();
       else if (sel && sel.info && sel.info.id === ed.id) {
         sel.info.hash = res.hash;
         renderPanel();
       }
+      if(op.type==='setText')await window.RetouchComparisons?.syncText(ed.info);
       toast('Saved', 'ok');
     } else {
       ed.el.innerHTML = ed.originalHTML;

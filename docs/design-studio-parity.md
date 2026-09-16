@@ -21784,3 +21784,31 @@ comparison document, vector entry, arbitrary dynamic-source text and every
 scroll/transform/occurrence combination remain incomplete. Full Figma fidelity,
 arbitrary-site support and trusted Homebrew distribution remain incomplete.
 No desktop rebuild or push in this continuation.
+
+## Pending inline-text saves when entering a comparison (2026-09-16)
+
+The preceding push was progress: origin was verified at ed598e21. This
+continuation reproduced a browser failure where an inline text save succeeded
+but a comparison double-click during that save never reopened editing. The
+first click cleared `editing` before its asynchronous write finished; subsequent
+click/double-click intents superseded it, then returned at the busy guard.
+
+Inline commits now share their pending promise. Comparison intents await that
+promise before checking current selection serials and busy state, so the newest
+valid request can open its target after saving. Reload-based text writes await
+the reload. Inline setText also invokes the comparison text synchronization path
+already used by inspector text edits; without it, React comparison text remained
+stale in the browser check even though the source write succeeded.
+
+Validation: 1,732 unit tests passed. The comparison entry browser test holds a
+real source POST until the double-click sequence finishes, then proves same-layer
+reopening and switching to a different text layer, saved text convergence,
+unchanged source for a no-op finish, preserved scope, and exact source undo/redo.
+HTML and React use Chromium 145; Liquid uses WebKit 26. Evidence is retained in
+/tmp/retouch-comparison-pending-{before,html,react,liquid,units}.log. The before
+run fails waiting for the editable target after the pending save.
+
+This covers literal text handoffs in these fixtures, not every rich-text
+structural reload, route change, failed save, or arbitrary framework. Typing is
+still on the main canvas. Full Figma parity, arbitrary-site support and trusted
+Homebrew distribution remain incomplete. No desktop rebuild or push here.
