@@ -603,7 +603,7 @@ window.addEventListener('retouch:comparison-edit',async event=>{
   const applyScope=()=>{
     if(!detail.scopeAtWidth)return;
     if(!sel)return toast('Select a layer before choosing its style scope.','err');
-    styleScope=sel.info.cssAuthoring?`min-[${detail.width}px]:`:RetouchResponsive.atWidth(doc(),detail.width).prefix;renderPanel();
+    styleScope=(sel.info.cssAuthoring||sel.info.groupScale||sel.info.scaleMember)?`min-[${detail.width}px]:`:RetouchResponsive.atWidth(doc(),detail.width).prefix;renderPanel();
   };
   const openContext=()=>{if(detail.contextMenu&&serial===comparisonSelectionSerial&&sameRoute()&&contextOpener?.isConnected&&sel)window.RetouchActions?.contextMenu({...detail.contextMenu,opener:contextOpener});};
   if(group?.length===0){if(!detail.append)clearSelection();return;}
@@ -1864,7 +1864,7 @@ function screenScopeSection() {
   const width = iframe.contentWindow?.innerWidth;
   let previewScope = null;
   if (Number.isInteger(width) && width >= 240) {
-    const atWidth = sel?.info.cssAuthoring?{prefix:`min-[${width}px]:`,label:`${width} px and larger`}:RetouchResponsive.atWidth(doc(),width,options.slice(1));
+    const atWidth = (sel?.info.cssAuthoring||sel?.info.groupScale||sel?.info.scaleMember)?{prefix:`min-[${width}px]:`,label:`${width} px and larger`}:RetouchResponsive.atWidth(doc(),width,options.slice(1));
     previewScope = atWidth;
     if (!options.some(o=>o.prefix===atWidth.prefix)) options.push(atWidth);
   }
@@ -3522,7 +3522,7 @@ async function refreshGroupMove(infos,before){
  else await refreshWrittenElement(infos[0],el=>classSelectionMatches(infos,el.ownerDocument),{classSource:true});
 }
 function movementMembers(roots){
- const visibleOnly=roots.length===1&&!sel?.multiple?.length&&!!sel?.info.groupScale&&!!sel.info.cssAuthoring&&roots[0].hasAttribute('data-rt-group');
+ const visibleOnly=roots.length===1&&!sel?.multiple?.length&&!!sel?.info.groupScale&&roots[0].hasAttribute('data-rt-group');
  const members=RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el),undefined,{visibleOnly});
  if(!members.length)throw Error('Choose a screen where at least one group layer is visible.');return members;
 }
@@ -3611,7 +3611,7 @@ async function refreshHTMLGroupScale(info){
 async function writeHTMLGroupScale(info,percent,offset=[0,0],move=[0,0]){
  if(!selectionEditRangeActive()||sel?.info!==info)return;
  const context=await moveGroupOnCanvas(info,null,{prepareOnly:true,allowLayers:true});if(!context||!context.current())return;RetouchGroupMove.scalePlan(context.members,percent/100);
- const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;busyPanel(true);
+ const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;if(!Number.isInteger(width))throw Error('Choose an explicit pixel screen range for group scaling.');busyPanel(true);
  try{
   const result=await api('POST','/rt/__api/op',{type:'scaleGroup',id:info.id,fileHash:info.hash,width,factor:percent/100,offset,move});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not scale the group.');
   if(result.undoId)editorHistory.record({type:'htmlGroupScale',id:info.id,undoId:result.undoId});sel.info=result.element;
@@ -3652,16 +3652,16 @@ async function writeGroupMove({info,roots,selectionIds,members,infos,scope,width
      const fresh=movementMembers(roots);
      if(fresh.length!==members.length||fresh.some((item,i)=>item.el!==members[i].el||item.translate!==members[i].translate||item.matrix.some((n,j)=>Math.abs(n-members[i].matrix[j])>1e-9)||['x','y','width','height'].some(key=>Math.abs(item.rect[key]-members[i].rect[key])>.1)))throw Error('The group changed during movement. Re-select it.');
      const deltas=Array.isArray(delta)?delta:members.map(()=>delta);if(deltas.length!==members.length)throw Error('Resolve every layer offset.');
-     if(css&&info.groupScale&&selectionIds.length===1&&(scaling||info.groupScale.metadata)){
+     if(info.groupScale&&selectionIds.length===1&&(scaling||info.groupScale.metadata)){
       const bounds=RetouchCanvasMove.union(members.map(item=>item.rect)),factor=scaling?scaling.expected[0].width/members[0].rect.width:1;
       if(!scaling&&deltas.some(d=>Math.abs(d.x-deltas[0].x)>.001||Math.abs(d.y-deltas[0].y)>.001))throw Error('Move the scaled group as one selection.');
       const dx=scaling?scaling.expected[0].x-(bounds.left+(members[0].rect.x-bounds.left)*factor):deltas[0].x,dy=scaling?scaling.expected[0].y-(bounds.top+(members[0].rect.y-bounds.top)*factor):deltas[0].y;
       return await writeHTMLGroupScale(info,factor*100,scaling?[dx/bounds.width,dy/bounds.height]:[0,0],scaling?[0,0]:[dx,dy]);
      }
      const moving=members.map((item,i)=>({item,delta:deltas[i],info:infos[i]})).filter(({delta})=>scaling||delta.x!==0||delta.y!==0);if(!moving.length)return;const writeInfos=moving.map(entry=>entry.info),changesById=Object.fromEntries(moving.map(({item,delta})=>{
-      if(css&&item.el.ownerDocument[Symbol.for('retouch.group-scale.runtime')]?.manages?.(item.el)){const prior=RetouchGroupMove.scaleMovement(item.el),expected=scaling?.expected[members.indexOf(item)],shift=expected?{x:expected.x-item.rect.x,y:expected.y-item.rect.y}:delta,factor=expected?RetouchGroupMove.memberScale(item.el)*expected.width/item.rect.width:null;if(factor!==null&&(!Number.isFinite(factor)||factor<.01||factor>100))throw Error('Keep the layer scale between 1 and 10,000 percent.');return [item.id,{'--rt-scale-move-x':(prior.x+shift.x)+'px','--rt-scale-move-y':(prior.y+shift.y)+'px',...(expected?{'--rt-scale-factor':String(factor)}:{})}];}
+      if(item.el.ownerDocument[Symbol.for('retouch.group-scale.runtime')]?.manages?.(item.el)){const prior=RetouchGroupMove.scaleMovement(item.el),expected=scaling?.expected[members.indexOf(item)],shift=expected?{x:expected.x-item.rect.x,y:expected.y-item.rect.y}:delta,factor=expected?RetouchGroupMove.memberScale(item.el)*expected.width/item.rect.width:null;if(factor!==null&&(!Number.isFinite(factor)||factor<.01||factor>100))throw Error('Keep the layer scale between 1 and 10,000 percent.');return [item.id,{'--rt-scale-move-x':(prior.x+shift.x)+'px','--rt-scale-move-y':(prior.y+shift.y)+'px',...(expected?{'--rt-scale-factor':String(factor)}:{})}];}
       return [item.id,{translate:RetouchGroupMove.translation(item.translate,RetouchGroupMove.localDelta(item.matrix,delta)),...(scaling?{scale:scaling.scales[item.id]}:{})}];
-     })),classesById=css?{}:Object.fromEntries(writeInfos.map(item=>[item.id,scaling?RetouchGroupMove.scaleClasses(RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate),scope,scaling.scales[item.id]):RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate)])),first=writeInfos[0],multi=writeInfos.length>1;
+     })),classesById=css?{}:Object.fromEntries(writeInfos.map(item=>[item.id,Object.hasOwn(changesById[item.id],'--rt-scale-move-x')?RetouchGroupScaleClasses.write(item.className,scope,changesById[item.id]):scaling?RetouchGroupMove.scaleClasses(RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate),scope,scaling.scales[item.id]):RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate)])),first=writeInfos[0],multi=writeInfos.length>1;
      busyPanel(true);busy=true;
      const result=await api('POST','/rt/__api/op',{type:css?(multi?'setCSSSelection':'setCSS'):(multi?'setClassesSelection':'setClasses'),id:first.id,fileHash:first.hash,...(multi?{ids:writeInfos.map(item=>item.id)}:{}),...(css?{width,...(multi?{changesById}:{changes:changesById[first.id]})}:multi?{classesById,...selectionSourceContexts(writeInfos)}:{classes:classesById[first.id],context:first.context})});
      if(!result?.ok)throw Error(result?.reason||result?.error||'Could not move group.');

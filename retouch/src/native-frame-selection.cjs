@@ -7,7 +7,7 @@ function scaledChildren(resolved,language){
  structure.ranges({...resolved,element:roots[0]},language,{templateChildren:true});require('./native-parent-proof.cjs').prove(resolved,roots,parent,language);return roots;
 }
 function describe(resolved,language){
- try{const h=helpers(language);if(language==='liquid'&&require('./liquid-group-scale.cjs').reclaim(resolved,[resolved.element],true))return {canFrame:true,canRemoveFrame:false};if(scaledChildren(resolved,language))return {canFrame:false,canRemoveFrame:h.isFrame(resolved.element)};const ranges=structure.ranges(resolved,language,{templateChildren:language==='liquid'&&h.isFrame(resolved.element)}),parent=resolved.elements.find(e=>e.id===ranges.parentId);return {canFrame:!!parent&&insertion.describe({...resolved,element:parent},language).canInsert,canRemoveFrame:h.isFrame(resolved.element)};}catch{return {canFrame:false,canRemoveFrame:false};}
+ try{const h=helpers(language);if(language==='liquid'&&require('./liquid-group-scale.cjs').reclaim(resolved,[resolved.element],true))return {canFrame:true,canRemoveFrame:false,parentId:resolved.element.parent?.id||null};if(scaledChildren(resolved,language))return {canFrame:false,canRemoveFrame:h.isFrame(resolved.element)};const ranges=structure.ranges(resolved,language,{templateChildren:language==='liquid'&&h.isFrame(resolved.element)}),parent=resolved.elements.find(e=>e.id===ranges.parentId);return {canFrame:!!parent&&insertion.describe({...resolved,element:parent},language).canInsert,canRemoveFrame:h.isFrame(resolved.element)};}catch{return {canFrame:false,canRemoveFrame:false};}
 }
 function plan(resolved,op,language){
  const refuse=reason=>({ok:false,refused:true,reason});

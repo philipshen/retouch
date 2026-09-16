@@ -8,12 +8,12 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
  const measure=frame=>frame.locator('h1,p').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect();return [r.x,r.y,r.width,r.height];}));
  const initial=[];for(const frame of frames){await frame.locator('[data-rt-group]').waitFor({state:'attached'});initial.push(await measure(frame));await frame.locator('body').evaluate(()=>window.__groupMoveDocument=document);}
  let failed=false;
- if(kind==='react'||kind==='html'&&scaling){
+ if(kind==='react'||['html','liquid'].includes(kind)&&scaling){
   const tablet=await (await page.locator('iframe[title="Tablet comparison preview"]').elementHandle()).contentFrame();
   await page.route(kind==='react'?/__rt_revision=/:/\/rt\/__group-scale-runtime\.js$/,async route=>{if(!failed&&route.request().frame()===tablet){failed=true;await route.abort();}else await route.continue();});
  }
- const x=page.getByLabel(scaling?'Scale selection (%)':'Group X (px)',{exact:true});await x.fill(scaling?'150':String(Number(await x.inputValue())+23));await x.press('Enter');await wait(()=>read()!==original);await settled();const moved=read();
- if(kind==='react'||kind==='html'&&scaling){const retry=page.getByRole('button',{name:kind==='react'?'Retry classes in Tablet comparison':'Retry scale in Tablet comparison',exact:true});await retry.waitFor();assert.ok(failed);await retry.click();await retry.waitFor({state:'hidden'});}
+ const x=page.getByLabel(scaling?'Scale selection (%)':'Group X (px)',{exact:true});await x.fill(scaling?'150':String(Number(await x.inputValue())+23));await x.press('Enter');try{await wait(()=>read()!==original);}catch(error){console.error('GROUP SCALE WRITE STATE',JSON.stringify(await page.evaluate(()=>({scope:styleScope,toasts:document.querySelector('#toasts')?.textContent,range:document.querySelector('[aria-label="Edit range status"]')?.dataset.match,groupScale:sel?.info?.groupScale}))));throw error;}await settled();const moved=read();
+ if(kind==='react'||['html','liquid'].includes(kind)&&scaling){const retry=page.getByRole('button',{name:kind==='react'?'Retry classes in Tablet comparison':'Retry scale in Tablet comparison',exact:true});await retry.waitFor();assert.ok(failed);await retry.click();await retry.waitFor({state:'hidden'});}
  const verify=async(delta,scaledFactor=1.5,translate=0)=>{for(let f=0;f<frames.length;f++){
   const active=!scoped||f===0||f===3,factor=scaling&&delta&&active?scaledFactor:1,visible=initial[f].slice(0,2).filter(r=>r[2]>0&&r[3]>0),left=Math.min(...visible.map(r=>r[0])),top=Math.min(...visible.map(r=>r[1]));
   const expected=initial[f].map((r,i)=>i>=2||!r[2]||!r[3]?r:scaling?[left+(r[0]-left)*factor+(active?translate:0),top+(r[1]-top)*factor,r[2]*factor,r[3]*factor]:r.map((n,j)=>n+(j===0&&active?delta:0)));
@@ -22,7 +22,7 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
  await verify(23);if(scaling)await page.screenshot({path:'/tmp/retouch-scaled-comparisons-'+kind+'.png',caret:'initial'});
  await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await verify(0);
  await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===moved);await settled();await verify(23);
- if(scaling&&kind==='html'){
+ if(scaling&&['html','liquid'].includes(kind)){
   const scale=page.getByLabel('Scale selection (%)',{exact:true});await scale.fill('50');await scale.press('Enter');await wait(()=>read()!==moved);await settled();await verify(23,.75);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===moved);await settled();await verify(23);
   const beforePreview=await measure(app);await page.getByRole('button',{name:'Scale selection on canvas',exact:true}).click();const handle=page.getByRole('button',{name:'Scale bottom right',exact:true});await handle.focus();await handle.press('ArrowRight');await wait(async()=>(await measure(app))[0][2]>beforePreview[0][2]);assert.equal(read(),moved);await handle.press('Escape');await verify(23);
@@ -41,7 +41,7 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
   assert.equal(await page.getByLabel('Group X (px)',{exact:true}).isDisabled(),false);assert.equal(await page.getByRole('button',{name:'Move group on canvas',exact:true}).isDisabled(),false);assert.equal(read(),moved);
 
  }
- if(scaling&&kind==='html'&&process.env.RT_E2E_SCALED_UNGROUP){
+ if(scaling&&['html','liquid'].includes(kind)&&process.env.RT_E2E_SCALED_UNGROUP){
   const beforeUngroup=read(),expected=[];for(const frame of frames)expected.push(await measure(frame));
   const check=async grouped=>{for(let f=0;f<frames.length;f++){await wait(async()=>await frames[f].locator('[data-rt-group]').count()===(grouped?1:0));await wait(async()=>{const boxes=await measure(frames[f]);return boxes.length===expected[f].length&&boxes.every((r,i)=>r.every((n,j)=>Math.abs(n-expected[f][i][j])<.1));});}};
   await page.getByRole('treeitem',{name:'div · Group',exact:true}).click({button:'right'});await page.getByRole('menu',{name:'Canvas actions',exact:true}).locator('[data-action-id="layer-removeFrame"]').click();await wait(()=>read()!==beforeUngroup);await settled();const released=read();await check(false);assert.equal(await page.getByRole('treeitem',{selected:true}).count(),2);

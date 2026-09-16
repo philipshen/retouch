@@ -23387,3 +23387,49 @@ ownership-record maintenance. Liquid scale editing still needs registration,
 class-member writes from gestures, runtime/preview synchronization and editor
 history integration. React support, arbitrary template handling, full Figma
 parity and trusted desktop distribution remain unfinished. No push.
+
+### Liquid editor scaling integration
+
+Liquid now advertises the source-backed scaleGroup operation and group/member
+runtime descriptors. Scale fields and canvas gestures use saved group metadata
+for whole groups; independently edited members use persistent custom-property
+classes through the same writer used by source snapshots. Group moves, preview
+synchronization and undo/redo use the established source/runtime path. The class
+writer is shared between browser and source code. Regroup capability now includes
+the parent source ID required by the UI selection check.
+
+Generated screen scopes for these groups/members use the canvas pixel width.
+The initial integration exposed the class picker generating min-[68.75rem]: for
+1100px, which the saved metadata cannot represent. The generated scope now
+matches that metadata contract; explicit relative/named scaling ranges remain
+unsupported and receive a clear refusal. This does not generalize responsive
+metadata to arbitrary media conditions.
+
+The previously failing Liquid editor comparison regression now passes. Chromium
+and WebKit verify scaling across main/Phone/Tablet/Desktop, a deliberately failed
+Tablet runtime load and retry, exact source undo/redo, and retained preview
+documents for nonstructural edits. Chromium and WebKit lifecycle checks pass
+ungroup/regroup, another scale, independent member moves/resizes and exact
+history. Chromium additionally passes the full lifecycle in a 1100px edit range;
+WebKit passes range-specific scaling, outside-range controls and comparison
+geometry. The final Chromium gesture suite passes all corner/edge/center keyboard
+cases, pointer commit/cancel, mixed selection positioning and exact undo/redo.
+The pointer harness now scrolls to its handle and asserts delivered coordinates;
+its earlier failure had no drag events and NaN expected rectangles.
+
+All 1,791 unit tests and git diff --check passed. The light inspector and screen
+scope controls were visually inspected in the generated comparison screenshot.
+Evidence: /tmp/retouch-liquid-editor-final-units.log,
+/tmp/retouch-liquid-editor-lifecycle.log,
+/tmp/retouch-liquid-editor-lifecycle-webkit.log,
+/tmp/retouch-liquid-editor-scoped-lifecycle.log,
+/tmp/retouch-liquid-editor-scope-webkit-fixed.log,
+/tmp/retouch-liquid-editor-gestures-final.log,
+/tmp/retouch-scaled-comparisons-liquid.png.
+
+Remaining scope includes released-member structural copying/reordering, other
+released sets in the same source file, direct editing of repeated occurrences,
+dynamic class snapshots and relative/named group ranges. React still uses the
+older class-based group path with the known cross-screen positioning failure.
+Full Figma parity, arbitrary site coverage and trusted desktop distribution remain
+unfinished. No push.

@@ -1,9 +1,13 @@
 'use strict';
-// Source planner for Liquid group scaling. Editor capability remains gated until
-// member editing, copying and ungrouping preserve the saved runtime ownership.
+// Source-backed Liquid group scaling and persistent transform ownership.
 const MagicString=require('magic-string'),liquid=require('./adapters/liquid.cjs'),runtime=require('./group-scale-runtime.cjs');
 const attr=(el,name)=>el.attributes?.find(a=>a.name===name),value=(el,name)=>{const a=attr(el,name);if(a?.dynamic)throw Error('Resolve dynamic scale attributes first.');return a?.value;};
 const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+function describe(resolved){
+ const group=resolved.element,scaleMember=!!group?.attributes?.some(a=>a.name==='data-rt-scale-member');if(!group?.attributes?.some(a=>a.name==='data-rt-group'))return scaleMember?{scaleMember:true}:{};
+ const decode=text=>require('parse5').parseFragment('<textarea>'+text.replace(/</g,'&lt;')+'</textarea>').childNodes[0].childNodes[0]?.value||'',metadata=value(group,'data-rt-scale'),elements=resolved.elements||liquid.collect(resolved.source,resolved.relPath).elements;
+ return {groupScale:{runtimeRevision:runtime.revision(),metadata:metadata==null?null:decode(metadata),members:Object.fromEntries(elements.filter(e=>e.tagStart>group.tagStart&&e.closeEnd<=group.closeStart).map(e=>[e.id,value(e,'data-rt-scale-member')??null]))}};
+}
 function independentStyles(members){
  const snapshots=Object.create(null),classes=require('./liquid-classes.cjs');
  for(const member of members){
@@ -87,4 +91,4 @@ function clone(resolved,range){
   return runtime.upgrade(out.toString());
  }};
 }
-module.exports={plan,clone,release,reclaim};
+module.exports={plan,clone,release,reclaim,describe};
