@@ -21230,3 +21230,30 @@ Evidence: /tmp/retouch-shared-variants-all.log and
 /tmp/retouch-shared-variants-{react,html,liquid}.log.
 Full Figma fidelity, arbitrary-site behavior and trusted Homebrew distribution
 remain incomplete. No desktop rebuild or push in this continuation.
+
+### Font-variant shorthand cascade correction
+
+A new browser fixture exposed a real gap in the preceding shared typography
+change: an important font-variant shorthand at the edited scope could win over
+the emitted important longhand. The control wrote source without changing the
+computed property. Shared class editing now expands a same-scope font-variant
+shorthand through the preview document's CSS parser into supported longhands,
+preserving their importance and the unrelated font features before editing.
+Unparseable shorthands are refused rather than silently discarded. Inherited
+shorthands remain intact and receive a scoped longhand override.
+
+Reset removes the edited longhand (returning to its inherited/default value);
+Undo restores the exact original source, including the shorthand. Browser
+coverage verifies capital forms and super/subscript values, retained old-style
+numbers, reset and exact undo with same-scope shorthand on React and Liquid
+Chromium 145. Inherited shorthand plus responsive fallback passes Liquid
+WebKit 26. All 1,709 unit tests pass. Evidence:
+/tmp/retouch-variant-shorthand-liquid.log (initial failure),
+/tmp/retouch-variant-shorthand-liquid-fixed.log,
+/tmp/retouch-variant-shorthand-react.log,
+/tmp/retouch-variant-shorthand-inherited.log,
+/tmp/retouch-variant-shorthand-units.log.
+
+General font shorthand, arbitrary competing selectors and font-dependent glyph
+appearance remain outside this verification. Full Figma parity and trusted
+Homebrew distribution are still incomplete. No desktop rebuild or push.

@@ -46,6 +46,17 @@
  const svgValues=root.RetouchHTMLCSSValues||(typeof require==='function'?require('./html-css-values.js'):null);
  for(const [property,label]of [['text-decoration-style','Underline style'],['text-decoration-thickness','Underline thickness'],['text-underline-offset','Underline offset'],['text-decoration-skip-ink','Underline skip ink'],['text-decoration-color','Underline color']])fields[property]={label,underline:true,text:!svgValues.options[property],options:svgValues.options[property],valid:value=>svgValues.valid(property,value),matches:token=>inspector().decorationMatchers[property](token),token:value=>'['+property+':'+value.replace(/ /g,'_')+']'};
  for(const [property,label]of svgValues.svgFields.filter(([key])=>!['fill','stroke'].includes(key)))fields[property]={label,svg:true,text:!svgValues.options[property],options:svgValues.options[property],valid:value=>svgValues.valid(property,value,false),matches:token=>(root.RetouchSVGPaint||require('./svg-paint.js')).property(token)===property,token:value=>'['+property+':'+String(value).trim().replace(/\s+/g,'_')+']'};
+ function expandVariantShorthand(classes,document){
+  const I=inspector();return (classes||'').split(/\s+/).map(token=>{
+   const plain=I.base(token);if(!plain||!/^\[font-variant:/.test(plain))return token;
+   const style=document?.createElement('span').style;if(!style)throw Error('A document is required to expand font variants.');
+   style.setProperty('font-variant',plain.slice(14,-1).replace(/_/g,' '));
+   const properties=['ligatures','caps','numeric','east-asian','alternates','position','emoji'];
+   const values=properties.map(name=>['font-variant-'+name,style.getPropertyValue('font-variant-'+name)]).filter(([,value])=>value);
+   if(!values.length)throw Error('The font variant shorthand could not be expanded.');
+   return values.map(([key,value])=>(/^!|!$/.test(token)?'!':'')+'['+key+':'+value.replace(/ /g,'_')+']').join(' ');
+  }).join(' ');
+ }
  function change(classes,scope,property,value,document=null,relative=false,el=null){
   if(inlineTypography.includes(property)&&value!==null&&el&&typographyKeys(property).some(key=>el.style.getPropertyPriority(key)==='important'))throw Error('An important inline rule controls this typography property.');
   if(relative&&(!['line-height','letter-spacing'].includes(property)||!Number.isFinite(value)||value<(property==='line-height'?0:-100)||value>1000))throw Error('Choose a supported relative typography value.');
@@ -59,7 +70,7 @@
   if(addition&&R.project(classes,scope).split(/\s+/).some(token=>I.base(token)!==null&&shorthandMatch(I.base(token))&&/^!|!$/.test(token)))addition='!'+addition.replace(/^!/,'');
   if(addition&&document&&!['opacity','visibility','mix-blend-mode','isolation'].includes(property)&&I.catalog(document).some(name=>(classes||'').split(/\s+/).includes(name))&&!addition.startsWith('!'))addition='!'+addition;
   if(addition&&inlineTypography.includes(property)&&el&&typographyKeys(property).some(key=>el.style.getPropertyValue(key)))addition='!'+addition.replace(/^!|!$/g,'');
-  const projected=R.project(classes,scope),expanded=['font-size','line-height'].includes(property)?I.expandSizeLeading(projected):projected,next=I.replace(expanded,field.matches,addition);return next===projected?(classes||''):R.replaceScope(classes,next,scope);
+  const projected=R.project(classes,scope),expanded=property.startsWith('font-variant-')&&value!==null?expandVariantShorthand(projected,document):['font-size','line-height'].includes(property)?I.expandSizeLeading(projected):projected,next=I.replace(expanded,field.matches,addition);return next===projected?(classes||''):R.replaceScope(classes,next,scope);
  }
  function changeRotation(classes,scope,value,el,inherited=''){
   if(value!==null&&el.style.getPropertyPriority('rotate')==='important')throw Error('Edit the important inline rotation in its source first.');

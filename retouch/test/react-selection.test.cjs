@@ -391,7 +391,8 @@ test('shared wrap replaces mode/style classes and inherits their priority',()=>{
 test('shared capital forms and position preserve shorthand features and responsive priorities',()=>{
  for(const [property,value]of [['font-variant-caps','all-small-caps'],['font-variant-position','super']]){
   const shorthand='![font-variant:small-caps_oldstyle-nums]';
-  assert.equal(change(shorthand,'',property,value),shorthand+' !['+property+':'+value+']');
+  const doc={styleSheets:[],createElement:()=>({style:{setProperty(){},getPropertyValue:key=>({'font-variant-caps':'small-caps','font-variant-numeric':'oldstyle-nums','font-variant-position':'normal'})[key]||''}})};
+  const expanded=change(shorthand,'',property,value,doc);assert.ok(expanded.includes('![font-variant-numeric:oldstyle-nums]'));assert.ok(expanded.includes('!['+property+':'+value+']'));assert.ok(!expanded.includes('[font-variant:'));
   assert.equal(change(shorthand,'md:',property,value),shorthand+' md:!['+property+':'+value+']');
   const source=shorthand+' md:['+property+':normal] hover:['+property+':normal]';
   const next=change(source,'md:',property,value);
