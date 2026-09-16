@@ -515,3 +515,11 @@ test('shared truncation owns its screen scope and refuses invalid or inline-conf
  for(const value of [0,-1,1.5,1001,NaN,'3','bad'])assert.throws(()=>changeTextTruncation(source,'md:',value));
  for(const property of ['display','overflow','overflow-x','overflow-y','-webkit-box-orient','-webkit-line-clamp','line-clamp']){const el={style:{getPropertyPriority:key=>key===property?'important':''}};assert.throws(()=>changeTextTruncation(source,'md:',2,el),/important inline/);assert.equal(changeTextTruncation(source,'md:',null,el),'p-4 line-clamp-2 hover:line-clamp-1');}
 });
+
+test('text sizing mode distinguishes authored keywords, responsive sizes and layout-driven dimensions',()=>{
+ const {textResizeMode}=require('../shell/inspector.js'),css={flexGrow:'0',flexShrink:'0',flexBasis:'auto',alignSelf:'flex-start',justifySelf:'flex-start'};
+ assert.equal(textResizeMode({width:'max-content',height:'auto'},css),'width');assert.equal(textResizeMode({width:'200px',height:'auto'},css),'height');assert.equal(textResizeMode({width:'200px',height:'100px'},css),'fixed');
+ for(const width of ['auto','50%','fit-content','calc(100% - 10px)'])assert.equal(textResizeMode({width,height:'auto'},css),null);
+ const row={display:'flex',flexDirection:'row',alignItems:'stretch'};assert.equal(textResizeMode({width:'200px',height:'100px'},{...css,flexGrow:'1'},row),null);assert.equal(textResizeMode({width:'200px',height:'auto'},{...css,alignSelf:'auto'},row),null);
+ const grid={display:'grid',writingMode:'vertical-rl',justifyItems:'stretch'};assert.equal(textResizeMode({width:'200px',height:'auto'},{...css,justifySelf:'auto'},grid),null);assert.equal(textResizeMode({width:'200px',height:'auto'},css,grid),'height');
+});

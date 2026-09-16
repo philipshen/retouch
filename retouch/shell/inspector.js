@@ -364,14 +364,31 @@
     if(mode!=='fixed'&&property&&['normal','stretch'].includes(alignment))changes[property]='flex-start';
     return changes;
   }
+  function textResizeMode(sizes,css,parent=null){
+    const fixed=value=>typeof value==='string'&&/^(?:\d+(?:\.\d+)?|\.\d+)px$/.test(value);
+    const mode=sizes.width==='max-content'&&sizes.height==='auto'?'width':fixed(sizes.width)&&sizes.height==='auto'?'height':fixed(sizes.width)&&fixed(sizes.height)?'fixed':null;
+    if(!mode)return null;
+    if(parent&&/^(?:inline-)?flex$/.test(parent.display)&&(Number(css.flexGrow)!==0||Number(css.flexShrink)!==0||css.flexBasis!=='auto'))return null;
+    if(mode!=='fixed'){
+      const axes=(root.RetouchLayout||require('./layout.js')).layoutAxes({writingMode:parent?.writingMode,direction:parent?.flexDirection});
+      const property=parent&&/^(?:inline-)?grid$/.test(parent.display)?(axes.inline==='height'?'justifySelf':'alignSelf'):parent&&/^(?:inline-)?flex$/.test(parent.display)&&axes.main==='width'?'alignSelf':null;
+      const own=property&&css[property],alignment=own==='auto'?parent[property==='justifySelf'?'justifyItems':'alignItems']:own;
+      if(property&&['normal','stretch'].includes(alignment))return null;
+    }
+    return mode;
+  }
+  function currentTextResizeMode(el){
+    try{const styles=el.computedStyleMap(),parent=layoutParent(el),view=el.ownerDocument.defaultView;return textResizeMode({width:styles.get('width').toString(),height:styles.get('height').toString()},view.getComputedStyle(el),parent?view.getComputedStyle(parent):null);}catch{return null;}
+  }
   function sharedTextResizing(parent,getElements,ready,onChange){
     const eligible=el=>el?.isConnected&&isTextLayer(el.localName)&&el.namespaceURI==='http://www.w3.org/1999/xhtml'&&!['inline','contents','none'].includes(el.ownerDocument.defaultView.getComputedStyle(el).display);
     if(!getElements().every(eligible))return;
     const available=()=>ready()&&getElements().every(el=>eligible(el)&&textResizeProperties.every(key=>el.style.getPropertyPriority(key)!=='important'));
-    const row=document.createElement('div'),label=document.createElement('span'),group=document.createElement('div');row.className='text-resize-controls';label.className='hint';label.textContent='Resizing';group.className='layout-mode-segments';row.append(label,group);parent.append(row);
+    const modes=getElements().map(currentTextResizeMode),mixed=modes.some(mode=>mode!==modes[0]),current=mixed?null:modes[0];
+    const row=document.createElement('div'),label=document.createElement('span'),group=document.createElement('div');row.className='text-resize-controls';label.className='hint';label.textContent=mixed?'Resizing · Mixed':'Resizing';group.className='layout-mode-segments';row.dataset.textSizingMode=mixed?'mixed':current||'custom';row.append(label,group);parent.append(row);
     for(const [mode,name]of [['width','Auto width'],['height','Auto height'],['fixed','Fixed size']]){
       const control=button(name,async()=>{if(!row.isConnected||!available())return;try{const changes=getElements().map(el=>textResizeChanges(el.ownerDocument.defaultView.getComputedStyle(el),mode,layoutParent(el)?el.ownerDocument.defaultView.getComputedStyle(layoutParent(el)):null));root.RetouchPanelFocus?.queue(control);await onChange(changes);}catch(error){note(parent,error.message,'refused');}});
-      control.setAttribute('aria-label','Shared '+name);control.disabled=!available();control.title=control.disabled?'Preview the selected edit range and resolve important inline sizing or wrapping rules.':mode==='width'?'Fit each layer to its own text, preserving explicit line breaks.':mode==='height'?'Keep each layer’s width and fit its height to wrapped text.':'Keep each layer’s current width and height.';group.append(control);
+      control.setAttribute('aria-label','Shared '+name);control.setAttribute('aria-pressed',String(current===mode));control.disabled=!available();control.title=control.disabled?'Preview the selected edit range and resolve important inline sizing or wrapping rules.':mode==='width'?'Fit each layer to its own text, preserving explicit line breaks.':mode==='height'?'Keep each layer’s width and fit its height to wrapped text.':'Keep each layer’s current width and height.';group.append(control);
     }
     root.RetouchInspectorUI?.keyboardToolbar(group,'Shared text resizing',{role:'group'});
   }
@@ -1214,6 +1231,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={truncationProperties,sharedTruncationTypography,textResizeChanges,textResizeProperties,sharedTextResizing,textVerticalValue,sharedVerticalAlignment,sharedFontPresets,sharedAxisRanges,sharedVariationTypography,sharedTypographyPreview,sharedFeatureTypography,sharedLengthDrag,effectiveSpacingPercent,localPositionCorners,positionGeometry,localPositionGeometry,textResizing,textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={textResizeMode,truncationProperties,sharedTruncationTypography,textResizeChanges,textResizeProperties,sharedTextResizing,textVerticalValue,sharedVerticalAlignment,sharedFontPresets,sharedAxisRanges,sharedVariationTypography,sharedTypographyPreview,sharedFeatureTypography,sharedLengthDrag,effectiveSpacingPercent,localPositionCorners,positionGeometry,localPositionGeometry,textResizing,textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

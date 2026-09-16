@@ -445,3 +445,9 @@ test('adaptive minimum follows inline priority and inherited important columns',
  assert.equal(L.adaptiveMinimum('!grid-cols-2',strong,el('30px 50px')),null);
  assert.equal(L.adaptiveMinimum(normal,'',el('repeat(auto-fit, minmax(min(100%, 180px), 1fr))')),180);
 });
+
+test('sizing behavior recognizes explicit property classes and intrinsic widths',()=>{
+ assert.equal(L.sizeBehaviorToken('!size-20 ![width:220px]','width'),'w-[220px]');
+ assert.equal(L.sizeBehaviorToken('![width:315px] ![height:auto]','width'),'w-[315px]');assert.equal(L.sizeBehaviorToken('![width:315px] ![height:auto]','height'),'h-auto');
+ assert.equal(L.sizeBehaviorToken('![width:max-content]','width'),'w-max');assert.equal(L.sizeBehaviorToken('w-full ![width:220px]','width'),'w-[220px]');assert.equal(L.sizeBehaviorToken('md:![width:220px] size-20','width'),'w-20');
+});

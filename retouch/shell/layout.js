@@ -177,6 +177,12 @@
     if(addition&&(inlineOverride||[...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(/^(?:gap-(?![xy]-)|\[gap:)/.test(I.base(token)||'')||matches(I.base(token)||'')))))addition='!'+addition;
     return I.replace(classes,matches,addition);
   }
+  function sizeBehaviorToken(classes,axis){
+    const dim=axis==='width'?'w':'h',property='['+axis+':',matches=token=>token?.startsWith(dim+'-')||token?.startsWith('size-')||token?.startsWith(property),tokens=classes.split(/\s+/).filter(token=>matches(I.base(token))),axisTokens=tokens.filter(token=>!I.base(token).startsWith('size-')),ownToken=axisTokens.find(token=>/^!|!$/.test(token))||tokens.find(token=>/^!|!$/.test(token))||axisTokens[0]||tokens[0];
+    const own=ownToken&&I.base(ownToken);if(!own)return null;
+    if(!own.startsWith(property))return own.replace(/^size-/,dim+'-');
+    const value=own.slice(property.length,-1);return dim+'-'+({auto:'auto','fit-content':'fit','max-content':'max','min-content':'min','100%':'full'}[value]||'['+value+']');
+  }
   function sizeClasses(classes,axis,mode,value,parent={}) {
     if(!['width','height'].includes(axis)||!['fixed','hug','fill','reset'].includes(mode))throw Error('Unknown sizing mode');
     if(mode==='fixed'&&(!Number.isFinite(value)||value<0||value>100000))throw Error('Invalid size');
@@ -375,11 +381,10 @@
     const dims=Object.fromEntries(['width','height'].map(axis=>{const value=geometry.dimensionSize(css,axis);return [axis,Number.isFinite(value)?value:el[axis==='width'?'offsetWidth':'offsetHeight']];}));
     for(const axis of ['width','height']) {
       const title=axis[0].toUpperCase()+axis.slice(1),dim=axis==='width'?'w':'h';
-      const sizingTokens=classes.split(/\s+/).filter(token=>I.base(token)!==null),ownToken=sizingTokens.find(token=>/^!|!$/.test(token)&&I.base(token).startsWith(dim+'-'))||sizingTokens.find(token=>/^!|!$/.test(token)&&I.base(token).startsWith('size-'))||sizingTokens.find(token=>I.base(token).startsWith(dim+'-'))||sizingTokens.find(token=>I.base(token).startsWith('size-'));
-      const own=ownToken&&I.base(ownToken).replace(/^size-/,dim+'-');
+      const own=sizeBehaviorToken(classes,axis);
       const context={inlineFlex:['flex','flex-grow','flex-shrink','flex-basis'].some(property=>el.style.getPropertyValue(property)),inlineDimensions:inlineDimensions(el,css),display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode,inheritedClasses:info.styleScope?info.anchorInheritedClasses||'':''},axes=layoutAxes(context);
       const stretchFill=own===dim+'-auto'&&parent&&(/grid/.test(parent.display)?axis===axes.inline?css.justifySelf==='stretch':css.alignSelf==='stretch':/flex/.test(parent.display)&&axis!==axes.main&&css.alignSelf==='stretch');
-      const sizing=own===dim+'-fit'?'hug':own===dim+'-full'||['-webkit-fill-available','-moz-available','stretch'].some(value=>own===dim+'-['+value+']')||stretchFill||/\bflex-1\b/.test(classes)&&parent&&/flex/.test(parent.display)&&axis===axes.main?'fill':own&&own!==dim+'-auto'?'fixed':'';
+      const sizing=[dim+'-fit',dim+'-max',dim+'-min'].includes(own)?'hug':own===dim+'-full'||['-webkit-fill-available','-moz-available','stretch'].some(value=>own===dim+'-['+value+']')||stretchFill||/\bflex-1\b/.test(classes)&&parent&&/flex/.test(parent.display)&&axis===axes.main?'fill':own&&own!==dim+'-auto'?'fixed':'';
       const size=(mode,value)=>save(sizeClasses(classes,axis,mode,mode==='fixed'?geometry.dimensionValue(css,axis,value):value,context));
       I.select(sec,title+' behavior',[['','Inherited / auto'],['fixed','Fixed'],['hug','Hug content'],['fill','Fill available']],sizing,v=>size(v||'reset',Math.round(dims[axis]*100)/100));
       numeric(title+' (px)',dims[axis],0,100000,v=>size('fixed',v)).retouchDimension={target:el,axis,box:'border'};
@@ -407,6 +412,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={inlineAlignment,inlineOverflow,inlinePadding,paddingLogical,inlineDimensions,explicitLayoutClasses,gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={sizeBehaviorToken,inlineAlignment,inlineOverflow,inlinePadding,paddingLogical,inlineDimensions,explicitLayoutClasses,gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

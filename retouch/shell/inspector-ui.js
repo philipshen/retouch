@@ -681,7 +681,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    const sync=()=>{notice.hidden=sharedRangeActive(rangeSource);const size=notice.hidden?null:screenScope.retouchPreviewSize?.();preview.disabled=!size;preview.textContent=size?'Preview '+size.width+' × '+size.height:'Preview edit range';preview.title=size?'Preview at '+size.width+' × '+size.height+'. Source and edit range stay unchanged. Undo preview size returns to the previous screen.':'This range cannot be previewed by changing screen size.';};sync();watchSharedRange(rangeSource,sync);
   }
   const textResize=panel.querySelector('.text-resize-controls'),textLayout=panel.querySelector(':scope > [data-section="layout"]');
-  if(textResize&&textLayout){const dimensions=textLayout.querySelector('[aria-label="Width (CSS)"], [aria-label="Width (px)"]')?.closest('.property-pair');if(dimensions?.parentElement===textLayout)dimensions.after(textResize);else textLayout.append(textResize);keyboardToolbar(textResize.querySelector('[role="group"]'),'Text resizing',{role:'group'});}
+  if(textResize&&textLayout){const dimensions=textLayout.querySelector('[aria-label="Width (CSS)"], [aria-label="Width (px)"]')?.closest('.property-pair');if(dimensions?.parentElement===textLayout)dimensions.after(textResize);else textLayout.append(textResize);}
   for(const section of panel.querySelectorAll(':scope > .inspector-section'))collapsibleSection(section);
  }
  const dock=document.createElement('nav');dock.className='design-tool-dock';dock.setAttribute('aria-label','Canvas tools');

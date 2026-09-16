@@ -21694,3 +21694,34 @@ Evidence: /tmp/retouch-single-truncation-before.log (inactive-control failure),
 
 Full Figma fidelity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete. No desktop rebuild or push in this continuation.
+
+### Visible text sizing mode and consistent dimension controls
+
+Text sizing now highlights Auto width, Auto height or Fixed size from computed
+sizing keywords using Typed OM. Shared selections with differing modes show
+Mixed and leave all mode buttons unpressed. Growing/shrinking flex items and
+stretched automatic grid/flex heights do not receive a misleading fixed/auto
+highlight. Responsive percentage/custom sizes and unavailable Typed OM leave
+no mode selected. Reading the mode does not modify source or preview styles.
+
+The visual/keyboard review found two related inconsistencies: single sizing
+had two keyboard handlers, so an arrow skipped two buttons, and the dimension
+behavior dropdown did not recognize explicit [width:...] / [height:...] classes.
+The duplicate binding is removed; dimension behavior now recognizes those
+classes, intrinsic sizing and existing importance/axis precedence. Auto height
+now visibly agrees with Fixed width / Auto height in the neighboring fields.
+
+Validation: full unit suite passed 1,726 tests; after tightening size-class
+precedence all 52 layout tests passed again. HTML Chromium shared flex and
+Liquid WebKit shared vertical-grid browser tests verify one active sizing mode
+and a real mixed selection after an individual edit, alongside existing size,
+scope and undo checks. React Chromium and Liquid WebKit single-layer tests
+verify all mode highlights, matching Width/Height behavior, and arrow navigation
+moving one button without changing source or selection. The updated React
+screenshot was inspected. Evidence: /tmp/retouch-sizing-mode-{units,layout-units,html,liquid,single-react,single-liquid}.log
+and /tmp/retouch-sizing-mode-selected.png.
+
+Arbitrary cascade/layout combinations and engines without usable Typed OM
+remain outside mode detection guarantees. Full Figma fidelity, arbitrary-site
+support and trusted Homebrew distribution remain incomplete. No desktop rebuild
+or push in this continuation.
