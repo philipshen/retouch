@@ -166,7 +166,7 @@
   const {left,gap}=context,d=el.ownerDocument;let right=context.right;
   // The merged paragraph ends where the right paragraph ended. Preserve its
   // authored gap, including zero when it was the final paragraph.
-  const ending=!context.listItem&&left.style.marginBlockStart==='0px'&&right.style.marginBlockStart==='0px'&&/^\d+(?:\.\d+)?px$/.test(left.style.marginBlockEnd)&&/^\d+(?:\.\d+)?px$/.test(right.style.marginBlockEnd)?right.style.marginBlockEnd:null;
+  const ending=left.style.marginBlockStart==='0px'&&right.style.marginBlockStart==='0px'&&/^\d+(?:\.\d+)?px$/.test(left.style.marginBlockEnd)&&/^\d+(?:\.\d+)?px$/.test(right.style.marginBlockEnd)?right.style.marginBlockEnd:null;
   if(context.listItem){
    for(const [item,first]of [[left,false],[right,true]]){
     const children=[...item.childNodes].filter(node=>node.nodeType!==3||node.textContent.trim()),edge=first?children[0]:children.at(-1);
@@ -196,9 +196,16 @@
   if(nodes.some(node=>view.getComputedStyle(node).display!=='block'||[...node.style].some(name=>(name==='all'||name==='margin'||name.startsWith('margin-'))&&node.style.getPropertyPriority(name)==='important')))return [];
   return nodes;
  }
- function setParagraphSpacing(el,value){
-  if(!Number.isFinite(value)||value<0||value>10000)return false;
-  const nodes=spacingParagraphs(el);if(!nodes.length)return false;
+ function spacingListItems(el){
+  const context=listContext(el);if(!context)return [];
+  const nodes=[...context.list.children],view=el.ownerDocument.defaultView;
+  if(nodes.length<2||/flex|grid/.test(view.getComputedStyle(context.list).display)||nodes.some(node=>node.tagName!=='LI'||view.getComputedStyle(node).display!=='list-item'||[...node.style].some(name=>(name==='all'||name==='margin'||name.startsWith('margin-'))&&node.style.getPropertyPriority(name)==='important')))return [];
+  return nodes;
+ }
+ function setParagraphSpacing(el,value){return setBlockSpacing(el,spacingParagraphs(el),value);}
+ function setListSpacing(el,value){return setBlockSpacing(el,spacingListItems(el),value);}
+ function setBlockSpacing(el,nodes,value){
+  if(!Number.isFinite(value)||value<0||value>10000||!nodes.length)return false;
   const original=nodes.map(node=>node.getAttribute('style')),ends=nodes.map((_,index)=>index===nodes.length-1?0:value);
   nodes.forEach((node,index)=>{node.style.setProperty('margin-block-start','0px');node.style.setProperty('margin-block-end',ends[index]+'px');});
   if(nodes.some((node,index)=>{const css=el.ownerDocument.defaultView.getComputedStyle(node);return Math.abs(parseFloat(css.marginBlockStart))>0.01||Math.abs(parseFloat(css.marginBlockEnd)-ends[index])>0.01;})){
@@ -231,6 +238,7 @@
  }
  function enter(el){
   const context=listContext(el);if(!context)return false;
+  const spaced=spacingListItems(el),values=spaced.slice(0,-1).map(node=>node.style.marginBlockStart==='0px'?node.style.marginBlockEnd:''),spacing=values.length&&values.every(value=>value===values[0]&&/^\d+(?:\.\d+)?px$/.test(value))?parseFloat(values[0]):null;
   const {items,list,range}=context,d=el.ownerDocument,first=items[0],last=items.at(-1);
   if(range.collapsed&&!first.textContent.trim()&&!first.querySelector('img,input,ul,ol')){
    if(canIndent(el,true)){indent(el,true);caret(first);return true;}
@@ -240,7 +248,7 @@
    list.after(paragraph);if(tail)paragraph.after(tail);
    if(!list.children.length)list.remove();placeholder(paragraph);caret(paragraph);syncMarkers(el);return true;
   }
-  splitRange(items,range);syncMarkers(el);return true;
+  splitRange(items,range);if(spacing!==null)setListSpacing(el,spacing);syncMarkers(el);return true;
  }
  function apply(el,kind){
   if(!supported(el)||!['none','ul','ol'].includes(kind))return false;
@@ -273,5 +281,5 @@
   if(kind!=='none')for(const item of el.querySelectorAll('li'))if(item.style.listStyleType){item.style.setProperty('list-style-type','inherit',item.style.getPropertyPriority('list-style-type'));item.__rtListMarker='inherit';}
   syncMarkers(el);restoreSelection(el,offsets);return true;
  }
- const api={spacingParagraphs,setParagraphSpacing,startNumber,setStart,supported,state,apply,prefixContext,prefix,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
+ const api={spacingListItems,setListSpacing,spacingParagraphs,setParagraphSpacing,startNumber,setStart,supported,state,apply,prefixContext,prefix,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
 })(typeof window!=='undefined'?window:null);

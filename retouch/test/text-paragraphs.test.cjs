@@ -101,3 +101,20 @@ for(const kind of ['react','html','liquid'])test(kind+' native paragraph joins p
   const saved=fs.readFileSync(file,'utf8');assert.ok(saved.includes('<p title="first"><strong>First</strong>'));assert.ok(saved.includes('<span title="second"'));assert.ok(saved.includes('<a href="/kept">Second</a>'));assert.ok(saved.includes('<span title="third"'));assert.equal((saved.match(kind==='react'?/display:"inline"/g:/display: inline;/g)||[]).length,2);
  }finally{cleanup(root);}
 });
+
+test('list item spacing composes with markers and validates protocol targets',()=>{
+ const item={t:'block',tag:'li',marker:'none',spacing:7.5,children:[text('Item')]};
+ assert.equal(rich.validateChildrenTree([{t:'block',tag:'ul',children:[item]}],0),null);
+ const markup=source.rewrite('Before','id',[{t:'block',tag:'ul',children:[item]}],{parentTag:'div'});assert.ok(markup.includes('list-style-type: none;'));assert.ok(markup.includes('margin-block-end: 7.5px;'));
+ for(const tag of ['ul','ol'])assert.ok(rich.validateChildrenTree([{t:'block',tag,spacing:7.5,children:[]}],0));
+});
+for(const kind of ['react','html','liquid'])test(kind+' kept list item spacing leaves nested list contents untouched',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),name=kind==='react'?'Text.tsx':kind==='html'?'index.html':'text.liquid';
+ const inner='<ol><li title="first">First<ul><li>Nested</li></ul></li><li title="last"><a href="/kept">Last</a></li></ol>',original=(kind==='react'?'export const Text = () => ':'')+'<div>'+inner+'</div>'+(kind==='react'?';':'');
+ const root=makeApp({[name]:original}),file=path.join(root,name);
+ try{
+  const index=new Index(root,adapter);index.scanAll();const elements=kind==='react'?id.collectElements(original,name).elements:adapter.collect(original,name).elements,tag=e=>kind==='react'?e.node.openingElement.name.name:e.tag,resolved=index.resolve(elements.find(e=>tag(e)==='div').id),tree=kind==='html'?source.describe(inner,resolved.element.id).descriptor.children:null,list=tree?tree[0]:elements.find(e=>tag(e)==='ol'),items=tree?list.children:elements.filter(e=>tag(e)==='li').filter((_,i)=>i!==1);
+  const result=(kind==='react'?writer:adapter).applyOp(resolved,{type:'setChildren',children:[{t:'keep',id:list.id,children:items.map((item,i)=>({t:'keep',id:item.id,spacing:i?0:18}))}]});assert.equal(result.ok,true,JSON.stringify(result));
+  const saved=fs.readFileSync(file,'utf8');assert.ok(saved.includes('<ul><li>Nested</li></ul>'));assert.ok(saved.includes('<a href="/kept">Last</a>'));assert.equal((saved.match(kind==='react'?/marginBlockEnd:/g:/margin-block-end:/g)||[]).length,2);assert.ok(saved.includes(kind==='react'?'marginBlockEnd:"18px"':'margin-block-end: 18px;'));
+ }finally{cleanup(root);}
+});

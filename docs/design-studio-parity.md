@@ -21904,3 +21904,35 @@ appearance, native paragraph joins across complex wrappers, responsive/shared
 spacing and arbitrary selection deletion remain unproven. This does not prove
 full Figma parity or arbitrary-site support. Trusted Homebrew distribution is
 still incomplete. No desktop rebuild or push here.
+
+## List spacing in text editing (2026-09-16)
+
+The preceding turn was progress: 40a4dc35 added native paragraph joins. This
+continuation adds a List spacing field alongside list indentation in the light
+inline typography inspector. It changes gaps between direct items of the list
+containing the text cursor, leaves nested lists' spacing alone, and retains line
+height. The final item has zero trailing margin. Enter inherits uniform authored
+spacing; joining items preserves the ending gap, including zero at the end.
+
+The new/kept/copied item source protocol supports spacing in React, HTML and
+Liquid. List markers compose with spacing instead of being lost when both are
+present. Shared paragraph/list margin editing preserves unrelated source
+properties; flex/grid lists, non-list-item layouts and important inline margin
+overrides remain excluded. The paragraph-spacing placeholder now uses a dash
+when unavailable, with guidance in its tooltip, avoiding truncated help text.
+
+Validation: all 1,743 unit tests passed. Added tests cover marker/spacing
+composition, invalid list-container targets, and kept list item source edits
+that retain nested lists and links in all adapters. HTML/React Chromium 145 and
+Liquid WebKit 26 browser flows pass 18 px outer/7.5 px nested gaps, zero spacing,
+negative refusal, unchanged line height, insertion/join inheritance, local
+history, save/reopen, and exact source undo/redo. Evidence:
+/tmp/retouch-list-spacing-{html,react,liquid,units,targeted}.log. The inspected
+/tmp/retouch-list-spacing.png shows the nested list and zero-valued List spacing
+control. The tooltip/placeholder-only cleanup followed that screenshot.
+
+This is inline-edit, all-screen list spacing. Responsive/shared list spacing,
+all indentation/outdent/reordering normalization cases, single-item future
+spacing, source-relative units and arbitrary cascade/layout combinations remain
+incomplete. Full Figma fidelity, arbitrary-site support and trusted Homebrew
+distribution remain unproven. No desktop rebuild or push here.

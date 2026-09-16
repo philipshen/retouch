@@ -31,7 +31,7 @@ function validateChildrenTree(children, depth, inLink=false, blockDepth=0, keptT
       const err = validateChildrenTree(c.children, depth + 1,inLink,blockDepth,keptTag);
       if (err) return err;
     } else if (c.t === 'copy') {
-      if(Object.hasOwn(c,'spacing')&&(!keptTag||!['p','div','span'].includes(c.tag||keptTag(c.id))||Object.hasOwn(c,'paragraph')||!require('./text-paragraphs.cjs').validSpacing(c.spacing)))return 'Invalid paragraph spacing.';
+      if(Object.hasOwn(c,'spacing')&&(!keptTag||!['p','div','span','li'].includes(c.tag||keptTag(c.id))||Object.hasOwn(c,'paragraph')||!require('./text-paragraphs.cjs').validSpacing(c.spacing)))return 'Invalid paragraph spacing.';
 
       if(!/^[0-9a-f]{10}$/.test(c.id||'')||!keptTag||!require('./rich-text-copy.cjs').tags.has(keptTag(c.id))||Object.keys(c).some(key=>!['t','id','children','href','marker','paragraph','spacing'].includes(key)))return 'Invalid split text source.';
       if(Object.hasOwn(c,'paragraph')&&(c.paragraph!=='inline'||!keptTag||!['span','li','p','div'].includes(keptTag(c.id))||Object.hasOwn(c,'tag')||Object.hasOwn(c,'marker')))return 'Invalid paragraph join.';
@@ -43,7 +43,7 @@ function validateChildrenTree(children, depth, inLink=false, blockDepth=0, keptT
       const block=!c.paragraph&&['li','p','div'].includes(keptTag(c.id));
       const err=validateChildrenTree(c.children,depth+(block?0:1),inLink,blockDepth+(block?1:0),keptTag);if(err)return err;
     } else if (c.t === 'keep') {
-      if(Object.hasOwn(c,'spacing')&&(!keptTag||!['p','div','span'].includes(c.tag||keptTag(c.id))||Object.hasOwn(c,'paragraph')||!require('./text-paragraphs.cjs').validSpacing(c.spacing)))return 'Invalid paragraph spacing.';
+      if(Object.hasOwn(c,'spacing')&&(!keptTag||!['p','div','span','li'].includes(c.tag||keptTag(c.id))||Object.hasOwn(c,'paragraph')||!require('./text-paragraphs.cjs').validSpacing(c.spacing)))return 'Invalid paragraph spacing.';
 
       if(Object.hasOwn(c,'start')&&(!keptTag||(c.tag||keptTag(c.id))!=='ol'||Object.hasOwn(c,'paragraph')||!require('./list-start.cjs').valid(c.start)))return 'Invalid ordered list start.';
       if(Object.hasOwn(c,'paragraph')&&(c.paragraph!=='inline'||!keptTag||!['span','li','p','div'].includes(keptTag(c.id))||Object.hasOwn(c,'tag')||Object.hasOwn(c,'marker')))return 'Invalid paragraph join.';

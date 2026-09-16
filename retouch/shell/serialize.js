@@ -77,7 +77,7 @@
         continue;
       }
       if(/^(UL|OL|LI)$/.test(n.tagName)||n.tagName==='P'&&n.__rtBlockTag==='p'){
-        var list={t:'block',tag:n.tagName.toLowerCase(),children:serializeChildren(n,snapshot)};if(n.tagName==='P'&&Object.prototype.hasOwnProperty.call(n,'__rtParagraphSpacing'))list.spacing=n.__rtParagraphSpacing;
+        var list={t:'block',tag:n.tagName.toLowerCase(),children:serializeChildren(n,snapshot)};if(['P','LI'].includes(n.tagName)&&n.style?.marginBlockStart==='0px'&&/^\d+(?:\.\d+)?px$/.test(n.style.marginBlockEnd))list.spacing=parseFloat(n.style.marginBlockEnd);
         if(/^(UL|OL)$/.test(n.tagName)&&n.style&&['disc','decimal','lower-alpha','lower-roman'].includes(n.style.listStyleType))list.marker=n.style.listStyleType;
         if(n.tagName==='LI'&&n.style&&['none','inherit'].includes(n.style.listStyleType))list.marker=n.style.listStyleType;
         if(snapshot&&n.__rtListTemplate)list.template=n.__rtListTemplate;

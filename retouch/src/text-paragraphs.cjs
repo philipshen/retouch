@@ -22,7 +22,7 @@ function patchSpacing(raw,value,jsx=false){
  let tag,marked;
  if(jsx){const opening=require('@babel/parser').parseExpression(raw,{plugins:['jsx','typescript']}).openingElement;tag=opening?.name.name;marked=opening?.attributes.some(a=>a.type==='JSXAttribute'&&a.name.name==='data-retouch-paragraph');}
  else{const node=require('parse5').parseFragment(raw).childNodes[0];tag=node?.tagName;marked=node?.attrs?.some(a=>a.name==='data-retouch-paragraph');}
- if(!['p','div'].includes(tag)&&!(tag==='span'&&marked))throw Error('Spacing needs a paragraph source element.');
+ if(!['p','div','li'].includes(tag)&&!(tag==='span'&&marked))throw Error('Spacing needs a paragraph or list item source element.');
  const patch=require('./inline-source-property.cjs').patch;
  return patch(patch(raw,tag,'0px',jsx,'margin-block-start'),tag,value+'px',jsx,'margin-block-end');
 }
