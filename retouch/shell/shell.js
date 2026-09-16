@@ -3089,7 +3089,7 @@ async function writeVariableSelection(type,width,extra){
   const result=await api('POST','/rt/__api/op',{type:type+'Selection',id:info.id,ids,fileHash:info.hash,width,...selectionSourceContexts(selection),...extra});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected variable bindings.');
   if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
-  sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();renderPanel();toast('Selected bindings updated','ok');
+  sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});else await reloadFrame();renderPanel();toast('Selected bindings updated','ok');
  }finally{busyPanel(false);}
 }
 function selectionColorOptions(width){
@@ -3101,7 +3101,7 @@ function selectionColorOptions(width){
       const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,...selectionSourceContexts(selection),width:react?0:width,scope:react?width:undefined,property,styleId,libraryRevision,...(type.startsWith('detach')?{}:selectionBackgroundStates(selection,property))});
       if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected colors.');
       if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
-      sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();renderPanel();toast('Selected colors updated','ok');
+      sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});else await reloadFrame();renderPanel();toast('Selected colors updated','ok');
     }finally{busyPanel(false);}
   }
   const inheritedForSelection=(info,property)=>info.classColorStyles?RetouchResponsive.inheritedLink(Object.fromEntries(Object.entries(info.colorStyleLinks||{}).filter(([,group])=>group[property]).map(([key,group])=>[key,group[property]])),width,matchingEls(info.id)[0]?.ownerDocument):RetouchColorStyles.inheritedLink(info.colorStyleLinks,width,property);
@@ -3120,7 +3120,7 @@ function mountSelectionEffectStyles(){
       if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update effect styles in this selection.');
       if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
       sel.info=result.element;sel.multiple=result.selection;
-      if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();
+      if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});else await reloadFrame();
       renderPanel();toast('Selected effect styles updated','ok');
     }finally{busyPanel(false);}
   }
@@ -3139,7 +3139,7 @@ function mountSelectionTextStyles(){
       if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update text styles in this selection.');
       if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
       sel.info=result.element;sel.multiple=result.selection;
-      if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();
+      if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});else await reloadFrame();
       renderPanel();toast('Selected text styles updated','ok');
     }finally{busyPanel(false);}
   }
@@ -3703,7 +3703,7 @@ window.RetouchTextStyleRequest=async operation=>{
 async function refreshTextStyleElement(info){
   if(info.classTextStyles||info.classVariables)await refreshWrittenElement(info,el=>{
     try{return JSON.stringify(JSON.parse(el.getAttribute('data-rt-text-styles')||'{}'))===JSON.stringify(info.textStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-color-styles')||'{}'))===JSON.stringify(info.colorStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-effect-styles')||'{}'))===JSON.stringify(info.effectStyleLinks||{})&&(!info.classVariables||JSON.stringify(JSON.parse(el.getAttribute('data-rt-variables')||'{}'))===JSON.stringify(info.variableLinks||{}))&&(info.className||'').split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token));}catch{return false;}
-  });else await reloadFrame();
+  },{classSource:true});else await reloadFrame();
 }
 function selectionBackgroundStates(selection,property){
  if(property!=='background-color'||document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')return {};

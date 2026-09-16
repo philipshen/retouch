@@ -22492,3 +22492,29 @@ only when those steps actually run.
 Full Figma parity, arbitrary-site support, the Typed OM sizing indicator
 fallback, and trusted notarized Homebrew distribution remain unfinished.
 No push or desktop rebuild in this continuation.
+
+### Saved styles and comparison refresh (2026-09-16)
+
+Connected shared class-backed text, color, effect, and variable writes, plus
+single-layer saved-style refreshes, to the comparison class synchronization
+path. Comparison stylesheet failures now use the existing per-screen retry UI.
+This preserves the existing source history and context-selection branches.
+
+Added a client-rendered React saved text style scenario: apply to two layers,
+verify 32px text across Phone/Tablet/Desktop, undo to exact original source and
+original computed sizes, redo to exact applied source, and retain all comparison
+documents. The test aborts the first Tablet stylesheet revalidation request and
+requires its retry control to recover. Before wiring the refresh, that control
+never appeared; the new regression passes in Chromium 145 and WebKit 26.
+Normal HMR already passed the same basic scenario before the change, so that
+alone was not evidence of reliable comparison synchronization.
+
+The full React saved-text-style browser workflow and all 1,763 unit tests pass.
+Evidence: /tmp/retouch-saved-style-comparisons-before.log,
+/tmp/retouch-saved-style-comparisons.log,
+/tmp/retouch-saved-style-comparisons-webkit.log,
+/tmp/retouch-saved-style-regression.log, /tmp/retouch-saved-style-units.log.
+Color/effect/variable comparison flows share the corrected dispatch but were
+not independently exercised in this continuation. Framework-specific HMR
+limits, full Figma parity, arbitrary-site support, and trusted Homebrew
+release remain unfinished. No desktop rebuild or push in this continuation.
