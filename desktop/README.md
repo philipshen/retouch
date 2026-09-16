@@ -932,3 +932,25 @@ checks the real `/rt/docs/` route, exact injected bridge, color/alpha handling,
 source apply/undo, cancellation, error recovery and ignored late replies in
 Chromium and WebKit. Sampling replies are simulated in those browser checks.
 The macOS sampler UI and a rebuilt packaged app were not launched for this change.
+
+
+### Packaged screen and Vite checkpoint (2026-09-17)
+
+A clean `f6d9a341` source tree produced a fresh universal development app at
+`/private/tmp/retouch-studio-screen-presets/Retouch.app` and
+`Retouch-0.1.0-mac.zip` in the same directory. The
+[verification receipt](verification/2026-09-17-screens-vite-package.json) records
+its SHA-256, 278 source files, architecture checks and test scope.
+
+Both the original app and a fresh ZIP extraction pass strict signature and
+complete source-inventory checks. Tamper rejection and the bundled React runtime
+lifecycle pass. The app's bundled CLI passes the Vite `/docs/` startup, editing,
+configuration restart recovery and exact undo workflow in WebKit. Its bundled
+screen UI passes presets, existing-screen reveal, Actions, persistence and
+retained-document checks in Chromium. The add-screen harness now accepts
+`RT_PACKAGE_ROOT` to run against that actual packaged source. The generated
+local cask passes Ruby syntax checking.
+
+This archive is ad hoc signed. Native launch, Intel execution, notarization,
+Homebrew installation/upgrade of this candidate and public release remain
+unverified. The checks above do not establish trusted macOS distribution.

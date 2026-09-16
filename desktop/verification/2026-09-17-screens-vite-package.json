@@ -1,0 +1,39 @@
+{
+  "date": "2026-09-17",
+  "sourceCommit": "f6d9a3417babc0f8778a4481eaf033e6b9f1dbab",
+  "sourceTreeDirty": false,
+  "app": "/private/tmp/retouch-studio-screen-presets/Retouch.app",
+  "archive": "/private/tmp/retouch-studio-screen-presets/Retouch-0.1.0-mac.zip",
+  "sha256": "988aed580487329f15f96d49550295a574cb9d8291acf2a96b3a5cec765e0896",
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "sourceFiles": 278,
+  "signing": "ad hoc development signature",
+  "checks": {
+    "originalAndExtractedPackage": "passed strict signature and complete source inventory verification",
+    "tamperRejection": "passed altered files, missing runtime, manifest omissions, duplicates, traversal, unlisted files, plist changes and symlinks",
+    "bundledRuntime": "passed React editing lifecycle and exact undo",
+    "bundledViteWebKit": "passed TSX edits, HMR state, configuration restart recovery, persisted undo, process shutdown and connection notices",
+    "bundledScreensChromium": "passed presets, existing-screen reveal, Actions, validation, persistence, retained documents and narrow layout",
+    "localCaskSyntax": "passed Ruby syntax check"
+  },
+  "unverified": [
+    "native application launch for this build",
+    "macOS system color sampler interaction",
+    "Intel runtime execution",
+    "Developer ID signing and notarization",
+    "Homebrew install or upgrade for this artifact",
+    "public release"
+  ],
+  "logs": [
+    "/tmp/retouch-studio-screen-presets-build.log",
+    "/tmp/retouch-studio-screen-presets-tamper.log",
+    "/tmp/retouch-studio-screen-presets-runtime.log",
+    "/tmp/retouch-studio-screen-presets-vite.log",
+    "/tmp/retouch-studio-screen-presets-ui.log",
+    "/tmp/retouch-studio-screen-presets-extracted.log",
+    "/tmp/retouch-studio-screen-presets-final.log"
+  ]
+}
