@@ -205,6 +205,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         showLogs(); logText?.string = ""
         appendLog("Project: " + folder.path + "\n" + (isHTML ? "Mode: HTML files" : "Command: retouch -- " + command) + "\n\n")
         let process = Process(), pipe = Pipe()
+        var startupTail = "", installationFailure = false
         process.executableURL = URL(fileURLWithPath: "/bin/zsh"); process.arguments = isHTML ? Self.htmlLaunchArguments(folder) : Self.launchArguments(command)
         process.currentDirectoryURL = folder; process.standardOutput = pipe; process.standardError = pipe
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
@@ -214,6 +215,9 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
             DispatchQueue.main.async {
                 guard let self = self, self.projectProcess === process else { return }
                 self.appendLog(text)
+                let startupOutput = startupTail + text
+                installationFailure = installationFailure || startupOutput.contains("[retouch] Retouch installation is incomplete.")
+                startupTail = String(startupOutput.suffix(1024))
                 for url in self.outputLines.append(text) where !self.candidateURLs.contains(url) {
                     if self.candidateURLs.count < 16 { self.candidateURLs.append(url) }
                 }
@@ -223,7 +227,11 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
             DispatchQueue.main.async {
                 guard let self = self, self.projectProcess === finished else { return }
                 self.appendLog("\nProject exited (" + String(finished.terminationStatus) + ").\n")
-                self.status.stringValue = finished.terminationStatus == 127 ? "Startup executable not found. Check Project logs and ensure Node and your command are available." : "Project stopped. See Project logs for details."
+                if finished.terminationStatus == 78 && installationFailure {
+                    self.status.stringValue = "Retouch installation needs repair. Reinstall Retouch; see Project logs for details."
+                } else {
+                    self.status.stringValue = finished.terminationStatus == 127 ? "Startup executable not found. Check Project logs and ensure Node and your command are available." : "Project stopped. See Project logs for details."
+                }
                 self.stopDiscovery()
                 // Only retire the editor owned by this process; a manually connected
                 // editor on another origin can remain open when the project exits.

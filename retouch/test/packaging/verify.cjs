@@ -4,6 +4,7 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),asse
 if(!process.argv[2])throw Error('Usage: node test/packaging/verify.cjs <installed-retouch-directory>');
 const packageRoot=fs.realpathSync(process.argv[2]),load=require('node:module').createRequire(path.join(packageRoot,'package.json'));
 for(const name of ['group-scale.js','group-scale-bootstrap.js','group-scale-legacy.json','react-group-scale-dev.jsx','react-group-scale-legacy.json'])assert.ok(fs.statSync(path.join(packageRoot,'runtime',name)).isFile(),name);
+assert.equal(load('./src/installation.cjs').check(packageRoot).ready,true);
 const identity=load('./src/id.cjs'),adapter=load('./src/adapters/react.cjs'),transactions=load('./src/transactions.cjs'),runtime=load('./src/react-group-scale-runtime.cjs');
 assert.ok(load('./src/group-scale-runtime.cjs').script().includes('data-rt-scale-runtime'));
 assert.equal(runtime.recognized(runtime.component()),true);

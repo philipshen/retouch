@@ -23794,3 +23794,37 @@ and trusted public desktop/Homebrew distribution remain unfinished. No push.
 
 All 32 desktop unit tests also passed:
 /tmp/retouch-package-desktop-units.log.
+
+### Installation readiness before project startup
+
+The CLI now checks required runtime assets, compatibility registries, declared
+production dependencies and runtime generation before starting HTML, Shopify or
+wrapped project commands. An incomplete installation exits 78 with a reinstall
+message before running the user's command. Help/version remain available. Doctor
+reports readiness after that check. The desktop recognizes the installation
+failure marker plus exit status and gives a repair message; it does not classify
+an ordinary project exit 78 as a broken installation.
+
+The universal development app rebuilt at
+/private/tmp/retouch-installation-preflight-build/Retouch.app with strict ad hoc
+signature and 276 inventoried source files. ZIP SHA256:
+679140f644ed75579eb71349408c13f4740885c31b54218e0f6a051140b81c4b.
+The receipt identifies sourceCommit 8fb1412aa473d5f0b8ba94ed262497d08fb70298 and
+sourceTreeDirty true. Native launch/UI checks remain unrun; build success is not
+native behavior or macOS trust evidence.
+
+Four readiness tests also passed against the packaged CLI: missing runtime,
+invalid registry/missing dependencies, blocked command startup with working
+help/version, and a healthy command with preserved exit status. The packaged
+source-edit lifecycle/exact undo and Doctor checks passed. All 32 desktop unit
+tests passed. Evidence: /tmp/retouch-installation-build.log,
+/tmp/retouch-installation-packaged-tests.log,
+/tmp/retouch-installation-packaged-functional.log,
+/tmp/retouch-installation-packaged-doctor.log,
+/tmp/retouch-installation-desktop-units.log. Full Figma parity and trusted public
+macOS/Homebrew distribution remain unfinished. No push.
+
+All 1,815 Retouch unit tests passed: /tmp/retouch-installation-units.log.
+The desktop marker parser checks the complete chunk before bounding its retained
+tail, so long diagnostic details do not discard the failure marker. The final
+universal build passed package verification; native launch remains untested.

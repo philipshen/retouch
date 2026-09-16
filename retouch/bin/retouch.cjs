@@ -4,6 +4,11 @@ const path = require('node:path');
 
 const [, , cmd, arg] = process.argv;
 
+if (['--','html','shopify','doctor'].includes(cmd)) {
+  try { require('../src/installation.cjs').check(); }
+  catch (error) { console.error('[retouch] ' + error.message); process.exit(78); }
+}
+
 if (cmd === '--') {
   require('../src/session.cjs').run(arg, process.argv.slice(4)).then(
     code => { process.exitCode = code; },

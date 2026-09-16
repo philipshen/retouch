@@ -6,6 +6,7 @@ function doctor(root = process.cwd()) {
   root = fs.realpathSync(root);
   console.log(`Retouch ${require('../package.json').version}\nRoot: ${root}\nNode: ${process.version} (${process.execPath})`);
   console.log(`Preload: ${require.resolve('./preload.cjs')}`);
+  console.log('Installation: ready');
   const local = createRequire(path.join(root, 'package.json'));
   try {
     const filename = local.resolve('next/package.json');
