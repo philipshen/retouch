@@ -21164,3 +21164,23 @@ not prove line-break quality for arbitrary content or all shorthand/cascade
 combinations. Broader typography/layout fidelity, full Figma parity,
 arbitrary-site coverage and trusted Homebrew distribution remain incomplete.
 No native rebuild or push.
+
+### Shared wrapping rendered-geometry verification
+
+The shared wrap fixture now constrains a paragraph to 40px and measures actual
+text Range line rectangles. It asserts multiple lines before editing, one line
+for No wrap, multiple lines for Auto/Balance/Pretty, and restored wrapping when
+leaving the selected screen scope or resetting. Existing source/undo and inline
+longhand guard assertions remain in the flow.
+
+React passed on Chromium 145; HTML and Liquid passed on WebKit 26. This proves
+the wrapping control changes rendered line layout in these fixtures, beyond
+checking computed CSS alone. It does not evaluate ideal line balancing across
+arbitrary paragraphs, scripts or fonts.
+
+Evidence: `/tmp/retouch-wrap-geometry-react.log`,
+`/tmp/retouch-wrap-geometry-html.log`,
+`/tmp/retouch-wrap-geometry-liquid.log`.
+This pass changes browser verification only. Full Figma parity, arbitrary-site
+support and trusted Homebrew distribution remain incomplete. No native rebuild
+or push.
