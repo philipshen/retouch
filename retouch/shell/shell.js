@@ -868,7 +868,7 @@ async function persistInlineEdit() {
 }
 
 // Reload the iframe to its current path, preserving scroll where possible.
-function clientMountReady(d){return !!d?.body&&[...d.querySelectorAll('[data-rt-client-revision]')].every(el=>el.getAttribute('data-rt-client-mounted')===el.getAttribute('data-rt-client-revision'));}
+function clientMountReady(d){return !!d?.body&&!d.querySelector('[data-rt-react-scale-pending]')&&[...d.querySelectorAll('[data-rt-client-revision]')].every(el=>el.getAttribute('data-rt-client-mounted')===el.getAttribute('data-rt-client-revision'));}
 async function waitForClientMount(d){for(let attempt=0;attempt<80;attempt++){if(d!==doc())return false;if(clientMountReady(d))return true;await new Promise(resolve=>setTimeout(resolve,50));}return false;}
 window.RetouchClientMount={ready:clientMountReady};
 // A committed gradient gesture can retain its re-entry token through its own
@@ -3605,6 +3605,11 @@ async function scaleGroupOnCanvas(info,opener){
 async function refreshHTMLGroupScale(info){
  const select=d=>matchingInDocument(d,info.id,info),state=info.groupScale;
  const matches=el=>el.getAttribute('data-rt-scale')===state.metadata&&Object.entries(state.members).every(([id,value])=>{const members=matchingInDocument(el.ownerDocument,id);return members.length&&members.every(member=>member.getAttribute('data-rt-scale-member')===value);});
+ if(state.react){
+  const ready=el=>matches(el)&&(!state.metadata||el.ownerDocument[Symbol.for('retouch.group-scale.runtime')]?.revision===state.runtimeRevision);
+  await refreshWrittenElement(info,ready);
+  const result=await window.RetouchComparisons?.syncRendered({select,matches:ready,serverRendered:false,revisionAttribute:info.renderRevisionAttribute,hash:info.hash,kind:'Scale'});if(result?.failures.length)throw Error('Retry the failed comparison previews.');return;
+ }
  await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select,matches});await RetouchRenderSync.ensureGroupScaleRuntime(iframe,state.runtimeRevision);
  const result=await window.RetouchComparisons?.syncRendered({select,matches,kind:'Scale',afterSync:frame=>RetouchRenderSync.ensureGroupScaleRuntime(frame,state.runtimeRevision)});if(result?.failures.length)throw Error('Retry the failed comparison previews.');
 }

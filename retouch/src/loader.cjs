@@ -16,7 +16,12 @@ module.exports = function retouchLoader(source, inputMap) {
       return callback(null, source, inputMap);
     }
     const appRoot = (this.getOptions ? this.getOptions().appRoot : undefined) || process.env.RETOUCH_APP_ROOT || this.rootContext || process.cwd();
-    const result = stamp(source, this.resourcePath, appRoot);
+    const groupScaleRuntime=require.resolve('../runtime/react-group-scale-dev.jsx');
+    if(this.resourcePath===groupScaleRuntime)return callback(null,require('./react-group-scale-runtime.cjs').component());
+    const helper=require('node:path').join(require('node:path').dirname(this.resourcePath),'.retouch-group-scale.jsx'),fs=require('node:fs');
+    if(fs.existsSync(helper))this.addDependency?.(helper);else this.addMissingDependency?.(helper);
+    const redirectGroupScaleRuntime=fs.existsSync(helper)&&fs.readFileSync(helper,'utf8')===require('./react-group-scale-runtime.cjs').component();
+    const result = stamp(source, this.resourcePath, appRoot, {groupScaleRuntime,redirectGroupScaleRuntime});
     if (!result) return callback(null, source, inputMap);
     return callback(null, result.code, result.map);
   } catch (err) {

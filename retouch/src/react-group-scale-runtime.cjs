@@ -16,10 +16,10 @@ function install(host){
  control.register=node=>{registrations.set(node,(registrations.get(node)||0)+1);control.refresh();let disposed=false;return ()=>{if(disposed)return;disposed=true;const count=registrations.get(node)||0;if(count<=1)registrations.delete(node);else registrations.set(node,count-1);control.refresh();};};
  document[key]=control;return control;
 }
-export default function RetouchScaleRuntime(){
+export default function RetouchScaleRuntime({warm=false}){
  const anchor=useRef(null);
- useLayoutEffect(()=>{const group=anchor.current?.parentElement;if(!group?.hasAttribute('data-rt-group'))return;return install(group.ownerDocument.defaultView).register(group);},[]);
- return <script ref={anchor} type="application/json" data-rt-react-scale-anchor="" />;
+ useLayoutEffect(()=>{const node=anchor.current,group=node?.parentElement;const release=group?.hasAttribute('data-rt-group')?install(group.ownerDocument.defaultView).register(group):null;node?.removeAttribute('data-rt-react-scale-pending');return ()=>{node?.setAttribute('data-rt-react-scale-pending','');release?.();};},[warm]);
+ return warm?null:<script ref={anchor} type="application/json" data-rt-react-scale-anchor="" data-rt-react-scale-pending="" />;
 }
 `;}
 module.exports={component};

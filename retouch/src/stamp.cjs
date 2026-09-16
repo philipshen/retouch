@@ -17,7 +17,7 @@ function toPosixRel(appRoot, filePath) {
 // Returns { code, map } or null when there is nothing to stamp.
 // Throws on parse errors; callers treat any throw as "serve unstamped"
 // (fault isolation, OQ-B1 residual d).
-function stamp(source, filePath, appRoot) {
+function stamp(source, filePath, appRoot, {groupScaleRuntime=null,redirectGroupScaleRuntime=true}={}) {
   if (!/\.(tsx|jsx)$/.test(filePath)) return null;
   if (filePath.includes(`${path.sep}node_modules${path.sep}`)) return null;
   if (!source.includes('<')) return null;
@@ -61,6 +61,20 @@ function stamp(source, filePath, appRoot) {
     }
   }
   require('@babel/traverse').default(ast,{FunctionDeclaration:forward,FunctionExpression:forward,ArrowFunctionExpression:forward});
+  if(groupScaleRuntime){
+    const imports=ast.program.body.filter(n=>n.type==='ImportDeclaration'&&n.source.value==='./.retouch-group-scale.jsx');
+    for(const imported of redirectGroupScaleRuntime?imports:[])ms.overwrite(imported.source.start,imported.source.end,JSON.stringify(groupScaleRuntime));
+    const groups=elements.filter(e=>e.kind==='host'&&e.node.closingElement&&e.node.openingElement.attributes.some(a=>a.name?.name==='data-rt-group'));
+    let name='RetouchDevelopmentScaleRuntime',suffix=0;while(source.includes(name))name='RetouchDevelopmentScaleRuntime'+(++suffix);
+    const root=elements.find(e=>e.kind==='host'&&e.node.closingElement&&['main','body','div','section','article','aside','header','footer','nav'].includes(e.node.openingElement.name.name));
+    let injected=false;
+    if(root&&!groups.includes(root)){ms.appendLeft(root.node.closingElement.start,'<'+name+' warm />');injected=true;}
+    for(const group of groups){
+      const registered=group.node.children.some(n=>n.type==='JSXElement'&&imports.some(i=>i.specifiers.some(s=>s.type==='ImportDefaultSpecifier'&&s.local.name===n.openingElement.name.name)));
+      if(!registered){ms.appendLeft(group.node.closingElement.start,'<'+name+' />');injected=true;}
+    }
+    if(injected)ms.append('\nimport '+name+' from '+JSON.stringify(groupScaleRuntime)+';\n');
+  }
   return {
     code: ms.toString(),
     map: ms.generateMap({ hires: true, source: filePath }),

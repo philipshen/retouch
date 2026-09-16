@@ -58,3 +58,5 @@ test('Turbopack HMR guard composes existing loaders without changing their optio
   assert.deepEqual(previous.loaders, ['existing-loader']);
   assert.throws(() => composeNext({ turbopack: { rules: { [pattern]: [] } } }, options), /Cannot safely compose/);
 });
+
+test('development runtime loader also runs when Retouch is installed in node_modules',()=>{const cfg=composeNext({},options).webpack({module:{rules:[]}},{}),excluded=cfg.module.rules[0].exclude;assert.equal(excluded(require.resolve('../runtime/react-group-scale-dev.jsx')),false);assert.equal(excluded('/app/node_modules/other/component.jsx'),true);});

@@ -11,7 +11,7 @@ function plan(resolved,op){try{
  const source=resolved.source,{ast,elements}=collectElements(source,resolved.relPath),group=elements.find(e=>e.id===resolved.element.id);
  if(!group||group.kind!=='host'||!attribute(group,'data-rt-group')||!group.node.closingElement)throw Error('Choose a source-backed React group.');
  const helper=path.join(path.dirname(resolved.file),'.retouch-group-scale.jsx'),generated=runtime.component(),before=fs.existsSync(helper)?fs.readFileSync(helper,'utf8'):null;
- if(before!==null&&before!==generated)throw Error('The generated React scale helper changed outside this runtime version.');
+ if(before!==null&&before!==generated&&!require('../runtime/react-group-scale-legacy.json').some(entry=>entry.sha256===require('node:crypto').createHash('sha256').update(before).digest('hex')))throw Error('The generated React scale helper changed outside this runtime version.');
  const imports=ast.program.body.filter(n=>n.type==='ImportDeclaration'&&n.source.value===moduleName);
  if(imports.length>1||imports.some(n=>n.specifiers.length!==1||n.specifiers[0].type!=='ImportDefaultSpecifier'||n.importKind==='type'))throw Error('Resolve the React scale helper import.');
  let binding=imports[0]?.specifiers[0].local.name;
@@ -38,6 +38,19 @@ function plan(resolved,op){try{
  if(!imports.length)out.append('\nimport '+binding+' from '+JSON.stringify(moduleName)+';\n');
  const after=out.toString(),next=collectElements(after,resolved.relPath).elements;
  for(const element of elements)if(!next.some(e=>e.id===element.id&&e.kind===element.kind))throw Error('Scaling changed source layer identity.');
- return {ok:true,hash:contentHash(after),edits:[{file:resolved.file,before:source,after},...(before===generated?[]:[{file:helper,before,after:generated}])]};
+ return {ok:true,hash:contentHash(after),edits:[...(before===generated?[]:[{file:helper,before,after:generated}]),{file:resolved.file,before:source,after}]};
  }catch(error){return {ok:false,refused:true,reason:error.message};}}
-module.exports={plan};
+function describe(resolved){
+ const group=resolved.element;if(!attribute(group,'data-rt-group'))return attribute(group,'data-rt-scale-member')?{scaleMember:true}:{};
+ const elements=resolved.elements||collectElements(resolved.source,resolved.relPath).elements;
+ return {groupScale:{react:true,runtimeRevision:require('./group-scale-runtime.cjs').revision(),metadata:literal(group,'data-rt-scale'),members:Object.fromEntries(elements.filter(e=>e.kind==='host'&&e.node.start>group.node.start&&e.node.end<group.node.end).map(e=>[e.id,literal(e,'data-rt-scale-member')]))}};
+}
+const structural=new Set(['frameSelection','groupSelection','removeFrame','reparentElement','reparentSelection','duplicateSelection','deleteSelection','moveSelection','insertElement','duplicateElement','pasteElement','deleteElement','moveElement','setChildren','setTag','createComponent','detachComponent','insertComponent','swapComponent','moveComponent','reparentComponentSelection','deleteComponent','deleteComponentSelection','duplicateComponent','duplicateComponentSelection']);
+function guard(resolved,op){
+ if(!structural.has(op.type))return null;
+ const elements=resolved.elements||collectElements(resolved.source,resolved.relPath).elements,ids=new Set([resolved.element.id,...(Array.isArray(op.ids)?op.ids:[]),op.copiedId,op.parentId,op.targetId,op.destinationId]),selected=elements.filter(e=>ids.has(e.id));
+ const owners=elements.filter(e=>attribute(e,'data-rt-scale'));
+ if(owners.some(owner=>selected.some(e=>e.node.start<owner.node.end&&e.node.end>owner.node.start)))return {ok:false,refused:true,reason:'Responsive React groups need preserved scale ownership for this structural edit. Undo the group scaling first.'};
+ return null;
+}
+module.exports={plan,describe,guard};

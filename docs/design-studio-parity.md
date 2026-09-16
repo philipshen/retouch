@@ -23485,3 +23485,47 @@ passed in Chromium and WebKit; git diff --check passed. Evidence:
 /tmp/retouch-react-source-final-units.log,
 /tmp/retouch-react-source-chromium-isolated.log,
 /tmp/retouch-react-source-webkit-isolated.log. Local commit only; no push.
+
+### React editor integration and mounted comparison synchronization
+
+React groups now expose the saved scaling planner through the adapter and editor.
+The existing scale/position controls save responsive group metadata and use exact
+source-history undo/redo. Main and comparison previews wait for React-owned updates;
+this path does not reconcile fetched HTML or inject the standalone HTML runtime.
+
+Initial testing found two distinct integration failures. Adding a new client entry
+when first scaling triggered Next's full reload. Development compilation now
+preloads the helper through a component that renders null in ordinary container
+roots, registers groups in compiled output, and keeps the runtime module identity
+stable when the saved source imports its generated helper. Source files are not
+changed by this compilation step, and existing stamped IDs are preserved. Only
+exactly matching generated helpers are redirected; externally edited helpers keep
+their own import. The loader watches helper creation/changes, and its runtime entry
+is exempted from the usual node_modules exclusion.
+
+The second failure was an early comparison refresh: server-rendered elements were
+available while the framework router was still absent. A pending marker on the
+group helper now participates in client-mount readiness. Comparisons then update
+through the verified Next 16.2 development router. The prior generated helper has
+an exact fingerprint and archived fixture so source transactions can upgrade it
+and undo back to its exact old contents.
+
+Structural edits involving saved React scale ownership are explicitly refused
+until copy/release/regroup mapping is implemented. Additional gaps include dynamic
+classes/children, component children, nested groups, inline member styles, leaf-only
+module preloading, and non-Next/Turbopack integration. The group's inert script
+anchor still needs selector-sensitive site coverage. The null preload avoids adding
+an element to unrelated containers. Production builds, installed-package browser
+verification, universal hydration behavior and full Figma parity remain unproven.
+
+Validation: 1,800 unit tests passed, plus the final ownership-guard regression
+check. Chromium passed base and 1100 px scoped editor scaling, movement, keyboard
+preview/cancel, exact undo/redo and retained documents across main/Phone/Tablet/
+Desktop. WebKit passed the base editor flow. Chromium and WebKit passed the saved
+source/runtime suite, including warm-to-active registration, cleanup, navigation
+and saved-page reload. The light inspector/comparison screenshot was inspected.
+Evidence: /tmp/retouch-react-integrated-final-units.log,
+/tmp/retouch-react-scale-owner-tests.log, /tmp/retouch-react-editor-mounted.log,
+/tmp/retouch-react-editor-warm-null.log, /tmp/retouch-react-editor-null-webkit.log,
+/tmp/retouch-react-warm-transition.log, /tmp/retouch-react-warm-transition-webkit.log,
+/tmp/retouch-scaled-comparisons-react.png. git diff --check passed. No push.

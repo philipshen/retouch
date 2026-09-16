@@ -159,3 +159,9 @@ test('client module mount markers use callback refs without changing authored re
  for(const name of ['span','div'])assert.equal(elements.find(el=>el.node.openingElement.name.name===name).node.openingElement.attributes.some(a=>a.name?.name==='data-rt-client-revision'),false);
  assert.ok(result.code.includes('ref={existing}'));assert.equal(stamp('export default function Page(){return <p/>}','/app/page.jsx','/app').code.includes('data-rt-client-revision'),false);assert.equal(source.includes('data-rt-client'),false);
 });
+
+test('development scale registration keeps authored identities and stable runtime imports',()=>{
+ const runtime='/tool/react-group-scale-dev.jsx',src='export default function Page(){return <main><div data-rt-group=""><h1>Title</h1></div></main>}',plain=stamp(src,file,ROOT),dev=stamp(src,file,ROOT,{groupScaleRuntime:runtime});
+ assert.deepStrictEqual([...dev.code.matchAll(/data-rt="([^"]+)"/g)].map(m=>m[1]),[...plain.code.matchAll(/data-rt="([^"]+)"/g)].map(m=>m[1]));assert.ok(dev.code.includes(runtime));assert.strictEqual((dev.code.match(/<RetouchDevelopmentScaleRuntime \/>/g)||[]).length,1);assert.ok(dev.code.includes('<RetouchDevelopmentScaleRuntime warm />'));assert.ok(!plain.code.includes(runtime));
+ const saved='import SavedRuntime from "./.retouch-group-scale.jsx";'+src.replace('</div>','<SavedRuntime /></div>'),compiled=stamp(saved,file,ROOT,{groupScaleRuntime:runtime});assert.ok(!compiled.code.includes('./.retouch-group-scale.jsx'));assert.strictEqual((compiled.code.match(/<RetouchDevelopmentScaleRuntime \/>/g)||[]).length,0);assert.ok(stamp(saved,file,ROOT,{groupScaleRuntime:runtime,redirectGroupScaleRuntime:false}).code.includes('./.retouch-group-scale.jsx'));
+});

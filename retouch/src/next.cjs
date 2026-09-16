@@ -72,7 +72,7 @@ function composeNext(nextConfig = {}, { port, appRoot }) {
     webpack(cfg, ctx) {
       cfg.module.rules.push({
         test: /\.(tsx|jsx)$/,
-        exclude: /node_modules/,
+        exclude: file=>file.includes(path.sep+'node_modules'+path.sep)&&file!==require.resolve('../runtime/react-group-scale-dev.jsx'),
         enforce: 'pre',
         use: [loader],
       });
