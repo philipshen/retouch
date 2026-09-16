@@ -961,6 +961,16 @@
     const raw=inline&&(el.style.getPropertyPriority(property)==='important'||!/^!|!$/.test(selected))?inline:match?.[1],percent=spacingPercent(property,raw),css=el.ownerDocument.defaultView.getComputedStyle(el),expected=percent/100*parseFloat(css.fontSize),actual=parseFloat(css.getPropertyValue(property));
     return percent!==null&&Number.isFinite(actual)&&Math.abs(expected-actual)<.02?percent:null;
   }
+  let sharedPreviewIndex=0;
+  function sharedTypographyPreview(parent,elements){
+    if(!elements.length)return;
+    const preview=document.createElement('div');preview.className='shared-type-preview';parent.append(preview);
+    let sample=null,frame=null;sharedPreviewIndex=Math.min(sharedPreviewIndex,elements.length-1);
+    const render=index=>{sharedPreviewIndex=index;frame?.remove();frame=typographyPreview(preview,elements[index]);frame.title='Selected layer typography preview';frame.retouchSample(sample);};
+    select(preview,'Preview selected text layer',elements.map((el,index)=>[String(index),(index+1)+'. '+((el.innerText||el.textContent||el.localName).trim().replace(/\s+/g,' ').slice(0,45)||el.localName)]),String(sharedPreviewIndex),value=>{const index=Number(value);if(Number.isInteger(index)&&index>=0&&index<elements.length)render(index);});
+    preview.querySelector('.inspector-field > span').textContent='Preview layer';
+    preview.retouchSample=text=>{sample=text;frame?.retouchSample(text);};render(sharedPreviewIndex);return preview;
+  }
   function typographyPreview(parent,el){
     const d=el.ownerDocument,css=d.defaultView.getComputedStyle(el);
     const preview=document.createElement('iframe');preview.className='type-preview';preview.title='Typography preview';preview.setAttribute('sandbox','allow-same-origin');parent.append(preview);
@@ -1098,6 +1108,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={sharedFeatureTypography,sharedLengthDrag,effectiveSpacingPercent,localPositionCorners,positionGeometry,localPositionGeometry,textResizing,textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={sharedTypographyPreview,sharedFeatureTypography,sharedLengthDrag,effectiveSpacingPercent,localPositionCorners,positionGeometry,localPositionGeometry,textResizing,textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

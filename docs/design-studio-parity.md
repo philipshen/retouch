@@ -21314,3 +21314,30 @@ summary opener; corrected them to its accessible label and reran successfully.
 Shared font previews and variable-axis editing remain incomplete, as do full
 Figma fidelity, arbitrary-site guarantees and trusted Homebrew distribution.
 No native rebuild or push in this continuation.
+
+### Shared typography preview
+
+Shared Type settings now includes a per-layer preview selector and the existing
+sandboxed typography preview. Mixed selections can be inspected one layer at
+a time, using that layer's computed typography and page font stylesheets. The
+chosen index persists across panel rebuilds. Details controls select useful
+samples on focus/hover (numbers, fractions, ligatures, capital forms), while
+Basics returns to the chosen layer's text. Preview selection and sample changes
+have no source-write callbacks.
+
+Validation: 1,710 unit tests passed. HTML/React Chromium 145 and Liquid WebKit 26
+browser checks cover selecting both layers with distinct numeric features,
+focused width samples, no source writes from preview interactions, and shared
+feature editing/reset/undo. HTML and Liquid additionally assert that the
+selected preview's computed property updates after each committed edit. The
+HTML screenshot was inspected for popup bounds, selector legibility and sample
+layout. Evidence: /tmp/retouch-shared-preview-units.log,
+/tmp/retouch-shared-preview-html-final.log,
+/tmp/retouch-shared-preview-react.log,
+/tmp/retouch-shared-preview-liquid.log,
+/tmp/retouch-shared-preview-html.png and /tmp/retouch-shared-preview-react.png.
+
+This verifies the fixture's loaded fonts and computed properties, not every
+remote font/CSP setup or glyph substitution. Shared variable-axis controls,
+full Figma fidelity, arbitrary-site guarantees and trusted Homebrew
+installation remain incomplete. No desktop rebuild or push.

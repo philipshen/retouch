@@ -279,6 +279,7 @@
    const mixed=adaptiveMinimums.some(value=>value!==adaptiveMinimums[0]),minimum=I.number(groups.layout,'Shared Minimum column size (px)',mixed?NaN:adaptiveMinimums[0],1,2000,value=>{const columns=adaptiveColumns(value);if(!columns||elements.some(el=>!el.isConnected||width>el.ownerDocument.defaultView.innerWidth||!['grid','inline-grid'].includes(el.ownerDocument.defaultView.getComputedStyle(el).display)))return;save(null,null,width,Object.fromEntries(infos.map(info=>[info.id,{'grid-template-columns':columns}])));});minimum.disabled=width>elements[0].ownerDocument.defaultView.innerWidth;minimum.placeholder=mixed?'Mixed':'';minimum.closest('.inspector-field').querySelector(':scope > span').textContent='Min column';minimum.title='Columns fit the available space automatically and shrink below this minimum on narrow screens.';I.fieldDraft(minimum);
   }
 
+  I.sharedTypographyPreview(typography,elements);
   const families=computed.map(css=>css.fontFamily),mixedFamilies=families.some(value=>value!==families[0]);
   I.fontPicker(typography,elements[0].ownerDocument,mixedFamilies?'':families[0],value=>save('font-family',value,width),{mixed:mixedFamilies,label:'Shared Page font',disabled:!typographyReady(elements,width,'font-family')});
   typography.querySelector('[aria-label="Shared Page font"]').closest('.inspector-field').querySelector(':scope > span').textContent='Font';

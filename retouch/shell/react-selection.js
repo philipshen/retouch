@@ -301,6 +301,7 @@
   }
   const automatic=I.button('Automatic shared line height',()=>relativeWrite('line-height','normal',false));automatic.disabled=elements.some(el=>el.style.getPropertyPriority('line-height')==='important');relativeGroup.append(automatic);
   I.note(groups.typography,'Relative spacing follows each layer’s own font size. Pixel controls and resets are available below.');
+  I.sharedTypographyPreview(groups.typography,elements);
   for(const [property,field]of Object.entries(fields).filter(([,field])=>!field.constraint).flatMap(entry=>['width','height'].includes(entry[0])?[entry,...['min-','max-'].map(prefix=>[prefix+entry[0],fields[prefix+entry[0]]])]:[entry])){
    if(!elements.every(el=>itemApplies(el,field)))continue;
    const sec=field.svg?groups.stroke:field.constraint||field.ratio||['width','height'].includes(property)?groups.size:field.flexItem||field.layoutItem?groups.item:['opacity','rotate','visibility','mix-blend-mode','isolation'].includes(property)?groups.appearance:groups.typography;
