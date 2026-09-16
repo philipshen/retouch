@@ -27,11 +27,13 @@ const memberEdit=(source,scope,changes)=>{const r=resolve(source),element=r.elem
  const scaledAgain=edit(movedAgain,0,.5);await runCase(movedAgain,scaledAgain,(group,width)=>groupScale(group,width>=1000?1:.5));
  const literal=template.replace('{% for item in items %}','').replace('{% endfor %}','').replace('{{ item.title | escape }}','Headline').replace('{{ item.text | escape }}','Text');
  const copy=(source,tag)=>{const r=resolve(source),element=r.elements.find(e=>e.tag===tag),result=liquid.planOp({...r,element},{type:'duplicateElement',fileHash:r.hash});assert.equal(result.ok,true,result.reason);return result.edits[0].after;};
- const copyBase=memberEdit(edit(literal,0,1.5),'',{'--rt-scale-factor':'1.2','--rt-scale-move-x':'23px'}),copyComposed=edit(copyBase,0,1.5);
+ for(const copyTemplate of [literal,template]){
+ const copyBase=memberEdit(edit(copyTemplate,0,1.5),'',{'--rt-scale-factor':'1.2','--rt-scale-move-x':'23px'}),copyComposed=edit(copyBase,0,1.5);
  for(const tag of ['h1','div']){
   let reference=copy(copyBase,tag);const ids=resolve(reference).elements.filter(e=>e.attributes?.some(a=>a.name==='data-rt-group')).map(e=>e.id);
   for(const id of ids){const r=resolve(reference),result=plan({...r,element:r.elements.find(e=>e.id===id)},{fileHash:r.hash,width:0,factor:1.5});assert.equal(result.ok,true,result.reason);reference=result.edits[0].after;}
   await runCase(reference,copy(copyComposed,tag),group=>group);
+ }
  }
  assert.deepEqual(errors,[]);console.log('SAVED LIQUID GROUP SCALE AND MEMBER COMPOSITION PASS',engine);
  }finally{await browser?.close();if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}}})().catch(error=>{console.error(error);process.exitCode=1;});

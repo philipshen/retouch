@@ -41,8 +41,8 @@ test('React refuses repeated elements, components, expressions, and return roots
     assert.equal(react.planOp(target(react,source),{type:'deleteElement'}).refused,true,source);
   }
 });
-test('Liquid refuses control scopes and expression siblings',()=>{
-  for(const source of ['{% for x in xs %}<div><b>B</b></div>{% endfor %}','<div>{% if x %}<b>B</b>{% endif %}</div>','<div><b>{{ value }}</b></div>']) {
+test('Liquid refuses inner control boundaries and unescaped expression siblings',()=>{
+  for(const source of ['<div>{% if x %}<b>B</b>{% endif %}</div>','<div><b>{{ value }}</b></div>']) {
     assert.equal(liquid.planOp(target(liquid,source),{type:'deleteElement'}).refused,true,source);
   }
 });
@@ -91,4 +91,12 @@ for(const adapter of [react,liquid,html])test(adapter.name+' maps survivors and 
  assert.deepEqual(new Set(plan.removedSourceIds),new Set(['b','span'].map(tag=>target(adapter,source,tag).element.id)));
  const elements=adapter.collect(plan.edits[0].after,resolved.relPath).elements,mapping=new Map(plan.sourceIdMap),survivors=resolved.elements.filter(element=>!plan.removedSourceIds.includes(element.id));assert.deepEqual(survivors.map(element=>mapping.get(element.id)||element.id).sort(),elements.map(element=>element.id).sort());
  for(const element of survivors){const next=elements.find(item=>item.id===(mapping.get(element.id)||element.id));assert.equal(next.node?.openingElement?.name.name||next.tag,element.node?.openingElement?.name.name||element.tag);}
+});
+
+test('Liquid sibling edits retain enclosing loops and conditions with escaped text',async()=>{
+ const source='{% for item in items %}{% if item.show %}<div><b>{{ item.label | escape }}</b><i>Tail</i></div>{% endif %}{% endfor %}',r=target(liquid,source),engine=new(require('liquidjs').Liquid)(),items=[{show:true,label:'<img src=x>'},{show:false,label:'hidden'},{show:true,label:'Last'}];
+ for(const [operation,expected]of [[{type:'duplicateElement'},source.replace('</b>','</b>\n<b>{{ item.label | escape }}</b>')],[{type:'deleteElement'},source.replace('<b>{{ item.label | escape }}</b>','')],[{type:'moveElement',direction:'after'},source.replace('<b>{{ item.label | escape }}</b><i>Tail</i>','<i>Tail</i><b>{{ item.label | escape }}</b>')]]){
+  const result=liquid.planOp(r,{...operation,fileHash:r.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits[0].after,expected);const rendered=await engine.parseAndRender(result.edits[0].after,{items});assert.equal(rendered,await engine.parseAndRender(expected,{items}));assert.ok(!rendered.includes('<img'));assert.ok(!rendered.includes('hidden'));
+ }
+ for(const input of ['<div><b>{{ raw }}</b><i>{{ safe | escape }}</i></div>','<div>{% for x in xs %}<b>{{ x | escape }}</b>{% endfor %}</div>','{% if x %}<div><b>B</b>{% endif %}</div>'])assert.equal(liquid.planOp(target(liquid,input),{type:'duplicateElement'}).ok,false,input);
 });

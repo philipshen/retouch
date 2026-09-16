@@ -24,11 +24,13 @@ function reactRange(resolved) {
   items.parentId=resolved.elements?.find(e=>e.node.start===target.parent.start)?.id || null;
   return items;
 }
-function liquidRange(resolved) {
+function liquidRange(resolved,{templateChildren=false}={}) {
   const node=resolved.element;
   if(node.kind!=='host'||node.dynamicTag||node.generatedImage||!node.parent) throw Error('Select a literal HTML child inside a parent element.');
-  // Control tags before the selection can enclose its parent despite the HTML
-  // tokenizer ignoring Liquid syntax. Reject only open enclosing control scopes.
+  // A complete parent can live inside a loop or condition. Editing its children
+  // leaves that outer control flow untouched; inner control boundaries remain
+  // excluded by the complete-sibling checks below.
+  if(!templateChildren){
   const scopes=[];
   for(const m of resolved.source.slice(0,node.tagStart).matchAll(/\{%-?\s*([\s\S]*?)-?%\}/g)) {
     const body=m[1].trim(),statements=/^liquid(?:\s|$)/.test(body)?body.replace(/^liquid\s*/,'').split(/\r?\n/):[body];
@@ -39,13 +41,15 @@ function liquidRange(resolved) {
     }
   }
   if(scopes.length) throw Error('Elements inside Liquid control scopes cannot be structurally edited.');
+  }
   const parent=node.parent;
   for(let ancestor=parent;ancestor;ancestor=ancestor.parent) {
     if(unsafeTags.has(ancestor.tag) && ancestor.tag!=='body' && ancestor.tag!=='html' || /\s(?:x-for|v-for|v-if|x-if)\s*=/i.test(resolved.source.slice(ancestor.tagStart,ancestor.openEnd))) throw Error('Elements inside client-rendered templates cannot be structurally edited.');
   }
   if(parent.closeStart==null) throw Error('The parent markup is incomplete.');
   const inner=resolved.source.slice(parent.openEnd,parent.closeStart);
-  if(/\{[%{]/.test(require('./liquid-layer-name.cjs').strip(inner))) throw Error('Structural editing requires literal HTML siblings without Liquid expressions.');
+  const stripped=require('./liquid-layer-name.cjs').strip(inner),literal=templateChildren?stripped.replace(/\{\{([\s\S]*?)\}\}/g,(output,expression)=>/\|\s*escape(?:_once)?\s*-?\s*$/.test(expression)?'':output):stripped;
+  if(/\{[%{]/.test(literal)) throw Error('Structural editing requires literal HTML siblings without Liquid expressions.');
   const complete = n => n.kind==='host' && !n.dynamicTag && !unsafeTags.has(n.tag) && Number.isInteger(n.closeEnd) && n.children.every(complete);
   if(!parent.children.every(complete)) throw Error('Structural editing requires complete literal HTML siblings.');
   const ranges=parent.children.map(n=>({start:n.tagStart,end:n.closeEnd,selected:n===node}));
@@ -84,11 +88,11 @@ function htmlRange(resolved) {
   items.parentId=resolved.elements?.find(e=>e.node===parent)?.id||null;
   return items;
 }
-function ranges(resolved,language) {return language==='react'?reactRange(resolved):language==='html'?htmlRange(resolved):liquidRange(resolved);}
+function ranges(resolved,language,options) {return language==='react'?reactRange(resolved):language==='html'?htmlRange(resolved):liquidRange(resolved,options);}
 function duplicateAllowed(source,range,language) {return !/\s(?:id|key|ref)\s*=/i.test(source.slice(range.start,range.end));}
-function describe(resolved,language) {
+function describe(resolved,language,options) {
   try {
-    const items=ranges(resolved,language),index=items.findIndex(r=>r.selected);
+    const items=ranges(resolved,language,options),index=items.findIndex(r=>r.selected);
     if(index<0) throw Error('The source element could not be located.');
     let canDuplicate=duplicateAllowed(resolved.source,items[index],language);
     if(canDuplicate&&['html','liquid'].includes(language))try{require(language==='html'?'./html-css.cjs':'./liquid-group-scale.cjs').clone(resolved,items[index]);}catch{canDuplicate=false;}
@@ -98,7 +102,7 @@ function describe(resolved,language) {
 function planOp(resolved,op,language) {
   if(op.fileHash && op.fileHash!==resolved.hash) return refuse('The file changed. Re-select the element before editing.');
   try {
-    const items=ranges(resolved,language),index=items.findIndex(r=>r.selected),source=resolved.source;
+    const items=ranges(resolved,language,{templateChildren:true}),index=items.findIndex(r=>r.selected),source=resolved.source;
     if(index<0) throw Error('The source element could not be located.');
     const node=items[index];
     let next,createdId,movedId,sourceIdMap,removedSourceIds;

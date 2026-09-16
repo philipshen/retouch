@@ -23294,3 +23294,37 @@ claim template/control-scope copying is solved. That broader structural proof,
 released-set ownership/ungrouping, and editor runtime/history integration remain
 necessary. Liquid group scaling is still not advertised in the editor. Full
 Figma parity and trusted desktop distribution remain unfinished. No push.
+
+### Liquid sibling edits inside enclosing template scopes
+
+Ordinary Liquid sibling copy/paste/delete/reorder operations now permit a complete
+HTML parent inside an enclosing loop or condition, and escaped output expressions
+inside its children. The edit preserves outer control flow byte for byte. Inner
+control tags, mixed sibling content, dynamic tags, and unescaped output remain
+outside this proof. Removing an escaped output for structural validation does
+not modify that expression in the source operation.
+
+This handling is explicitly enabled for ordinary structural actions and their
+adapter capabilities. SVG mask/boolean consumers retain the strict default
+range/description behavior; the full suite caught their dependency during
+implementation and confirms it is preserved. Other frame/reparent operations
+have not been generalized by this change.
+
+Source tests verify copy, delete and move under a loop plus condition, including
+hidden instances and text containing markup characters. Copy/paste/multi-copy
+scale-identity tests now use the enclosing loop and escaped template expressions,
+not the earlier literal-only fixture. Chromium and WebKit saved-page tests now
+exercise copies of both children and entire groups in that repeated template at
+390/768/1100/1440/523px, including reloads and ordered transform snapshots.
+All 1,789 unit tests passed; git diff --check passed. Evidence:
+/tmp/retouch-liquid-scoped-structure.log,
+/tmp/retouch-liquid-scoped-copy-chromium.log,
+/tmp/retouch-liquid-scoped-copy-webkit.log,
+/tmp/retouch-liquid-scoped-units.log.
+
+This resolves the enclosing-loop/escaped-output copy restriction identified in
+the previous turn. General Liquid expression/control-flow edits, scaled-group
+ungrouping, runtime ownership through release, and editor integration remain
+unfinished. The source scaling prototype is still not advertised as an editor
+capability. Full Figma parity and trusted desktop distribution remain unfinished.
+No push.
