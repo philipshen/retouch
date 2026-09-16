@@ -23559,3 +23559,27 @@ Evidence: /tmp/retouch-react-copy-chromium.log,
 
 Final validation: all 1,801 unit tests and git diff --check passed.
 Unit log: /tmp/retouch-react-copy-complete-units.log.
+
+### Deleting saved React scale groups and members
+
+Scaled React groups and their native children can now be deleted through the
+structural editor. Deleting a child removes its persistent identity from saved
+independent-transform snapshots while retaining surviving members' transforms.
+Deleting a complete group removes its registration with the subtree. Multi-selection
+deletion composes these changes in memory into one exact source transaction; an
+empty group can remain with no member snapshots. The shared helper file is retained
+for other groups/imports. Undo restores exact source and ownership references.
+
+All 1,802 unit tests passed, including whole-group, child and all-child deletion;
+a targeted follow-up verifies that surviving independent transforms are retained.
+Chromium passed group and child deletion with undo/redo across all four previews,
+following the existing scaling/copy checks. The child action waits for selection
+resolution before dispatching Delete. Evidence:
+/tmp/retouch-react-delete-units.log, /tmp/retouch-react-delete-snapshot-tests.log,
+/tmp/retouch-react-delete-ready.log.
+
+Ungroup/regroup, reparenting/reordering, generated children, component subtrees and
+other previously documented parity/distribution gaps remain unfinished. No push.
+
+WebKit also passed the complete editor group/child delete and undo/redo flow:
+/tmp/retouch-react-delete-webkit.log. git diff --check passed.

@@ -134,6 +134,7 @@ function planOp(resolved,op,language) {
       const adapter=require('./adapters/'+language+'.cjs'),elements=adapter.collect(next,resolved.relPath).elements,start=element=>language==='react'?element.node.start:language==='html'?element.location.startOffset:element.tagStart,mapped=new Set();sourceIdMap=[];removedSourceIds=[];
       for(const element of resolved.elements){const before=start(element);if(before>=node.start&&before<node.end){removedSourceIds.push(element.id);continue;}const after=before>=node.end?before-(node.end-node.start):before,target=elements.find(item=>item.kind===element.kind&&start(item)===after);if(!target||mapped.has(target.id))throw Error('The surviving layers could not be mapped after deletion.');mapped.add(target.id);if(target.id!==element.id)sourceIdMap.push([element.id,target.id]);}
       if(mapped.size!==elements.length)throw Error('Deletion changed the surviving source layer identities.');
+      if(language==='react')next=require('./jsx-group-scale.cjs').prune(next,resolved.relPath);
     } else if(op.type==='moveElement') {
       const to=op.direction==='before'?index-1:op.direction==='after'?index+1:op.direction==='first'?0:op.direction==='last'?items.length-1:-1;
       if(to<0||to>=items.length||to===index) throw Error('There is no sibling in that direction.');
