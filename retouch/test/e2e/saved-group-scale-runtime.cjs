@@ -4,7 +4,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
 const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.join(fixture,'node_modules/playwright'))[engine],{script}=require('../../src/group-scale-runtime.cjs');
 (async()=>{
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-saved-scale-')),file=path.join(directory,'index.html');let browser,server;
- const original='<!doctype html><html><head><style>main{display:flex;flex-direction:column;gap:16px}h1{font:700 32px Georgia}p{font:16px Arial}@media(min-width:700px){main{flex-direction:row;gap:24px}}@media(min-width:1000px){main{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}}[data-rt-group]{display:contents}</style></head><body><main><div data-rt-group><h1>Headline</h1><p>Other text</p></div><p>Named text</p></main></body></html>';
+ const original='<!doctype html><html><head><style>main{display:flex;flex-direction:column;gap:16px}h1{font:700 32px Georgia}p{font:16px Arial}@media(min-width:700px){main{flex-direction:row;gap:24px}}@media(min-width:1000px){main{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}}[data-rt-group]{display:contents}</style></head><body><main><div data-rt-frame data-rt-group><h1>Headline</h1><p>Other text</p></div><p>Named text</p></main></body></html>';
  const html=require('../../src/adapters/html.cjs'),planner=require('../../src/html-group-scale.cjs');
  const scale=(source,width,factor)=>{const relPath='index.html',elements=html.collect(source,relPath).elements,r={source,relPath,elements,element:elements.find(item=>item.tag==='div'),file,hash:html.contentHash(source)},result=planner.plan(r,{fileHash:r.hash,width,factor});assert.equal(result.ok,true,result.reason);return result.edits[0].after;};
  const saved=scale(scale(original,0,1.5),1000,4/3);fs.writeFileSync(file,saved);
@@ -19,6 +19,11 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await page.locator('[data-rt-group]').evaluate(el=>el.setAttribute('data-rt-scale',JSON.stringify({version:1,ranges:{0:1.5},offsets:{0:[-.25,-.25]},pixels:{0:[23,-9]}})));await verify(1.5,[-.25,-.25],[23,-9]);
   await page.locator('[data-rt-group]').evaluate(el=>el.removeAttribute('data-rt-scale'));await verify(1);assert.deepEqual(await page.locator('h1,p').evaluateAll(nodes=>nodes.map(el=>el.getAttribute('style'))),[null,null,null]);
   fs.writeFileSync(file,original);await page.reload();await verify(1);fs.writeFileSync(file,saved);await page.reload();await verify(1.5);
+  const ungroup=source=>{const relPath='index.html',elements=html.collect(source,relPath).elements,r={source,relPath,elements,element:elements.find(item=>item.tag==='div'),file,hash:html.contentHash(source)},result=require('../../src/html-frame-selection.cjs').plan(r,{type:'removeFrame',fileHash:r.hash});assert.equal(result.ok,true,result.reason);return result.edits[0].after;};
+  baselineSource=ungroup(original);fs.writeFileSync(file,ungroup(saved));await baseline.reload();await page.reload();
+  assert.equal(await page.locator('[data-rt-group]').count(),0);assert.equal(await page.locator('script[data-rt-scale-set]').count(),1);
+  for(const width of [390,768,1100,1440,523]){await baseline.setViewportSize({width,height:900});await page.setViewportSize({width,height:900});await verify(width>=1000?2:1.5);await page.reload();await verify(width>=1000?2:1.5);}
+  assert.deepEqual(await page.evaluate(()=>scaleErrors),[]);
   const duplicate=source=>{const relPath='index.html',elements=html.collect(source,relPath).elements,r={source,relPath,elements,element:elements.find(item=>item.tag==='h1'),file,hash:html.contentHash(source)},result=html.planOp(r,{type:'duplicateElement',fileHash:r.hash});assert.equal(result.ok,true,result.reason);return result.edits[0].after;};
   baselineSource=duplicate(original);fs.writeFileSync(file,duplicate(saved));await baseline.reload();await page.reload();
   for(const width of [390,768,1100,1440,523]){await baseline.setViewportSize({width,height:900});await page.setViewportSize({width,height:900});await verify(width>=1000?2:1.5);}

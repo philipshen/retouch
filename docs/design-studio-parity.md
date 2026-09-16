@@ -22767,3 +22767,32 @@ new browser geometry case exercises a child copy inside one scaled group.
 Ungrouping scaled groups, renderer parity, multi-group scale composition,
 CSP delivery, and trusted Homebrew distribution remain unfinished. No push or
 desktop rebuild in this continuation.
+
+### Preserving responsive scale when ungrouping HTML (2026-09-16)
+
+Removing a scaled HTML group now retains its responsive transform in an inert
+JSON script linked to the released children by persistent identities. The group
+wrapper is removed. The saved runtime applies the shared transform to those
+roots, observes membership changes, and refuses overlapping controllers. The
+source scale planner also refuses a new scale group overlapping a released set.
+Fixed group-scale descriptions comparing nodes from separate parser trees,
+which previously left their member map empty.
+
+Validation: Chromium and WebKit editor tests ungroup a scaled group, verify
+matching main and Phone/Tablet/Desktop geometry, and perform exact source undo
+and redo. Structural actions reload documents through the existing path.
+Ordinary saved-page tests in both browsers verify released geometry and reloads
+at 390/768/1100/1440/523px without editor instrumentation. All 1,773 unit tests
+pass, including descriptor and overlap regressions. Evidence:
+/tmp/retouch-scale-ungroup-editor.log,
+/tmp/retouch-scale-ungroup-editor-webkit.log,
+/tmp/retouch-scale-ungroup-browser.log,
+/tmp/retouch-scale-ungroup-webkit.log,
+/tmp/retouch-scale-ungroup-units-final.log.
+
+This proves immediate ungrouping and responsive persistence. Independent edits,
+copying, reparenting, and deleting released members still need defined behavior
+and validation; copying a released member does not yet copy its set membership.
+Composed scaling, React/Liquid parity, runtime migration, CSP-restricted delivery,
+full Figma parity, and trusted notarized Homebrew distribution remain unfinished.
+No push or desktop rebuild in this continuation.

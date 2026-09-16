@@ -11,6 +11,16 @@ function plan(resolved,op){
   if(!group||group.node.namespaceURI!=='http://www.w3.org/1999/xhtml'||attr(group.node,'data-rt-group')===undefined)throw Error('Choose a source-backed group.');
   const groups=elements.filter(item=>attr(item.node,'data-rt-scale')!==undefined);
   if(groups.some(other=>other.id!==group.id&&(contains(other.node,group.node)||contains(group.node,other.node))))throw Error('Overlapping responsive scale groups are not supported yet.');
+  let root=group.node;while(root.parentNode)root=root.parentNode;
+  function checkReleased(node){
+   if(attr(node,'data-rt-scale-set')!==undefined){
+    if(node.tagName!=='script'||attr(node,'type')!=='application/json')throw Error('Invalid released scale metadata.');
+    const ids=require('../runtime/group-scale-bootstrap.js').members((node.childNodes||[]).map(child=>child.value||'').join(''));
+    if(elements.some(item=>ids.includes(attr(item.node,'data-rt-scale-member'))&&(contains(item.node,group.node)||contains(group.node,item.node))))throw Error('Overlapping responsive scale groups are not supported yet.');
+   }
+   for(const child of node.childNodes||[])checkReleased(child);
+  }
+  checkReleased(root);
   const stored=attr(group.node,'data-rt-scale'),ranges=stored===undefined?[]:parse(stored);let current=1;
   for(const [width,value]of ranges)if(width<=op.width)current=value;
   const shift=op.offset??[0,0],move=op.move??[0,0];if([shift,move].some(pair=>!Array.isArray(pair)||pair.length!==2||pair.some(n=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>10000)))throw Error('Choose finite group offsets.');
@@ -36,8 +46,18 @@ function plan(resolved,op){
  }catch(error){return {ok:false,refused:true,reason:error.message};}
 }
 function describe(resolved){
- const group=resolved.element;if(attr(group.node,'data-rt-group')===undefined)return {};
- const members=html.collect(resolved.source,resolved.relPath).elements.filter(item=>item.id!==group.id&&contains(group.node,item.node));
+ const elements=html.collect(resolved.source,resolved.relPath).elements,group=elements.find(item=>item.id===resolved.element.id);if(!group||attr(group.node,'data-rt-group')===undefined)return {};
+ const members=elements.filter(item=>item.id!==group.id&&contains(group.node,item.node));
  return {groupScale:{metadata:attr(group.node,'data-rt-scale')??null,members:Object.fromEntries(members.map(item=>[item.id,attr(item.node,'data-rt-scale-member')??null]))}};
 }
-module.exports={plan,describe};
+function release(resolved){
+ const metadata=attr(resolved.element.node,'data-rt-scale');if(metadata===undefined)return null;parse(metadata);
+ const elements=html.collect(resolved.source,resolved.relPath).elements,group=elements.find(item=>item.id===resolved.element.id),children=elements.filter(item=>item.node.parentNode===group.node),ids=children.map(item=>attr(item.node,'data-rt-scale-member'));
+ require('../runtime/group-scale-bootstrap.js').members(JSON.stringify(ids));
+ const tree=parse5.parse(resolved.source,{sourceCodeLocationInfo:true}),scripts=[];let end=null;
+ function walk(node){if(node.tagName==='body')end=node.sourceCodeLocation?.endTag?.startOffset??null;if(attr(node,'data-rt-scale-runtime')!==undefined)scripts.push(node);for(const child of node.childNodes||[])walk(child);}
+ walk(tree);if(end===null||scripts.length!==1||!scripts[0].sourceCodeLocation?.endTag||resolved.source.slice(scripts[0].sourceCodeLocation.startOffset,scripts[0].sourceCodeLocation.endOffset)!==runtime.script())throw Error('The saved scale runtime changed outside the editor.');
+ const id=html.contentHash(resolved.source+'|released-scale|'+resolved.element.id).slice(0,10);
+ return {at:end,text:'<script type="application/json" data-rt-scale-set="'+id+'" data-rt-scale="'+escape(metadata)+'">'+JSON.stringify(ids)+'</script>'};
+}
+module.exports={plan,describe,release};

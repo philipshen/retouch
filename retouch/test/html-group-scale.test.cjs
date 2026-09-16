@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),html=require('../src/adapters/html.cjs'),{plan}=require('../src/html-group-scale.cjs');
-const source='<!doctype html><html><head></head><body><main><div data-rt-group style="display:contents"><h1>Heading</h1><p>Text</p></div><p>Outside</p></main></body></html>';
+const source='<!doctype html><html><head></head><body><main><div data-rt-frame data-rt-group style="display:contents"><h1>Heading</h1><p>Text</p></div><p>Outside</p></main></body></html>';
 function resolve(source){const relPath='index.html',elements=html.collect(source,relPath).elements;return {source,relPath,elements,element:elements.find(item=>item.tag==='div'),file:'/site/index.html',hash:html.contentHash(source)};}
 test('HTML group scaling persists ranges, stable identities and one private runtime in one source edit',()=>{
  const r=resolve(source),first=plan(r,{fileHash:r.hash,width:0,factor:1.5});assert.equal(first.ok,true,first.reason);assert.equal(first.edits.length,1);assert.equal(first.edits[0].before,source);const next=resolve(first.edits[0].after);assert.deepEqual(next.elements.map(item=>item.id),r.elements.map(item=>item.id));assert.equal(next.elements.find(item=>item.tag==='h1').node.attrs.some(attr=>attr.name==='data-rt-scale-member'),true);
@@ -35,4 +35,19 @@ test('paste, shared duplication and whole-group duplication remap copied scale m
   html.planOp(next,{type:'duplicateElement',fileHash:next.hash})
  ];
  for(const result of results){assert.equal(result.ok,true,result.reason);const copied=resolve(result.edits[0].after),members=copied.elements.flatMap(item=>item.node.attrs.filter(attr=>attr.name==='data-rt-scale-member').map(attr=>attr.value));assert.equal(members.length,new Set(members).size);for(const original of [heading,text])assert.ok(members.includes(original.node.attrs.find(attr=>attr.name==='data-rt-scale-member').value));assert.equal((copied.source.match(/<script data-rt-scale-runtime="1">/g)||[]).length,1);}
+});
+test('ungrouping preserves responsive scale intent on the released source members',()=>{
+ const r=resolve(source),scaled=plan(r,{fileHash:r.hash,width:0,factor:1.5}).edits[0].after,next=resolve(scaled),released=require('../src/html-frame-selection.cjs').plan(next,{type:'removeFrame',fileHash:next.hash});assert.equal(released.ok,true,released.reason);
+ const after=released.edits[0].after;assert.equal(html.collect(after,'index.html').elements.some(item=>item.node.attrs.some(attr=>attr.name==='data-rt-group')),false);assert.match(after,/<script type="application\/json" data-rt-scale-set=/);assert.ok(after.includes('&quot;ranges&quot;:{&quot;0&quot;:1.5}'));
+});
+test('scale descriptions resolve all members across parser instances',()=>{
+ const r=resolve(source),describe=require('../src/html-group-scale.cjs').describe;assert.equal(Object.keys(describe(r).groupScale.members).length,2);
+ const next=resolve(plan(r,{fileHash:r.hash,width:0,factor:1.5}).edits[0].after);assert.equal(Object.values(describe(next).groupScale.members).filter(Boolean).length,2);
+});
+
+test('scaling refuses a new wrapper overlapping released scale members',()=>{
+ const r=resolve(source),scaled=plan(r,{fileHash:r.hash,width:0,factor:1.5}).edits[0].after,next=resolve(scaled);
+ const released=require('../src/html-frame-selection.cjs').plan(next,{type:'removeFrame',fileHash:next.hash}).edits[0].after;
+ const wrapped=resolve(released.replace('<main>','<main><div data-rt-frame data-rt-group style="display:contents">').replace('</main>','</div></main>'));
+ const result=plan(wrapped,{fileHash:wrapped.hash,width:0,factor:2});assert.equal(result.ok,false);assert.match(result.reason,/Overlapping/);assert.equal(result.edits,undefined);
 });

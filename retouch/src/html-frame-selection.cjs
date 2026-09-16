@@ -34,6 +34,7 @@ function plan(resolved,op){
   const out=new MagicString(resolved.source);
   if(removed){out.remove(removed.location.startTag.startOffset,start);out.remove(end,removed.location.endTag.endOffset);}
   else{out.appendLeft(start,opening);out.appendLeft(end,closing);}
+  if(removed){const released=require('./html-group-scale.cjs').release({...resolved,elements,element:removed});if(released)out.appendLeft(released.at,released.text);}
   const after=out.toString(),parsed=html.collect(after,resolved.relPath).elements;
   if(parsed.length!==elements.length+(removed?-1:1))return refuse('Framing would change the parsed HTML structure.');
   // Track every original node by its shifted source offset, not by structural
