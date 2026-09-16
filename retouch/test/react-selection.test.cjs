@@ -448,3 +448,13 @@ test('shared optical sizing retains manual axes and responsive priority',()=>{
  assert.throws(()=>change(source,'','font-optical-sizing','invalid'));
  const el={style:{getPropertyPriority:()=> 'important',getPropertyValue:()=>''}};assert.throws(()=>change(source,'','font-optical-sizing','auto',null,false,el),/important inline/);
 });
+
+test('shared vertical text classes preserve horizontal layout and responsive priority',()=>{
+ const {changeTextVertical}=require('../shell/react-selection.js');
+ assert.equal(changeTextVertical('items-start justify-end md:items-end hover:items-center','md:','align-items','center'),'items-start justify-end hover:items-center md:[align-items:center]');
+ assert.equal(changeTextVertical('!content-start justify-end','md:','align-content','flex-end'),'!content-start justify-end md:![align-content:flex-end]');
+ assert.equal(changeTextVertical('![place-content:center_start]','md:','justify-content','center'),'![place-content:center_start] md:![justify-content:center]');
+ assert.equal(changeTextVertical('content-start md:content-end justify-center','md:','align-content',null),'content-start justify-center');
+ const el={style:{getPropertyPriority:key=>key==='place-content'?'important':'',getPropertyValue:()=>''}};assert.throws(()=>changeTextVertical('','','align-content','center',null,el),/important inline/);
+ assert.throws(()=>changeTextVertical('','','color','center'));assert.throws(()=>changeTextVertical('','','align-content','bad'));
+});

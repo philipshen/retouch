@@ -180,6 +180,11 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   if(preview){const old=preview.closest('details');body.append(preview);if(old&&old!==settings)old.remove();}
   body.append(tabs,...[...groups.values()].map(group=>group.panel));select(groups.has(active())?active():'Basics');
  }
+ function verticalTextButtons(vertical,shared=false){
+  if(vertical){const field=vertical.closest('.inspector-field'),group=document.createElement('div');field.classList.add('vertical-text-modes');field.querySelector(':scope > span').textContent='Vertical';group.className='layout-mode-segments';
+   for(const [value,label,lines]of [['top','top','M4 3h12 M6 6h8 M6 9h8'],['center','middle','M4 10h2 M14 10h2 M7 7h6 M7 13h6'],['bottom','bottom','M6 11h8 M6 14h8 M4 17h12']]){const button=document.createElement('button');button.type='button';button.disabled=vertical.disabled;button.setAttribute('aria-label',(shared?'Align selected text ':'Align text ')+label);button.title=(shared?'Align selected text ':'Align text ')+label;button.setAttribute('aria-pressed',String(vertical.value===value));button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+lines+'"/></svg>';button.onclick=()=>{vertical.value=value;vertical.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);}field.insertBefore(group,vertical);keyboardToolbar(group,shared?'Selected vertical text alignment buttons':'Vertical text alignment buttons');
+  }
+ }
  function typographyPrimary(section){
   const find=labels=>labels.map(label=>section.querySelector('[aria-label="'+label+'"]')).find(Boolean),row=control=>control?.closest('.property-row')||control?.closest('.inspector-field');
   const font=row(find(['Page font'])),weight=find(['Font weight (1–1000)','Font weight (CSS)']),spacing=find(['Line height (px)','Line height (CSS)']),align=row(find(['Text alignment','Text alignment (CSS)']));
@@ -187,9 +192,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   if(!parts.length)return;
   const primary=document.createElement('div');primary.className='typography-primary';section.querySelector(':scope > h3').after(primary);parts.forEach(part=>primary.append(part));
   const vertical=primary.querySelector('[aria-label="Vertical text alignment"]');
-  if(vertical){const field=vertical.closest('.inspector-field'),group=document.createElement('div');field.classList.add('vertical-text-modes');field.querySelector(':scope > span').textContent='Vertical';group.className='layout-mode-segments';
-   for(const [value,label,lines]of [['top','top','M4 3h12 M6 6h8 M6 9h8'],['center','middle','M4 10h2 M14 10h2 M7 7h6 M7 13h6'],['bottom','bottom','M6 11h8 M6 14h8 M4 17h12']]){const button=document.createElement('button');button.type='button';button.setAttribute('aria-label','Align text '+label);button.title='Align text '+label;button.setAttribute('aria-pressed',String(vertical.value===value));button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+lines+'"/></svg>';button.onclick=()=>{vertical.value=value;vertical.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);}field.insertBefore(group,vertical);keyboardToolbar(group,'Vertical text alignment buttons');
-  }
+  verticalTextButtons(vertical);
   font?.classList.add('typography-family');sizePair?.classList.add('typography-size');spacingPair?.classList.add('typography-spacing');
   if(weight&&sizePair){
    const weightRow=row(weight),settings=[...section.querySelectorAll('details')].find(details=>details.querySelector(':scope > summary')?.textContent==='Type settings');
@@ -263,6 +266,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    const label=field.querySelector('.inspector-field > span')||field.querySelector(':scope > span');if(label)label.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+path+'"/></svg>';
   }
   const underline=disclosure('Underline details','shared-underline-details');for(const label of ['Underline style','Underline thickness','Underline offset','Underline skip ink','Underline color']){const field=row(find([label]));if(field){const caption=field.querySelector('.inspector-field > span')||field.querySelector(':scope > span');if(caption)caption.textContent=label.replace('Underline ','').replace(/^./,letter=>letter.toUpperCase());underline.append(field);}}if(underline.children.length>1)body.append(underline);
+  const vertical=body.querySelector('[data-shared-text-vertical-alignment]');if(vertical){primary.append(vertical);verticalTextButtons(vertical.querySelector('select'),true);}
   const settings=disclosure('Type settings','shared-type-settings');
   for(const child of [...body.children])if(child!==primary&&!child.matches('[data-paint-property="color"]')&&!child.querySelector('[data-paint-property="color"]'))settings.append(child);
   const tools=document.createElement('div');tools.className='typography-alignment-tools';primary.append(tools);if(alignment){alignment.classList.add('shared-typography-alignment');tools.append(alignment);}

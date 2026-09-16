@@ -21475,3 +21475,33 @@ These runs verify CSS settings and override preservation, not cross-font glyph
 appearance or automatic-axis drag resolution. Full Figma fidelity,
 arbitrary-site guarantees and trusted Homebrew distribution remain incomplete.
 No native rebuild or push.
+
+### Shared vertical text alignment
+
+Shared text selections now expose the same top/middle/bottom icon controls as
+single-layer typography, alongside the primary text fields. Each supported
+HTML text box maps physical vertical alignment through its own layout: block
+content alignment, flex cross-axis alignment or flex column justification,
+including reversed directions. Mixed alignment has no pressed button. Source
+writes preserve other properties, scopes and priority; inactive screen ranges
+and important inline alignment rules disable and guard writes. Unsupported
+inline/vertical-writing/SVG boxes do not receive this control.
+
+Validation: 1,715 unit tests passed, including class isolation, responsive
+priority, place-content priority and invalid/inline refusal. HTML/React
+Chromium 145 and Liquid WebKit 26 browser checks verify rendered text geometry
+across a block heading and reversed flex paragraph, unchanged 220x140 boxes,
+top/middle/bottom pressed states, keyboard focus without source writes,
+responsive fallback, reset, exact source undo and important inline refusal.
+Existing single-layer reversed-flex alignment/font-catalog coverage passed.
+Inspected /tmp/retouch-shared-vertical-html.png for primary-row layout and
+centered text. Other evidence:
+/tmp/retouch-shared-vertical-units.log,
+/tmp/retouch-shared-vertical-html-final.log,
+/tmp/retouch-shared-vertical-{react,liquid}.log,
+/tmp/retouch-vertical-single-regression.log.
+
+Complex wrapping/grid/table content, arbitrary competing shorthands and writing
+modes remain outside this verification. Full Figma fidelity, arbitrary-site
+guarantees and trusted Homebrew distribution remain incomplete. No native
+rebuild or push.

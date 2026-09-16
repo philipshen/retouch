@@ -76,6 +76,13 @@
   if(addition&&inlineTypography.includes(property)&&el&&typographyKeys(property).some(key=>el.style.getPropertyValue(key)))addition='!'+addition.replace(/^!|!$/g,'');
   const projected=R.project(classes,scope),expanded=property.startsWith('font-variant-')&&value!==null?expandVariantShorthand(projected,document):['font-size','line-height'].includes(property)?I.expandSizeLeading(projected):projected,next=I.replace(expanded,field.matches,addition);return next===projected?(classes||''):R.replaceScope(classes,next,scope);
  }
+ function changeTextVertical(classes,scope,property,value,document=null,el=null){
+  const I=inspector(),R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js'),matches=I.verticalAlignmentMatchers[property];if(!matches||value!==null&&!['center','flex-start','flex-end'].includes(value))throw Error('Choose a supported vertical text alignment.');
+  if(value!==null&&el&&L.inlineAlignment(el,property,true))throw Error('An important inline rule controls vertical text alignment.');
+  const active=R.project(classes,scope),inherited=R.inherited(classes,scope,document),shorthand=token=>property==='align-items'?/^place-items-|^\[place-items:/.test(token):/^place-content-|^\[place-content:/.test(token);
+  const important=el&&L.inlineAlignment(el,property)||[...active.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(matches(I.base(token)||'')||shorthand(I.base(token)||'')))||document&&I.catalog(document).some(name=>(classes||'').split(/\s+/).includes(name));
+  return R.replaceScope(classes,I.replace(active,matches,value===null?'':(important?'!':'')+'['+property+':'+value+']'),scope);
+ }
  function changeRotation(classes,scope,value,el,inherited=''){
   if(value!==null&&el.style.getPropertyPriority('rotate')==='important')throw Error('Edit the important inline rotation in its source first.');
   const next=change(classes,scope,'rotate',value,el.ownerDocument);if(value===null)return next;
@@ -304,6 +311,8 @@
   const automatic=I.button('Automatic shared line height',()=>relativeWrite('line-height','normal',false));automatic.disabled=elements.some(el=>el.style.getPropertyPriority('line-height')==='important');relativeGroup.append(automatic);
   I.note(groups.typography,'Relative spacing follows each layer’s own font size. Pixel controls and resets are available below.');
   I.sharedTypographyPreview(groups.typography,elements);
+  I.sharedVerticalAlignment(groups.typography,()=>infos.map((_,i)=>liveElement(i)),(layouts,reset)=>typeActive()&&layouts.every((layout,i)=>reset||!root.RetouchLayout.inlineAlignment(liveElement(i),layout.property,true)),changes=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i),change=changes[i];return [info.id,changeTextVertical(info.className,scope,change.property,change.value,el.ownerDocument,el)];})));}catch(error){I.note(groups.typography,error.message,'refused');}},(index,property)=>changeTextVertical(infos[index].className,scope,property,null)!==infos[index].className);
+
   for(const [property,field]of Object.entries(fields).filter(([,field])=>!field.constraint).flatMap(entry=>['width','height'].includes(entry[0])?[entry,...['min-','max-'].map(prefix=>[prefix+entry[0],fields[prefix+entry[0]]])]:[entry])){
    if(!elements.every(el=>itemApplies(el,field)))continue;
    const sec=field.svg?groups.stroke:field.constraint||field.ratio||['width','height'].includes(property)?groups.size:field.flexItem||field.layoutItem?groups.item:['opacity','rotate','visibility','mix-blend-mode','isolation'].includes(property)?groups.appearance:groups.typography;
@@ -438,5 +447,5 @@
   if(layoutOptions.children.length>1)groups.layout.append(layoutOptions);
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={resetContainerAlignment,changeStack,changeAdaptiveGrid,sharedGroups,rotationDegrees,changeRotation,changeSizeMode,changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={changeTextVertical,resetContainerAlignment,changeStack,changeAdaptiveGrid,sharedGroups,rotationDegrees,changeRotation,changeSizeMode,changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);

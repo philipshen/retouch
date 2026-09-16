@@ -280,6 +280,8 @@
   }
 
   I.sharedTypographyPreview(typography,elements);
+  I.sharedVerticalAlignment(typography,()=>elements,(layouts,reset)=>elements.every((el,index)=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth&&(reset||!RetouchLayout.inlineAlignment(el,layouts[index].property,true))),changes=>save(null,null,width,Object.fromEntries(infos.map((info,index)=>[info.id,{[changes[index].property]:changes[index].value}]))),(index,property)=>Object.hasOwn(infos[index].cssRules?.[width]||{},property));
+
   const families=computed.map(css=>css.fontFamily),mixedFamilies=families.some(value=>value!==families[0]);
   I.fontPicker(typography,elements[0].ownerDocument,mixedFamilies?'':families[0],value=>save('font-family',value,width),{mixed:mixedFamilies,label:'Shared Page font',disabled:!typographyReady(elements,width,'font-family')});
   typography.querySelector('[aria-label="Shared Page font"]').closest('.inspector-field').querySelector(':scope > span').textContent='Font';
