@@ -21453,3 +21453,25 @@ All 1,713 unit tests pass. Evidence:
 Dragging automatic/default coordinates, resolved glyph fallback fidelity,
 full Figma parity, arbitrary-site guarantees and trusted Homebrew distribution
 remain incomplete. No native rebuild or push.
+
+### Shared optical sizing
+
+Shared Type settings now provides Automatic/Off optical sizing in the Variable
+tab for React, Liquid and HTML selections. It follows the selected screen
+scope, inherited important class priority and inline guards. An explicit opsz
+override remains intact; Variable font axes explains how many selected layers
+have that override and how to return them to automatic sizing.
+
+Validation: 1,714 unit tests passed, including inherited priority, reset,
+invalid input and important inline refusal. HTML/React Chromium 145 and Liquid
+WebKit 26 browser runs with embedded Roboto Flex verify auto/none computed
+values on both layers, preserved explicit opsz coordinates, the override
+explanation, Variable tab placement, responsive fallback, disabled synthetic
+changes, reset and exact source undo. Evidence:
+/tmp/retouch-shared-optical-units.log,
+/tmp/retouch-shared-optical-{html,react,liquid}.log.
+
+These runs verify CSS settings and override preservation, not cross-font glyph
+appearance or automatic-axis drag resolution. Full Figma fidelity,
+arbitrary-site guarantees and trusted Homebrew distribution remain incomplete.
+No native rebuild or push.

@@ -440,3 +440,11 @@ test('shared font presets use each font coordinates and reject ambiguous or inva
  const duplicate=font(700);duplicate.instances.push(duplicate.instances[0]);assert.deepEqual(sharedFontPresets([duplicate]),[]);
  assert.deepEqual(sharedFontPresets([font(700),null]),[]);assert.deepEqual(sharedFontPresets([]),[]);
 });
+
+test('shared optical sizing retains manual axes and responsive priority',()=>{
+ const source='![font-optical-sizing:none] [font-variation-settings:"opsz"_24]';
+ assert.equal(change(source,'md:','font-optical-sizing','auto'),source+' md:![font-optical-sizing:auto]');
+ assert.equal(change(source+' md:[font-optical-sizing:auto]','md:','font-optical-sizing',null),source);
+ assert.throws(()=>change(source,'','font-optical-sizing','invalid'));
+ const el={style:{getPropertyPriority:()=> 'important',getPropertyValue:()=>''}};assert.throws(()=>change(source,'','font-optical-sizing','auto',null,false,el),/important inline/);
+});
