@@ -35,5 +35,15 @@
     "/tmp/retouch-studio-screen-presets-ui.log",
     "/tmp/retouch-studio-screen-presets-extracted.log",
     "/tmp/retouch-studio-screen-presets-final.log"
-  ]
+  ],
+  "nativeAttempt": {
+    "processStarted": true,
+    "executable": "/private/tmp/retouch-studio-screen-presets/Retouch.app/Contents/MacOS/Retouch",
+    "windowVerified": false,
+    "automationError": "cgWindowNotFound",
+    "bundleIdentifierSelection": "ambiguous because multiple local development builds share design.retouch.studio",
+    "processStopped": true,
+    "diagnostics": "/tmp/retouch-native-screen-window.log",
+    "finding": "AppKit reported restoration of old state with null window identifier and class. Causality for the missing window is not established."
+  }
 }

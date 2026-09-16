@@ -954,3 +954,13 @@ local cask passes Ruby syntax checking.
 This archive is ad hoc signed. Native launch, Intel execution, notarization,
 Homebrew installation/upgrade of this candidate and public release remain
 unverified. The checks above do not establish trusted macOS distribution.
+
+
+The subsequent controlled native attempt started the exact executable in that
+package, as verified from its process path. Native automation returned
+`cgWindowNotFound` and supplied no app handle, so the window and project dialog
+could not be inspected. Bundle-ID selection was also ambiguous among older local
+builds. AppKit logs reported old window-state restoration with a null identifier
+and class; this has not been established as the cause. The test process was
+stopped and its exit verified. Native editing remains unverified; no launch loop,
+quarantine removal or security-setting change was performed.
