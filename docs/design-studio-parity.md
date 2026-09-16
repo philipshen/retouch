@@ -22575,3 +22575,42 @@ Evidence: /tmp/retouch-group-range-before.log,
 
 Full Figma parity, arbitrary-site support, and trusted notarized Homebrew
 distribution remain unfinished. No push or desktop rebuild in this continuation.
+
+### Confirmed responsive group scaling defect (2026-09-16; unresolved)
+
+Added RT_E2E_GROUP_SCALE_COMPARISONS=1 to the comparison transform scenario.
+This is an opt-in failing regression, not a passing feature claim. At 150%
+scale in the 1100px grid layout, the main canvas matches its expected group
+bounds, but the Phone column layout does not preserve its own group anchor
+and relative spacing. On Phone, the second member should start at
+(8, 163.59375), but starts at (185.5, 126.09375); its scaled dimensions are
+correct. The outside sibling remains unchanged. The heading starts at
+(-0.5, 32.15625) instead of (8, 29.4375).
+
+Reproduce from the worktree:
+
+```
+RT_INSPECTOR_FIXTURE=/private/tmp/retouch-responsive-fixture \
+RT_E2E_RENDERER=html RT_E2E_GROUP_SELECTION=1 \
+RT_E2E_GROUP_MOVE_COMPARISONS=1 RT_E2E_GROUP_SCALE_COMPARISONS=1 \
+node retouch/test/e2e/page-fonts.cjs
+```
+
+Evidence: /tmp/retouch-group-scale-comparisons.log and visually inspected
+/tmp/retouch-group-transform-failure-html.png. The test emits before/expected/
+actual rectangles and the failing screen. The existing scoped move scenario
+still passes in /tmp/retouch-group-transform-move-regression.log.
+
+Cause: group-move.js scalePlan measures one rendered layout and computes
+pixel translation compensation around that layout's group bounds. shell.js
+writeGroupMove persists those pixel translations in the shared source scope.
+Other responsive layouts inherit the translations even when member positions,
+widths, and transform origins have changed. Comparison refresh is working;
+the authored geometry itself is insufficient. A fix must retain responsive
+layout and exact history while making the group anchor and member offsets
+respond to each layout. Merely refreshing frames, adding one translation per
+preset, or weakening the geometry assertion would not fix this defect.
+
+No production behavior changed in this investigation. No push or desktop
+rebuild. Full parity, responsive group scaling, arbitrary-site support, and
+trusted notarized Homebrew distribution remain unfinished.
