@@ -543,3 +543,15 @@ test('text sizing resolves scoped logical dimensions and allows later physical r
  for(const logical of ['[inline-size:200px]','[min-inline-size:10px]','[max-block-size:300px]'])assert.throws(()=>R.changeSizeMode(logical,'','width','fixed',100),/logical sizing/);
  assert.throws(()=>R.changeSizeMode('![inline-size:200px] md:![width:260px]','md:','width','fixed',100),/logical sizing/);
 });
+
+test('size limits stay editable and resettable after text sizing clears logical bounds',()=>{
+ const I=require('../shell/inspector.js'),R=require('../shell/react-selection.js'),L=require('../shell/layout.js');
+ const source='![inline-size:260px] ![block-size:180px] ![min-inline-size:50px] hover:min-w-40',preset=R.changeTextResizing(source,'md:',I.textResizeChanges({width:'260px',height:'180px',getPropertyValue:()=>''},'height'));
+ for(const property of ['min-width','max-width','min-height','max-height']){
+  const bound=property.split('-')[0],changed=R.change(preset,'md:',property,320);assert.ok(changed.includes('md:!['+property+':320px]'));assert.ok(!changed.includes('md:!['+bound+'-inline-size:'));assert.ok(!changed.includes('md:!['+bound+'-block-size:'));assert.ok(changed.includes(source));const reset=R.change(changed,'md:',property,null);assert.ok(!reset.includes('md:!['+property+':'));assert.ok(reset.includes(source));
+  const active=require('../shell/responsive.js').project(preset,'md:'),single=L.limitClasses(active,property,'320px');assert.ok(single.includes('!'+property.replace('width','w').replace('height','h')+'-[320px]'));assert.ok(!single.includes('!['+bound+'-inline-size:'));assert.ok(!L.limitClasses(single,property,null).includes(property.replace('width','w').replace('height','h')+'-[320px]'));
+ }
+ const first=R.change(preset,'md:','min-width',320);assert.doesNotThrow(()=>R.change(first,'md:','min-height',120));
+ assert.equal(L.releaseNeutralLimitAliases('![min-width:0px] [min-inline-size:0px]','min-width'),'![min-width:0px] [min-inline-size:0px]');
+ assert.ok(L.releaseNeutralLimitAliases('![min-width:0px] ![min-height:0px] [min-inline-size:30px]','min-width').includes('[min-inline-size:30px]'));
+});

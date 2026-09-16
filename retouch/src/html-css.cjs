@@ -65,6 +65,12 @@ function plan(resolved,op){
   // Reset must remain possible even if an external inline rule now wins.
   const important=[...inline.replace(/\/\*[\s\S]*?\*\//g,'').matchAll(/(?:^|;)\s*([a-z-]+)\s*:[^;]*!\s*important\s*(?=;|$)/gi)].map(m=>m[1].toLowerCase());
   if(changes.some(([property,value])=>value!==null&&important.some(p=>overlaps(p,property))))return refuse('This property overlaps an important inline style. Edit that source rule first.');
+  // Presets clear both logical and physical bounds. Once a physical bound is
+  // edited or reset, retain the other physical bound and release neutral aliases.
+  for(const bound of ['min','max']){
+   const neutral=bound==='min'?'0px':'none',aliases=[bound+'-inline-size',bound+'-block-size'];
+   if(['width','height'].every(axis=>values[bound+'-'+axis]===neutral)&&changes.some(([key])=>key===bound+'-width'||key===bound+'-height')&&!changes.some(([key])=>aliases.includes(key)))for(const key of aliases)if(values[key]===neutral)delete values[key];
+  }
   for(const [property,value]of changes){
   if(value===null)delete values[property];else {
    values[property]=value;

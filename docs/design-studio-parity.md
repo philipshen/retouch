@@ -22176,3 +22176,34 @@ writing-mode combinations remains unproven. The presets continue to express
 physical width/height. The computedStyleMap mode-display limitation remains.
 Full Figma parity, arbitrary-site support and trusted notarized Homebrew
 installation are unfinished. No desktop rebuild or push in this continuation.
+
+## Size limits remain editable after text sizing (2026-09-16)
+
+The preceding turn was progress: e2f886be resolved logical dimension classes and
+follow-up width/height edits. This continuation reproduced a refusal when editing
+a minimum size after a text sizing preset with inherited logical dimensions:
+/tmp/retouch-text-sizing-limit-edit-before.log records the failing browser flow.
+
+Shared constraint edits now recognize paired important physical overrides for
+inherited logical dimensions and bounds. Preset-generated neutral logical limits
+are released when their physical limit is edited or reset, provided the paired
+physical limits remain present. Other dimensions keep their physical limits.
+Unresolved authored non-neutral logical rules still refuse the edit. Single-layer
+limit edits retain the existing important priority instead of dropping it.
+HTML managed CSS applies the same neutral-alias cleanup in the source transaction,
+so resetting a physical bound can expose the original authored value.
+
+All 1,759 unit tests pass. Chromium 145 browser flows pass for shared HTML, React
+and Liquid and single React layers. After applying Auto height they edit all four
+physical minimum/maximum dimensions, verify actual geometry, reset each bound
+and verify its original computed value, then undo reset/edit exactly. Existing
+preset modes, follow-up width/height edits, responsive-range isolation, Auto
+sizing and inline-priority refusal remain covered in the same flows. Source tests
+cover alias cleanup, unchanged unrelated/inherited rules, priority retention,
+non-neutral rule preservation and idempotent preset application. Logs:
+/tmp/retouch-text-sizing-limit-edit-{html,react,liquid,single,units,targeted}.log.
+
+Arbitrary logical sizing/cascade/bindings and writing-mode combinations remain
+outside this evidence. Full Figma parity, arbitrary-site support and trusted
+notarized Homebrew distribution remain unfinished. No desktop rebuild or push
+in this continuation.

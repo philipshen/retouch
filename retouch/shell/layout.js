@@ -238,13 +238,20 @@
     if(!/^(?:\d*\.?\d+(?:px|%|rem|em|vw|vh|svw|svh|dvw|dvh|ch)|min-content|max-content|fit-content)$/.test(value)&&value!==(key.startsWith('min-')?'auto':'none'))throw Error('Use a nonnegative CSS size, or a sizing keyword');
     return value;
   }
+  function releaseNeutralLimitAliases(classes,key){
+    if(!limitKeys.includes(key))return classes;
+    const bound=key.split('-')[0],value=bound==='min'?'(?:0|0px)':'none',tokens=classes.split(/\s+/);
+    if(!['width','height'].every(axis=>tokens.some(token=>/^!|!$/.test(token)&&new RegExp('^\\['+bound+'-'+axis+':'+value+'\\]$').test(I.base(token)||''))))return classes;
+    const alias=new RegExp('^\\['+bound+'-(?:inline|block)-size:'+value+'\\]$');
+    return I.replace(classes,token=>alias.test(token),'');
+  }
   function limitClasses(classes,key,value,inherited='') {
     if(!limitKeys.includes(key))throw Error('Unknown size limit');
     const prefix=key.replace('width','w').replace('height','h')+'-';
     const matches=t=>t.startsWith(prefix)||t.startsWith('['+key+':');
     let addition=value===null?'':prefix+'['+limitValue(value,key)+']';
-    if(addition&&inherited.split(/\s+/).some(t=>/^!|!$/.test(t)&&matches(I.base(t)||'')))addition='!'+addition;
-    return I.replace(classes,matches,addition);
+    if(addition&&[...classes.split(/\s+/),...inherited.split(/\s+/)].some(t=>/^!|!$/.test(t)&&matches(I.base(t)||'')))addition='!'+addition;
+    return I.replace(releaseNeutralLimitAliases(classes,key),matches,addition);
   }
   function ownLimit(classes,key) {
     if(!limitKeys.includes(key))throw Error('Unknown size limit');
@@ -412,6 +419,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={sizeBehaviorToken,inlineAlignment,inlineOverflow,inlinePadding,paddingLogical,inlineDimensions,explicitLayoutClasses,gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={releaseNeutralLimitAliases,sizeBehaviorToken,inlineAlignment,inlineOverflow,inlinePadding,paddingLogical,inlineDimensions,explicitLayoutClasses,gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

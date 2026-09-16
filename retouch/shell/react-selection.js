@@ -72,13 +72,13 @@
   const dimension=['width','height'].includes(property),sizing=dimension||field.constraint,shorthandMatch=token=>property.startsWith('font-variant-')&&/^\[font(?:-variant)?:/.test(token)||dimension&&/^size-/.test(token)||field.flexItem&&flexShorthand(token)||field.layoutItem&&(field.gridPlacement?/^\[grid-area:/.test(token):/^place-self-|^\[place-self:/.test(token)),priorityMatch=token=>field.matches(token)||shorthandMatch(token);
   if(sizing&&value!==null){
    const own=R.project(classes,scope).split(/\s+/),inherited=R.inherited(classes,scope,document).split(/\s+/),important=token=>/^!|!$/.test(token);
-   const physicalOverrides=['width','height'].every(axis=>own.some(token=>important(token)&&fields[axis].matches(I.base(token)||'')));
+   const physicalOverrides=(prefix='')=>['width','height'].every(axis=>own.some(token=>important(token)&&fields[prefix+axis].matches(I.base(token)||'')));
    const neutral=token=>/^\[min-(?:inline|block)-size:(?:0|0px)\]$|^\[max-(?:inline|block)-size:none\]$/.test(I.base(token)||'');
    const logical=token=>/^\[(?:(?:min|max)-)?(?:inline|block)-size:/.test(I.base(token)||'');
    const unresolved=own.some(token=>logical(token)&&!neutral(token))||inherited.some(token=>{
     if(!logical(token)||neutral(token))return false;
     const property=I.base(token).split(':')[0];if(own.some(next=>important(next)&&neutral(next)&&I.base(next).split(':')[0]===property))return false;
-    return !(dimension&&physicalOverrides&&/^\[(?:inline|block)-size:/.test(I.base(token)));
+    const bound=/^\[(min|max)-/.exec(I.base(token));return !physicalOverrides(bound?bound[1]+'-':'');
    });
    if(unresolved)throw Error('A selected layer uses logical sizing. Edit its inline or block size before setting a physical width or height.');
   }
@@ -86,7 +86,7 @@
   if(addition&&R.project(classes,scope).split(/\s+/).some(token=>I.base(token)!==null&&(shorthandMatch(I.base(token))||sizing&&field.matches(I.base(token)))&&/^!|!$/.test(token)))addition='!'+addition.replace(/^!/,'');
   if(addition&&document&&!['opacity','visibility','mix-blend-mode','isolation'].includes(property)&&I.catalog(document).some(name=>(classes||'').split(/\s+/).includes(name))&&!addition.startsWith('!'))addition='!'+addition;
   if(addition&&inlineTypography.includes(property)&&el&&typographyKeys(property).some(key=>el.style.getPropertyValue(key)))addition='!'+addition.replace(/^!|!$/g,'');
-  const projected=R.project(classes,scope),expanded=property.startsWith('font-variant-')&&value!==null?expandVariantShorthand(projected,document):['font-size','line-height'].includes(property)?I.expandSizeLeading(projected):projected,next=I.replace(expanded,field.matches,addition);return next===projected?(classes||''):R.replaceScope(classes,next,scope);
+  const projected=R.project(classes,scope),limits=field.constraint?(root.RetouchLayout||require('./layout.js')).releaseNeutralLimitAliases(projected,property):projected,expanded=property.startsWith('font-variant-')&&value!==null?expandVariantShorthand(projected,document):['font-size','line-height'].includes(property)?I.expandSizeLeading(projected):limits,next=I.replace(expanded,field.matches,addition);return next===projected?(classes||''):R.replaceScope(classes,next,scope);
  }
  function changeTextTruncation(classes,scope,value,el=null){
   const I=inspector(),R=root.RetouchResponsive||require('./responsive.js');

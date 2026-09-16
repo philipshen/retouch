@@ -328,3 +328,12 @@ test('text sizing clears logical and physical bounds in one isolated HTML source
  const saved=result.edits[0].after;assert.deepEqual(css.describe(resolve(saved)).cssRules,{768:changes});assert.ok(saved.includes('<style>.title{color:red}</style>'));assert.ok(saved.includes('<h1 class="title">Second</h1>'));
  for(const property of I.textSizeLimits){assert.equal(css.valid(property,null),true);assert.equal(css.valid(property,'-1px'),false);assert.equal(css.valid(property,'0px; color:red'),false);assert.equal(css.valid(property,'max-content'),true);}
 });
+
+test('HTML size limit edits release preset aliases so reset restores authored bounds',()=>{
+ const I=require('../shell/inspector.js'),changes=I.textResizeChanges({width:'260px',height:'180px',getPropertyValue:()=>''},'height'),preset=css.plan(resolve(original),{width:768,changes}).edits[0].after;
+ for(const property of ['min-width','max-width','min-height','max-height']){
+  const bound=property.split('-')[0],edited=edit(preset,768,'320px',property);assert.equal(edited.ok,true,JSON.stringify(edited));const saved=edited.edits[0].after,rules=css.describe(resolve(saved)).cssRules[768];assert.equal(rules[property],'320px');assert.equal(rules[bound+'-inline-size'],undefined);assert.equal(rules[bound+'-block-size'],undefined);assert.ok(saved.includes('<style>.title{color:red}</style>'));
+  const reset=edit(saved,768,null,property);assert.equal(reset.ok,true);assert.equal(css.describe(resolve(reset.edits[0].after)).cssRules[768][property],undefined);
+ }
+ assert.deepEqual(css.plan(resolve(preset),{width:768,changes}).edits,[]);
+});
