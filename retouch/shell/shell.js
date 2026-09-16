@@ -3521,6 +3521,11 @@ async function refreshGroupMove(infos,before){
  else if(infos.every(info=>info.contextSelection&&info.classSourceLiteral))await refreshLiteralLiquidClasses(infos,before);
  else await refreshWrittenElement(infos[0],el=>classSelectionMatches(infos,el.ownerDocument),{classSource:true});
 }
+function movementMembers(roots){
+ const visibleOnly=roots.length===1&&!sel?.multiple?.length&&!!sel?.info.groupScale&&!!sel.info.cssAuthoring&&roots[0].hasAttribute('data-rt-group');
+ const members=RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el),undefined,{visibleOnly});
+ if(!members.length)throw Error('Choose a screen where at least one group layer is visible.');return members;
+}
 async function moveGroupOnCanvas(info,opener,gesture={}){
  if(!gesture.prepareOnly)stopDrawing?.();if(panelTasks||sourceRequests||undoBusy||editing||sel?.info!==info)return;
  const scope=styleScope,hash=info.hash,selection=sel,selectionIds=(sel.multiple||[info]).map(item=>item.id),roots=groupMovementRoots(gesture.allowLayers),current=()=>mode==='edit'&&sel===selection&&sel.info.hash===hash&&styleScope===scope&&selectionEditRangeActive()&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!document.querySelector('dialog[open]');
@@ -3528,7 +3533,7 @@ async function moveGroupOnCanvas(info,opener,gesture={}){
   if(!roots)throw Error('Select groups and layers with one rendered occurrence each.');
   const width=scope?Number(/^min-\[(\d+)px\]:$/.exec(scope)?.[1]):0;
   if(info.cssAuthoring?(!Number.isInteger(width)||width>doc().defaultView.innerWidth):(scope&&document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='true'))throw Error('Choose a screen where the group edit range is active.');
-  const members=gesture.prepared?.members||RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el)),responses=gesture.prepared?gesture.prepared.infos.map(element=>({ok:true,element})):await Promise.all(members.map(item=>api('GET',resolveUrl(item.id))));
+  const members=gesture.prepared?.members||movementMembers(roots),responses=gesture.prepared?gesture.prepared.infos.map(element=>({ok:true,element})):await Promise.all(members.map(item=>api('GET',resolveUrl(item.id))));
   if(!current()||gesture.valid&&!gesture.valid())return;
   if(!responses.every(r=>r?.ok&&r.element.hash===info.hash&&r.element.file===info.file))throw Error('Re-select group contents from the same source file.');
   const infos=responses.map(r=>r.element),css=infos.every(item=>item.cssAuthoring);
@@ -3552,7 +3557,7 @@ function groupMovementSection(info){
   const toolbar=RetouchSelectionLayout.alignmentToolbar((mode,event,control)=>void alignGroupSelection(mode,control,undefined,event.shiftKey&&!mode.startsWith('gap-')),true);
   const update=()=>{for(const control of toolbar.querySelectorAll('button')){control.title=control.getAttribute('aria-label')+(parent&&!control.dataset.distribution?' · Shift: align the whole selection to parent bounds':'');if(control.dataset.distribution)control.disabled=outer.length<3||groupAlignmentTarget.startsWith('layer:');}};
   section.append(toolbar);I.select(section,'Align to',choices,groupAlignmentTarget,value=>{groupAlignmentTarget=value;update();});update();
-  if(outer.length>1)try{const bounds=RetouchGroupMove.selectionBounds(roots,RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el)));
+  if(outer.length>1)try{const bounds=RetouchGroupMove.selectionBounds(roots,movementMembers(roots));
    I.select(section,'Canvas gap adjustment',[['equal','All gaps equally'],['individual','Only the dragged gap']],groupGapMode,value=>{groupGapMode=value;window.dispatchEvent(new Event('retouch:selection-layout'));});
    for(const [axis,label]of [['x','Horizontal gap (px)'],['y','Vertical gap (px)']]){const values=RetouchSelectionLayout.gaps(bounds,axis).values,mixed=values.some(value=>Math.abs(value-values[0])>=1/32),input=I.number(section,label,mixed?NaN:values[0],-100000,100000,value=>void alignGroupSelection('spacing-'+axis,input,value));input.placeholder=mixed?'Mixed':'';input.title='Space the selected groups and layers without changing their internal layout. The first layer stays fixed, or the chosen reference layer.';I.fieldDraft(input);const control=I.button('Adjust '+(axis==='x'?'horizontal':'vertical')+' gaps on canvas',event=>void spaceGroupsOnCanvas(axis,event.currentTarget));control.dataset.canvasTool='spacing-'+axis;section.append(control);}
   }catch(error){I.note(section,error.message,'refused');}
@@ -3573,7 +3578,7 @@ function selectionEditRangeActive(){return !styleScope||document.querySelector('
 
 function appendSelectionScaleControls(section,info,roots){
  const I=RetouchInspector,active=selectionEditRangeActive();
- const scaling=I.number(section,'Scale selection (%)',100,1,10000,value=>void scaleGroup(info,value,scaling));scaling.disabled=!active;scaling.title=active?'Scale selected content proportionally from its top-left corner. Layout slots stay unchanged.':'Preview the selected edit range before scaling.';I.fieldDraft(scaling);scaling.retouchNumericPreview=()=>{if(!selectionEditRangeActive())throw Error('Preview the selected edit range before scaling.');const selection=sel,scope=styleScope,hash=info.hash,preview=RetouchGroupMove.scalePreview(RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el)));return {current:()=>sel===selection&&info.hash===hash&&styleScope===scope&&selectionEditRangeActive()&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&preview.current(),update:value=>preview.update(value/100),restore:preview.restore};};
+ const scaling=I.number(section,'Scale selection (%)',100,1,10000,value=>void scaleGroup(info,value,scaling));scaling.disabled=!active;scaling.title=active?'Scale selected content proportionally from its top-left corner. Layout slots stay unchanged.':'Preview the selected edit range before scaling.';I.fieldDraft(scaling);scaling.retouchNumericPreview=()=>{if(!selectionEditRangeActive())throw Error('Preview the selected edit range before scaling.');const selection=sel,scope=styleScope,hash=info.hash,preview=RetouchGroupMove.scalePreview(movementMembers(roots));return {current:()=>sel===selection&&info.hash===hash&&styleScope===scope&&selectionEditRangeActive()&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&preview.current(),update:value=>preview.update(value/100),restore:preview.restore};};
  const scaleCanvas=I.button('Scale selection on canvas',event=>void scaleGroupOnCanvas(info,event.currentTarget));scaleCanvas.disabled=!active;scaleCanvas.dataset.canvasTool='scale';scaleCanvas.setAttribute('aria-keyshortcuts','K');scaleCanvas.title=active?'Scale selection on canvas · K':'Preview the selected edit range before scaling.';section.append(scaleCanvas);
 }
 
@@ -3617,7 +3622,7 @@ async function scaleGroup(info,percent,input){
  try{if(percent===100)return;if(info.groupScale&&!sel?.multiple?.length){await writeHTMLGroupScale(info,percent);return;}const context=await moveGroupOnCanvas(info,null,{prepareOnly:true,allowLayers:true});if(!context||!context.current())return;const plan=RetouchGroupMove.scalePlan(context.members,percent/100);if(document.activeElement===input)RetouchPanelFocus.queue(input);await writeGroupMove(context,plan.deltas,plan);}catch(error){toast(error.message,'err');}
 }
 
-function groupPositionMeasurement(roots,members=RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el))){
+function groupPositionMeasurement(roots,members=movementMembers(roots)){
  const bounds=RetouchGroupMove.selectionBounds(roots,members),rect=RetouchCanvasMove.union(bounds),parent=RetouchGroupMove.parentBounds(roots),w=roots[0].ownerDocument.defaultView;return {members,parent,x:rect.left-(parent?.left??-w.scrollX),y:rect.top-(parent?.top??-w.scrollY)};
 }
 async function positionGroup(info,axis,value,input){
@@ -3644,7 +3649,7 @@ async function alignGroupSelection(mode,control,gap,asUnit=false){
 async function writeGroupMove({info,roots,selectionIds,members,infos,scope,width,css,current},delta,scaling=null){
     if(!current())return;
     let busy=false;try{
-     const fresh=RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el));
+     const fresh=movementMembers(roots);
      if(fresh.length!==members.length||fresh.some((item,i)=>item.el!==members[i].el||item.translate!==members[i].translate||item.matrix.some((n,j)=>Math.abs(n-members[i].matrix[j])>1e-9)||['x','y','width','height'].some(key=>Math.abs(item.rect[key]-members[i].rect[key])>.1)))throw Error('The group changed during movement. Re-select it.');
      const deltas=Array.isArray(delta)?delta:members.map(()=>delta);if(deltas.length!==members.length)throw Error('Resolve every layer offset.');
      if(css&&info.groupScale&&selectionIds.length===1&&(scaling||info.groupScale.metadata)){

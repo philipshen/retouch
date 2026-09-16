@@ -23038,3 +23038,29 @@ This is conservative author-CSS detection, not a complete cascade/provenance
 engine. No older macOS binary was exercised; missing-API behavior was simulated
 in current browsers. Full Figma parity, arbitrary-site coverage, and trusted
 notarized desktop distribution remain unfinished. No push.
+
+### Editing groups with responsive hidden children (2026-09-16)
+
+Single source-backed HTML groups now use visible-only measurement for position,
+scale fields, numeric previews, canvas preparation, and final movement checks.
+The source operation still persists responsive group metadata for all children,
+including currently hidden children. Existing lock checks remain active and a
+group with no visible members is refused with an explicit message. Mixed/group
+selections outside this single-HTML-group case retain strict measurement.
+
+The editor regression timed out before the change because its scale edit was
+refused. Chromium and WebKit now create a group whose second child is hidden
+above 1000px, scale it, verify main/Phone/Tablet/Desktop geometry, undo/redo exact
+source, apply a repeated scale, cancel a keyboard scale preview, and move/undo
+the scaled group. Phone/Tablet have both children visible. Chromium covers base
+scope; WebKit min-1100 scope and inactive-screen guards. The existing deliberately
+failed runtime request and comparison retry also pass. All 1,778 unit tests pass.
+
+Evidence: /tmp/retouch-hidden-group-edit-before.log,
+/tmp/retouch-hidden-group-edit-chromium.log,
+/tmp/retouch-hidden-group-edit-webkit.log,
+/tmp/retouch-hidden-group-edit-units.log.
+
+No runtime bundle change was required. Fully hidden selections, mixed hidden
+selections, nested scale composition, other renderers, CSP delivery, full Figma
+parity, and trusted notarized desktop distribution remain unfinished. No push.
