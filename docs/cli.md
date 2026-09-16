@@ -60,7 +60,7 @@ Run Retouch inside that environment, next to its source and dev process.
 ## Limits
 
 - Automatic instrumentation currently supports Next.js, not arbitrary bundlers.
-- Vite and additional languages need their own build integrations.
+- Vite React has an explicit `retouch/vite` plugin (Vite 8; see the package README). It is not injected automatically by the wrapper. Additional languages still need their own build integrations.
 - Shopify retains `retouch shopify <theme-dir>` and its isolation protections;
   arbitrary `shopify` child processes are not intercepted.
 - Windows process-group management is not implemented.
@@ -128,3 +128,36 @@ process shutdown. It uses ports 3488 and 3489; they must be free.
 `RT_RETOUCH_CLI` can point to an installed CLI to run the same checks against a
 packaged release. Separately, a wrapped production build was verified to have
 no Retouch stamps in prerendered HTML or `/rt` rewrites in the routes manifest.
+
+
+### Installed Vite startup verification (2026-09-17)
+
+`retouch/test/launch/vite.cjs` checks the actual installed-package path through
+`retouch -- npm run dev`, a TypeScript Vite config importing `retouch/vite`,
+and React TSX. It creates its own temporary app and uses installed dependency
+fixtures without changing their source. Run it against an installed tarball:
+
+```sh
+RT_VITE_FIXTURE=/absolute/path/to/vite-react-dependencies \
+RT_INSPECTOR_FIXTURE=/absolute/path/to/playwright-dependencies \
+RT_PACKAGE_ROOT=/absolute/path/to/installed/node_modules/retouch \
+node retouch/test/launch/vite.cjs
+```
+
+Set `RT_E2E_BROWSER=webkit` to use WebKit and configure
+`PLAYWRIGHT_BROWSERS_PATH` if its browser installation is outside the default
+cache. The Vite dependency fixture needs Vite and `@vitejs/plugin-react`, React,
+and React DOM. The Playwright fixture needs its selected browser installed.
+
+Chromium and WebKit passed with Vite 8.3.0, `@vitejs/plugin-react` 6.1.1 and
+React 19.2.0. The test verifies announced editor URL and service health, source
+stamps, text write-back, hot-update state/document retention, normal process
+shutdown, restart and exact persisted source undo, layer-label refresh, and
+unchanged application manifest and Vite configuration. It checks the editor
+port closes after each shutdown. This does not verify native WKWebView startup,
+config-triggered Vite restarts, arbitrary frameworks, or trusted distribution.
+
+The tested npm-packed source was `3c075ef8abb44ddca34289091d56f906d095bfcc`;
+tarball SHA-256:
+`b9feee599c1a144a4019cd3e388504c3b2118a1fcd2e357ad085175c2360ecc9`.
+This is local packaged-install evidence, not a published release.
