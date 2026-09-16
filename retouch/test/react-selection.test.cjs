@@ -573,3 +573,11 @@ test('visibility edits override normal inline rules and preserve scoped priority
  assert.throws(()=>change('visible','','visibility','hidden',null,false,important),/important inline/);
  assert.equal(change('md:!invisible','md:','visibility',null,null,false,important),'');
 });
+
+test('opacity edits retain priority over ordinary inline opacity and permit reset under important inline opacity',()=>{
+ const el={style:{getPropertyValue:()=>'.8',getPropertyPriority:()=>''}},important={style:{getPropertyValue:()=>'.8',getPropertyPriority:()=> 'important'}};
+ assert.equal(change('p-4','','opacity',50,null,false,el),'p-4 !opacity-[0.5]');
+ assert.equal(change('opacity-80 md:!opacity-50','md:','opacity',75),'opacity-80 md:!opacity-[0.75]');
+ assert.throws(()=>change('','md:','opacity',50,null,false,important),/important inline/);
+ assert.equal(change('opacity-80 md:!opacity-50','md:','opacity',null,null,false,important),'opacity-80');
+});

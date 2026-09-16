@@ -22392,3 +22392,27 @@ all 1,761 unit tests pass. Logs: /tmp/retouch-class-visibility-{react,liquid,uni
 Full Figma parity, arbitrary-site support, the Typed OM sizing indicator fallback
 and trusted notarized Homebrew distribution remain unfinished. No desktop
 rebuild or push in this continuation.
+
+### Opacity editing across source adapters (2026-09-16)
+
+Single and shared opacity now follow the same preview-range and inline-priority
+rules as visibility. React/Liquid numeric fields and the single-layer slider
+can override ordinary inline opacity using important utilities in the selected
+scope. The inline source remains unchanged, and subsequent opacity edits retain
+priority. Important inline opacity refuses edits but permits in-range reset of
+a Retouch override. HTML uses computed opacity for feedback, accepts ordinary
+inline opacity in shared numeric controls, and guards edits/reset outside the
+selected range. Disabled controls explain the range or important-inline boundary.
+
+The RT_E2E_OPACITY_CONTENT browser flow checks single/shared numeric edits,
+React/Liquid slider edits, mixed values, computed opacity, screen isolation,
+disabled controls and synthetic out-of-range events, important inline refusal,
+reset under important inline opacity, unchanged inline styles and exact undo.
+HTML and React pass Chromium 145; Liquid passes WebKit 26. The HTML visibility
+regression also passes WebKit after consolidating appearance readiness checks.
+All 1,762 unit tests pass, including opacity source-priority coverage. Logs:
+/tmp/retouch-opacity-{html,react,liquid,units,visibility-regression}.log.
+
+This covers tested opacity interactions, not full Figma or arbitrary-site parity.
+The Typed OM sizing indicator fallback and trusted notarized Homebrew delivery
+remain unfinished. No push or desktop rebuild in this continuation.
