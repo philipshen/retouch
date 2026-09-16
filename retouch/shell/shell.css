@@ -1250,9 +1250,11 @@ html, body { overflow:clip; }
 
 .screen-add-dialog { width:min(340px,calc(100vw - 24px));height:fit-content;padding:20px; }
 .screen-add-dialog[open] { max-height:calc(100dvh - 24px);overflow:auto; }
-.screen-add-dialog form { display:grid;gap:16px; }
+.screen-add-dialog form { display:grid;gap:12px; }
 .screen-add-dialog label { display:grid;gap:6px;font-size:11px;color:var(--ink); }
 .screen-add-dialog input,.screen-add-dialog select { width:100%;min-width:0;height:30px;padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);font:12px var(--font); }
 .screen-add-dimensions { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
 .screen-add-dialog footer { display:flex;justify-content:flex-end;gap:8px; }
 .screen-add-dialog button.screen-add-submit { background:var(--accent);color:#fff; }
+
+.screen-add-dialog .screen-add-existing { justify-self:start;max-width:100%;height:auto;text-align:left;overflow-wrap:anywhere;color:var(--accent); }

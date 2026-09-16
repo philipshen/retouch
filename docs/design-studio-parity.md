@@ -23887,3 +23887,9 @@ The add-screen browser workflow covers preset dimensions, custom-name retention,
 saved-project preset creation, cancellation/focus, duplicate and range validation,
 reload persistence, comparison capacity, retained existing documents, Actions
 access, and the narrow-screen dialog layout in Chromium and WebKit.
+
+When Add screen dimensions match an existing comparison, the dialog also offers
+**Show [screen] instead**. It closes the dialog, expands a collapsed preview,
+and moves focus to that comparison without renaming it, creating another card,
+or resizing the main canvas. The browser checks verify the existing document
+and selection survive this path, alongside ordinary creation and cancellation.
