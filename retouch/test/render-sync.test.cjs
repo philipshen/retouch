@@ -2,6 +2,22 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { capture, restore, reconcile, sync } = require('../shell/render-sync.js');
+test('compiled CSS waits for both template and enabled stylesheet revisions without fetching or mutating', async () => {
+  const rendering={attribute:'data-rt-revision',hash:'a'.repeat(40),selector:'[data-rt-vue-css="1234567890"]',property:'--retouch-css-revision',value:'b'.repeat(40)};
+  let actualHash='old',actualCSS='old';
+  const element={getAttribute:name=>name==='data-rt'?'1234567890':actualHash};
+  const sheet={disabled:true,cssRules:[{selectorText:rendering.selector,style:{getPropertyValue:()=>actualCSS}}]};
+  const document={querySelectorAll:()=>[element],styleSheets:[sheet]},frame={contentDocument:document,contentWindow:{location:{href:'http://localhost/app'}}};
+  const timer=setTimeout(()=>{actualHash=rendering.hash;actualCSS=rendering.value;sheet.disabled=false;},75);
+  try{const result=await require('../shell/render-sync.js').syncCSS({frame,id:'1234567890',rendering,fetcher:()=>assert.fail('Compiled CSS must not fetch server-rendered HTML')});assert.equal(result.method,'compiled-styles');assert.equal(frame.contentDocument,document);}finally{clearTimeout(timer);}
+});
+test('compiled CSS refuses invalid receipts and a navigated preview', async () => {
+  const rendering={attribute:'data-rt-revision',hash:'a'.repeat(40),selector:'[data-rt-vue-css="1234567890"]',property:'--retouch-css-revision',value:'b'.repeat(40)};
+  const document={querySelectorAll:()=>[],styleSheets:[]},frame={contentDocument:document,contentWindow:{location:{href:'http://localhost/app'}}};
+  await assert.rejects(require('../shell/render-sync.js').syncCSS({frame,id:'1234567890',rendering:{...rendering,value:'invalid'}}),/revision is invalid/);
+  const timer=setTimeout(()=>frame.contentDocument={},25);
+  try{await assert.rejects(require('../shell/render-sync.js').syncCSS({frame,id:'1234567890',rendering}),/navigated/);}finally{clearTimeout(timer);}
+});
 function node(tag, children = [], values = {}) {
   const attrs = new Map(Object.entries(values));
   const n = { nodeType: tag ? 1 : 3, tagName: tag?.toUpperCase(), nodeValue: tag ? null : '', childNodes: [],

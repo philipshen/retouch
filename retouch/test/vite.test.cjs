@@ -24,6 +24,18 @@ test('Vite Vue integration uses matching compiler options and preserves hot-temp
  const react=retouch({adapter:'react'});react.configResolved({...config,plugins:[vue]});assert.equal(react.transform.call(context,source,file),null);
  plugin.configResolved({...config,command:'build'});assert.equal(plugin.transform.call(context,source,file),null);
 });
+test('Vue responsive styles use a stable independent CSS module and refuse outside-root requests',async t=>{
+ const {root,config}=fixture(t),file=path.join(root,'App.vue'),source='<template><h1>Hello</h1></template>';
+ fs.writeFileSync(file,source);const plugin=retouch({adapter:'vue'});plugin.configResolved({...config,plugins:[{name:'vite:vue',api:{options:{}}}]});
+ const transformed=plugin.transform.call({warn:message=>assert.fail(message)},source,file),style=transformed.code.match(/<style src="([^"]+)"/)[1];
+ const id=plugin.resolveId(style)+'?vue&type=style&index=0&src=true&lang.css',watched=[];
+ const css=await plugin.load.call({addWatchFile:file=>watched.push(file)},id);
+ assert.match(css,/--retouch-css-revision:[a-f0-9]{40}/);assert.deepEqual(watched,[fs.realpathSync(file)]);
+ const module={id},reloaded=[],update={file,read:async()=>source,server:{moduleGraph:{getModuleById:value=>value===id?module:null},reloadModule:async value=>reloaded.push(value)}};
+ await plugin.handleHotUpdate(update);assert.deepEqual(reloaded,[module]);assert.equal((await update.read()).match(/<style src="([^"]+)"/)[1],style);
+ const outside='virtual:retouch-vue-css/'+Buffer.from('../Outside.vue').toString('base64url')+'.css';assert.equal(plugin.resolveId(outside),undefined);assert.equal(await plugin.load.call({addWatchFile:()=>assert.fail('No outside dependency')},'\0'+outside),null);
+ plugin.configResolved({...config,command:'build'});assert.equal(plugin.resolveId(style),undefined);assert.equal(await plugin.load(id),null);
+});
 test('Vite same-origin middleware preserves API authentication and closes cleanly',async t=>{const {config}=fixture(t),plugin=retouch();plugin.configResolved(config);let middleware;const server=http.createServer((req,res)=>middleware(req,res,()=>{res.writeHead(404);res.end('app route');}));t.after(async()=>{await plugin.closeBundle();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));});await plugin.configureServer({middlewares:{use(fn){middleware=fn;}},httpServer:server,config:{logger:{info(){}}}});server.listen(0,'127.0.0.1');await once(server,'listening');const url='http://127.0.0.1:'+server.address().port;assert.equal((await fetch(url+'/rt/__api/health')).status,200);assert.equal((await fetch(url+'/rtother')).status,404);const shell=await fetch(url+'/rt');assert.equal(shell.status,200);assert.match(await shell.text(),/Retouch/);assert.equal((await fetch(url+'/rt/__api/op',{method:'POST',headers:{'content-type':'application/json'},body:'{}'})).status,401);});
 
 test('Vite base paths route the editor to the app while preserving query and API paths',async t=>{

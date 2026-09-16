@@ -23954,3 +23954,40 @@ errors. Screenshots: `/tmp/retouch-vite-vue-chromium.png` and
 `/tmp/retouch-vite-vue-webkit.png`. Logs: `/tmp/retouch-vite-vue-chromium.log`,
 `/tmp/retouch-vite-vue-webkit.log`, `/tmp/retouch-vue-react-regression.log`, and
 `/tmp/retouch-vue-adapter-units.log`. Full Figma parity remains incomplete.
+
+
+### Vue responsive CSS with retained component state
+
+The Vue adapter now supports responsive layout, appearance and typography through
+existing light inspector controls, plus atomic selections within one SFC. A
+compiler-parsed, source-owned style block stores validated rules and screen
+scopes. Static template markers identify rule owners; ambiguous ownership,
+computed inline styles, stale source hashes and externally modified managed
+blocks are refused. Script and existing style blocks retain their source bytes.
+Snapshot undo restores the exact original; scope reset leaves the stable template
+style marker available for later edits.
+
+HTML and Vue share the existing CSS value and cascade planner. During Vite dev,
+the Vue transform exposes the owned stylesheet through a stable virtual CSS src.
+This lets Vue rerender the template while Vite replaces CSS independently:
+simultaneous marker and style changes no longer reload component state. Both
+transforms share one MagicString source map, including scripts located after the
+managed style block. Preview synchronization waits for matching compiled template
+and stylesheet revisions without rewriting the preview document. Production
+builds retain authored CSS and persistent style owners; dev-only revision markers
+and virtual CSS module references are excluded.
+
+Validation: 1,856 unit tests passed. Chromium and WebKit passed actual inspector
+padding and typography edits, base and 768px scopes, phone/tablet/desktop
+comparison updates, same-SFC multi-selection including repeated template nodes,
+exact undo, retained documents and live Vue counters, and production CSS output.
+The existing HTML site browser regression also passed after updating its stale
+fixture to open the Layout options disclosure before choosing Display. Browser
+fixtures used Vite 8.3.0, Vue 3.5.42 and @vitejs/plugin-vue 6.0.9. These checks do
+not cover every appearance control or Vue configuration.
+
+Linked style libraries, structural edits, component-property editing, computed
+inline style overrides, external templates, template preprocessors and SSR
+editing remain incomplete. This checkpoint does not rebuild the native app or
+establish full Figma parity, arbitrary-site support, notarization or Homebrew
+installation.

@@ -1,9 +1,16 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),{once}=require('node:events');
 const virtual='virtual:retouch-group-scale.jsx',resolvedVirtual='\0retouch-group-scale.jsx';
+const vueStylePrefix='virtual:retouch-vue-css/';
 function retouch(options={}){
  if(options.adapter!==undefined&&!['react','vue'].includes(options.adapter))throw Error('[retouch] Choose the react or vue source adapter.');
- let config,sidecar,sourceAdapter;
+ let config,sidecar,sourceAdapter;const vueStyleModules=new Map();
+ function vueStyleFile(id){
+  const key=id.replace(/^\0/,'').split('?')[0];if(!key.startsWith(vueStylePrefix)||!key.endsWith('.css'))return null;
+  const encoded=key.slice(vueStylePrefix.length,-4);if(!/^[A-Za-z0-9_-]+$/.test(encoded))return null;
+  const relative=Buffer.from(encoded,'base64url').toString('utf8');if(Buffer.from(relative).toString('base64url')!==encoded||!relative.endsWith('.vue'))return null;
+  try{const file=fs.realpathSync(path.resolve(config.root,relative)),rel=path.relative(config.root,file);if(rel.startsWith('..'+path.sep)||path.isAbsolute(rel)||file.split(path.sep).includes('node_modules'))return null;return {file,relative:rel.split(path.sep).join('/')};}catch{return null;}
+ }
  async function closeSidecar(){if(!sidecar)return;const active=sidecar;sidecar=null;active.retouchIndex.close();active.closeAllConnections();await new Promise(resolve=>active.close(resolve));}
  return {
   name:'vite-plugin-retouch',apply:'serve',enforce:'pre',
@@ -19,7 +26,7 @@ function retouch(options={}){
    const renderer=options.adapter||(vuePlugins.length?'vue':'react');
    if(renderer==='vue'){
     if(vuePlugins.length!==1||!vuePlugins[0].api?.options)throw Error('[retouch] Vue editing needs one @vitejs/plugin-vue integration.');
-    sourceAdapter=require('./adapters/vue.cjs').create({compilerOptions:()=>vuePlugins[0].api.options.template?.compilerOptions||{}});
+    sourceAdapter=require('./adapters/vue.cjs').create({compilerOptions:()=>vuePlugins[0].api.options.template?.compilerOptions||{},styleModule:relative=>vueStylePrefix+Buffer.from(relative).toString('base64url')+'.css'});
    }else sourceAdapter=require('./adapter.cjs').getAdapter('react');
   },
   async configureServer(server){
@@ -38,8 +45,16 @@ function retouch(options={}){
    });
    server.httpServer?.once('listening',()=>{const address=server.httpServer.address();if(address&&typeof address==='object')server.config.logger.info('[retouch] Open http://localhost:'+address.port+'/rt'+(config.base==='/'?'':config.base));});
   },
-  resolveId(id){if(config?.command==='serve'&&sourceAdapter?.name==='react'&&id===virtual)return resolvedVirtual;},
-  async load(id){if(config?.command!=='serve'||sourceAdapter?.name!=='react'||id!==resolvedVirtual)return null;const load=require('node:module').createRequire(path.join(config.root,'package.json')),vite=await import(require('node:url').pathToFileURL(load.resolve('vite')).href);if(typeof vite.transformWithOxc!=='function')throw Error('[retouch] The Vite plugin currently requires Vite 8.');const result=await vite.transformWithOxc(require('./react-group-scale-runtime.cjs').component(),'retouch-group-scale.jsx',{jsx:{runtime:'automatic',development:true},sourcemap:true});return {code:result.code,map:result.map};},
+  resolveId(id){if(config?.command!=='serve')return;if(sourceAdapter?.name==='react'&&id===virtual)return resolvedVirtual;if(sourceAdapter?.name==='vue'&&id.startsWith(vueStylePrefix)&&vueStyleFile(id))return '\0'+id;},
+  async load(id){
+   if(config?.command!=='serve')return null;
+   if(sourceAdapter?.name==='vue'&&id.startsWith('\0'+vueStylePrefix)){
+    const target=vueStyleFile(id);if(!target)return null;
+    this.addWatchFile(target.file);if(!vueStyleModules.has(target.file))vueStyleModules.set(target.file,new Set());vueStyleModules.get(target.file).add(id);
+    return require('./vue-css.cjs').stylesheet(fs.readFileSync(target.file,'utf8'),target.relative);
+   }
+   if(sourceAdapter?.name!=='react'||id!==resolvedVirtual)return null;const load=require('node:module').createRequire(path.join(config.root,'package.json')),vite=await import(require('node:url').pathToFileURL(load.resolve('vite')).href);if(typeof vite.transformWithOxc!=='function')throw Error('[retouch] The Vite plugin currently requires Vite 8.');const result=await vite.transformWithOxc(require('./react-group-scale-runtime.cjs').component(),'retouch-group-scale.jsx',{jsx:{runtime:'automatic',development:true},sourcemap:true});return {code:result.code,map:result.map};
+  },
   transform(source,id,options){
    if(config?.command!=='serve'||options?.ssr||id.startsWith('\0')||id.includes('?')||!(sourceAdapter.name==='vue'?/\.vue$/i:/\.(jsx|tsx)$/).test(id))return null;
    if(id.split(path.sep).includes('node_modules'))return null;
@@ -50,7 +65,7 @@ function retouch(options={}){
     return require('./stamp.cjs').stamp(source,real,config.root,{groupScaleRuntime:virtual,redirectGroupScaleRuntime:fs.existsSync(helper)&&fs.readFileSync(helper,'utf8')===runtime.component()});
    }catch(error){this.warn('[retouch] Stamping skipped for '+id+': '+error.message);return null;}
   },
-  handleHotUpdate(ctx){
+  async handleHotUpdate(ctx){
    if(config?.command!=='serve'||sourceAdapter?.name!=='vue'||!sourceAdapter.matches(ctx.file)||ctx.file.split(path.sep).includes('node_modules'))return;
    let real;try{real=fs.realpathSync(ctx.file);}catch{return;}
    const relative=path.relative(config.root,real);
@@ -59,6 +74,10 @@ function retouch(options={}){
    // modules from that cache. Keep its cache consistent with our pre-transform.
    const read=ctx.read;
    ctx.read=async()=>{const source=await read();try{return sourceAdapter.stamp(source,real,config.root)?.code||source;}catch(error){ctx.server?.config?.logger?.warn('[retouch] Stamping skipped for '+ctx.file+': '+error.message);return source;}};
+   // Keep the CSS module independent of Vue's component module. Its stable src
+   // lets Vue classify simultaneous template/style edits as a rerender, while
+   // Vite replaces the stylesheet through its own CSS HMR boundary.
+   for(const id of vueStyleModules.get(real)||[]){const module=ctx.server.moduleGraph.getModuleById(id);if(module)await ctx.server.reloadModule(module);}
   },
   closeBundle:closeSidecar
  };

@@ -40,8 +40,9 @@ function create(options = {}) {
     return {
       id: element.id, kind: 'host', tag: element.tag, file: resolved.relPath, hash: resolved.hash,
       renderRevisionAttribute: 'data-rt-revision',
+      linkedStyleAuthoring: false,
       className: attr(element, 'class')?.value || '', classNameDynamic: true,
-      classNameReason: 'Vue style editing is not available yet.',
+      classNameReason: 'Use the responsive CSS properties for Vue styles.',
       text: range ? element.node.children.map(child => child.content).join('') : null,
       renderedText: rendered?.node.children.every(child => child.type === NodeTypes.TEXT) ? rendered.node.children.map(child => child.content).join('') : null,
       textDynamic: !range, textReason: 'This Vue region contains expressions, directives, or nested markup. Its template logic is preserved.',
@@ -50,10 +51,13 @@ function create(options = {}) {
       srcReason: canSetSrc ? null : 'Select an image with a literal source and no responsive source bindings.',
       canSetTag: !!range, canRename: unique(element, 'data-rt-name') && !bound(element, 'data-rt-name'), layerName: attr(element, 'data-rt-name')?.value || '',
       context: resolved.context || null,
+      ...require('../vue-css.cjs').describe(resolved, adapter),
     };
   };
   function planOp(resolved, op) {
     if (op.fileHash && op.fileHash !== resolved.hash) return refuse('The file changed. Re-select the element.');
+    if (op.type === 'setCSS') return require('../vue-css.cjs').plan(resolved, op, adapter);
+    if (op.type === 'setCSSSelection') return require('../vue-css.cjs').planSelection(resolved, op, adapter);
     const element = resolved.element, info = describe(resolved), out = new MagicString(resolved.source);
     function setAttribute(name, value) {
       const old = attr(element, name), token = `${name}="${escapeAttr(value)}"`;
@@ -91,12 +95,16 @@ function create(options = {}) {
     } catch (error) { return refuse('The edited Vue template is invalid: ' + error.message); }
     return { ok: true, hash: source.contentHash(after), edits: [{ file: resolved.file, before: resolved.source, after }] };
   }
-  return {
+  const adapter = {
     name: 'vue', matches: file => /\.vue$/i.test(file), collect, describe, planOp,
-    stamp: (text, file, root) => source.stamp(text, file, root, compilerOptions(), { revision: source.contentHash(text) }), contentHash: source.contentHash,
+    stamp: (text, file, root) => {
+      const relative = root ? path.relative(root, file).split(path.sep).join('/') : file;
+      return source.stamp(text, file, root, compilerOptions(), { revision: source.contentHash(text), transformDocument: out => require('../vue-css.cjs').warmInto(out, text, relative, options.styleModule?.(relative)) });
+    }, contentHash: source.contentHash,
     assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets', imageOnly: true },
-    capabilities: { classAttr: 'class', ops: ['setText', 'setTag', 'setSrc', 'renameElement'] },
+    capabilities: { classAttr: 'class', ops: ['setText', 'setTag', 'setSrc', 'renameElement', 'setCSS', 'setCSSSelection'] },
     applyOp: (resolved, op) => require('../transactions.cjs').applyPlan(resolved.appRoot || path.dirname(resolved.file), planOp(resolved, op)),
   };
+  return adapter;
 }
 module.exports = { ...create(), create };

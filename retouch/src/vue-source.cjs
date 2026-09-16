@@ -65,7 +65,7 @@ function collect(source, relPath, compilerOptions = {}, { preserveWhitespace = t
   return { elements, excluded, template, ast };
 }
 
-function stamp(source, file, root, compilerOptions, { revision } = {}) {
+function stamp(source, file, root, compilerOptions, { revision, transformDocument } = {}) {
   const relPath = root ? path.relative(root, file).split(path.sep).join('/') : file;
   const { elements } = collect(source, relPath, compilerOptions);
   if (!elements.length) return null;
@@ -81,6 +81,7 @@ function stamp(source, file, root, compilerOptions, { revision } = {}) {
       else out.appendLeft(element.start + 1 + element.tag.length, ' ' + token);
     }
   }
+  transformDocument?.(out);
   return { code: out.toString(), map: out.generateMap({ hires: true, source: file, includeContent: true }) };
 }
 

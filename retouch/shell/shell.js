@@ -2072,7 +2072,7 @@ function renderPanelContents(textEditing=false) {
   if((sel.multiple?.length>1?sel.multiple.every(item=>item.variables):info.variables)){const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;RetouchCollectionBindings.mount(panelBody,sel.multiple?.length>1?sel.multiple:info,width,sel.multiple?.length>1?writeVariableSelection:writeTextStyle);}
   else if(sel.multiple?.length>1?sel.multiple.every(item=>item.classVariables):info.classVariables){const scope=styleScope;RetouchCollectionBindings.mount(panelBody,sel.multiple?.length>1?sel.multiple:info,scope,(type,_width,extra)=>sel.multiple?.length>1?writeVariableSelection(type,0,{scope,...extra}):writeTextStyle(type,0,{scope,...extra}),{inherited:(property,ignoreOwn)=>RetouchCollectionBindings.classInherited(info,scope,property,matchingEls(info.id)[0]?.ownerDocument,ignoreOwn),scopeLabel:document.querySelector('[aria-label="Style screen scope"]')?.selectedOptions[0]?.textContent||scope||'all screen sizes'});}
 
-  if(!sel.multiple?.length&&(info.cssAuthoring||info.classEffectStyles)&&!info.effectStyleLinkReason){
+  if(!sel.multiple?.length&&info.linkedStyleAuthoring!==false&&(info.cssAuthoring||info.classEffectStyles)&&!info.effectStyleLinkReason){
    const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,scope=info.classEffectStyles?styleScope:width,links=info.effectStyleLinks||{},inheritedWidth=Object.keys(links).map(Number).filter(value=>value<width).sort((a,b)=>b-a)[0];
    const inherited=info.classEffectStyles?RetouchResponsive.inheritedLink(links,styleScope,matchingEls(info.id)[0]?.ownerDocument):!links[width]&&inheritedWidth!==undefined?{link:links[inheritedWidth],label:inheritedWidth?inheritedWidth+'px and larger':'All sizes'}:null;
    RetouchEffectStyles.mount(panelBody,matchingEls(info.id)[0],{info,link:links[scope],overrides:info.effectStyleOverrides?.[scope]||[],inherited,apply:(styleId,libraryRevision)=>writeTextStyle('applyEffectStyle',width,{scope:styleScope,styleId,libraryRevision}),reset:(styleId,libraryRevision)=>writeTextStyle('resetEffectStyle',width,{scope:styleScope,styleId,libraryRevision}),detach:()=>writeTextStyle('detachEffectStyle',width,{scope:styleScope}),update:(styleId,libraryRevision,name,properties)=>writeTextStyle('updateEffectStyle',width,{scope:styleScope,styleId,libraryRevision,name,properties})});
@@ -2213,7 +2213,7 @@ function renderPanelContents(textEditing=false) {
   if(info.cssAuthoring){
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
     const position=target?.namespaceURI!=='http://www.w3.org/2000/svg'?RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,(g,action,opener,initial)=>moveHTMLLayer(info,target,width,g,action,opener,initial)):null;
-    panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS,position,writeTextStyle));
+    panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS,position,info.linkedStyleAuthoring===false?null:writeTextStyle));
     const imageFill=RetouchImageFill.mount(info,target,null,changes=>setHTMLCSS(changes,null,width),info.cssRules?.[width]||{},imageFillUpload(info),/\.liquid$/i.test(info.file)?(src,initialize,action,stack)=>setLiquidImageFill(info,src,initialize,action,stack):null,projectImageBrowser(info));if(imageFill)panelBody.append(imageFill);
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{},(save,preview)=>repositionImage(target,save,preview)));
     if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
@@ -3131,7 +3131,7 @@ function selectionColorOptions(width){
 }
 function mountSelectionEffectStyles(){
   const selection=sel.multiple,element=matchingEls(sel.info.id)[0];
-  if(!element||!selection.every(info=>info.cssAuthoring||info.classEffectStyles))return;
+  if(!element||!selection.every(info=>info.linkedStyleAuthoring!==false&&(info.cssAuthoring||info.classEffectStyles)))return;
   const scope=sel.info.classEffectStyles?styleScope:String(styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0);
   const links=selection.map(info=>info.effectStyleLinks?.[scope]).filter(Boolean),overrides=selection.reduce((sum,info)=>sum+(info.effectStyleOverrides?.[scope]?.length||0),0);
   async function write(type,styleId,libraryRevision){
@@ -3150,7 +3150,7 @@ function mountSelectionEffectStyles(){
 }
 function mountSelectionTextStyles(){
   const selection=sel.multiple,element=matchingEls(sel.info.id)[0];
-  if(!element||!selection.every(info=>info.classTextStyles||info.cssAuthoring))return;
+  if(!element||!selection.every(info=>info.linkedStyleAuthoring!==false&&(info.classTextStyles||info.cssAuthoring)))return;
   const scope=sel.info.classTextStyles?styleScope:String(styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0);
   const links=selection.map(info=>info.textStyleLinks?.[scope]).filter(Boolean),overrides=selection.reduce((sum,info)=>sum+(info.textStyleOverrides?.[scope]?.length||0),0);
   async function write(type,styleId,libraryRevision){
@@ -3173,7 +3173,7 @@ async function setHTMLCSSSelection(property,value,width,changesById,resetScope=f
     const result=await api('POST','/rt/__api/op',{type:'setCSSSelection',id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,...(resetScope?{resetScope:true}:changesById?{changesById}:{property,value}),width});
     if(!result?.ok){renderPanel();return toast(result?.reason||result?.error||'Could not style selected layers','err');}
     saved=true;if(result.undoId)editorHistory.record({type:'setCSSSelection',managedCSS:true,id:info.id,selectionIds:selection.map(item=>item.id),undoId:result.undoId});
-    sel.info=result.element;sel.multiple=result.selection;await RetouchRenderSync.syncCSS({frame:iframe,entries:result.selection.map(item=>({id:item.id,rules:item.cssRules,texts:item.cssRuleTexts}))});await window.RetouchComparisons?.syncCSS(result.selection);renderPanel();toast('Selected layers updated','ok');
+    sel.info=result.element;sel.multiple=result.selection;await RetouchRenderSync.syncCSS({frame:iframe,entries:result.selection.map(item=>({id:item.id,rules:item.cssRules,texts:item.cssRuleTexts,rendering:item.cssRendering}))});await window.RetouchComparisons?.syncCSS(result.selection);renderPanel();toast('Selected layers updated','ok');
   }catch(error){toast((saved?'Styles saved; preview refresh failed: ':'Could not style selected layers: ')+error.message,'err');renderPanel();}finally{busyPanel(false);}
 }
 function classSelectionMatches(infos,document){
@@ -3539,7 +3539,7 @@ function transformReactLayer(info,target,action,opener,initial=null){
 }
 
 async function refreshGroupMove(infos,before){
- if(infos.every(info=>info.cssAuthoring)){await RetouchRenderSync.syncCSS({frame:iframe,entries:infos.map(info=>({id:info.id,rules:info.cssRules,texts:info.cssRuleTexts}))});await window.RetouchComparisons?.syncCSS(infos);}
+ if(infos.every(info=>info.cssAuthoring)){await RetouchRenderSync.syncCSS({frame:iframe,entries:infos.map(info=>({id:info.id,rules:info.cssRules,texts:info.cssRuleTexts,rendering:info.cssRendering}))});await window.RetouchComparisons?.syncCSS(infos);}
  else if(infos.every(info=>info.contextSelection&&info.classSourceLiteral))await refreshLiteralLiquidClasses(infos,before);
  else await refreshWrittenElement(infos[0],el=>classSelectionMatches(infos,el.ownerDocument),{classSource:true});
 }
@@ -3793,7 +3793,7 @@ async function setHTMLCSS(property,value,width,resetScope=false){
     const result=await api('POST','/rt/__api/op',{type:'setCSS',id:info.id,fileHash:info.hash,width,...(resetScope?{resetScope:true}:typeof property==='object'?{changes:property}:{property,value})});
     if(!result?.ok){toast(result?.reason||result?.error||'Could not save CSS','err');renderPanel();return;}
     saved=true;if(result.undoId)editorHistory.record({type:'setCSS',managedCSS:true,id:info.id,undoId:result.undoId});
-    sel.info=result.element;await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:result.element.cssRules,texts:result.element.cssRuleTexts});await window.RetouchComparisons?.syncCSS(result.element);renderPanel();toast('Saved','ok');
+    sel.info=result.element;await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:result.element.cssRules,texts:result.element.cssRuleTexts,rendering:result.element.cssRendering});await window.RetouchComparisons?.syncCSS(result.element);renderPanel();toast('Saved','ok');
   }catch(error){toast((saved?'Styles saved; preview refresh failed: ':'Could not save styles: ')+error.message,'err');renderPanel();}finally{busyPanel(false);}
 }
 async function setClasses(classes, isUndo) {
@@ -4006,7 +4006,7 @@ async function restoreHistory(direction,op) {
       if(op.type==='setImageFill'){await refreshLiquidImageFill(info);renderPanel();}
       else if(op.type==='setText'&&info.kind==='host'&&!info.textSource&&window.__RT_RENDERING?.reloadAfterWrite){
         await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info)});
-      }else if(op.type==='setCSSSelection'&&op.managedCSS){if(!selectionResult?.every(item=>item?.ok&&item.element.cssAuthoring))throw Error('The restored CSS selection could not be resolved.');const infos=selectionResult.map(item=>item.element);await RetouchRenderSync.syncCSS({frame:iframe,entries:infos.map(item=>({id:item.id,rules:item.cssRules,texts:item.cssRuleTexts}))});await window.RetouchComparisons?.syncCSS(infos);}else if(op.type==='setCSS'&&op.managedCSS&&info.cssAuthoring)await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:info.cssRules,texts:info.cssRuleTexts});else await refresh();
+      }else if(op.type==='setCSSSelection'&&op.managedCSS){if(!selectionResult?.every(item=>item?.ok&&item.element.cssAuthoring))throw Error('The restored CSS selection could not be resolved.');const infos=selectionResult.map(item=>item.element);await RetouchRenderSync.syncCSS({frame:iframe,entries:infos.map(item=>({id:item.id,rules:item.cssRules,texts:item.cssRuleTexts,rendering:item.cssRendering}))});await window.RetouchComparisons?.syncCSS(infos);}else if(op.type==='setCSS'&&op.managedCSS&&info.cssAuthoring)await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:info.cssRules,texts:info.cssRuleTexts,rendering:info.cssRendering});else await refresh();
       if(op.type==='setText')await window.RetouchComparisons?.syncText(info);
       if(op.type==='setCSS'&&op.managedCSS&&info.cssAuthoring)await window.RetouchComparisons?.syncCSS(info);
       if(op.type==='createComponent'&&component?.ok)sel={hostId:component.definitionId,instanceId:op.id,scope:'instance',info};

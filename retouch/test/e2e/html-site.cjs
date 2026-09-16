@@ -215,6 +215,7 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await wait(()=>read()===original,'new frame and text exact undo');
 
   await size('768x1024');await page.getByRole('treeitem',{name:'main',exact:true}).click();await page.getByLabel('Style screen scope').selectOption('min-[768px]:');
+  if(!await page.getByLabel('Display (CSS)',{exact:true}).isVisible())await page.getByText('Layout options',{exact:true}).click();
   await page.getByLabel('Display (CSS)',{exact:true}).selectOption('grid');await wait(async()=>await app.locator('main').evaluate(el=>getComputedStyle(el).display)==='grid','grid display');await settled();
   const columns=page.getByLabel('Grid columns',{exact:true});await columns.fill('2');await columns.press('Tab');
   await wait(async()=>await app.locator('main').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length)===2,'grid columns');await settled();

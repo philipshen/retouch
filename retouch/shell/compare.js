@@ -711,7 +711,7 @@
           }
           const d=card.frame.contentDocument;if(!d?.body||d.URL==='about:blank')throw Error('Preview is still loading.');
           const url=new URL(d.URL);if(url.pathname+url.search+url.hash!==expectedRoute)return;
-          const ids=new Set([...d.querySelectorAll('[data-rt]')].map(el=>el.getAttribute('data-rt'))),entries=infos.filter(item=>ids.has(item.id)).map(item=>({id:item.id,rules:item.cssRules,texts:item.cssRuleTexts}));if(!entries.length)return;
+          const ids=new Set([...d.querySelectorAll('[data-rt]')].map(el=>el.getAttribute('data-rt'))),entries=infos.filter(item=>ids.has(item.id)).map(item=>({id:item.id,rules:item.cssRules,texts:item.cssRuleTexts,rendering:item.cssRendering}));if(!entries.length)return;
           await RetouchRenderSync.syncCSS({frame:card.frame,entries});
         }catch(error){if(open&&cards.includes(card))card.styleSyncError='Styles saved; comparison refresh failed: '+error.message;}
       }));

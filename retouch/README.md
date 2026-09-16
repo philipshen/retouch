@@ -120,16 +120,22 @@ export default defineConfig({
 With `@vitejs/plugin-vue` present, `retouch()` also selects Vue automatically.
 Retouch uses the Vue plugin's template compiler options for source mapping.
 The initial adapter supports literal text, literal image sources, text-layer tag
-changes and layer names in `.vue` files. It preserves script/style blocks and
-template expressions. Styling, structural operations, component-property edits,
-external templates, template preprocessors and SSR editing remain incomplete.
+changes, layer names, and responsive CSS in `.vue` files. Layout, appearance and
+typography controls support individual layers and selections within one SFC.
+Retouch stores styles in a dedicated block while preserving authored script/style
+blocks and template expressions. During development, a stable CSS module lets Vite
+update styles independently without resetting component state; authored styles
+remain in production builds. Computed inline styles, structural operations, linked
+style libraries, component-property edits, external templates, template
+preprocessors and SSR editing remain incomplete.
 Broad or dynamically named bindings that can replace source markers are not
 editable yet. Repeated template elements share their authored source identity.
 
 The browser fixture verifies repeated text edits, literal interpolation syntax,
 exact undo, compiler-normalized whitespace, retained preview documents and live
-Vue state, base paths, immediate image uploads, and production instrumentation
-exclusion. Tested with Vite 8.3.0, Vue 3.5.42 and `@vitejs/plugin-vue` 6.0.9 in
+Vue state, base paths, immediate image uploads, responsive padding and typography,
+same-SFC selection styling, comparison screens, and production style retention
+with transient instrumentation excluded. Tested with Vite 8.3.0, Vue 3.5.42 and `@vitejs/plugin-vue` 6.0.9 in
 Chromium and WebKit. This does not establish compatibility with every Vue setup.
 
 ## Explicit config mode

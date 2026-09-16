@@ -89,8 +89,20 @@
     }
     throw new Error('Source saved, but the preview did not update. Check the app dev server / HMR connection.');
   }
-  async function syncCSS({frame,id,rules,texts,entries=[{id,rules,texts}],fetcher=root.fetch.bind(root)}) {
+  async function syncCSS({frame,id,rules,texts,rendering,entries=[{id,rules,texts,rendering}],fetcher=root.fetch.bind(root)}) {
     if(!Array.isArray(entries)||!entries.length||entries.length>100||new Set(entries.map(item=>item.id)).size!==entries.length)throw Error('Choose distinct styled layers.');
+    if(entries.some(entry=>entry.rendering)){
+      if(entries.some(entry=>!entry.rendering||entry.rendering.attribute!=='data-rt-revision'||!/^\[data-rt-vue-css="[a-f0-9]{10}"\]$/.test(entry.rendering.selector)||entry.rendering.property!=='--retouch-css-revision'||![entry.rendering.hash,entry.rendering.value].every(value=>/^[a-f0-9]{40}$/.test(value))))throw Error('The compiled style revision is invalid.');
+      const document=frame.contentDocument,href=frame.contentWindow.location.href;
+      const sheetMatches=rendering=>[...document.styleSheets].some(sheet=>{try{if(sheet.disabled||sheet.media?.mediaText&&!frame.contentWindow.matchMedia(sheet.media.mediaText).matches)return false;return [...sheet.cssRules].some(rule=>rule.selectorText===rendering.selector&&rule.style?.getPropertyValue(rendering.property).trim()===rendering.value);}catch{return false;}});
+      for(let attempt=0,stable=0;attempt<160;attempt++){
+        if(frame.contentDocument!==document||frame.contentWindow.location.href!==href)throw Error('Preview navigated while waiting for the compiled styles.');
+        const ready=entries.every(({id,rendering})=>{const nodes=[...document.querySelectorAll('[data-rt]')].filter(node=>node.getAttribute('data-rt')===id);return nodes.length>0&&nodes.every(node=>node.getAttribute(rendering.attribute)===rendering.hash)&&sheetMatches(rendering);});
+        stable=ready?stable+1:0;if(stable>=3)return {ok:true,method:'compiled-styles',layers:entries.length};
+        await new Promise(resolve=>setTimeout(resolve,50));
+      }
+      throw Error('The preview has not received the compiled style revision.');
+    }
     const d=frame.contentDocument,href=frame.contentWindow.location.href,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
     const index=(doc,selector,attribute)=>{const map=new Map();for(const el of doc.querySelectorAll(selector)){const key=el.getAttribute(attribute);if(!map.has(key))map.set(key,[]);map.get(key).push(el);}return map;};
     const canonical=value=>JSON.stringify(Object.entries(value).sort(([a],[b])=>Number(a)-Number(b)).map(([width,props])=>[width,Object.entries(props).sort(([a],[b])=>a.localeCompare(b))]));

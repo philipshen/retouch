@@ -28,7 +28,7 @@ function doctor(root = process.cwd()) {
       try { vuePlugin = JSON.parse(fs.readFileSync(local.resolve('@vitejs/plugin-vue/package.json'), 'utf8')); } catch {}
       console.log(react ? `React: ${react.version}` : 'React: not found at this root.');
       console.log(vue ? `Vue: ${vue.version}` : 'Vue: not found at this root.');
-      if(vue)console.log(vuePlugin ? `Vue Vite plugin: ${vuePlugin.version}; initial SFC text, image, tag and layer-name editing is available. Styling and structural operations remain incomplete.` : 'Vue setup: install @vitejs/plugin-vue and include vue() in the Vite configuration.');
+      if(vue)console.log(vuePlugin ? `Vue Vite plugin: ${vuePlugin.version}; SFC text, image, tag, layer-name and responsive CSS editing is available. Computed inline styles, structural operations and linked style libraries remain incomplete.` : 'Vue setup: install @vitejs/plugin-vue and include vue() in the Vite configuration.');
       const configs = ['js', 'mjs', 'ts', 'cjs', 'mts', 'cts'].map(ext => 'vite.config.' + ext).filter(file => fs.existsSync(path.join(root, file)));
       console.log(configs.length ? `Vite configuration: ${configs.join(', ')}` : 'Vite configuration: no default config file found; a custom config may be selected by the startup command.');
       console.log('Vite setup: install Retouch as a project dependency, then add retouch() from "retouch/vite" alongside your React or Vue Vite plugin, then run your usual dev command.');
