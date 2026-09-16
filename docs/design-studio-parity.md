@@ -22741,3 +22741,29 @@ multi-group/mixed responsive composition, structural edits to scaled groups,
 runtime version migration, and CSP-restricted delivery still need work. Full
 Figma parity, arbitrary-site support, and trusted notarized Homebrew distribution
 remain unfinished. No push or desktop rebuild in this continuation.
+
+### Copying members of responsive scaled groups (2026-09-16)
+
+Fixed a persistent-identity collision in the shared HTML clone path. A copied
+scale member now receives a fresh deterministic identity, checked against all
+existing member identities; the original keeps its identity. This applies to
+single duplication, sibling paste, shared duplication, and whole-group copies.
+Previously, duplicating a child within a scaled group reused its member ID,
+causing the runtime's distinct-member validation to reject the group.
+
+The regression failed before the fix in
+/tmp/retouch-scale-copy-before.log. Source tests verify all four copy paths,
+retained original identities, unique copied IDs, and one runtime script.
+The saved-page browser test now duplicates a heading through the actual HTML
+source adapter, reloads it on an ordinary HTTP server, and compares proportional
+group geometry against the equally duplicated unscaled baseline at
+390/768/1100/1440/523px. It passes in Chromium and WebKit without editor data-rt
+instrumentation or runtime errors. All 1,770 unit tests pass.
+
+Evidence: /tmp/retouch-scale-copy-browser.log,
+/tmp/retouch-scale-copy-webkit.log, /tmp/retouch-scale-copy-units.log.
+Whole-group and multi-selection copying have source-level coverage here; the
+new browser geometry case exercises a child copy inside one scaled group.
+Ungrouping scaled groups, renderer parity, multi-group scale composition,
+CSP delivery, and trusted Homebrew distribution remain unfinished. No push or
+desktop rebuild in this continuation.

@@ -22,3 +22,17 @@ test('scale anchors compose separately from pixel moves and survive range inheri
  const moved=step({factor:1,move:[23,-9]});assert.deepEqual(moved.pixels,{0:[23,-9]});assert.deepEqual(moved.offsets,anchored.offsets);
  const inherited=step({factor:.5,width:1100});assert.equal(inherited.ranges[1100],1.5);assert.deepEqual(inherited.offsets[1100],[-.75,-.75]);assert.deepEqual(inherited.pixels[1100],[23,-9]);
 });
+test('duplicating a scaled group member allocates a distinct persistent identity',()=>{
+ const r=resolve(source),scaled=plan(r,{fileHash:r.hash,width:0,factor:1.5}).edits[0].after,next=resolve(scaled),heading=next.elements.find(item=>item.tag==='h1');
+ const copied=html.planOp({...next,element:heading},{type:'duplicateElement',fileHash:next.hash});assert.equal(copied.ok,true,copied.reason);
+ const headings=resolve(copied.edits[0].after).elements.filter(item=>item.tag==='h1'),ids=headings.map(item=>item.node.attrs.find(attr=>attr.name==='data-rt-scale-member')?.value);assert.equal(ids.length,2);assert.ok(ids.every(Boolean));assert.notEqual(ids[0],ids[1]);assert.equal(ids[0],heading.node.attrs.find(attr=>attr.name==='data-rt-scale-member').value);
+});
+test('paste, shared duplication and whole-group duplication remap copied scale members',()=>{
+ const r=resolve(source),scaled=plan(r,{fileHash:r.hash,width:0,factor:1.5}).edits[0].after,next=resolve(scaled),heading=next.elements.find(item=>item.tag==='h1'),text=next.elements.find(item=>item.tag==='p'),ids=[heading.id,text.id];
+ const results=[
+  html.planOp({...next,element:text},{type:'pasteElement',fileHash:next.hash,copiedHash:next.hash,copiedId:heading.id}),
+  require('../src/html-structure-selection.cjs').plan({...next,element:heading},{type:'duplicateSelection',fileHash:next.hash,ids}),
+  html.planOp(next,{type:'duplicateElement',fileHash:next.hash})
+ ];
+ for(const result of results){assert.equal(result.ok,true,result.reason);const copied=resolve(result.edits[0].after),members=copied.elements.flatMap(item=>item.node.attrs.filter(attr=>attr.name==='data-rt-scale-member').map(attr=>attr.value));assert.equal(members.length,new Set(members).size);for(const original of [heading,text])assert.ok(members.includes(original.node.attrs.find(attr=>attr.name==='data-rt-scale-member').value));assert.equal((copied.source.match(/<script data-rt-scale-runtime="1">/g)||[]).length,1);}
+});

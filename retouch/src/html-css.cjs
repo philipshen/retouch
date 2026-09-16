@@ -94,8 +94,13 @@ function plan(resolved,op){
 function clone(resolved,range){
  const chunk=new MagicString(resolved.source.slice(range.start,range.end)),styles=[];
  const elements=resolved.elements||html.collect(resolved.source,resolved.relPath).elements;
- const allocated=new Set();
+ const allocated=new Set(),scaleIdentities=new Set(elements.map(element=>attr(element.node,'data-rt-scale-member')).filter(Boolean));
  for(const element of elements){
+  const scaleMarker=element.location.attrs?.['data-rt-scale-member'];
+  if(scaleMarker&&scaleMarker.startOffset>=range.start&&scaleMarker.endOffset<=range.end){
+   let id,counter=0;do{id=html.contentHash(resolved.source+'|scale-copy|'+element.id+'|'+counter++).slice(0,10);}while(scaleIdentities.has(id));scaleIdentities.add(id);
+   chunk.overwrite(scaleMarker.startOffset-range.start,scaleMarker.endOffset-range.start,`data-rt-scale-member="${id}"`);
+  }
   const marker=element.location.attrs?.['data-rt-style'];
   if(!marker||marker.startOffset<range.start||marker.endOffset>range.end)continue;
   const state=inspect({...resolved,element});let id,counter=0;
