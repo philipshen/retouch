@@ -413,3 +413,12 @@ test('shared number and ligature edits replace only their feature family',()=>{
  assert.equal(change('!oldstyle-nums','md:','font-variant-numeric','tabular-nums'),'!oldstyle-nums md:![font-variant-numeric:tabular-nums]');
  for(const [property,value]of [['font-variant-numeric','lining-nums oldstyle-nums'],['font-variant-ligatures','common-ligatures no-common-ligatures']])assert.throws(()=>change(source,'',property,value));
 });
+
+test('shared variable font settings retain other feature classes and responsive priority',()=>{
+ const source='![font-variation-settings:"wght"_400] md:[font-variation-settings:"wght"_700,"wdth"_90] oldstyle-nums';
+ const value='"wght" 550, "wdth" 90';
+ assert.equal(change(source,'md:','font-variation-settings',value),'![font-variation-settings:"wght"_400] oldstyle-nums md:![font-variation-settings:"wght"_550,_"wdth"_90]');
+ assert.equal(change(source,'md:','font-variation-settings',null),'![font-variation-settings:"wght"_400] oldstyle-nums');
+ for(const value of ['"bad" 1','"wght" 10001','"wght" NaN','normal; color:red'])assert.throws(()=>change(source,'md:','font-variation-settings',value));
+ const el={style:{getPropertyPriority:()=> 'important',getPropertyValue:()=>''}};assert.throws(()=>change(source,'md:','font-variation-settings','normal',null,false,el),/important inline/);
+});

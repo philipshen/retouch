@@ -7,7 +7,7 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  await screen.selectOption('768x1024');await settled();await page.getByLabel('Style screen scope').selectOption(kind==='html'?'min-[768px]:':'md:');await settled();await group();
  const trigger=page.getByLabel('Shared type settings',{exact:true});await trigger.click();
  const dialog=page.getByRole('dialog',{name:'Type settings',exact:true}),tabs=dialog.getByRole('tablist',{name:'Type settings categories',exact:true});
- assert.equal(await tabs.getByRole('tab').count(),2);const basics=tabs.getByRole('tab',{name:'Basics',exact:true}),details=tabs.getByRole('tab',{name:'Details',exact:true});
+ assert.equal(await tabs.getByRole('tab').count(),3);const basics=tabs.getByRole('tab',{name:'Basics',exact:true}),details=tabs.getByRole('tab',{name:'Details',exact:true});
  await basics.click();await basics.press('ArrowRight');assert.equal(await details.getAttribute('aria-selected'),'true');assert.equal(await details.evaluate(el=>el===document.activeElement),true);await details.press('Home');assert.equal(await basics.getAttribute('aria-selected'),'true');assert.equal(read(),original,'tab navigation must not write source');
  await show(page.getByLabel('Shared Number width',{exact:true}));assert.equal(await details.getAttribute('aria-selected'),'true','reveal must open the containing category');
  const layerPreview=page.frameLocator('iframe[title="Selected layer typography preview"]'),previewLayer=page.getByLabel('Preview selected text layer',{exact:true});

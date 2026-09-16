@@ -21341,3 +21341,31 @@ This verifies the fixture's loaded fonts and computed properties, not every
 remote font/CSP setup or glyph substitution. Shared variable-axis controls,
 full Figma fidelity, arbitrary-site guarantees and trusted Homebrew
 installation remain incomplete. No desktop rebuild or push.
+
+### Shared variable-font axis editing
+
+Shared Type settings now includes a Variable tab with editable axis overrides.
+The union of selected layers' explicit axes is displayed with mixed values.
+Changing one coordinate preserves each layer's other coordinates. Users can
+add a four-character axis tag and value, remove one override across the
+selection, or reset the scoped variation-settings property. Values reuse the
+existing parser, numeric bounds and 16-axis limit; exceeding that limit reports
+why the write was refused. Responsive and important inline guards apply to
+both adapters, including programmatically dispatched changes.
+
+Validation: 1,711 unit tests passed. HTML/React Chromium 145 and Liquid WebKit 26
+browser coverage verifies distinct initial Weight/Width values, shared Weight
+editing with preserved Width differences, custom-axis add/remove, Variable tab
+reveal, responsive fallback, disabled synthetic events, reset, exact source
+undo and important inline refusal. The existing shared number/ligature/preview
+flow passes with the new three-tab layout. Evidence:
+/tmp/retouch-shared-axes-units.log,
+/tmp/retouch-shared-axes-{html,react,liquid}.log,
+/tmp/retouch-shared-axes-feature-regression.log.
+
+These checks verify computed settings and source behavior, not rendered glyph
+changes from every axis. Shared font-file discovery, named presets and
+font-specific range intersection are still missing; the initial shared axis
+UI uses explicit tags and the existing broad coordinate limits. Full Figma
+fidelity, arbitrary-site guarantees and trusted Homebrew distribution remain
+incomplete. No desktop rebuild or push.

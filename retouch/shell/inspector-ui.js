@@ -169,7 +169,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   const active=()=>shared?activeSharedTypeTab:activeTypeTab;
   const defaultSample=()=>active()==='Details'?'0123456789':null;
   const focusedSample=()=>{const control=body.contains(document.activeElement)?document.activeElement:null;return control&&!control.closest('[hidden]')?samples[control.getAttribute('aria-label')?.replace(/^Shared /,'')]??defaultSample():defaultSample();};
-  for(const name of shared?['Basics','Details']:['Basics','Details','Variable']){
+  for(const name of ['Basics','Details','Variable']){
    const tab=document.createElement('button'),panel=document.createElement('div'),id='type-tab-'+(++typeTabId);tab.type='button';tab.textContent=name;tab.id=id;tab.setAttribute('role','tab');tab.setAttribute('aria-controls',id+'-panel');panel.id=id+'-panel';panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',id);panel.className='type-settings-page';groups.set(name,{tab,panel});tabs.append(tab);
   }
   for(const child of children){const summary=child.querySelector(':scope > summary')?.textContent;groups.get(summary==='Variable font axes'?'Variable':child.dataset.typeCategory==='Details'||shared&&!!child.querySelector('[aria-label="Shared Capital forms"],[aria-label="Shared Number position"]')||['Number formatting','Ligatures','Capital forms','Number position'].includes(summary)?'Details':'Basics').panel.append(child);}
