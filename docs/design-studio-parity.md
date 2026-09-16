@@ -22077,3 +22077,35 @@ hanging-list mode, arbitrary authored list/marker styles and layout, responsive
 inset overrides, and full Figma feature parity. Arbitrary-site support and trusted
 notarized Homebrew distribution remain unfinished. No desktop rebuild or push
 in this continuation.
+
+## Selected paragraphs become lists (2026-09-16)
+
+The preceding turn was progress: b7ec68b1 added source-backed list insets with
+browser and unit verification. This continuation extends selection-scoped list
+editing to ordinary paragraphs, following the existing Figma list reference:
+https://help.figma.com/hc/en-us/articles/360040449773-Create-bulleted-and-numbered-lists
+
+A caret in a direct paragraph, or a selection spanning contiguous paragraphs,
+can now create a numbered or bulleted list without converting surrounding text.
+The control reads No list for selected plain paragraphs even when another list
+exists nearby. Native P/DIV paragraphs become LI nodes retaining their source
+attributes and children; explicit Retouch paragraph spans retain their wrappers
+inside list items. Inter-paragraph whitespace retains its text order. A range
+ending at the next paragraph's beginning excludes it, and parent-element range
+boundaries are supported. List marker synchronization touches only the new list.
+
+HTML/React Chromium 145 and Liquid WebKit 26 browser checks pass. The suite
+covers caret conversion beside an existing list, partial-text ranges spanning
+two paragraphs, exclusive end boundaries, parent-element
+boundaries, explicit paragraph spans and whitespace, retained links/classes/titles,
+local undo/redo, save/reopen, and exact source undo/redo. React fixture assertions
+account for JSX dropping inter-element newlines and assert that rendered text is
+unchanged through conversion. HTML list-control/keyboard and selected-list
+regressions pass; all 1,754 unit tests pass. Evidence is in
+/tmp/retouch-paragraph-list-selection-{html,react,liquid,units}.log and
+/tmp/retouch-paragraph-list-{controls,selection}-regression.log.
+
+Remaining work includes selections mixing existing lists and plain paragraphs,
+soft-line selections within a single text run, nested paragraph containers,
+arbitrary authored styling/bindings, and full Figma parity. Trusted notarized
+Homebrew distribution remains unfinished. No desktop rebuild or push here.

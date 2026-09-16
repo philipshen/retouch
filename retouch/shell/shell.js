@@ -1299,7 +1299,7 @@ function inlineListShortcut(event){
 }
 function applyTextList(kind){
   const current=editing;if(!current||!RetouchListEditing.supported(current.el))return false;
-  if(!RetouchListEditing.canApply(current.el)){toast('Select items in one list or select all text to change list style.','err');return false;}
+  if(!RetouchListEditing.canApply(current.el)){toast('Select paragraphs, items in one list, or all text to change list style.','err');return false;}
   const result=inlineFormattingTransaction(()=>RetouchListEditing.apply(current.el,kind));
   current.el.ownerDocument.dispatchEvent(new Event('selectionchange'));return result;
 }
@@ -1308,7 +1308,7 @@ function showInlineFormatToolbar(){
   inlineFormatCleanup();if(!editing||editing.info.canSetChildren===false)return;
   const d=doc(),bar=document.createElement('div');bar.className='inline-format-toolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Selected text formatting');
   for(const [tag,label,text]of [['strong','Bold selected text','B'],['em','Italic selected text','I'],['u','Underline selected text','U'],['s','Strikethrough selected text','S'],['sup','Superscript selected text','x²'],['sub','Subscript selected text','x₂']]){const button=document.createElement('button');button.type='button';button.textContent=text;button.dataset.formatTag=tag;if(tag==='u'||tag==='s')button.style.textDecoration=tag==='u'?'underline':'line-through';button.setAttribute('aria-label',label);button.title=label;button.onpointerdown=event=>event.preventDefault();button.onclick=()=>{toggleWrap(tag);update();};bar.append(button);}
-  const listStyle=document.createElement('select');listStyle.setAttribute('aria-label','Text layer list style');listStyle.title='Applies to selected list items. Select all text to change the whole text layer.';
+  const listStyle=document.createElement('select');listStyle.setAttribute('aria-label','Text layer list style');listStyle.title='Applies to selected paragraphs or list items. Select all text to change the whole text layer.';
   for(const [value,label]of [['none','No list'],['ul','Bulleted list'],['ol','Numbered list'],['mixed','Mixed']]){const option=document.createElement('option');option.value=value;option.textContent=label;option.disabled=value==='mixed';listStyle.append(option);}
   listStyle.onchange=()=>{if(savedRange&&editing){const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());applyTextList(listStyle.value);update();}};
   const paragraphSpacing=document.createElement('input');paragraphSpacing.type='number';paragraphSpacing.min='0';paragraphSpacing.max='10000';paragraphSpacing.step='any';paragraphSpacing.setAttribute('aria-label','Paragraph spacing (px)');paragraphSpacing.title='Space between paragraphs in this text layer. Soft line breaks use line height.';

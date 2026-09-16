@@ -1,7 +1,7 @@
 (function(root){
  const containers=new Set(['DIV','SECTION','ARTICLE','ASIDE','NAV','MAIN','HEADER','FOOTER','BLOCKQUOTE','LI','TD','TH','FORM','FIELDSET','FIGURE','FIGCAPTION','DETAILS','DIALOG','BODY']);
  function supported(el){return !!el&&containers.has(el.tagName);}
- function state(el){const context=wholeTextSelected(el)?null:listContext(el);if(context)return context.list.tagName.toLowerCase();const selection=el?.ownerDocument.getSelection();if(selection?.isCollapsed)return 'none';const lists=[...el.querySelectorAll('ul,ol')];if(!lists.length)return 'none';return lists.every(node=>node.tagName===lists[0].tagName)?lists[0].tagName.toLowerCase():'mixed';}
+ function state(el){const context=wholeTextSelected(el)?null:listContext(el);if(context)return context.list.tagName.toLowerCase();if(paragraphListContext(el))return 'none';const selection=el?.ownerDocument.getSelection();if(selection?.isCollapsed)return 'none';const lists=[...el.querySelectorAll('ul,ol')];if(!lists.length)return 'none';return lists.every(node=>node.tagName===lists[0].tagName)?lists[0].tagName.toLowerCase():'mixed';}
  function rename(node,tag){
   if(node.tagName.toLowerCase()===tag)return node;
   const next=node.ownerDocument.createElement(tag);
@@ -281,10 +281,36 @@
   splitRange(items,range);if(spacing!==null)setListSpacing(el,spacing);syncMarkers(el);return true;
  }
  function wholeTextSelected(el){const range=el?.ownerDocument.getSelection();if(!range?.rangeCount||range.isCollapsed)return false;const offsets=selectionOffsets(el);return !!offsets&&offsets[0]===0&&offsets[1]===el.textContent.length;}
+ function paragraphListContext(el){
+  const selection=el?.ownerDocument.getSelection();if(!selection?.rangeCount)return null;
+  const range=selection.getRangeAt(0);if(!el.contains(range.startContainer)||!el.contains(range.endContainer))return null;
+  const top=(node,offset,end=false)=>{if(node===el)return el.childNodes[offset-(end?1:0)]||null;while(node?.parentNode&&node.parentNode!==el)node=node.parentNode;return node;};
+  const first=top(range.startContainer,range.startOffset);let last=range.collapsed?first:top(range.endContainer,range.endOffset,true);
+  if(!range.collapsed&&last&&last!==first&&range.endContainer!==el){
+   const before=el.ownerDocument.createRange();before.selectNodeContents(last);before.setEnd(range.endContainer,range.endOffset);const fragment=before.cloneContents();
+   if(!fragment.textContent&&!fragment.querySelector('br,img,input,svg,video,audio,canvas,iframe,ul,ol,[contenteditable="false"]'))last=last.previousSibling;
+  }
+  const nodes=[...el.childNodes],from=nodes.indexOf(first),to=nodes.indexOf(last);if(from<0||to<from)return null;
+  const selected=nodes.slice(from,to+1),paragraphs=selected.filter(node=>node.nodeType===1);
+  if(!paragraphs.length||selected.some(node=>node.nodeType!==1&&(node.nodeType!==3||node.textContent.trim())))return null;
+  if(paragraphs.some(node=>!node.matches('p,div,span[data-retouch-paragraph]')||node.querySelector('p,div,ul,ol,table,section,article,[contenteditable="false"]')||node.getAttribute('contenteditable')==='false'))return null;
+  return {nodes:selected,paragraphs};
+ }
+ function applyParagraphSelection(el,kind,context){
+  if(kind==='none')return false;
+  const offsets=selectionOffsets(el),list=el.ownerDocument.createElement(kind);list.style.cssText='list-style: revert; margin: 0; padding-inline-start: 1.5em;';context.nodes[0].before(list);
+  for(const node of context.nodes){
+   if(node.nodeType!==1){list.append(node);continue;}
+   let item;if(node.matches('span[data-retouch-paragraph]')){item=el.ownerDocument.createElement('li');item.append(node);}else item=rename(node,'li');
+   if(item.style.listStyleType){item.style.setProperty('list-style-type','inherit',item.style.getPropertyPriority('list-style-type'));item.__rtListMarker='inherit';}
+   list.append(item);
+  }
+  syncMarkers(el,[list]);restoreSelection(el,offsets);return true;
+ }
  function canApply(el){
   if(!supported(el))return false;
   const context=listContext(el);if(context)return !context.list.hasAttribute('reversed')&&![...context.list.children].some(item=>item.hasAttribute('value'));
-  return wholeTextSelected(el)||!el.querySelector('ul,ol')&&el.querySelectorAll(':scope > p,:scope > div,:scope > span[data-retouch-paragraph]').length<2;
+  return wholeTextSelected(el)||!!paragraphListContext(el)||!el.querySelector('ul,ol')&&el.querySelectorAll(':scope > p,:scope > div,:scope > span[data-retouch-paragraph]').length<2;
  }
  function applyListSelection(el,kind,context){
   const {list,items}=context,offsets=selectionOffsets(el),siblings=[...list.children],from=siblings.indexOf(items[0]),to=siblings.indexOf(items.at(-1)),start=Number(startNumber(list));
@@ -316,6 +342,7 @@
  function apply(el,kind){
   if(!canApply(el)||!['none','ul','ol'].includes(kind))return false;
   const context=wholeTextSelected(el)?null:listContext(el);if(context)return applyListSelection(el,kind,context);
+  const paragraphs=wholeTextSelected(el)?null:paragraphListContext(el);if(paragraphs)return applyParagraphSelection(el,kind,paragraphs);
   const offsets=selectionOffsets(el),d=el.ownerDocument;
   if(kind==='none'){
    for(const list of [...el.querySelectorAll('ul,ol')].reverse())rename(list,'div');
