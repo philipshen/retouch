@@ -23677,3 +23677,27 @@ Full Figma parity and trusted macOS/Homebrew distribution remain incomplete.
 WebKit passed the corresponding 1100 px scoped editor deletion and history flow
 across all previews: /tmp/retouch-released-delete-webkit.log. git diff --check passed.
 This continuation is committed locally; no new push was requested.
+
+### Copying released responsive React layers
+
+Released React roots now support Duplicate, sibling copy/paste and multi-selection
+duplication. The planner temporarily regroups the ownership set in memory, uses
+the native JSX copy checks and snapshot remapping, then releases it again. Only
+the final source is written, as one undoable transaction. The copied subtree gets
+distinct persistent identities, retains ordered snapshots and later class edits,
+and becomes selected. Stale clipboard revisions and duplicated authored identities
+are refused. Cross-parent/cross-file paste and arbitrary generated subtrees remain
+unfinished.
+
+All 1,808 unit tests passed, including nested member snapshots, multi-selection
+copy, source mappings and exact undo. Chromium passed Duplicate/Delete/history in
+main/Phone/Tablet/Desktop. The saved-page check duplicates a released heading after
+an independent 23 px movement, verifies both copies against an unscaled reference
+at 390/768/1100/1440/523 pixels, then reloads and verifies again. Evidence:
+/tmp/retouch-released-copy-units.log, /tmp/retouch-released-copy-targeted.log,
+/tmp/retouch-released-copy-editor.log, /tmp/retouch-released-copy-runtime.log.
+Full Figma parity and trusted macOS/Homebrew distribution remain incomplete.
+
+WebKit passed the 1100 px scoped copy/delete/history flow across all four previews:
+/tmp/retouch-released-copy-webkit.log. git diff --check passed. This continuation
+is committed locally; no new push was requested.
