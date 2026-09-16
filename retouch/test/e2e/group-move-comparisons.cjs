@@ -68,6 +68,7 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===released);await settled();await checkScale(1);
    console.log('RELEASED LAYER INDEPENDENT SCALE PASS',kind,{scoped});
   }
+  if(process.env.RT_E2E_RELEASED_GESTURES)await require('./group-scale-canvas.cjs').run({page,app,read,wait,settled,kind,released:true});
   if(process.env.RT_E2E_RELEASED_COPY){
    const heading=page.getByRole('treeitem',{name:/^h1 ·/}).first();await heading.click();await settled();await heading.click({button:'right'});
    await page.getByRole('menu',{name:'Canvas actions',exact:true}).getByRole('menuitem',{name:'Duplicate layer',exact:true}).click();await wait(()=>read()!==released);await settled();const copied=read(),copiedBoxes=[];

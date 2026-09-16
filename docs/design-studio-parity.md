@@ -22949,3 +22949,31 @@ pointer/keyboard cases on a released member remain to be added. Complete shared
 transform composition after independent offsets, arbitrary reparenting, nested
 scale groups, other renderers, CSP delivery, full Figma parity, and trusted
 desktop distribution remain unfinished. No push.
+
+### Released-layer canvas gestures and mixed positioning (2026-09-16)
+
+Extended the canvas scale suite to select a released heading by itself and with
+an ordinary nonadjacent layer. Chromium and WebKit pass corner/edge/center
+keyboard scaling, Alt-center scaling, Escape cancellation, pointer dragging,
+exact source undo/redo, and unchanged unselected sibling geometry. WebKit runs
+with the edit scope set to min-1100; these new gesture assertions measure the
+active main canvas, not geometry in every comparison during each gesture.
+
+Visual inspection revealed that a mixed selection could scale while its position
+panel still showed an unsupported anchor-placement error. The movement root
+selector now admits selections containing a runtime-managed member, exposing the
+existing mixed CSS movement path. New browser assertions move the released and
+ordinary layers together by 17px, leave the middle sibling unchanged, and verify
+exact undo/redo. The error is absent and the move control is enabled. Inspected
+/tmp/retouch-released-mixed-position-html.png to verify the controls and outlines
+in the light inspector. All 1,777 unit tests pass.
+
+Evidence: /tmp/retouch-released-gestures.log,
+/tmp/retouch-released-gestures-webkit.log,
+/tmp/retouch-released-mixed-position.log,
+/tmp/retouch-released-mixed-position-webkit.log,
+/tmp/retouch-released-mixed-position-units.log.
+
+Shared transform composition after independent offsets, arbitrary reparenting,
+nested scale groups, other renderers, CSP delivery, full Figma parity, and trusted
+desktop distribution remain unfinished. No push.

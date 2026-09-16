@@ -3227,7 +3227,7 @@ async function convertSVGToPath(info,toArrow=false,arrowPoints){
 }
 function groupMovementRoots(allowLayers=false){
  if(!sel?.info)return null;const roots=(sel.multiple||[sel.info]).map(info=>{const matches=matchingEls(info.id);return matches.length===1?matches[0]:null;});
- return roots.every(Boolean)&&(allowLayers||roots.some(el=>el.hasAttribute('data-rt-group'))||roots.every(el=>el?.ownerDocument[Symbol.for('retouch.group-scale.runtime')]?.manages?.(el)))?roots:null;
+ return roots.every(Boolean)&&(allowLayers||roots.some(el=>el.hasAttribute('data-rt-group'))||roots.some(el=>el?.ownerDocument[Symbol.for('retouch.group-scale.runtime')]?.manages?.(el)))?roots:null;
 }
 function groupNudgeShortcut(e){
  if(e.defaultPrevented||e.repeat||e.isComposing||e.ctrlKey||e.metaKey||e.altKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)||mode!=='edit'||editing||stopDrawing||panelTasks||sourceRequests||undoBusy||canvasPan.active||!sel?.info||document.querySelector('dialog[open]'))return false;
