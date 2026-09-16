@@ -30,7 +30,7 @@
   if(!Array.isArray(ids)||!ids.length||ids.length>100||new Set(ids).size!==ids.length||ids.some(id=>typeof id!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(id)))throw Error('Invalid released scale members.');
   return ids;
  }
- function mount({document=root.document,geometry,controller}){
+ function mount({document=root.document,geometry,controller,eligible=()=>true}){
   const win=document.defaultView,active=new Map();let pending=0,disposed=false;
   const report=(el,error)=>el.dispatchEvent(new win.CustomEvent('retouch:scale-error',{bubbles:true,detail:{message:error.message}}));
   const overlaps=(a,b)=>a.some(left=>b.some(right=>left.contains(right)||right.contains(left)));
@@ -38,6 +38,7 @@
    if(disposed)return;
    const candidates=new Map();
    for(const el of document.querySelectorAll('[data-rt-scale]'))try{
+    if(!eligible(el))continue;
     const raw=el.getAttribute('data-rt-scale'),ranges=parse(raw),data=JSON.parse(raw);let roots=[el],signature=raw;
     if(el.hasAttribute('data-rt-scale-set')){
      if(el.tagName!=='SCRIPT'||el.type!=='application/json')throw Error('Released scale metadata must be inert JSON.');

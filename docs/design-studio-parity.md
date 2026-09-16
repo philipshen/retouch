@@ -23433,3 +23433,25 @@ dynamic class snapshots and relative/named group ranges. React still uses the
 older class-based group path with the known cross-screen positioning failure.
 Full Figma parity, arbitrary site coverage and trusted desktop distribution remain
 unfinished. No push.
+
+### React lifecycle registration prototype
+
+Added a generated client component that registers its native group after mounting
+and unregisters on cleanup. The shared runtime now accepts an eligibility filter,
+so metadata on unregistered React groups does not trigger DOM writes. Registration
+is reference counted, and cleanup restores runtime-owned styles. HTML and Liquid
+keep the default document-wide eligibility behavior. The previous saved runtime
+fingerprint is retained for exact upgrade validation.
+
+The isolated Next 16.2.5 / React 19.2 fixture passed in Chromium and WebKit across
+390, 768, 1100, 1440 and 523 pixel widths. It checks initially mounted groups, delayed
+registration, independent groups with repeated member IDs, cleanup and same-document
+client navigation. No hydration, console or scale errors were observed. All 1,791
+unit tests and the saved HTML runtime regression passed. Evidence:
+/tmp/retouch-react-runtime-prototype.log, /tmp/retouch-react-runtime-webkit.log,
+/tmp/retouch-react-runtime-units.log, /tmp/retouch-react-registration-html.log.
+
+This is a runtime foundation only. JSX source planning, generated helper ownership,
+editor integration, production builds, HMR and delayed Suspense hydration remain
+unverified or unimplemented. React still uses its existing editor scaling path.
+Full Figma parity and trusted desktop distribution remain unfinished.

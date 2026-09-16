@@ -3,9 +3,10 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 const files={'./translate-values.js':'shell/translate-values.js','./flip.js':'shell/flip.js','./group-move.js':'shell/group-move.js','./group-scale.js':'runtime/group-scale.js','./bootstrap.js':'runtime/group-scale-bootstrap.js'};
 let cached,currentRevision;
 const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
+function moduleSource(){return Object.entries(files).map(([name,file])=>`{const module={exports:{}};(function(window,globalThis,require,module){\n${fs.readFileSync(path.join(__dirname,'..',file),'utf8')}\n})(undefined,scope,require,module);modules[${JSON.stringify(name)}]=module.exports;}`).join('\n');}
 function bundle(){
  if(cached)return cached;
- const modules=Object.entries(files).map(([name,file])=>`{const module={exports:{}};(function(window,globalThis,require,module){\n${fs.readFileSync(path.join(__dirname,'..',file),'utf8')}\n})(undefined,scope,require,module);modules[${JSON.stringify(name)}]=module.exports;}`).join('\n');
+ const modules=moduleSource();
  currentRevision=hash(modules);
  // Keep the authored site's globals private; all dependencies are embedded.
  // The lexical window/globalThis parameters route UMD exports to our registry.
@@ -23,4 +24,4 @@ function upgrade(source){
  if(!require('../runtime/group-scale-legacy.json').some(entry=>entry.sha256===hash(value)))throw Error('The saved scale runtime changed outside the editor.');
  return new MagicString(source).overwrite(location.startOffset,location.endOffset,latest).toString();
 }
-module.exports={bundle,script,revision,upgrade};
+module.exports={bundle,script,revision,upgrade,moduleSource};
