@@ -405,3 +405,11 @@ test('shared capital forms and position preserve shorthand features and responsi
   assert.equal(change('','',property,value,null,false,el),'!['+property+':'+value+']');
  }
 });
+
+test('shared number and ligature edits replace only their feature family',()=>{
+ const source='oldstyle-nums tabular-nums md:ordinal hover:slashed-zero [font-variant-ligatures:none]';
+ assert.equal(change(source,'md:','font-variant-numeric','lining-nums proportional-nums'),'oldstyle-nums tabular-nums hover:slashed-zero [font-variant-ligatures:none] md:[font-variant-numeric:lining-nums_proportional-nums]');
+ assert.equal(change(source,'','font-variant-ligatures','common-ligatures no-contextual'),'md:ordinal hover:slashed-zero oldstyle-nums tabular-nums [font-variant-ligatures:common-ligatures_no-contextual]');
+ assert.equal(change('!oldstyle-nums','md:','font-variant-numeric','tabular-nums'),'!oldstyle-nums md:![font-variant-numeric:tabular-nums]');
+ for(const [property,value]of [['font-variant-numeric','lining-nums oldstyle-nums'],['font-variant-ligatures','common-ligatures no-common-ligatures']])assert.throws(()=>change(source,'',property,value));
+});

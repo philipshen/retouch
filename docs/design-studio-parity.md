@@ -21257,3 +21257,32 @@ WebKit 26. All 1,709 unit tests pass. Evidence:
 General font shorthand, arbitrary competing selectors and font-dependent glyph
 appearance remain outside this verification. Full Figma parity and trusted
 Homebrew distribution are still incomplete. No desktop rebuild or push.
+
+### Shared number formatting and ligature groups
+
+Shared Type settings now includes Number formatting (width, style, fractions,
+ordinals and zero style) and Ligatures (common, rare, historical and contextual
+alternates). The groups use the same choices as single-layer editing. Mixed
+state is computed per subgroup, and changing one subgroup preserves every
+selected layer's other features. In particular, enabling common ligatures on
+a layer whose previous value was `none` retains its other disabled ligatures.
+Each change saves per-layer values in one source transaction. Responsive range,
+important inline rules, reset and detached-layer checks guard writes.
+
+Validation: 1,710 unit tests passed, including feature-family isolation, scoped
+priority and invalid combinations. Browser tests passed on HTML/React Chromium
+145 and Liquid WebKit 26: tabular width retains distinct old-style/lining
+numbers; common ligatures retain distinct unrelated features; mixed state,
+responsive fallback, disabled synthetic events, reset, exact source undo and
+important inline refusal are covered. React initially failed because the test
+fixture only injected its mixed starting styles into HTML/Liquid. The styles
+now live in shared fixture CSS, with explicit initial-value assertions; the
+corrected React run passed.
+
+Evidence: /tmp/retouch-shared-features-units.log,
+/tmp/retouch-shared-features-html.log,
+/tmp/retouch-shared-features-react-fixed.log,
+/tmp/retouch-shared-features-liquid.log. Glyph appearance and every subgroup
+combination have not been visually compared with Figma. Full Figma parity,
+arbitrary-site guarantees and trusted Homebrew distribution remain incomplete.
+No native rebuild or push in this continuation.

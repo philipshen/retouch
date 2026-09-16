@@ -1,6 +1,6 @@
 (function(root){
  'use strict';
- const inlineTypography=['font-family','font-size','font-weight','font-style','line-height','letter-spacing','text-decoration-line','text-decoration-style','text-decoration-thickness','text-underline-offset','text-decoration-skip-ink','text-decoration-color','text-indent','text-wrap','font-variant-caps','font-variant-position'];
+ const inlineTypography=['font-family','font-size','font-weight','font-style','line-height','letter-spacing','text-decoration-line','text-decoration-style','text-decoration-thickness','text-underline-offset','text-decoration-skip-ink','text-decoration-color','text-indent','text-wrap','font-variant-caps','font-variant-position','font-variant-numeric','font-variant-ligatures'];
  const typographyKeys=property=>property==='text-wrap'?['text-wrap','text-wrap-mode','text-wrap-style']:[property];
  const fields={opacity:{label:'Opacity (%)',matches:t=>/^opacity-|^\[opacity:/.test(t),token:v=>'opacity-['+v/100+']'},visibility:{label:'Visibility',matches:t=>/^(visible|invisible|collapse)$|^\[visibility:/.test(t),options:['visible','hidden','collapse'],token:v=>({visible:'visible',hidden:'invisible',collapse:'collapse'})[v]},'mix-blend-mode':{label:'Blend mode',matches:t=>/^mix-blend-|^\[mix-blend-mode:/.test(t),options:(root.RetouchHTMLCSSValues||require('./html-css-values.js')).options['mix-blend-mode'],token:v=>'mix-blend-'+v},isolation:{label:'Blend group',matches:t=>/^(isolate|isolation-auto)$|^\[isolation:/.test(t),options:['auto','isolate'],token:v=>v==='auto'?'isolation-auto':'isolate'}};
  function rotationDegrees(value){
@@ -32,6 +32,8 @@
   'text-align':{label:'Text alignment',matches:t=>inspector().textAlignToken(t),options:['left','center','right','justify','start','end'],token:v=>'[text-align:'+v+']'},
   'font-style':{label:'Font slant',matches:t=>inspector().fontStyleToken(t),options:['normal','italic','oblique'],token:v=>'[font-style:'+v+']'},
   'text-decoration-line':{label:'Text decoration',matches:t=>inspector().decorationToken(t),options:['none','underline','line-through','overline','underline line-through','underline overline','overline line-through','underline overline line-through'],token:v=>'[text-decoration-line:'+v.replace(/ /g,'_')+']'},
+  'font-variant-numeric':{label:'Number formatting',feature:'numeric',matches:t=>inspector().numericToken(t),valid:value=>(root.RetouchHTMLCSSValues||require('./html-css-values.js')).numericValid(value),token:value=>'[font-variant-numeric:'+value.replace(/ /g,'_')+']'},
+  'font-variant-ligatures':{label:'Ligatures',feature:'ligature',matches:t=>inspector().ligatureToken(t),valid:value=>(root.RetouchHTMLCSSValues||require('./html-css-values.js')).ligatureValid(value),token:value=>'[font-variant-ligatures:'+value.replace(/ /g,'_')+']'},
   'font-variant-caps':{label:'Capital forms',matches:t=>inspector().capsToken(t),options:['normal','small-caps','all-small-caps','petite-caps','all-petite-caps','unicase','titling-caps'],optionLabels:{normal:'Normal','small-caps':'Small caps','all-small-caps':'All small caps','petite-caps':'Petite caps','all-petite-caps':'All petite caps',unicase:'Unicase','titling-caps':'Titling caps'},token:value=>'[font-variant-caps:'+value+']'},
   'font-variant-position':{label:'Number position',matches:t=>inspector().fontPositionToken(t),options:['normal','super','sub'],optionLabels:{normal:'Normal',super:'Superscript',sub:'Subscript'},token:value=>'[font-variant-position:'+value+']'},
   'text-wrap':{label:'Wrap style',matches:t=>inspector().textWrapToken(t),options:['wrap','balance','pretty','nowrap'],optionLabels:{wrap:'Auto',balance:'Balance',pretty:'Pretty',nowrap:'No wrap'},token:value=>'[text-wrap:'+value+']'},
@@ -302,6 +304,11 @@
   for(const [property,field]of Object.entries(fields).filter(([,field])=>!field.constraint).flatMap(entry=>['width','height'].includes(entry[0])?[entry,...['min-','max-'].map(prefix=>[prefix+entry[0],fields[prefix+entry[0]]])]:[entry])){
    if(!elements.every(el=>itemApplies(el,field)))continue;
    const sec=field.svg?groups.stroke:field.constraint||field.ratio||['width','height'].includes(property)?groups.size:field.flexItem||field.layoutItem?groups.item:['opacity','rotate','visibility','mix-blend-mode','isolation'].includes(property)?groups.appearance:groups.typography;
+   if(field.feature){
+    const ready=(reset=false)=>typeActive()&&infos.every((_,i)=>{const el=liveElement(i);return el?.isConnected&&(reset||el.style.getPropertyPriority(property)!=='important');});
+    const write=values=>{if(!ready(values===null))return;try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);return [info.id,change(info.className,scope,property,values===null?null:values[i],el.ownerDocument,false,el)];})));}catch(error){I.note(sec,error.message,'refused');}};
+    I.sharedFeatureTypography(sec,field.feature,()=>infos.map((_,i)=>liveElement(i)),ready,write,()=>write(null),infos.some(info=>change(info.className,scope,property,null)!==info.className));continue;
+   }
    if(field.ratio){
     const values=computed.map(css=>css.getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),input=root.document.createElement('input');input.type='text';input.value=mixed?'':values[0];input.placeholder=mixed?'Mixed':'auto, 1 / 1, 16 / 9';
     const blocked=elements.some((el,i)=>el.style.getPropertyValue(property)||el.style.getPropertyValue('height')||el.style.getPropertyValue('inline-size')||el.style.getPropertyValue('block-size')||['inline','contents'].includes(computed[i].display));input.disabled=blocked;
