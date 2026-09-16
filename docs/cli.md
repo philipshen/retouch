@@ -155,7 +155,7 @@ stamps, text write-back, hot-update state/document retention, normal process
 shutdown, restart and exact persisted source undo, layer-label refresh, and
 unchanged application manifest and Vite configuration. It checks the editor
 port closes after each shutdown. This does not verify native WKWebView startup,
-config-triggered Vite restarts, arbitrary frameworks, or trusted distribution.
+arbitrary frameworks or trusted distribution. Config-triggered restart recovery is covered by the later check below.
 
 The tested npm-packed source was `3c075ef8abb44ddca34289091d56f906d095bfcc`;
 tarball SHA-256:
@@ -195,3 +195,19 @@ requirement. Finding a config file is not reported as proof that Retouch is
 configured. Unverified versions and unreadable package metadata are distinguished
 from missing packages. The diagnostic reads metadata without evaluating Vite
 configuration or starting the application; existing Next diagnostics remain.
+
+
+### Vite configuration restart recovery
+
+Vite replaces its Retouch writer when a configuration edit restarts the dev
+server. An already-open editor now detects the changed writer session via its
+health endpoint and reloads to obtain the current token and persisted history.
+This check is enabled by the Vite plugin. Normal source HMR retains its existing
+session and does not trigger this editor reload. The monitor retries through
+brief server unavailability and stops its request/timer when the page leaves.
+
+Set `RT_VITE_CONFIG_RESTART=1` on `retouch/test/launch/vite.cjs` to verify recovery
+without manually refreshing the editor: edit source, change the Vite config,
+wait for a new editor token, undo and redo, then stop/start the process and undo
+again. This verifies saved source/history recovery; preserving unsaved drafts
+through a configuration restart is not established.

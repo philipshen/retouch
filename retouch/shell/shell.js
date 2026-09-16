@@ -163,6 +163,25 @@ showHistoryPersistence(window.__RT_RENDERING?.historyPersistenceError,historyRec
 const appPath = (location.pathname.replace(/^\/rt\/?/, '/') || '/') + location.search + location.hash;
 iframe.src = appPath;
 routeInput.value = appPath;
+// A Vite configuration restart replaces the writer and its authorization token.
+// Reload only when the writer session changes; ordinary HMR keeps this document.
+if(window.__RT_RENDERING?.reloadOnServerRestart){
+ const session=window.__RT_RENDERING.stateScope?.session;
+ let timer,controller,stopped=false,reloading=false;
+ const check=async()=>{
+  if(stopped||reloading)return;
+  const request=new AbortController();controller=request;const timeout=setTimeout(()=>request.abort(),3000);
+  try{
+   const response=await fetch('/rt/__api/health',{cache:'no-store',signal:request.signal});
+   if(response.ok){const health=await response.json();if(health.service==='retouch'&&/^[a-f0-9]{64}$/.test(health.session)&&health.session!==session){reloading=true;location.reload();}}
+  }catch{/* The dev server may be between shutdown and startup. */}
+  finally{clearTimeout(timeout);if(controller===request)controller=null;if(!stopped&&!reloading){clearTimeout(timer);timer=setTimeout(check,1500);}}
+ };
+ timer=setTimeout(check,1500);
+ window.addEventListener('pagehide',()=>{stopped=true;clearTimeout(timer);controller?.abort();});
+ window.addEventListener('pageshow',event=>{if(event.persisted){stopped=false;reloading=false;clearTimeout(timer);timer=setTimeout(check,1500);}});
+}
+
 
 iframe.addEventListener('load', () => {
   try {

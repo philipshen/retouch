@@ -88,9 +88,24 @@ async function start() {
     await live.getByRole('button', {name: 'Count 1'}).waitFor();
     assert.equal(await live.evaluate(() => window.__originalDocument === document), true);
     assert.deepEqual(errors, []);
+    if (process.env.RT_VITE_CONFIG_RESTART) {
+      const oldToken = await page.evaluate(() => window.__RT_TOKEN);
+      const announcements = (logs.match(/\[retouch\] Open /g) || []).length;
+      fs.writeFileSync(path.join(root, 'vite.config.ts'), config + '// trigger a normal Vite configuration restart\n');
+      for (let n = 0; n < 150 && (logs.match(/\[retouch\] Open /g) || []).length === announcements; n++) await delay(100);
+      assert.ok((logs.match(/\[retouch\] Open /g) || []).length > announcements, 'Vite did not restart after its configuration changed');
+      await page.waitForFunction(token => typeof window.__RT_TOKEN === 'string' && window.__RT_TOKEN !== token, oldToken);
+      await app.getByRole('heading', {name: 'Saved across startup'}).waitFor();
+      await page.getByRole('button', {name: 'Undo', exact: true}).click();
+      await app.getByRole('heading', {name: 'Installed Vite', exact: true}).waitFor();
+      assert.equal(fs.readFileSync(file, 'utf8'), source);
+      await page.getByRole('button', {name: 'Redo', exact: true}).click();
+      await app.getByRole('heading', {name: 'Saved across startup'}).waitFor();
+    }
     await browser.close(); browser = null;
     await stop();
     await assert.rejects(fetch(healthURL(editor), {signal: AbortSignal.timeout(1000)}));
+    if (process.env.RT_VITE_CONFIG_RESTART) fs.writeFileSync(path.join(root, 'vite.config.ts'), config);
     editor = await start();
     browser = await playwright[engine].launch();
     page = await browser.newPage();
@@ -109,6 +124,7 @@ async function start() {
     await browser.close(); browser = null;
     await stop();
     await assert.rejects(fetch(healthURL(editor), {signal: AbortSignal.timeout(1000)}));
+    if (process.env.RT_VITE_CONFIG_RESTART) console.log('PASS automatic editor session recovery, source undo and redo after Vite configuration restart:', engine);
     console.log('PASS installed Vite config, TSX edit, HMR state, restart source undo, unchanged config, and process shutdown:', engine);
   } catch (error) { console.error(logs); throw error; }
   finally { await browser?.close(); await stop(); fs.rmSync(root, {recursive: true, force: true}); }

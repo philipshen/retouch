@@ -17,7 +17,7 @@ function retouch(){
   async configureServer(server){
    require('./installation.cjs').check();
    const react=require('./adapter.cjs').getAdapter('react'),adapter={...react,assets:config.publicDir?{...react.assets,directory:path.relative(config.root,config.publicDir),urlPrefix:config.base}:undefined};
-   sidecar=require('./server.cjs').startServer({appRoot:config.root,port:0,adapter,quiet:true});
+   sidecar=require('./server.cjs').startServer({appRoot:config.root,port:0,adapter,rendering:{reloadOnServerRestart:true},quiet:true});
    if(!sidecar.listening)await once(sidecar,'listening');
    server.middlewares.use((req,res,next)=>{
     // The editor owns /rt independently of Vite's public base. Deep editor URLs
