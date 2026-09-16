@@ -23828,3 +23828,28 @@ All 1,815 Retouch unit tests passed: /tmp/retouch-installation-units.log.
 The desktop marker parser checks the complete chunk before bounding its retained
 tail, so long diagnostic details do not discard the failure marker. The final
 universal build passed package verification; native launch remains untested.
+
+### Add comparison screens without changing the canvas
+
+The Screens toolbar now has an Add action with a compact light-theme dialog for
+name, width and height. It creates a named comparison directly, preserving the
+current canvas dimensions and the already-loaded preview documents. Names and
+dimensions are validated for uniqueness and supported bounds; the eight-screen
+limit disables Add. Escape/Cancel creates nothing and restores focus to Add.
+Existing pin-current-size behavior remains available beside it.
+
+Chromium and WebKit passed the new add-screen browser suite, including duplicate
+name/dimensions, invalid size, Escape and focus return, narrow-window sizing,
+persistence after reload, retained document identity and eight-screen capacity.
+No page/console errors occurred and project source was unchanged. Screenshots at
+1440 px and 360 px were visually inspected. That inspection caught an initial
+full-height dialog; fit-content sizing and a bounded-height browser assertion
+corrected it. The final light dialog fits its content and remains on-screen.
+All 1,815 unit tests passed; git diff --check passed. Evidence:
+/tmp/retouch-add-screen-chromium.log, /tmp/retouch-add-screen-webkit.log,
+/tmp/retouch-add-screen-units.log,
+/tmp/retouch-add-screen-dialog-chromium.png,
+/tmp/retouch-add-screen-mobile-chromium.png,
+/tmp/retouch-add-screen-result-chromium.png. agent-browser was unavailable, so the
+existing Playwright fixture provided browser verification. Full Figma parity and
+trusted desktop distribution remain incomplete. Committed locally; no push.

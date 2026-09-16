@@ -7,7 +7,7 @@
   let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore,allPreviews,revealAll,emptyState,emptyAdd;
   const collapsedScreens=new WeakSet(),sizeHistories=new WeakMap(),nameHistories=new WeakMap(),lockedRatios=new WeakSet();let previewSerial=0;
   const marqueeCleanup=new WeakMap();
-  let activeName=null,activeDimensionScrub=null,draggedScreen=null;
+  let activeName=null,activeDimensionScrub=null,draggedScreen=null,addScreenButton=null,addScreenDialog=null;
   const clearScreenDrag=()=>{draggedScreen=null;rail.querySelectorAll('[data-screen-drop]').forEach(card=>delete card.dataset.screenDrop);};
   window.addEventListener('blur',clearScreenDrag);
   for(const type of ['blur','pagehide'])window.addEventListener(type,()=>activeDimensionScrub?.cancel());
@@ -40,6 +40,7 @@
     if(revealAll)revealAll.disabled=!selected||!cards.length;
     if(allPreviews){allPreviews.disabled=!cards.length;allPreviews.textContent=cards.some(card=>!card.previewBody.hidden)?'Hide all previews':'Show all previews';allPreviews.setAttribute('aria-controls',cards.map(card=>card.previewBody.id).join(' '));}
     const size=current();
+    if(addScreenButton){addScreenButton.disabled=sizes.length>=8||loadingSet||removals>0;addScreenButton.title=sizes.length>=8?'Remove a comparison to add another':'Add a named screen without resizing the canvas';}
     if(undoOrder)undoOrder.disabled=!orderUndo.length||removals>0||loadingSet;
     if(redoOrder)redoOrder.disabled=!orderRedo.length||removals>0||loadingSet;
     if(undoOrder)undoOrder.parentElement.hidden=!orderUndo.length&&!orderRedo.length;
@@ -265,6 +266,7 @@
     files.append(saveSet,loadSet,undoLoad,file);rail.append(files,setStatus);
     pin=document.createElement('button');pin.id='comparisonPin';pin.className='control-button comparison-pin';pin.type='button';pin.textContent='+';pin.setAttribute('aria-label','Pin current size');
     pin.onclick=()=>{if(!pin.disabled)window.RetouchComparisons.showSize(current());};toolbar.insertBefore(pin,focus);
+    addScreenButton=document.createElement('button');addScreenButton.type='button';addScreenButton.className='control-button';addScreenButton.textContent='Add';addScreenButton.setAttribute('aria-label','Add screen');addScreenButton.onclick=openAddScreen;toolbar.insertBefore(addScreenButton,pin);
     restore=document.createElement('button');restore.id='comparisonRestore';restore.className='control-button';restore.type='button';
     restore.onclick=()=>{
       updateControls();if(restore.disabled)return;
@@ -286,6 +288,17 @@
     orderHistory.append(undoOrder,redoOrder);rail.append(orderHistory);
     for(const size of sizes)addCard(size);
     updateControls();
+  }
+  function openAddScreen(){
+    if(addScreenButton.disabled||addScreenDialog)return;
+    const dialog=document.createElement('dialog');addScreenDialog=dialog;dialog.className='component-modal screen-add-dialog';dialog.setAttribute('aria-labelledby','screenAddTitle');
+    const form=document.createElement('form'),title=document.createElement('h2');title.id='screenAddTitle';title.textContent='Add screen';const hint=document.createElement('p');hint.className='hint';hint.textContent='Compare another size while keeping your canvas as it is.';
+    const field=(label,type,value)=>{const wrap=document.createElement('label'),input=document.createElement('input');wrap.textContent=label;input.type=type;input.value=String(value);input.required=true;if(type==='number'){input.min='240';input.max='7680';input.step='1';}else input.maxLength=70;wrap.append(input);return {wrap,input};};
+    const size=current(),name=field('Screen name','text',''),width=field('Width (px)','number',valid(size.width)?size.width:640),height=field('Height (px)','number',valid(size.height)?size.height:900),dimensions=document.createElement('div');dimensions.className='screen-add-dimensions';dimensions.append(width.wrap,height.wrap);
+    const footer=document.createElement('footer'),cancel=document.createElement('button'),submit=document.createElement('button');cancel.type='button';cancel.textContent='Cancel';cancel.onclick=()=>dialog.close();submit.type='submit';submit.textContent='Add screen';submit.className='screen-add-submit';footer.append(cancel,submit);form.append(title,hint,name.wrap,dimensions,footer);dialog.append(form);
+    for(const input of [name.input,width.input,height.input])input.oninput=()=>{name.input.setCustomValidity('');width.input.setCustomValidity('');};
+    form.onsubmit=event=>{event.preventDefault();const label=name.input.value.trim().replace(/\s+/g,' '),w=Number(width.input.value),h=Number(height.input.value);name.input.setCustomValidity(!label?'Enter a screen name.':sizes.some(size=>size[0].toLowerCase()===label.toLowerCase())?'A screen with this name already exists.':'');width.input.setCustomValidity(sizes.some(size=>size[1]===w&&size[2]===h)?'A screen with these dimensions already exists.':'');if(!form.reportValidity())return;if(!window.RetouchComparisons.canShowSize({width:w,height:h})||sizes.length>=8)return;dialog.close('created');window.RetouchComparisons.showSize({width:w,height:h,label});};
+    dialog.addEventListener('close',()=>{dialog.remove();addScreenDialog=null;if(dialog.returnValue!=='created'&&addScreenButton?.isConnected)addScreenButton.focus();},{once:true});document.body.append(dialog);dialog.showModal();name.input.focus();
   }
   function addCard(size,before=null){
       clearOrderHistory();
@@ -604,6 +617,7 @@
     try{frame.contentWindow.stop();frame.src='about:blank';}catch{done();}
   });}
   async function dispose(){
+    addScreenDialog?.close();
     activeDimensionScrub?.cancel();clearOrderHistory();
     // Unload each browsing context before detaching it, including frames whose
     // framework bootstrap is still awaiting scripts or network responses.

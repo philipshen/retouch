@@ -1247,3 +1247,12 @@ html, body { overflow:clip; }
 .filter-controls > legend { display:flex;align-items:center;justify-content:space-between;width:100%;padding:0;font-size:12px;font-weight:500;color:var(--ink); }
 
 :is(.layer-item,.context-layer-choice)[data-layer-kind="group"]::before { mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221%22%3E%3Crect%20x%3D%223%22%20y%3D%223%22%20width%3D%2210%22%20height%3D%2210%22%20stroke-dasharray%3D%222%202%22%2F%3E%3C%2Fsvg%3E"); }
+
+.screen-add-dialog { width:min(340px,calc(100vw - 24px));height:fit-content;padding:20px; }
+.screen-add-dialog[open] { max-height:calc(100dvh - 24px);overflow:auto; }
+.screen-add-dialog form { display:grid;gap:16px; }
+.screen-add-dialog label { display:grid;gap:6px;font-size:11px;color:var(--ink); }
+.screen-add-dialog input { width:100%;min-width:0;height:30px;padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);font:12px var(--font); }
+.screen-add-dimensions { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+.screen-add-dialog footer { display:flex;justify-content:flex-end;gap:8px; }
+.screen-add-dialog button.screen-add-submit { background:var(--accent);color:#fff; }
