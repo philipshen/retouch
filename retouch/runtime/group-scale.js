@@ -34,10 +34,11 @@
     if(query&&!query.matches)return;
     const value=factor(),shift=offset(),pixels=pixelOffset();if([shift,pixels].some(pair=>!Array.isArray(pair)||pair.length!==2||pair.some(n=>!Number.isFinite(n))))throw Error('Resolve a finite scale offset.');
     const members=geometry.measureSelection(selected,()=>false,identity);targets=members.map(item=>item.el);managed=new Set(targets);
+    const memberFactors=Object.fromEntries(members.map(item=>[item.id,geometry.memberScale(item.el)]));
     const movements=Object.fromEntries(members.map(item=>[item.id,geometry.scaleMovement(item.el)]));
-    if(value===1&&[...shift,...pixels,...Object.values(movements).flatMap(value=>[value.x,value.y])].every(n=>n===0))return;
+    if(value===1&&Object.values(memberFactors).every(n=>n===1)&&[...shift,...pixels,...Object.values(movements).flatMap(value=>[value.x,value.y])].every(n=>n===0))return;
     const left=Math.min(...members.map(item=>item.rect.x)),top=Math.min(...members.map(item=>item.rect.y)),width=Math.max(...members.map(item=>item.rect.right))-left,height=Math.max(...members.map(item=>item.rect.bottom))-top;
-    preview=geometry.scalePreview(members,{runtime:true});preview.update({factor:value,movements,offset:{x:shift[0]*width+pixels[0],y:shift[1]*height+pixels[1]}});
+    preview=geometry.scalePreview(members,{runtime:true});preview.update({factor:value,movements,memberFactors,offset:{x:shift[0]*width+pixels[0],y:shift[1]*height+pixels[1]}});
    }catch(error){preview?.restore();preview=null;onError(error);}
    finally{if(!disposed)observe(targets);}
   }

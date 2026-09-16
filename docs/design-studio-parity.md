@@ -22911,3 +22911,41 @@ rewriting on open. Browser migration coverage uses the archived 31915148 runtime
 the other allowlist hashes were generated from their committed source. Transform
 composition, other renderers, CSP delivery, complete Figma parity, and trusted
 notarized desktop distribution remain unfinished. No push.
+
+### Independent scale of released HTML layers (2026-09-16)
+
+The shared geometry planner now supports per-member scale factors in addition
+to the group's responsive factor. A layer's independent factor changes its size
+around its resulting top-left position; saved movement offsets remain separate.
+The editor writes --rt-scale-factor plus anchor movement in managed CSS instead
+of persisting the runtime's computed scale and translation. Relative edits
+multiply the previous independent factor and reject cumulative factors outside
+0.01–100. Siblings retain their positions and sizes.
+
+Managed scale/movement CSS edits upgrade recognized legacy runtimes in their
+source transaction. Runtime script markup carries its revision, and CSS preview
+sync replaces an outdated controller when the fetched source revision changes.
+Added the exact 7345fec5 runtime fingerprint before changing its dependencies.
+
+Chromium and WebKit saved-page tests verify independent factors 1.4 at base and
+0.75 above 1000px combined with responsive shared scaling and independent pixel
+movement, unchanged siblings, and reloads at five widths. Live editor tests
+verify 200% then 50%, exact undo/redo and all four previews; Chromium covers base
+scope, WebKit min-1100 scope. The Chromium legacy editor test also verifies an
+individual CSS scale edit upgrades saved source and preserves preview documents.
+Existing full group/mixed scale pointer/keyboard gesture regressions pass.
+All 1,777 unit tests pass.
+
+Evidence: /tmp/retouch-independent-scale-saved.log,
+/tmp/retouch-independent-scale-saved-webkit.log,
+/tmp/retouch-independent-scale-editor.log,
+/tmp/retouch-independent-scale-editor-webkit.log,
+/tmp/retouch-independent-scale-upgrade.log,
+/tmp/retouch-independent-scale-gestures.log,
+/tmp/retouch-independent-scale-units.log.
+
+The new independent browser case exercises percentage fields; separate anchored
+pointer/keyboard cases on a released member remain to be added. Complete shared
+transform composition after independent offsets, arbitrary reparenting, nested
+scale groups, other renderers, CSP delivery, full Figma parity, and trusted
+desktop distribution remain unfinished. No push.

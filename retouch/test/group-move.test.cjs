@@ -76,3 +76,9 @@ test('scaled layer movement reads bounded pixel offsets without saving rendered 
  assert.deepEqual(move.scaleMovement(el),{x:0,y:0});values['--rt-scale-move-x']='23px';values['--rt-scale-move-y']='-9.5px';assert.deepEqual(move.scaleMovement(el),{x:23,y:-9.5});
  for(const value of ['10%', 'calc(1px + 2%)','NaNpx','100001px']){values['--rt-scale-move-x']=value;assert.throws(()=>move.scaleMovement(el),/pixels/);}
 });
+
+test('independent scale factors default to one and reject invalid or excessive values',()=>{
+ let value='';const el={ownerDocument:{defaultView:{getComputedStyle:()=>({getPropertyValue:()=>value})}}};assert.equal(move.memberScale(el),1);
+ for(const n of [.01,.75,1.4,100]){value=String(n);assert.equal(move.memberScale(el),n);}
+ for(const n of ['0','-2','101','NaN','Infinity','50%']){value=n;assert.throws(()=>move.memberScale(el),/scale/);}
+});

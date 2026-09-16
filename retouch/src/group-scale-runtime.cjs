@@ -12,7 +12,7 @@ function bundle(){
  cached=`(()=>{'use strict';const host=window,scope={document:host.document,MutationObserver:host.MutationObserver,ResizeObserver:host.ResizeObserver};for(const name of ['requestAnimationFrame','cancelAnimationFrame','addEventListener','removeEventListener','matchMedia'])scope[name]=host[name].bind(host);const modules=Object.create(null),require=name=>{if(!modules[name])throw Error('Missing scale runtime dependency: '+name);return modules[name];};\n${modules}\nconst start=()=>{const key=Symbol.for('retouch.group-scale.runtime');host.document[key]?.dispose();host.document[key]=require('./bootstrap.js').mount({document:host.document,geometry:require('./group-move.js'),controller:require('./group-scale.js')});host.document[key].revision=${JSON.stringify(currentRevision)};};if(host.document.readyState==='loading')host.document.addEventListener('DOMContentLoaded',start,{once:true});else start();})();`;
  return cached;
 }
-function script(){return '<script data-rt-scale-runtime="1">'+bundle().replace(/<\/script/gi,'<\\/script')+'</script>';}
+function script(){return '<script data-rt-scale-runtime="1" data-rt-scale-revision="'+revision()+'">'+bundle().replace(/<\/script/gi,'<\\/script')+'</script>';}
 function revision(){bundle();return currentRevision;}
 function upgrade(source){
  const scripts=[],tree=parse5.parse(source,{sourceCodeLocationInfo:true});

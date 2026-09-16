@@ -41,6 +41,8 @@ function plan(resolved,op){
   if(op.fileHash&&op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the element.');
   if(op.changes!==undefined&&(op.changes===null||typeof op.changes!=='object'||Array.isArray(op.changes)||Object.hasOwn(op,'property')))return refuse('Provide a property or a CSS change set.');
   if(op.resetScope!==undefined&&(op.resetScope!==true||Object.hasOwn(op,'property')||Object.hasOwn(op,'value')||Object.hasOwn(op,'changes')))return refuse('Reset a screen scope without additional property changes.');
+  const originalSource=resolved.source;
+  if(Object.keys(op.changes||{[op.property]:op.value}).some(name=>/^--rt-scale-(?:factor|move-[xy])$/.test(name))){const source=require('./group-scale-runtime.cjs').upgrade(originalSource);if(source!==originalSource){const elements=html.collect(source,resolved.relPath).elements;resolved={...resolved,source,elements,element:elements.find(item=>item.id===resolved.element.id)};}}
   const state=inspect(resolved),block=state.blocks.find(b=>b.width===op.width),values={...block?.values};
   let changes=op.resetScope?Object.keys(values).map(property=>[property,null]):op.changes===undefined?[[op.property,op.value]]:Object.entries(op.changes);
   if(op.resetScope&&Number.isInteger(op.width)&&op.width>=0&&op.width<=7680&&!changes.length)return {ok:true,hash:resolved.hash,edits:[]};
@@ -88,7 +90,7 @@ function plan(resolved,op){
   for(const old of state.blocks)out.remove(old.node.sourceCodeLocation.startOffset,old.node.sourceCodeLocation.endOffset);
   const content=[...rules].sort(([a],[b])=>a-b).map(([width,props])=>`<style data-rt-css="${state.id}" data-rt-width="${width}" data-rt-values="${escape(JSON.stringify(props))}">${rule(state.id,width,props)}</style>`).join('');
   if(content)out.appendLeft(state.headEnd??resolved.source.length,content);
-  const after=out.toString();return {ok:true,hash:html.contentHash(after),edits:[{file:resolved.file,before:resolved.source,after}]};
+  const after=out.toString();return {ok:true,hash:html.contentHash(after),edits:[{file:resolved.file,before:originalSource,after}]};
  }catch(e){return refuse(e.message);}
 }
 function clone(resolved,range){

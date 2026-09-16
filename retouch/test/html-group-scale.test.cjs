@@ -4,12 +4,12 @@ const source='<!doctype html><html><head></head><body><main><div data-rt-frame d
 function resolve(source){const relPath='index.html',elements=html.collect(source,relPath).elements;return {source,relPath,elements,element:elements.find(item=>item.tag==='div'),file:'/site/index.html',hash:html.contentHash(source)};}
 test('HTML group scaling persists ranges, stable identities and one private runtime in one source edit',()=>{
  const r=resolve(source),first=plan(r,{fileHash:r.hash,width:0,factor:1.5});assert.equal(first.ok,true,first.reason);assert.equal(first.edits.length,1);assert.equal(first.edits[0].before,source);const next=resolve(first.edits[0].after);assert.deepEqual(next.elements.map(item=>item.id),r.elements.map(item=>item.id));assert.equal(next.elements.find(item=>item.tag==='h1').node.attrs.some(attr=>attr.name==='data-rt-scale-member'),true);
- const second=plan(next,{fileHash:next.hash,width:1100,factor:2});assert.equal(second.ok,true,second.reason);const final=resolve(second.edits[0].after),metadata=JSON.parse(final.element.node.attrs.find(attr=>attr.name==='data-rt-scale').value);assert.deepEqual(metadata,{version:1,ranges:{0:1.5,1100:3}});assert.equal((final.source.match(/<script data-rt-scale-runtime="1">/g)||[]).length,1);assert.ok(final.source.includes('<p>Outside</p>'));assert.deepEqual(plan(final,{fileHash:final.hash,width:0,factor:1}).edits,[]);
+ const second=plan(next,{fileHash:next.hash,width:1100,factor:2});assert.equal(second.ok,true,second.reason);const final=resolve(second.edits[0].after),metadata=JSON.parse(final.element.node.attrs.find(attr=>attr.name==='data-rt-scale').value);assert.deepEqual(metadata,{version:1,ranges:{0:1.5,1100:3}});assert.equal((final.source.match(/<script data-rt-scale-runtime="1"/g)||[]).length,1);assert.ok(final.source.includes('<p>Outside</p>'));assert.deepEqual(plan(final,{fileHash:final.hash,width:0,factor:1}).edits,[]);
 });
 test('HTML scaling rejects stale source, invalid factors and modified runtime',()=>{
  const r=resolve(source);assert.equal(plan(r,{fileHash:'stale',width:0,factor:2}).ok,false);
  for(const factor of [0,101,NaN,'2'])assert.equal(plan(r,{fileHash:r.hash,width:0,factor}).ok,false);
- const first=plan(r,{fileHash:r.hash,width:0,factor:2}),edited=resolve(first.edits[0].after.replace('<script data-rt-scale-runtime="1">','<script data-rt-scale-runtime="1">/* host edit */'));assert.match(plan(edited,{fileHash:edited.hash,width:0,factor:2}).reason,/outside/);
+ const first=plan(r,{fileHash:r.hash,width:0,factor:2}),edited=resolve(first.edits[0].after.replace('data-rt-scale-runtime="1"','data-rt-scale-runtime="2"'));assert.match(plan(edited,{fileHash:edited.hash,width:0,factor:2}).reason,/outside/);
 });
 test('saved scaling is one exact undoable source transaction',t=>{
  const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{applyPlan}=require('../src/transactions.cjs'),{SourceHistory}=require('../src/history.cjs');
@@ -34,7 +34,7 @@ test('paste, shared duplication and whole-group duplication remap copied scale m
   require('../src/html-structure-selection.cjs').plan({...next,element:heading},{type:'duplicateSelection',fileHash:next.hash,ids}),
   html.planOp(next,{type:'duplicateElement',fileHash:next.hash})
  ];
- for(const result of results){assert.equal(result.ok,true,result.reason);const copied=resolve(result.edits[0].after),members=copied.elements.flatMap(item=>item.node.attrs.filter(attr=>attr.name==='data-rt-scale-member').map(attr=>attr.value));assert.equal(members.length,new Set(members).size);for(const original of [heading,text])assert.ok(members.includes(original.node.attrs.find(attr=>attr.name==='data-rt-scale-member').value));assert.equal((copied.source.match(/<script data-rt-scale-runtime="1">/g)||[]).length,1);}
+ for(const result of results){assert.equal(result.ok,true,result.reason);const copied=resolve(result.edits[0].after),members=copied.elements.flatMap(item=>item.node.attrs.filter(attr=>attr.name==='data-rt-scale-member').map(attr=>attr.value));assert.equal(members.length,new Set(members).size);for(const original of [heading,text])assert.ok(members.includes(original.node.attrs.find(attr=>attr.name==='data-rt-scale-member').value));assert.equal((copied.source.match(/<script data-rt-scale-runtime="1"/g)||[]).length,1);}
 });
 test('ungrouping preserves responsive scale intent on the released source members',()=>{
  const r=resolve(source),scaled=plan(r,{fileHash:r.hash,width:0,factor:1.5}).edits[0].after,next=resolve(scaled),released=require('../src/html-frame-selection.cjs').plan(next,{type:'removeFrame',fileHash:next.hash});assert.equal(released.ok,true,released.reason);
@@ -61,6 +61,7 @@ test('copies of released scale roots join the saved responsive set with fresh id
 });
 test('known saved runtimes upgrade in the scale transaction and preserve exact history input',()=>{
  const runtime=require('../src/group-scale-runtime.cjs'),legacy=require('node:fs').readFileSync(require('node:path').join(__dirname,'fixtures/group-scale/pre-revision-runtime.html'),'utf8'),r=resolve(source),current=plan(r,{fileHash:r.hash,width:0,factor:1.5}).edits[0].after,old=current.replace(runtime.script(),()=>legacy),state=resolve(old);
+ const heading=state.elements.find(item=>item.tag==='h1'),cssUpgrade=require('../src/html-css.cjs').plan({...state,element:heading},{fileHash:state.hash,width:0,changes:{'--rt-scale-factor':'2'}});assert.equal(cssUpgrade.ok,true,cssUpgrade.reason);assert.equal(cssUpgrade.edits[0].before,old);assert.ok(cssUpgrade.edits[0].after.includes(runtime.script()));
  assert.notEqual(old,current);assert.equal(runtime.upgrade(old),current);assert.equal(runtime.upgrade(current),current);
  const changed=plan(state,{fileHash:state.hash,width:0,factor:2});assert.equal(changed.ok,true,changed.reason);assert.equal(changed.edits[0].before,old);assert.ok(changed.edits[0].after.includes(runtime.script()));
  const released=require('../src/html-frame-selection.cjs').plan(state,{type:'removeFrame',fileHash:state.hash});assert.equal(released.ok,true,released.reason);assert.equal(released.edits[0].before,old);assert.ok(released.edits[0].after.includes(runtime.script()));
