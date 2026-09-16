@@ -22370,3 +22370,25 @@ This verifies HTML visibility; React/Liquid visibility guards require a separate
 audit. Full Figma parity, arbitrary-site support, Typed OM sizing feedback
 fallback, and trusted notarized Homebrew distribution remain unfinished.
 No push or desktop rebuild in this continuation.
+
+### React and Liquid visibility parity (2026-09-16)
+
+Single and shared class-based visibility now check the active preview range and
+connected target before edits or resets. Ordinary inline visibility no longer
+blocks the control: a scoped important utility overrides it while retaining the
+original inline source. Existing scoped and inherited important utilities keep
+their priority on subsequent edits. Important inline visibility still refuses
+edits; reset may remove the selected scope's override without changing the
+inline rule. Shared edits build one complete change set before saving.
+
+A new RT_E2E_VISIBILITY_CONTENT browser flow uses conflicting ordinary inline
+visibility values and exercises single/shared hide/show, mixed state, reset,
+responsive isolation, disabled controls and synthetic out-of-range events,
+important inline refusal, reset under an important inline rule, unchanged
+inline styles and exact source undo. React passes Chromium 145 and Liquid passes
+WebKit 26. A source-writer unit test covers priority preservation and refusal;
+all 1,761 unit tests pass. Logs: /tmp/retouch-class-visibility-{react,liquid,units}.log.
+
+Full Figma parity, arbitrary-site support, the Typed OM sizing indicator fallback
+and trusted notarized Homebrew distribution remain unfinished. No desktop
+rebuild or push in this continuation.

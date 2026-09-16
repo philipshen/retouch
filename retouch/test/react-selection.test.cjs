@@ -563,3 +563,13 @@ test('text sizing releases aspect ratios without preventing a later ratio edit',
  const ratio=R.changeRatio(resized,'md:','2 / 1');assert.ok(ratio.includes('md:![aspect-ratio:2_/_1]'));assert.ok(!ratio.includes('md:![aspect-ratio:auto]'));assert.equal(R.changeRatio(ratio,'md:','2 / 1'),ratio);
  assert.throws(()=>R.changeTextResizing(source,'md:',{...changes,'aspect-ratio':'1 / 1'}),/supported/);assert.throws(()=>R.changeTextResizing(source,'md:',changes,{style:{getPropertyPriority:key=>key==='aspect-ratio'?'important':''}}),/important inline/);
 });
+
+test('visibility edits override normal inline rules and preserve scoped priority',()=>{
+ const el={style:{getPropertyValue:()=> 'visible',getPropertyPriority:()=>''}};
+ assert.equal(change('p-4 visible hover:invisible','','visibility','hidden',null,false,el),'hover:invisible p-4 !invisible');
+ assert.equal(change('!visible md:!invisible lg:collapse','md:','visibility','visible'),'!visible lg:collapse md:!visible');
+ assert.equal(change('!visible md:!invisible','md:','visibility',null),'!visible');
+ const important={style:{getPropertyValue:()=> 'visible',getPropertyPriority:()=> 'important'}};
+ assert.throws(()=>change('visible','','visibility','hidden',null,false,important),/important inline/);
+ assert.equal(change('md:!invisible','md:','visibility',null,null,false,important),'');
+});
