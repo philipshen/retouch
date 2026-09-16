@@ -22,6 +22,6 @@ test('doctor retains Next diagnostics and reports malformed Vite metadata accura
 });
 test('doctor distinguishes Vue dependencies from an enabled editor and reports current editing limits',t=>{
  const root=fixture(t,{vite:'8.3.0',vue:'3.5.42','@vitejs/plugin-vue':'6.0.9'});
- const output=inspect(root);assert.match(output,/Vue: 3\.5\.42/);assert.match(output,/Vue Vite plugin: 6\.0\.9/);assert.match(output,/Computed inline styles, structural operations and linked style libraries remain incomplete/);assert.match(output,/does not confirm that the plugin is enabled/);
+ const output=inspect(root);assert.match(output,/Vue: 3\.5\.42/);assert.match(output,/Vue Vite plugin: 6\.0\.9/);assert.match(output,/Computed inline styles, other structural operations and linked style libraries remain incomplete/);assert.match(output,/does not confirm that the plugin is enabled/);
  const missing=inspect(fixture(t,{vite:'8.3.0',vue:'3.5.42'}));assert.match(missing,/install @vitejs\/plugin-vue/);
 });

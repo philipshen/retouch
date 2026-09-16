@@ -23991,3 +23991,29 @@ inline style overrides, external templates, template preprocessors and SSR
 editing remain incomplete. This checkpoint does not rebuild the native app or
 establish full Figma parity, arbitrary-site support, notarization or Homebrew
 installation.
+
+
+### Vue native sibling ordering
+
+Vue layers now expose the existing Move layer up/down and Send to back/Bring to
+front controls for complete native sibling regions. The compiler-backed planner
+moves whole source ranges, retains whitespace slots and all surrounding SFC
+bytes, and maps every affected descendant to its new structural source identity.
+Persistent CSS owners travel with the moved subtree; layer locks use the source
+identity map. A fresh source hash is required. Undo and redo use exact snapshots.
+
+The operation supports native children within a mapped HTML parent, including
+expressions and bindings inside each moved subtree. It refuses crossing sibling
+control-flow directives, component or structural-template siblings, SVG siblings,
+mixed text, comments, or missing/ambiguous source markers. Multi-selection moves,
+duplication, deletion, insertion and reparenting still need Vue implementations.
+These boundaries are unfinished parity work, not a claim of complete Vue support.
+
+Validation: all 1,859 unit tests passed; the doctor tests passed again after the
+capability wording update. Chromium and WebKit passed actual inspector padding,
+all four ordering buttons, a move across a locked sibling, style ownership after
+source ID changes, exact undo/redo, and retained preview documents and independent
+Vue counters. The combined browser fixture also passed responsive CSS,
+comparison-screen updates and production CSS retention/instrumentation exclusion.
+No native package, notarization, Homebrew installation or full-Figma completion
+claim is made by this checkpoint.
