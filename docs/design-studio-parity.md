@@ -20958,3 +20958,30 @@ Evidence: `/tmp/retouch-shared-settings-library-react.log`,
 This pass changes browser verification only; no native rebuild or push.
 Full parity, arbitrary-site support and trusted Homebrew distribution remain
 incomplete.
+
+### Shared React and Liquid text decoration
+
+React/Liquid shared typography now includes Text decoration, matching the
+existing HTML control. It supports underline, strikethrough, overline and their
+combinations, plus None. The selected-scope edit replaces decoration-line
+classes while preserving unrelated decoration color/style and other scopes.
+Ordinary inline decoration-line values use an important class override;
+important inline decoration refuses edits. React/Liquid and HTML decoration
+controls now use the existing typography screen-range guards, including reset.
+
+React, Liquid and HTML Chromium browser fixtures passed combined underline and
+strikethrough, None, narrow-screen fallback and dispatched-event refusal,
+reset, exact undo and important-inline refusal. The HTML reset probe now waits
+for the restored control to be ready after undo before revealing/clicking it.
+All 1,703 unit tests passed; the focused selection suite additionally passed
+ordinary/important inline decoration cases, scope reset and unrelated-property
+preservation. Logs: `/tmp/retouch-shared-decoration-react.log`,
+`/tmp/retouch-shared-decoration-liquid.log`,
+`/tmp/retouch-shared-decoration-html.log`,
+`/tmp/retouch-shared-decoration-units.log`,
+`/tmp/retouch-shared-decoration-unit.log`.
+
+This does not add shared underline thickness/color/offset controls, measure
+ancestor-propagated decoration, or establish arbitrary-cascade parity. Shared
+advanced typography grouping, full Figma parity, arbitrary-site support and
+trusted Homebrew distribution remain incomplete. No native rebuild or push.

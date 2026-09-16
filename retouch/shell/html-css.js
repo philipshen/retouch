@@ -3,7 +3,7 @@
  const openGridSections=new Set();
  const {options,fields,svgFields,adaptiveColumns,parseAdaptiveColumns,stackLayout,childAlignment,alignmentProperties,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
  const stopRail=RetouchGradientStopRail;
- const coreTypography=['font-family','font-size','font-weight','font-style','line-height','letter-spacing'];
+ const coreTypography=['font-family','font-size','font-weight','font-style','line-height','letter-spacing','text-decoration-line'];
  function typographyReady(elements,width,property,reset=false){return elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth&&(reset||el.style.getPropertyPriority(property)!=='important'));}
  function typographyHint(elements,width){return elements.some(el=>width>el.ownerDocument.defaultView.innerWidth)?'Switch to a screen inside the selected edit range.':'An important inline rule controls this typography property.';}
  function typographySave(save,infos,elements,width){return (...args)=>{

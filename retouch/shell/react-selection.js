@@ -1,6 +1,6 @@
 (function(root){
  'use strict';
- const inlineTypography=['font-family','font-size','font-weight','font-style','line-height','letter-spacing'];
+ const inlineTypography=['font-family','font-size','font-weight','font-style','line-height','letter-spacing','text-decoration-line'];
  const fields={opacity:{label:'Opacity (%)',matches:t=>/^opacity-|^\[opacity:/.test(t),token:v=>'opacity-['+v/100+']'},visibility:{label:'Visibility',matches:t=>/^(visible|invisible|collapse)$|^\[visibility:/.test(t),options:['visible','hidden','collapse'],token:v=>({visible:'visible',hidden:'invisible',collapse:'collapse'})[v]},'mix-blend-mode':{label:'Blend mode',matches:t=>/^mix-blend-|^\[mix-blend-mode:/.test(t),options:(root.RetouchHTMLCSSValues||require('./html-css-values.js')).options['mix-blend-mode'],token:v=>'mix-blend-'+v},isolation:{label:'Blend group',matches:t=>/^(isolate|isolation-auto)$|^\[isolation:/.test(t),options:['auto','isolate'],token:v=>v==='auto'?'isolation-auto':'isolate'}};
  function rotationDegrees(value){
   if(value==='none')return 0;
@@ -30,6 +30,7 @@
   'letter-spacing':{label:'Letter spacing (px)',min:-1000,max:1000,matches:t=>inspector().letterSpacingToken(t),token:v=>'[letter-spacing:'+v+'px]'},
   'text-align':{label:'Text alignment',matches:t=>inspector().textAlignToken(t),options:['left','center','right','justify','start','end'],token:v=>'[text-align:'+v+']'},
   'font-style':{label:'Font slant',matches:t=>inspector().fontStyleToken(t),options:['normal','italic','oblique'],token:v=>'[font-style:'+v+']'},
+  'text-decoration-line':{label:'Text decoration',matches:t=>inspector().decorationToken(t),options:['none','underline','line-through','overline','underline line-through','underline overline','overline line-through','underline overline line-through'],token:v=>'[text-decoration-line:'+v.replace(/ /g,'_')+']'},
   'text-transform':{label:'Text case',matches:t=>inspector().caseToken(t),options:['none','uppercase','lowercase','capitalize'],token:v=>'[text-transform:'+v+']'}
  });
  for(const bound of ['min','max'])for(const [axis,name]of [['w','width'],['h','height']]){const property=bound+'-'+name,keyword=bound==='min'?'auto':'none';fields[property]={label:(bound==='min'?'Minimum ':'Maximum ')+name+' (px)',min:0,max:100000,constraint:true,keyword,valid:value=>value===keyword||Number.isFinite(value)&&value>=0&&value<=100000,matches:token=>token.startsWith(bound+'-'+axis+'-')||token.startsWith('['+property+':'),token:value=>'['+property+':'+(value===keyword?keyword:value+'px')+']'};}
@@ -405,7 +406,7 @@
    const hints=[...body.children].filter(el=>el.classList.contains('hint')&&!el.classList.contains('refused')&&!el.hasAttribute('role'));
    if(hints.length){const details=root.document.createElement('details'),summary=root.document.createElement('summary');details.className='inspector-disclosure';summary.textContent='Details';details.append(summary,...hints);body.append(details);}
   }
-  if(!typeActive())for(const control of groups.typography.querySelectorAll('input,select,button')){const name=control.getAttribute('aria-label')||control.textContent;if(/^(?:Shared (?:Page font$|Font (?:size|weight|slant)|Line height|Letter spacing)|Automatic shared line height$|Reset shared (?:font (?:family|size|weight|slant)|line height|letter spacing))/i.test(name)){control.disabled=true;control.title='Switch to a screen inside the selected edit range.';}}
+  if(!typeActive())for(const control of groups.typography.querySelectorAll('input,select,button')){const name=control.getAttribute('aria-label')||control.textContent;if(/^(?:Shared (?:Page font$|Font (?:size|weight|slant)|Line height|Letter spacing|Text decoration)|Automatic shared line height$|Reset shared (?:font (?:family|size|weight|slant)|line height|letter spacing|text decoration))/i.test(name)){control.disabled=true;control.title='Switch to a screen inside the selected edit range.';}}
   if(layoutOptions.children.length>1)groups.layout.append(layoutOptions);
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }

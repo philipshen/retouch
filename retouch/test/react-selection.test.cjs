@@ -340,3 +340,12 @@ test('inline font face changes override only their longhand and retain reset und
   assert.equal(change(changed,'md:',property,null,null,false,el('important')),'text-lg');
  }
 });
+
+test('shared decoration replaces only its selected scope and preserves color and style',()=>{
+ const source='underline decoration-red-500 decoration-wavy md:line-through hover:overline';
+ assert.equal(change(source,'md:','text-decoration-line','underline line-through'),'underline decoration-red-500 decoration-wavy hover:overline md:[text-decoration-line:underline_line-through]');
+ assert.equal(change(source,'md:','text-decoration-line',null),'underline decoration-red-500 decoration-wavy hover:overline');
+ assert.equal(change('!underline','md:','text-decoration-line','none'),'!underline md:![text-decoration-line:none]');
+ assert.throws(()=>change(source,'','text-decoration-line','underline; color:red'));
+ const el={style:{getPropertyPriority:()=>'',getPropertyValue:()=> 'overline'}};assert.equal(change('p-4','','text-decoration-line','underline',null,false,el),'p-4 ![text-decoration-line:underline]');el.style.getPropertyPriority=()=> 'important';assert.throws(()=>change('p-4','','text-decoration-line','none',null,false,el),/important inline/);assert.equal(change('p-4 !underline','','text-decoration-line',null,null,false,el),'p-4');
+});
