@@ -21094,3 +21094,28 @@ coverage for this helper. It does not measure automatic underline metrics or
 preserve source-relative units that CSSOM reports as resolved lengths. Full
 Figma parity, arbitrary-site coverage and trusted Homebrew distribution remain
 incomplete. No native rebuild or push.
+
+### Underline drag edge-case verification
+
+Expanded the shared underline drag browser probe to percentage values, zero
+thickness clamping, negative offsets, no-op drags, foreign property changes
+and incompatible units. React, Liquid and HTML passed percentage cases; HTML
+also passed the expanded pixel cases. Foreign changes cancel the gesture
+without source writes, preserve the outside property's value and restore the
+other selected layer. Different rendered units and automatic values refuse
+to start a drag. Undo/redo and exact style restoration remain covered.
+
+The initial mixed-unit fixture used an ordinary inline value overridden by an
+important source utility. It now sets the different unit through the editor
+and asserts the computed values before dragging. The probe also reselects the
+group after undo restores the single-layer selection that made that fixture
+edit. Final runs completed successfully.
+
+Evidence: `/tmp/retouch-underline-percent-react.log`,
+`/tmp/retouch-underline-percent-liquid.log`,
+`/tmp/retouch-underline-percent-html.log`,
+`/tmp/retouch-underline-bounds-html.log`.
+This pass changes browser verification only. Source-relative units resolved
+by CSSOM, automatic underline metrics, full Figma parity, arbitrary-site
+support and trusted Homebrew distribution remain incomplete. No native
+rebuild or push.
