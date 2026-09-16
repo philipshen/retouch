@@ -20801,3 +20801,29 @@ source undo and important inline guards. All 1,702 unit tests passed. Logs:
 The guard targets core typography properties; library operations and other
 fields need their own coverage. Full Figma fidelity, arbitrary-site compatibility
 and trusted Homebrew distribution remain incomplete. No native rebuild or push.
+
+### Mixed pixel typography spacing drags
+
+Shared React/Liquid and HTML line-height and letter-spacing fields now scrub
+mixed computed pixel values by a common delta. Normal letter spacing supplies a
+zero baseline; automatic line height remains unmeasured and refuses mixed
+pixel dragging rather than inventing a height. Existing percentage behavior is
+retained. Mixed edits preview per layer, clamp as a selection, cancel on Escape
+or foreign property changes, and commit in one source transaction.
+
+Validation: React/Chromium, Liquid/WebKit and HTML/WebKit passed mixed leading
+30px/50px and tracking normal/4px fixtures. Checks cover +10px previews and
+commits, exact style restoration on cancel, negative tracking, line-height zero
+clamping, narrow-screen fallback, exact source undo/redo, foreign-change
+cancellation and refusal to drag mixed automatic leading. React and HTML also
+passed the percentage-spacing regression suite. All 1,702 unit tests passed.
+Logs: `/tmp/retouch-mixed-pixel-spacing-react.log`,
+`/tmp/retouch-mixed-pixel-spacing-liquid.log`,
+`/tmp/retouch-mixed-pixel-spacing-html.log`,
+`/tmp/retouch-mixed-pixel-percent-regression-react.log`,
+`/tmp/retouch-mixed-pixel-percent-regression-html.log`,
+`/tmp/retouch-mixed-pixel-spacing-units.log`.
+
+Automatic line-height measurement, full Figma fidelity, arbitrary-site
+compatibility and trusted Homebrew distribution remain incomplete. No native
+rebuild or push.
