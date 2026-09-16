@@ -45,7 +45,7 @@
   }
   const observer=new win.MutationObserver(()=>{if(!disposed&&!pending)pending=win.requestAnimationFrame(()=>{pending=0;reconcile();});});
   observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['data-rt-scale','data-rt-group','data-rt-scale-set','data-rt-scale-member']});reconcile();
-  return {refresh(){reconcile();for(const entry of active.values())entry.control.refresh();},owns(el,property){return [...active.values()].some(entry=>entry.control.owns(el,property));},pause(elements){const releases=[...active.values()].filter(entry=>overlaps(entry.roots,elements)).map(entry=>entry.control.pause());return ()=>releases.forEach(release=>release());},dispose(){if(disposed)return;disposed=true;observer.disconnect();win.cancelAnimationFrame(pending);for(const entry of active.values())entry.control.dispose();active.clear();}};
+  return {refresh(){reconcile();for(const entry of active.values())entry.control.refresh();},manages(el){return [...active.values()].some(entry=>entry.control.manages(el));},owns(el,property){return [...active.values()].some(entry=>entry.control.owns(el,property));},pause(elements){const releases=[...active.values()].filter(entry=>overlaps(entry.roots,elements)).map(entry=>entry.control.pause());return ()=>releases.forEach(release=>release());},dispose(){if(disposed)return;disposed=true;observer.disconnect();win.cancelAnimationFrame(pending);for(const entry of active.values())entry.control.dispose();active.clear();}};
  }
  const api={parse,members,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupScaleBootstrap=api;
 })(typeof window==='object'?window:globalThis);

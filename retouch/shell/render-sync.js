@@ -114,6 +114,7 @@
         for(const el of existing)el.remove();for(const el of replacements)d.head.append(el);
         if(owner===null)node.removeAttribute('data-rt-style');else node.setAttribute('data-rt-style',owner);
       }
+      d[Symbol.for('retouch.group-scale.runtime')]?.refresh();
       d.dispatchEvent(new frame.contentWindow.CustomEvent('retouch:render',{detail:{source:'server'}}));return {ok:true,method:'styles',layers:plans.length};
     }finally{clearTimeout(timer);}
   }

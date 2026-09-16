@@ -70,3 +70,9 @@ test('group scaling validates its ratio and replaces only active scale utilities
  assert.equal(move.scaleClasses('rotate-12 scale-x-125 md:scale-50 hover:opacity-50','','2 -1'),'md:scale-50 hover:opacity-50 rotate-12 ![scale:2_-1]');
  assert.equal(move.scaleClasses('scale-75 md:scale-125 md:translate-x-2','md:','1.5 1.5'),'scale-75 md:translate-x-2 md:![scale:1.5_1.5]');
 });
+
+test('scaled layer movement reads bounded pixel offsets without saving rendered translation',()=>{
+ const values={},el={ownerDocument:{defaultView:{getComputedStyle:()=>({getPropertyValue:name=>values[name]||''})}}};
+ assert.deepEqual(move.scaleMovement(el),{x:0,y:0});values['--rt-scale-move-x']='23px';values['--rt-scale-move-y']='-9.5px';assert.deepEqual(move.scaleMovement(el),{x:23,y:-9.5});
+ for(const value of ['10%', 'calc(1px + 2%)','NaNpx','100001px']){values['--rt-scale-move-x']=value;assert.throws(()=>move.scaleMovement(el),/pixels/);}
+});

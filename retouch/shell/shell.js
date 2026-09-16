@@ -3227,7 +3227,7 @@ async function convertSVGToPath(info,toArrow=false,arrowPoints){
 }
 function groupMovementRoots(allowLayers=false){
  if(!sel?.info)return null;const roots=(sel.multiple||[sel.info]).map(info=>{const matches=matchingEls(info.id);return matches.length===1?matches[0]:null;});
- return roots.every(Boolean)&&(allowLayers||roots.some(el=>el.hasAttribute('data-rt-group')))?roots:null;
+ return roots.every(Boolean)&&(allowLayers||roots.some(el=>el.hasAttribute('data-rt-group'))||roots.every(el=>el?.ownerDocument[Symbol.for('retouch.group-scale.runtime')]?.manages?.(el)))?roots:null;
 }
 function groupNudgeShortcut(e){
  if(e.defaultPrevented||e.repeat||e.isComposing||e.ctrlKey||e.metaKey||e.altKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)||mode!=='edit'||editing||stopDrawing||panelTasks||sourceRequests||undoBusy||canvasPan.active||!sel?.info||document.querySelector('dialog[open]'))return false;
@@ -3543,7 +3543,7 @@ async function moveGroupOnCanvas(info,opener,gesture={}){
 }
 
 function groupMovementSection(info){
- const I=RetouchInspector,section=I.section('Group'),roots=groupMovementRoots(),outer=roots.filter(el=>!roots.some(parent=>parent!==el&&parent.contains(el))),key=roots.map(el=>el.getAttribute('data-rt')).sort().join(',');
+ const I=RetouchInspector,section=I.section(sel.multiple?.length||matchingEls(info.id)[0]?.hasAttribute('data-rt-group')?'Group':'Position'),roots=groupMovementRoots(),outer=roots.filter(el=>!roots.some(parent=>parent!==el&&parent.contains(el))),key=roots.map(el=>el.getAttribute('data-rt')).sort().join(',');
  const parent=RetouchGroupMove.parentBounds(roots);
  if(key!==groupAlignmentKey){groupAlignmentKey=key;groupAlignmentTarget=outer.length===1?'parent':'selection';}
  if(outer.length>1||parent){
@@ -3564,7 +3564,7 @@ function groupMovementSection(info){
   }
  }catch(error){I.note(section,error.message,'refused');}
  appendSelectionScaleControls(section,info,roots);
- const button=I.button(sel.multiple?.length?'Move selection on canvas':'Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag selected groups and layers on the canvas. Arrow keys move 1 px; Shift moves 10 px.';section.append(button);
+ const button=I.button(sel.multiple?.length?'Move selection on canvas':matchingEls(info.id)[0]?.hasAttribute('data-rt-group')?'Move group on canvas':'Move layer on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag selected groups and layers on the canvas. Arrow keys move 1 px; Shift moves 10 px.';section.append(button);
  if(!selectionEditRangeActive()){for(const control of section.querySelectorAll('input,button')){control.disabled=true;control.title='Preview the selected edit range to transform this selection.';}I.note(section,'Preview the selected edit range to move, align, space, or scale this selection.');}
  return section;
 }
@@ -3653,7 +3653,10 @@ async function writeGroupMove({info,roots,selectionIds,members,infos,scope,width
       const dx=scaling?scaling.expected[0].x-(bounds.left+(members[0].rect.x-bounds.left)*factor):deltas[0].x,dy=scaling?scaling.expected[0].y-(bounds.top+(members[0].rect.y-bounds.top)*factor):deltas[0].y;
       return await writeHTMLGroupScale(info,factor*100,scaling?[dx/bounds.width,dy/bounds.height]:[0,0],scaling?[0,0]:[dx,dy]);
      }
-     const moving=members.map((item,i)=>({item,delta:deltas[i],info:infos[i]})).filter(({delta})=>scaling||delta.x!==0||delta.y!==0);if(!moving.length)return;const writeInfos=moving.map(entry=>entry.info),changesById=Object.fromEntries(moving.map(({item,delta})=>[item.id,{translate:RetouchGroupMove.translation(item.translate,RetouchGroupMove.localDelta(item.matrix,delta)),...(scaling?{scale:scaling.scales[item.id]}:{})}])),classesById=Object.fromEntries(writeInfos.map(item=>[item.id,scaling?RetouchGroupMove.scaleClasses(RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate),scope,scaling.scales[item.id]):RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate)])),first=writeInfos[0],multi=writeInfos.length>1;
+     const moving=members.map((item,i)=>({item,delta:deltas[i],info:infos[i]})).filter(({delta})=>scaling||delta.x!==0||delta.y!==0);if(!moving.length)return;const writeInfos=moving.map(entry=>entry.info),changesById=Object.fromEntries(moving.map(({item,delta})=>{
+      if(css&&!scaling&&item.el.ownerDocument[Symbol.for('retouch.group-scale.runtime')]?.manages?.(item.el)){const prior=RetouchGroupMove.scaleMovement(item.el);return [item.id,{'--rt-scale-move-x':(prior.x+delta.x)+'px','--rt-scale-move-y':(prior.y+delta.y)+'px'}];}
+      return [item.id,{translate:RetouchGroupMove.translation(item.translate,RetouchGroupMove.localDelta(item.matrix,delta)),...(scaling?{scale:scaling.scales[item.id]}:{})}];
+     })),classesById=css?{}:Object.fromEntries(writeInfos.map(item=>[item.id,scaling?RetouchGroupMove.scaleClasses(RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate),scope,scaling.scales[item.id]):RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate)])),first=writeInfos[0],multi=writeInfos.length>1;
      busyPanel(true);busy=true;
      const result=await api('POST','/rt/__api/op',{type:css?(multi?'setCSSSelection':'setCSS'):(multi?'setClassesSelection':'setClasses'),id:first.id,fileHash:first.hash,...(multi?{ids:writeInfos.map(item=>item.id)}:{}),...(css?{width,...(multi?{changesById}:{changes:changesById[first.id]})}:multi?{classesById,...selectionSourceContexts(writeInfos)}:{classes:classesById[first.id],context:first.context})});
      if(!result?.ok)throw Error(result?.reason||result?.error||'Could not move group.');

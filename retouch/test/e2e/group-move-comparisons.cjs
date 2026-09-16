@@ -47,6 +47,16 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
   await page.getByRole('treeitem',{name:'div · Group',exact:true}).click({button:'right'});await page.getByRole('menu',{name:'Canvas actions',exact:true}).locator('[data-action-id="layer-removeFrame"]').click();await wait(()=>read()!==beforeUngroup);await settled();const released=read();await check(false);assert.equal(await page.getByRole('treeitem',{selected:true}).count(),2);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeUngroup);await settled();await check(true);
   await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===released);await settled();await check(false);
+  if(process.env.RT_E2E_RELEASED_MOVE){
+   await page.getByRole('treeitem',{name:/^h1 ·/}).first().click();await settled();
+   const checkMove=async moved=>{for(let f=0;f<frames.length;f++){const active=!scoped||f===0||f===3;await wait(async()=>{const boxes=await measure(frames[f]);return boxes.length===expected[f].length&&boxes.every((r,i)=>r.every((n,j)=>Math.abs(n-expected[f][i][j]-(moved&&active&&i===0&&j===0?23:0))<.1));});}};
+   const position=page.getByLabel('Group X (px)',{exact:true});await position.fill(String(Number(await position.inputValue())+23));await position.press('Enter');await wait(()=>read()!==released);await settled();const independentlyMoved=read();await checkMove(true);
+   assert.ok(independentlyMoved.includes('--rt-scale-move-x'));assert.equal(await page.getByRole('treeitem',{name:/^h1 ·/}).first().getAttribute('aria-selected'),'true');
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===released);await settled();await checkMove(false);
+   await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===independentlyMoved);await settled();await checkMove(true);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===released);await settled();await checkMove(false);
+   console.log('RELEASED LAYER INDEPENDENT MOVE PASS',kind,{scoped});
+  }
   if(process.env.RT_E2E_RELEASED_COPY){
    const heading=page.getByRole('treeitem',{name:/^h1 ·/}).first();await heading.click();await settled();await heading.click({button:'right'});
    await page.getByRole('menu',{name:'Canvas actions',exact:true}).getByRole('menuitem',{name:'Duplicate layer',exact:true}).click();await wait(()=>read()!==released);await settled();const copied=read(),copiedBoxes=[];

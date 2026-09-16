@@ -22838,3 +22838,40 @@ were needed this turn. Structural operations use the existing document reload
 path. Multi-selection copy history, independent released-layer transforms, and
 arbitrary reparenting still need broader coverage/implementation. Full parity
 and trusted desktop distribution remain incomplete. No push.
+
+### Independent movement of released scaled layers (2026-09-16)
+
+Released HTML scale members now expose position and canvas movement controls.
+The shared movement path saves bounded pixel offsets in managed CSS custom
+properties (--rt-scale-move-x/y), separately from the runtime-owned translation.
+The saved runtime applies these offsets after computing shared scale geometry,
+so moving one released root does not change its siblings' scale anchor. Managed
+CSS retains responsive ranges and exact source history. CSS preview sync refreshes
+the scale runtime synchronously after replacing styles in each document.
+The runtime exposes which rendered members it manages even when the effective
+scale factor is one. Older runtimes without that method are feature-detected.
+
+The saved-page regression failed before implementation. Chromium and WebKit now
+verify a 23px/-9px member move, a desktop x override of 41px, unchanged siblings,
+and reloads at 390/768/1100/1440/523px. Live editor tests move a released heading
+through its position field, verify all four previews, exact undo/redo, and
+selection. Chromium covers base scope; WebKit covers min-1100 scope. Existing
+copy/delete history checks also pass. Full HTML scale tests pass corner/edge/
+center pointer and keyboard gestures, Escape, mixed selections, and history.
+All 1,775 unit tests pass, including bounded pixel offset parsing.
+
+Evidence: /tmp/retouch-independent-move-before.log,
+/tmp/retouch-independent-move-saved.log,
+/tmp/retouch-independent-move-saved-webkit.log,
+/tmp/retouch-independent-move-editor.log,
+/tmp/retouch-independent-move-editor-webkit.log,
+/tmp/retouch-independent-move-gestures.log,
+/tmp/retouch-independent-move-units-final.log.
+
+Offsets currently remain fixed in screen pixels when the shared group factor
+changes; complete transform composition and independent scale/rotation are not
+implemented. Nested descendants outside the runtime's direct rendered members,
+arbitrary reparenting, runtime version migration, React/Liquid parity, and
+trusted desktop distribution remain unfinished. The new canvas-move entry point
+uses the shared gesture implementation; the new independent-move browser case
+exercises position fields, not a separate pointer-drag case. No push.
