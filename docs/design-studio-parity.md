@@ -23232,3 +23232,33 @@ adapter geometry evidence above used both flags. Next work is Liquid member
 class snapshots and source-operation ownership, followed by editor/history
 integration and React persistence. Full parity and trusted desktop distribution
 remain unfinished. No push.
+
+### Liquid independent-child transforms and shared composition
+
+The Liquid source prototype now snapshots literal independent movement/scale
+classes before subsequent group edits. Added a class writer that preserves
+unrelated classes and supports the base scope and explicit minimum pixel widths.
+The snapshot reader accumulates range inheritance and rejects conflicting,
+conditional or unresolved scale-property tokens. Dynamic member class strings
+and inline independent transform declarations remain unsupported in the source
+prototype. The existing HTML composition algorithm is now shared by both source
+planners, including ordered snapshots and combining consecutive group steps.
+
+The saved Liquid browser test now uses actual Tailwind compilation and the
+Liquid adapter's setClasses operation. Two rendered instances are checked through
+group scaling, child movement/scaling with a desktop override, another base-range
+group scale, another child move, and another group scale. Chromium and WebKit
+passed at 390/768/1100/1440/523px with reloads. The HTML editor composition test
+also passed after extracting shared metadata logic, including exact undo/redo
+and retained comparison documents. All 1,787 unit tests passed. Final cleanup
+removed an unused import and normalized indentation; git diff --check passed.
+Evidence: /tmp/retouch-liquid-member-browser.log,
+/tmp/retouch-liquid-member-webkit.log,
+/tmp/retouch-liquid-shared-html-regression.log,
+/tmp/retouch-liquid-member-units.log.
+
+Liquid scaling remains a source prototype, not an advertised editor capability.
+Copying and ungrouping need persistent membership handling, followed by editor
+runtime/history integration. The known React/Liquid editor comparison failure
+has not yet been fixed by registration of this path. Full Figma parity, arbitrary
+site coverage and trusted desktop distribution remain unfinished. No push.

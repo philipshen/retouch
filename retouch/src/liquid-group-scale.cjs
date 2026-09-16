@@ -1,9 +1,18 @@
 'use strict';
 // Source planner for Liquid group scaling. Editor capability remains gated until
 // member editing, copying and ungrouping preserve the saved runtime ownership.
-const MagicString=require('magic-string'),liquid=require('./adapters/liquid.cjs'),runtime=require('./group-scale-runtime.cjs'),{parse}=require('../runtime/group-scale-bootstrap.js');
+const MagicString=require('magic-string'),liquid=require('./adapters/liquid.cjs'),runtime=require('./group-scale-runtime.cjs');
 const attr=(el,name)=>el.attributes?.find(a=>a.name===name),value=(el,name)=>{const a=attr(el,name);if(a?.dynamic)throw Error('Resolve dynamic scale attributes first.');return a?.value;};
 const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+function independentStyles(members){
+ const snapshots=Object.create(null),classes=require('./liquid-classes.cjs');
+ for(const member of members){
+  if(/--rt-scale-/.test(value(member,'style')||''))throw Error('Resolve inline independent transforms before composing the group.');
+  const literal=classes.decode(classes.clean(member.classAttr?.value||''));if(/\{[%{]/.test(literal))throw Error('Resolve dynamic member classes before composing the group.');
+  const ranges=require('./group-scale-classes.cjs').snapshot(literal);if(Object.keys(ranges).length)snapshots[value(member,'data-rt-scale-member')??member.id]=ranges;
+ }
+ return snapshots;
+}
 function plan(resolved,op){
  try{
   if(op.fileHash!==resolved.hash)throw Error('The file changed. Re-select the group.');
@@ -16,12 +25,8 @@ function plan(resolved,op){
   if(elements.some(e=>e!==group&&attr(e,'data-rt-scale')&&(inside(e)||e.tagStart<group.tagStart&&e.closeEnd>group.closeEnd)))throw Error('Overlapping responsive scale groups are not supported yet.');
   if(/data-rt-scale-set\s*=/.test(source))throw Error('Released scale sets need ownership mapping before Liquid group edits.');
   const stored=value(group,'data-rt-scale'),decode=text=>require('parse5').parseFragment('<textarea>'+text.replace(/</g,'&lt;')+'</textarea>').childNodes[0].childNodes[0]?.value||'',prior=stored==null?null:JSON.parse(decode(stored));
-  if(prior?.steps?.length)throw Error('Ordered member transforms need Liquid class snapshots before editing.');
-  const ranges=prior?parse(JSON.stringify(prior)):[],values=Object.fromEntries(ranges),offsets={...prior?.offsets},pixels={...prior?.pixels};let factor=1,offset=[0,0],move=[0,0];
-  for(const [width,next]of ranges)if(width<=op.width){factor=next;offset=offsets[width]||[0,0];move=pixels[width]||[0,0];}
   const shift=op.offset??[0,0],delta=op.move??[0,0];if([shift,delta].some(pair=>!Array.isArray(pair)||pair.length!==2||pair.some(n=>!Number.isFinite(n)||Math.abs(n)>10000)))throw Error('Choose finite group offsets.');
-  values[op.width]=factor*op.factor;offsets[op.width]=offset.map((n,i)=>n+factor*shift[i]);pixels[op.width]=move.map((n,i)=>n+delta[i]);
-  const data={version:1,ranges:values,offsets,pixels};parse(JSON.stringify(data));
+  const data=JSON.parse(require('./group-scale-metadata.cjs').compose(prior,op,()=>independentStyles(members)));
   const out=new MagicString(source),set=(el,name,val)=>{const a=attr(el,name),text=name+'="'+escape(val)+'"';if(a)out.overwrite(a.attrStart,a.attrEnd,text);else out.appendLeft(el.nameEnd,' '+text);};
   set(group,'data-rt-scale',JSON.stringify(data));const seen=new Set();
   for(const member of members){const id=value(member,'data-rt-scale-member')??member.id;if(!/^[a-zA-Z0-9_-]{1,80}$/.test(id)||seen.has(id))throw Error('Group members need distinct persistent identities.');seen.add(id);set(member,'data-rt-scale-member',id);}
