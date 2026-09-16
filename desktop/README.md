@@ -340,6 +340,13 @@ node desktop/scripts/build.cjs
 
 Click **Open project…** and choose a folder. Select **Edit HTML files** for a
 static web directory, or **Run startup command** for your usual app command.
+For a folder without a saved command, the dialog suggests its `dev` script,
+or `start` when no nonempty `dev` script exists. It uses the declared npm,
+pnpm, Yarn, or Bun package manager, otherwise the nearest unambiguous lockfile
+within the checkout, and defaults to npm when neither is present. Conflicting
+lockfiles or unsupported declarations leave the command blank. Suggestions stay
+editable, and a previously saved command takes precedence. Selecting the folder
+only reads metadata; scripts run after **Start project**.
 Folders with `index.html`/`index.htm` and no `package.json` default to HTML mode;
 the choice is always available. HTML mode starts the bundled server on an
 available port and opens its editor automatically, with no command required.

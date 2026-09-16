@@ -154,6 +154,53 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         return !fm.fileExists(atPath: folder.appendingPathComponent("package.json").path)
             && ["index.html", "index.htm"].contains { fm.fileExists(atPath: folder.appendingPathComponent($0).path) }
     }
+    // Read project metadata only. The suggested command is reviewed in the
+    // startup dialog; opening a folder never executes a package script.
+    static func suggestedStartupCommand(_ folder: URL) -> String? {
+        guard let data = try? Data(contentsOf: folder.appendingPathComponent("package.json")),
+              let manifest = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let scripts = manifest["scripts"] as? [String: Any],
+              let script = ["dev", "start"].first(where: { key in
+                  guard let value = scripts[key] as? String else { return false }
+                  return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+              }) else { return nil }
+        let supported = ["npm", "pnpm", "yarn", "bun"]
+        var manager: String?
+        // A declared package manager is authoritative. Do not guess around an
+        // unsupported declaration or interpolate arbitrary manifest text.
+        if let declared = manifest["packageManager"] as? String {
+            let name = declared.components(separatedBy: "@")[0]
+            guard supported.contains(name) else { return nil }
+            manager = name
+        }
+        if manager == nil {
+            var directory = folder.standardizedFileURL
+            var boundary = directory, ancestor = directory
+            while true {
+                if FileManager.default.fileExists(atPath: ancestor.appendingPathComponent(".git").path) { boundary = ancestor; break }
+                if ancestor.path == "/" || ancestor.path.isEmpty { break }
+                let parent = ancestor.deletingLastPathComponent()
+                if parent.path == ancestor.path { break }
+                ancestor = parent
+            }
+            while true {
+                let locks: [(String, [String])] = [
+                    ("npm", ["package-lock.json", "npm-shrinkwrap.json"]),
+                    ("pnpm", ["pnpm-lock.yaml"]), ("yarn", ["yarn.lock"]),
+                    ("bun", ["bun.lock", "bun.lockb"])
+                ]
+                let found = locks.filter { entry in entry.1.contains { FileManager.default.fileExists(atPath: directory.appendingPathComponent($0).path) } }.map { $0.0 }
+                if found.count > 1 { return nil }
+                if let first = found.first { manager = first; break }
+                // An ancestor lockfile is relevant only within this Git checkout.
+                if directory.path == boundary.path { break }
+                let parent = directory.deletingLastPathComponent()
+                if parent.path == directory.path { break }
+                directory = parent
+            }
+        }
+        return (manager ?? "npm") + " run " + script
+    }
     @objc private func projectModeChanged(_ sender: NSPopUpButton) {
         if let input = sender.superview?.subviews.first(where: { $0 is NSTextField }) as? NSTextField {
             input.isEnabled = sender.indexOfSelectedItem == 0
@@ -185,7 +232,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         alert.informativeText = "Choose HTML files to edit a static web folder, or enter your usual startup command for an app. The editor opens automatically."
         let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 480, height: 26))
         let key = "projectCommand:" + folder.path
-        input.stringValue = UserDefaults.standard.string(forKey: key) ?? ""
+        input.stringValue = UserDefaults.standard.string(forKey: key) ?? Self.suggestedStartupCommand(folder) ?? ""
         input.placeholderString = "npm run dev, make internal, or ./start.sh"
         input.setAccessibilityLabel("Project startup command")
         let mode = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 480, height: 28))
@@ -454,6 +501,49 @@ if CommandLine.arguments.contains("--self-test") {
         precondition(done.wait(timeout: .now() + 10) == .success)
         print("PASS native discovery health probe against running editor")
     }
+    let startupRoot = FileManager.default.temporaryDirectory.appendingPathComponent("retouch-startup-" + UUID().uuidString)
+    try! FileManager.default.createDirectory(at: startupRoot, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: startupRoot) }
+    try! FileManager.default.createDirectory(at: startupRoot.appendingPathComponent(".git"), withIntermediateDirectories: true)
+    let startupManifest = startupRoot.appendingPathComponent("package.json")
+    func manifest(_ value: [String: Any]) {
+        try! JSONSerialization.data(withJSONObject: value).write(to: startupManifest)
+    }
+    precondition(Studio.suggestedStartupCommand(startupRoot) == nil)
+    manifest(["scripts": ["dev": "vite", "start": "vite preview"]])
+    precondition(Studio.suggestedStartupCommand(startupRoot) == "npm run dev")
+    for manager in ["npm", "pnpm", "yarn", "bun"] {
+        manifest(["scripts": ["dev": "do not execute this"], "packageManager": manager + "@1.0.0"])
+        precondition(Studio.suggestedStartupCommand(startupRoot) == manager + " run dev")
+    }
+    manifest(["scripts": ["dev": "  ", "start": "node app.js"]])
+    precondition(Studio.suggestedStartupCommand(startupRoot) == "npm run start")
+    manifest(["scripts": ["build": "vite build"]])
+    precondition(Studio.suggestedStartupCommand(startupRoot) == nil)
+    manifest(["scripts": ["dev": "vite"], "packageManager": "evil; echo hello"])
+    precondition(Studio.suggestedStartupCommand(startupRoot) == nil)
+    manifest(["scripts": ["dev": "vite"]])
+    let pnpmLock = startupRoot.appendingPathComponent("pnpm-lock.yaml")
+    try! "".write(to: pnpmLock, atomically: true, encoding: .utf8)
+    precondition(Studio.suggestedStartupCommand(startupRoot) == "pnpm run dev")
+    let child = startupRoot.appendingPathComponent("apps/site")
+    try! FileManager.default.createDirectory(at: child, withIntermediateDirectories: true)
+    try! Data(contentsOf: startupManifest).write(to: child.appendingPathComponent("package.json"))
+    precondition(Studio.suggestedStartupCommand(child) == "pnpm run dev")
+    // Without a checkout boundary, do not adopt arbitrary ancestor lockfiles.
+    try! FileManager.default.removeItem(at: startupRoot.appendingPathComponent(".git"))
+    precondition(Studio.suggestedStartupCommand(child) == "npm run dev")
+    try! FileManager.default.createDirectory(at: startupRoot.appendingPathComponent(".git"), withIntermediateDirectories: true)
+    // A nested checkout does not inherit the parent's package manager.
+    try! "gitdir: elsewhere".write(to: child.appendingPathComponent(".git"), atomically: true, encoding: .utf8)
+    precondition(Studio.suggestedStartupCommand(child) == "npm run dev")
+    try! "".write(to: startupRoot.appendingPathComponent("yarn.lock"), atomically: true, encoding: .utf8)
+    precondition(Studio.suggestedStartupCommand(startupRoot) == nil)
+    manifest(["scripts": ["dev": "vite"], "packageManager": "bun@1.2.0"])
+    precondition(Studio.suggestedStartupCommand(startupRoot) == "bun run dev")
+    try! "broken JSON".write(to: startupManifest, atomically: true, encoding: .utf8)
+    precondition(Studio.suggestedStartupCommand(startupRoot) == nil)
+    print("PASS project startup suggestions, package managers, monorepo boundaries and ambiguous metadata")
     var lines = Studio.StartupLines()
     precondition(lines.append("Local: http://local").isEmpty)
     precondition(lines.append("host:3496\n").first?.port == 3496)
