@@ -3519,7 +3519,7 @@ function transformReactLayer(info,target,action,opener,initial=null){
 async function refreshGroupMove(infos,before){
  if(infos.every(info=>info.cssAuthoring)){await RetouchRenderSync.syncCSS({frame:iframe,entries:infos.map(info=>({id:info.id,rules:info.cssRules,texts:info.cssRuleTexts}))});await window.RetouchComparisons?.syncCSS(infos);}
  else if(infos.every(info=>info.contextSelection&&info.classSourceLiteral))await refreshLiteralLiquidClasses(infos,before);
- else await refreshWrittenElement(infos[0],el=>classSelectionMatches(infos,el.ownerDocument));
+ else await refreshWrittenElement(infos[0],el=>classSelectionMatches(infos,el.ownerDocument),{classSource:true});
 }
 async function moveGroupOnCanvas(info,opener,gesture={}){
  if(!gesture.prepareOnly)stopDrawing?.();if(panelTasks||sourceRequests||undoBusy||editing||sel?.info!==info)return;
@@ -3634,7 +3634,7 @@ async function writeGroupMove({info,roots,selectionIds,members,infos,scope,width
      if(!result?.ok)throw Error(result?.reason||result?.error||'Could not move group.');
      const updated=result.selection||[result.element],before=Object.fromEntries(writeInfos.map(item=>[item.id,item.className])),after=Object.fromEntries(updated.map(item=>[item.id,item.className]));
      if(result.undoId)editorHistory.record({type:'moveGroup',id:first.id,groupId:info.id,selectionIds,childIds:writeInfos.map(item=>item.id),classesBefore:before,classesAfter:after,undoId:result.undoId});
-     await refreshGroupMove(updated,before);await restoreLayerSelection(selectionIds);if(sel)renderPanel();let settled=false;for(let attempt=0;attempt<50;attempt++){settled=members.every((item,i)=>{const el=matchingEls(item.id)[0],r=el?.getBoundingClientRect();const expected=scaling?.expected[i]||{x:item.rect.x+deltas[i].x,y:item.rect.y+deltas[i].y,width:item.rect.width,height:item.rect.height};return r&&['x','y','width','height'].every(key=>Math.abs(r[key]-expected[key])<.6);});if(settled)break;await new Promise(resolve=>setTimeout(resolve,100));}if(!settled)throw Error('Group changes saved, but the canvas did not match. Check style overrides.');toast(scaling?'Selection scaled':'Group moved','ok');
+     try{await refreshGroupMove(updated,before);}finally{await restoreLayerSelection(selectionIds);if(sel)renderPanel();}let settled=false;for(let attempt=0;attempt<50;attempt++){settled=members.every((item,i)=>{const el=matchingEls(item.id)[0],r=el?.getBoundingClientRect();const expected=scaling?.expected[i]||{x:item.rect.x+deltas[i].x,y:item.rect.y+deltas[i].y,width:item.rect.width,height:item.rect.height};return r&&['x','y','width','height'].every(key=>Math.abs(r[key]-expected[key])<.6);});if(settled)break;await new Promise(resolve=>setTimeout(resolve,100));}if(!settled)throw Error('Group changes saved, but the canvas did not match. Check style overrides.');toast(scaling?'Selection scaled':'Group moved','ok');
     }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
 
@@ -3915,7 +3915,7 @@ async function restoreHistory(direction,op) {
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentPropSelection'){await refreshComponentSelection(op.selectionIds);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
-    if(op.type==='moveGroup'){const results=await Promise.all(op.childIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(r=>r?.ok))throw Error('The group contents no longer resolve.');await refreshGroupMove(results.map(r=>r.element),direction==='undo'?op.classesAfter:op.classesBefore);await restoreLayerSelection(op.selectionIds||[op.groupId]);if(sel)renderPanel();return result;}
+    if(op.type==='moveGroup'){const results=await Promise.all(op.childIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(r=>r?.ok))throw Error('The group contents no longer resolve.');try{await refreshGroupMove(results.map(r=>r.element),direction==='undo'?op.classesAfter:op.classesBefore);}finally{await restoreLayerSelection(op.selectionIds||[op.groupId]);if(sel)renderPanel();}return result;}
     if(op.type==='setLiquidClassesSelection'){const results=await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(item=>item?.ok&&item.element.classSourceLiteral))throw Error('The literal class selection no longer resolves.');await refreshLiteralLiquidClasses(results.map(item=>item.element),direction==='undo'?op.classesAfter:op.classesBefore);await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='collectionSelection'){await reloadFrame();await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     const fresh = await api('GET', resolveUrl(op.id, op.context));

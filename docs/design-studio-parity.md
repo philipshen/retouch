@@ -22518,3 +22518,31 @@ Color/effect/variable comparison flows share the corrected dispatch but were
 not independently exercised in this continuation. Framework-specific HMR
 limits, full Figma parity, arbitrary-site support, and trusted Homebrew
 release remain unfinished. No desktop rebuild or push in this continuation.
+
+### Group movement across comparison screens (2026-09-16)
+
+Class-backed group movement now synchronizes comparison previews through the
+same revision-aware class/stylesheet refresh as direct property edits. Group
+move and history operations restore their selection in a finally block, so a
+comparison refresh failure cannot skip selection recovery after a saved edit.
+HTML and literal Liquid retain their existing synchronization paths.
+
+Added a grouped-layer comparison browser scenario: move the group 23px in X,
+verify both members and an unchanged outside sibling in the main canvas and
+Phone/Tablet/Desktop, undo to exact source and original geometry, redo to exact
+source and moved geometry, and retain every preview document. React uses a
+client page and aborts the first Tablet stylesheet revalidation, requiring a
+visible retry and successful recovery. This failed before the fix because the
+retry never appeared. The scenario passes for React in Chromium 145/WebKit 26
+and for HTML/Liquid in Chromium. All 1,763 unit tests pass.
+
+Evidence: /tmp/retouch-group-comparisons-before.log,
+/tmp/retouch-group-comparisons.log, /tmp/retouch-group-comparisons-webkit.log,
+/tmp/retouch-group-comparisons-html.log,
+/tmp/retouch-group-comparisons-liquid.log,
+/tmp/retouch-group-comparisons-units.log.
+
+The scenario covers base-range translation; it does not independently prove
+all responsive group scaling/spacing combinations. Full Figma parity,
+arbitrary-site support, and trusted notarized Homebrew distribution remain
+unfinished. No push or desktop rebuild in this continuation.
