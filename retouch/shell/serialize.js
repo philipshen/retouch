@@ -41,6 +41,7 @@
         var kept={t:'keep',id:id};
         if(n.__rtBlockTag&&n.__rtBlockTag!==(before&&before.tag))kept.tag=n.__rtBlockTag;
         if(/^(UL|OL|LI)$/.test(n.tagName)&&n.__rtListMarker&&n.__rtListMarker!==before.marker)kept.marker=n.__rtListMarker;
+        if(/^(UL|OL)$/.test(n.tagName)&&n.getAttribute('data-retouch-list-spacing')!==(before.listSpacing??null))kept.listSpacing=n.getAttribute('data-retouch-list-spacing')===null?null:Number(n.getAttribute('data-retouch-list-spacing'));
         if(n.tagName==='OL'&&Object.prototype.hasOwnProperty.call(n,'__rtListStart')&&n.getAttribute('start')!==before.start)kept.start=n.__rtListStart;
         if(n.__rtParagraphInline)kept.paragraph='inline';else if(Object.prototype.hasOwnProperty.call(n,'__rtParagraphSpacing'))kept.spacing=n.__rtParagraphSpacing;
         if(!unchanged||n.__rtParagraphInline)kept.children=serializeChildren(n,snapshot);
@@ -48,7 +49,7 @@
         append(kept,block(n));
         continue;
       }
-      if(n.tagName==='SPAN'&&n.getAttribute&&n.getAttribute('data-retouch-paragraph')!==null){append({t:'paragraph',children:serializeChildren(n,snapshot),...(n.style?.marginBlockStart==='0px'&&/^\d+(?:\.\d+)?px$/.test(n.style.marginBlockEnd)?{spacing:parseFloat(n.style.marginBlockEnd)}:{})},true);continue;}
+      if(n.tagName==='SPAN'&&n.getAttribute&&n.getAttribute('data-retouch-paragraph')!==null){append({t:'paragraph',children:serializeChildren(n,snapshot),...(n.style?.marginBlockStart==='0px'&&/^\d+(?:\.\d+)?(?:e-\d+)?px$/.test(n.style.marginBlockEnd)?{spacing:parseFloat(n.style.marginBlockEnd)}:{})},true);continue;}
       // Only validated range styles can create new styled spans.
       // Existing attributed nodes still use the source-preserving keep path above.
       if (n.tagName === 'SPAN' && n.style) {
@@ -77,9 +78,10 @@
         continue;
       }
       if(/^(UL|OL|LI)$/.test(n.tagName)||n.tagName==='P'&&n.__rtBlockTag==='p'){
-        var list={t:'block',tag:n.tagName.toLowerCase(),children:serializeChildren(n,snapshot)};if(['P','LI'].includes(n.tagName)&&n.style?.marginBlockStart==='0px'&&/^\d+(?:\.\d+)?px$/.test(n.style.marginBlockEnd))list.spacing=parseFloat(n.style.marginBlockEnd);
+        var list={t:'block',tag:n.tagName.toLowerCase(),children:serializeChildren(n,snapshot)};if(['P','LI'].includes(n.tagName)&&n.style?.marginBlockStart==='0px'&&/^\d+(?:\.\d+)?(?:e-\d+)?px$/.test(n.style.marginBlockEnd))list.spacing=parseFloat(n.style.marginBlockEnd);
         if(/^(UL|OL)$/.test(n.tagName)&&n.style&&['disc','decimal','lower-alpha','lower-roman'].includes(n.style.listStyleType))list.marker=n.style.listStyleType;
         if(n.tagName==='LI'&&n.style&&['none','inherit'].includes(n.style.listStyleType))list.marker=n.style.listStyleType;
+        if(/^(UL|OL)$/.test(n.tagName)&&n.getAttribute('data-retouch-list-spacing')!==null)list.listSpacing=Number(n.getAttribute('data-retouch-list-spacing'));
         if(snapshot&&n.__rtListTemplate)list.template=n.__rtListTemplate;
         if(n.tagName==='OL'&&n.getAttribute('start')!==null){
           var start=Number(n.getAttribute('start'));

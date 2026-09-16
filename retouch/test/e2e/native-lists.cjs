@@ -9,6 +9,7 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  const target=app.locator('main > div.type-editorial');
  await target.click();await wait(async()=>await target.getAttribute('contenteditable')==='true');
  const typography=page.locator('#panelBody > [data-section=typography]');assert.equal(await typography.count(),1,'active DIV text editing has a primary Typography section');assert.equal(await typography.locator('[aria-label="Finish text editing"]').count(),1);assert.equal(await page.locator('.inspector-more [data-range-editing]').count(),0);
+ if(process.env.RT_E2E_LIST_SPACING_PREFERENCE){await require('./list-spacing-preference.cjs')({page,target,read,wait,settled,states,kind});return;}
  if(process.env.RT_E2E_LIST_SPACING){await require('./list-spacing.cjs')({page,target,read,wait,settled,states,kind});return;}
  if(process.env.RT_E2E_LIST_START){await require('./list-start.cjs')({page,target,read,wait,settled,states,kind});return;}
  if(process.env.RT_E2E_LIST_PREFIX){await require('./list-prefix.cjs')({page,target,read,wait,settled,states,kind});return;}

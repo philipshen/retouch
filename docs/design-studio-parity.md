@@ -21963,3 +21963,37 @@ list independently of its zero trailing margin. Mixed spacing, every source
 cascade, arbitrary list reordering and responsive/shared controls remain
 incomplete. Full Figma parity, arbitrary-site support and trusted Homebrew
 distribution remain open. No desktop rebuild or push here.
+
+## Persistent single-item list spacing (2026-09-16)
+
+The preceding turn was progress: 00a381d9 corrected spacing during indentation.
+This continuation gives each edited list its own persisted spacing preference,
+independent of its final item's zero margin. List spacing is now editable with
+one item, survives save/reopen and joining down to one item, and supplies the gap
+when another item is added. Nested lists retain their own preference through
+indent/outdent operations instead of falling back to the outer list's spacing.
+
+The bounded listSpacing source field is stored as a literal
+`data-retouch-list-spacing` attribute on ul/ol in React, HTML and Liquid. Existing
+item margins continue to render the actual site spacing. Serializers distinguish
+list preference changes from child-content changes; copied list containers carry
+the preference. Patches preserve other source bytes and refuse dynamic,
+duplicate or spread-controlled attributes. Numeric source formatting also
+accepts scientific notation for tiny valid spacing values instead of refusing
+those values after the UI accepts them.
+
+Validation: all 1,747 unit tests passed. New source tests cover literal attribute
+insertion/update/removal, bounds, dynamic/spread/template refusal, protocol
+placement, and unchanged children/attributes on single-item lists across the
+three adapters. HTML/React Chromium 145 and Liquid WebKit 26 browser flows pass
+21 px single-item save/reopen, added-item inheritance, independent 7.5 px nested
+preferences after indent/outdent/join, zero trailing margins, local history and
+exact source undo/redo. The prior HTML multi-item/nested spacing flow also passes.
+Evidence: /tmp/retouch-list-spacing-preference-{html,react,liquid,units,targeted,
+regression}.log.
+
+The preference guides Retouch editing; arbitrary application-generated new list
+items outside Retouch are not automatically normalized. Responsive/shared
+spacing, all mixed/cascade layouts and dynamic-source bindings remain incomplete.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain unfinished. No desktop rebuild or push here.

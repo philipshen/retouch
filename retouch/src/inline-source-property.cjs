@@ -18,7 +18,7 @@ function css(value,marker,property='list-style-type'){
  const relevant=part=>(property==='display'?/^\s*(?:display|all)\s*:/i:property.startsWith('margin-')?/^\s*(?:margin(?:-[a-z-]+)?|all)\s*:/i:/^\s*(?:list-style(?:-type)?|all)\s*:/i).test(clean(part));
  const important=parts.some(part=>relevant(part)&&/!\s*important\s*;?\s*$/i.test(clean(part)));
  if(property.startsWith('margin-')){
-  const canonical=part=>/^ ?margin-block-(?:start|end): \d+(?:\.\d+)?px(?: !important)?;$/.test(part);
+  const canonical=part=>/^ ?margin-block-(?:start|end): \d+(?:\.\d+)?(?:e-\d+)?px(?: !important)?;$/.test(part);
   const own=parts.findLastIndex(part=>canonical(part)&&part.trimStart().startsWith(property+':'));
   if(own>=0&&parts.slice(own+1).every(part=>!part.trim()||canonical(part))){parts[own]=(parts[own].startsWith(' ')?' ':'')+property+': '+marker+(important?' !important':'')+';';return parts.join('');}
  }
@@ -29,7 +29,7 @@ function css(value,marker,property='list-style-type'){
 }
 function patch(raw,tag,marker,jsx=false,property='list-style-type'){
  const camel=property.replace(/-([a-z])/g,(_,c)=>c.toUpperCase());
- if(property.startsWith('margin-')&&!/^(?:0|(?:\d+(?:\.\d+)?)px)$/.test(marker))throw Error('Unsupported paragraph spacing.');
+ if(property.startsWith('margin-')&&!/^(?:0|(?:\d+(?:\.\d+)?(?:e-\d+)?)px)$/.test(marker))throw Error('Unsupported paragraph spacing.');
  if(!['display','list-style-type','margin-block-start','margin-block-end'].includes(property)||property==='display'&&!['inline','block'].includes(marker))throw Error('Unsupported inline property.');
  if(jsx){
   const node=require('@babel/parser').parseExpression(raw,{plugins:['jsx','typescript']}),opening=node.openingElement;

@@ -74,7 +74,7 @@
  }
  function copiedList(source){
   const list=source.ownerDocument.createElement(source.tagName);
-  for(const name of ['class','style'])if(source.hasAttribute(name))list.setAttribute(name,source.getAttribute(name));
+  for(const name of ['class','style','data-retouch-list-spacing'])if(source.hasAttribute(name))list.setAttribute(name,source.getAttribute(name));
   if(!list.hasAttribute('style'))list.style.cssText='list-style: revert; margin: 0; padding-inline-start: 1.5em;';
   const id=source.__rtListTemplate||source.getAttribute('data-rt-keep')||source.getAttribute('data-rt');if(id)list.__rtListTemplate=id;
   return list;
@@ -96,7 +96,7 @@
    spacingChanges.set(nested,destinationListSpacing(nested,sourceSpacing));
    nested.append(...items);
   }
-  for(const [changedList,value]of spacingChanges)if(value!==null&&el.contains(changedList))setBlockSpacing(el,listSpacingNodes(changedList,1),value);
+  for(const [changedList,value]of spacingChanges)if(value!==null&&el.contains(changedList))setStoredListSpacing(el,changedList,value);
   syncMarkers(el);
   if(el.contains(caret.start)&&el.contains(caret.end)){const restored=d.createRange();restored.setStart(caret.start,caret.from);restored.setEnd(caret.end,caret.to);d.getSelection().removeAllRanges();d.getSelection().addRange(restored);}else restoreSelection(el,offsets);
   return true;
@@ -170,7 +170,7 @@
   const {left,gap}=context,d=el.ownerDocument;let right=context.right;
   // The merged paragraph ends where the right paragraph ended. Preserve its
   // authored gap, including zero when it was the final paragraph.
-  const ending=left.style.marginBlockStart==='0px'&&right.style.marginBlockStart==='0px'&&/^\d+(?:\.\d+)?px$/.test(left.style.marginBlockEnd)&&/^\d+(?:\.\d+)?px$/.test(right.style.marginBlockEnd)?right.style.marginBlockEnd:null;
+  const ending=left.style.marginBlockStart==='0px'&&right.style.marginBlockStart==='0px'&&/^\d+(?:\.\d+)?(?:e-\d+)?px$/.test(left.style.marginBlockEnd)&&/^\d+(?:\.\d+)?(?:e-\d+)?px$/.test(right.style.marginBlockEnd)?right.style.marginBlockEnd:null;
   if(context.listItem){
    for(const [item,first]of [[left,false],[right,true]]){
     const children=[...item.childNodes].filter(node=>node.nodeType!==3||node.textContent.trim()),edge=first?children[0]:children.at(-1);
@@ -207,13 +207,21 @@
   return nodes;
  }
  function authoredListSpacing(list){
+  const eligible=listSpacingNodes(list,1);if(!eligible.length)return null;const stored=list.getAttribute('data-retouch-list-spacing');if(stored!==null&&/^\d+(?:\.\d+)?(?:e-\d+)?$/i.test(stored)&&Number(stored)<=10000)return Number(stored);
   const nodes=listSpacingNodes(list),values=nodes.slice(0,-1).map(node=>node.style.marginBlockStart==='0px'?node.style.marginBlockEnd:'');
-  return values.length&&values.every(value=>value===values[0]&&/^\d+(?:\.\d+)?px$/.test(value))?parseFloat(values[0]):null;
+  return values.length&&values.every(value=>value===values[0]&&/^\d+(?:\.\d+)?(?:e-\d+)?px$/.test(value))?parseFloat(values[0]):null;
  }
  function destinationListSpacing(list,fallback){const value=authoredListSpacing(list);return value!==null?value:list.children.length<2?fallback:null;}
- function spacingListItems(el){return listSpacingNodes(listContext(el)?.list);}
+ function spacingListItems(el){return listSpacingNodes(listContext(el)?.list,1);}
  function setParagraphSpacing(el,value){return setBlockSpacing(el,spacingParagraphs(el),value);}
- function setListSpacing(el,value){return setBlockSpacing(el,spacingListItems(el),value);}
+ function setListSpacing(el,value){return setStoredListSpacing(el,listContext(el)?.list,value);}
+ function setStoredListSpacing(el,list,value){
+  const nodes=listSpacingNodes(list,1);if(!nodes.length||!Number.isFinite(value)||value<0||value>10000)return false;
+  const changed=setBlockSpacing(el,nodes,value),view=el.ownerDocument.defaultView;
+  if(nodes.some((node,index)=>{const css=view.getComputedStyle(node);return Math.abs(parseFloat(css.marginBlockStart))>0.01||Math.abs(parseFloat(css.marginBlockEnd)-(index===nodes.length-1?0:value))>0.01;}))return false;
+  if(list.getAttribute('data-retouch-list-spacing')===String(value))return changed;
+  list.setAttribute('data-retouch-list-spacing',String(value));return true;
+ }
  function setBlockSpacing(el,nodes,value){
   if(!Number.isFinite(value)||value<0||value>10000||!nodes.length)return false;
   const original=nodes.map(node=>node.getAttribute('style')),ends=nodes.map((_,index)=>index===nodes.length-1?0:value);
@@ -224,7 +232,7 @@
   let changed=false;nodes.forEach((node,index)=>{if(node.getAttribute('style')!==original[index]){node.__rtParagraphSpacing=ends[index];changed=true;}});return changed;
  }
  function paragraph(el){
-  const spaced=spacingParagraphs(el),values=spaced.slice(0,-1).map(node=>node.style.marginBlockStart==='0px'?node.style.marginBlockEnd:''),spacing=values.length&&values.every(value=>value===values[0]&&/^\d+(?:\.\d+)?px$/.test(value))?parseFloat(values[0]):null;
+  const spaced=spacingParagraphs(el),values=spaced.slice(0,-1).map(node=>node.style.marginBlockStart==='0px'?node.style.marginBlockEnd:''),spacing=values.length&&values.every(value=>value===values[0]&&/^\d+(?:\.\d+)?(?:e-\d+)?px$/.test(value))?parseFloat(values[0]):null;
   const d=el.ownerDocument,selection=d.getSelection();if(!selection.rangeCount)return false;
   let range=selection.getRangeAt(0);if(!el.contains(range.startContainer)||!el.contains(range.endContainer))return false;
   const element=node=>node.nodeType===1?node:node.parentElement;
@@ -248,7 +256,7 @@
  }
  function enter(el){
   const context=listContext(el);if(!context)return false;
-  const spaced=spacingListItems(el),values=spaced.slice(0,-1).map(node=>node.style.marginBlockStart==='0px'?node.style.marginBlockEnd:''),spacing=values.length&&values.every(value=>value===values[0]&&/^\d+(?:\.\d+)?px$/.test(value))?parseFloat(values[0]):null;
+  const spacing=authoredListSpacing(context.list);
   const {items,list,range}=context,d=el.ownerDocument,first=items[0],last=items.at(-1);
   if(range.collapsed&&!first.textContent.trim()&&!first.querySelector('img,input,ul,ol')){
    if(canIndent(el,true)){indent(el,true);caret(first);return true;}
@@ -291,5 +299,5 @@
   if(kind!=='none')for(const item of el.querySelectorAll('li'))if(item.style.listStyleType){item.style.setProperty('list-style-type','inherit',item.style.getPropertyPriority('list-style-type'));item.__rtListMarker='inherit';}
   syncMarkers(el);restoreSelection(el,offsets);return true;
  }
- const api={spacingListItems,setListSpacing,spacingParagraphs,setParagraphSpacing,startNumber,setStart,supported,state,apply,prefixContext,prefix,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
+ const api={authoredListSpacing,spacingListItems,setListSpacing,spacingParagraphs,setParagraphSpacing,startNumber,setStart,supported,state,apply,prefixContext,prefix,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
 })(typeof window!=='undefined'?window:null);

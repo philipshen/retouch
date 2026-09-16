@@ -779,7 +779,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
     if(rangeStyle){c.__rtRangeStyleValues={};for(const [property,value]of Object.entries(rangeStyle.properties||{[rangeStyle.property]:rangeStyle.value})){const probe=el.ownerDocument.createElement('span');probe.style.setProperty(property,value);const css=probe.style.getPropertyValue(property);if(c.style.getPropertyValue(property)===css){c.__rtRangeStyleValues[property]={value,css};if(property==='color'){c.__rtRangeStyleValue=value;c.__rtRangeStyleCSS=css;}}}}
 
     const cid = c.getAttribute('data-rt-keep') || c.getAttribute('data-rt') || c.getAttribute('data-rt-i');
-    if (cid) editing.snapshot.set(cid, {html:c.innerHTML,marker:c.style.listStyleType,start:c.getAttribute('start'),tag:c.tagName.toLowerCase(),href:c.tagName==='A'?c.getAttribute('href'):undefined});
+    if (cid) editing.snapshot.set(cid, {html:c.innerHTML,marker:c.style.listStyleType,start:c.getAttribute('start'),listSpacing:c.getAttribute('data-retouch-list-spacing'),tag:c.tagName.toLowerCase(),href:c.tagName==='A'?c.getAttribute('href'):undefined});
   }
   editing.originalTree = serializeChildren(el, editing.snapshot);
   // plaintext-only forces pre-wrap in Chromium even over author !important
@@ -1420,7 +1420,7 @@ function showInlineFormatToolbar(){
     const paragraphs=valid?RetouchListEditing.spacingParagraphs(editing.el):[];paragraphSpacing.disabled=!paragraphs.length;
     if(document.activeElement!==paragraphSpacing){const values=paragraphs.slice(0,-1).map(node=>d.defaultView.getComputedStyle(node).marginBlockEnd),same=values.length&&values.every(value=>value===values[0]);paragraphSpacing.value=same?parseFloat(values[0]):'';paragraphSpacing.placeholder=values.length?'Mixed':'—';paragraphSpacing.title=paragraphs.length?'Space between paragraphs in this text layer. Soft line breaks use line height.':'Select a simple text flow with at least two paragraphs. Enter creates a paragraph.';}
     const spacedItems=valid?RetouchListEditing.spacingListItems(editing.el):[];listSpacing.disabled=!spacedItems.length;
-    if(document.activeElement!==listSpacing){const values=spacedItems.slice(0,-1).map(node=>d.defaultView.getComputedStyle(node).marginBlockEnd),same=values.length&&values.every(value=>value===values[0]);listSpacing.value=same?parseFloat(values[0]):'';listSpacing.placeholder=values.length?'Mixed':'Select a list';}
+    if(document.activeElement!==listSpacing){const values=spacedItems.slice(0,-1).map(node=>d.defaultView.getComputedStyle(node).marginBlockEnd),same=values.length&&values.every(value=>value===values[0]);const stored=valid?RetouchListEditing.authoredListSpacing(RetouchListEditing.listContext(editing.el)?.list):null;listSpacing.value=stored!==null?stored:same?parseFloat(values[0]):spacedItems.length===1?0:'';listSpacing.placeholder=spacedItems.length?'Mixed':'Select a list';}
     const listContext=valid?RetouchListEditing.listContext(editing.el):null;listStart.disabled=!listContext||listContext.list.tagName!=='OL';if(d.activeElement!==listStart&&document.activeElement!==listStart)listStart.value=listStart.disabled?'':RetouchListEditing.startNumber(listContext.list);
     selectionNote.textContent=valid?(range.collapsed?'Text you type next':'Selected text'):'Select text to format';
     if(valid&&!editing.caretComposition&&editing.caretStyle&&!sameCaret(range,editing.caretStyle.range))editing.caretStyle=null;
