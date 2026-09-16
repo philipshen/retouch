@@ -4,9 +4,10 @@
 const tags=new Set(['p','div','ul','ol','li']);
 const flow=new Set(['div','section','article','aside','nav','main','header','footer','blockquote','li','td','th','form','fieldset','figure','figcaption','details','dialog','body']);
 const phrasing=new Set(['span','a','strong','em','b','i','u','s','sup','sub','br','code','mark','small','abbr','time','img','input','label','button']);
-const contains=items=>Array.isArray(items)&&items.some(item=>item&&(item.t==='paragraph'||item.t==='block'||item.t==='copy'||item.t==='keep'&&(item.tag||item.paragraph||Object.hasOwn(item,'start')||Object.hasOwn(item,'spacing')||Object.hasOwn(item,'listSpacing'))||contains(item.children)));
+const contains=items=>Array.isArray(items)&&items.some(item=>item&&(item.t==='paragraph'||item.t==='block'||item.t==='copy'||item.t==='keep'&&(item.tag||item.paragraph||Object.hasOwn(item,'start')||Object.hasOwn(item,'spacing')||Object.hasOwn(item,'listSpacing')||Object.hasOwn(item,'listInset'))||contains(item.children)));
 function validateNode(node){
- if(!tags.has(node.tag)||Object.keys(node).some(key=>!['t','tag','children','start','template','marker','spacing','listSpacing'].includes(key)))return 'Unsupported paragraph or list node.';
+ if(!tags.has(node.tag)||Object.keys(node).some(key=>!['t','tag','children','start','template','marker','spacing','listSpacing','listInset'].includes(key)))return 'Unsupported paragraph or list node.';
+ if(Object.hasOwn(node,'listInset')&&(!['ul','ol'].includes(node.tag)||!require('./list-inset.cjs').valid(node.listInset)))return 'Invalid list inset.';
  if(Object.hasOwn(node,'listSpacing')&&(!['ul','ol'].includes(node.tag)||!require('./list-spacing.cjs').valid(node.listSpacing)))return 'Invalid list spacing preference.';
  if(Object.hasOwn(node,'spacing')&&(!['p','div','li'].includes(node.tag)||!require('./text-paragraphs.cjs').validSpacing(node.spacing)))return 'Invalid paragraph spacing.';
  if(Object.hasOwn(node,'marker')&&!require('./list-markers.cjs').valid(node.tag,node.marker))return 'Invalid list marker.';
@@ -50,7 +51,8 @@ function markup(node,content,jsx=false,template=null){
  }
  const raw='<'+node.tag+appearance+style+(Object.hasOwn(node,'start')?' start="'+node.start+'"':'')+'>'+content+'</'+node.tag+'>';
  const spaced=Object.hasOwn(node,'listSpacing')?require('./list-spacing.cjs').patch(raw,node.listSpacing,jsx):raw;
- const styled=node.marker?require('./list-markers.cjs').patch(spaced,node.tag,node.marker,jsx):spaced;
+ const inset=Object.hasOwn(node,'listInset')?require('./list-inset.cjs').patch(spaced,node.tag,node.listInset,jsx):spaced;
+ const styled=node.marker?require('./list-markers.cjs').patch(inset,node.tag,node.marker,jsx):inset;
  return Object.hasOwn(node,'spacing')?require('./text-paragraphs.cjs').patchSpacing(styled,node.spacing,jsx):styled;
 }
 const inlineTag=tag=>tag==='#text'||tag==='#comment'||phrasing.has(tag);

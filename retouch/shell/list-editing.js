@@ -213,6 +213,18 @@
  }
  function destinationListSpacing(list,fallback){const value=authoredListSpacing(list);return value!==null?value:list.children.length<2?fallback:null;}
  function spacingListItems(el){return listSpacingNodes(listContext(el)?.list,1);}
+ function insetList(el){
+  const list=listContext(el)?.list;if(!list)return null;
+  const css=el.ownerDocument.defaultView.getComputedStyle(list);
+  return /^(block|flow-root|list-item)$/.test(css.display)?list:null;
+ }
+ function setListInset(el,value){
+  const list=insetList(el);if(!list||!Number.isFinite(value)||value<0||value>10000)return false;
+  const original=list.getAttribute('style');list.style.setProperty('padding-inline-start',value+'px',list.style.getPropertyPriority('padding-inline-start'));
+  const actual=parseFloat(el.ownerDocument.defaultView.getComputedStyle(list).paddingInlineStart);
+  if(!Number.isFinite(actual)||Math.abs(actual-value)>0.02){list.style.cssText=original||'';if(original===null)list.removeAttribute('style');return false;}
+  if(list.getAttribute('style')===original)return false;list.__rtListInset=value;return true;
+ }
  function setParagraphSpacing(el,value){return setBlockSpacing(el,spacingParagraphs(el),value);}
  function setListSpacing(el,value){return setStoredListSpacing(el,listContext(el)?.list,value);}
  function setStoredListSpacing(el,list,value){
@@ -333,5 +345,5 @@
   if(kind!=='none')for(const item of el.querySelectorAll('li'))if(item.style.listStyleType){item.style.setProperty('list-style-type','inherit',item.style.getPropertyPriority('list-style-type'));item.__rtListMarker='inherit';}
   syncMarkers(el);restoreSelection(el,offsets);return true;
  }
- const api={authoredListSpacing,spacingListItems,setListSpacing,spacingParagraphs,setParagraphSpacing,startNumber,setStart,supported,state,canApply,apply,prefixContext,prefix,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
+ const api={insetList,setListInset,authoredListSpacing,spacingListItems,setListSpacing,spacingParagraphs,setParagraphSpacing,startNumber,setStart,supported,state,canApply,apply,prefixContext,prefix,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
 })(typeof window!=='undefined'?window:null);

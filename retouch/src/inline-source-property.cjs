@@ -15,22 +15,22 @@ function css(value,marker,property='list-style-type'){
  if(quote||comment||stack.length)throw Error('The list style has incomplete CSS.');
  parts.push(value.slice(start));
  const clean=part=>part.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\\([a-f\d]{1,6})(?:\r\n|[\t\n\r\f ])?|\\([^\n\r\f])/gi,(_,hex,char)=>hex?String.fromCodePoint(Math.min(parseInt(hex,16)||0xfffd,0x10ffff)):char);
- const relevant=part=>(property==='display'?/^\s*(?:display|all)\s*:/i:property.startsWith('margin-')?/^\s*(?:margin(?:-[a-z-]+)?|all)\s*:/i:/^\s*(?:list-style(?:-type)?|all)\s*:/i).test(clean(part));
+ const relevant=part=>(property==='display'?/^\s*(?:display|all)\s*:/i:property.startsWith('padding-')?/^\s*(?:padding(?:-[a-z-]+)?|all)\s*:/i:property.startsWith('margin-')?/^\s*(?:margin(?:-[a-z-]+)?|all)\s*:/i:/^\s*(?:list-style(?:-type)?|all)\s*:/i).test(clean(part));
  const important=parts.some(part=>relevant(part)&&/!\s*important\s*;?\s*$/i.test(clean(part)));
- if(property.startsWith('margin-')){
-  const canonical=part=>/^ ?margin-block-(?:start|end): \d+(?:\.\d+)?(?:e-\d+)?px(?: !important)?;$/.test(part);
+ if(property.startsWith('margin-')||property.startsWith('padding-')){
+  const canonical=part=>/^ ?(?:margin-block-(?:start|end)|padding-inline-start): \d+(?:\.\d+)?(?:e-\d+)?px(?: !important)?;$/.test(part);
   const own=parts.findLastIndex(part=>canonical(part)&&part.trimStart().startsWith(property+':'));
   if(own>=0&&parts.slice(own+1).every(part=>!part.trim()||canonical(part))){parts[own]=(parts[own].startsWith(' ')?' ':'')+property+': '+marker+(important?' !important':'')+';';return parts.join('');}
  }
  // Replace our trailing canonical override, keeping earlier author CSS exact.
  const last=parts.findLastIndex(part=>part.trim());
- if(last>=0&&!property.startsWith('margin-')&&(property==='display'?/^ ?display: (?:inline|block)(?: !important)?;$/:/^ ?list-style-type: (?:disc|decimal|lower-alpha|lower-roman|none|inherit)(?: !important)?;$/).test(parts[last]))value=parts.slice(0,last).join('');
+ if(last>=0&&!property.startsWith('margin-')&&!property.startsWith('padding-')&&(property==='display'?/^ ?display: (?:inline|block)(?: !important)?;$/:/^ ?list-style-type: (?:disc|decimal|lower-alpha|lower-roman|none|inherit)(?: !important)?;$/).test(parts[last]))value=parts.slice(0,last).join('');
  return value+(value.trim()&&!value.trimEnd().endsWith(';')?';':'')+(value?' ':'')+property+': '+marker+(important?' !important':'')+';';
 }
 function patch(raw,tag,marker,jsx=false,property='list-style-type'){
  const camel=property.replace(/-([a-z])/g,(_,c)=>c.toUpperCase());
- if(property.startsWith('margin-')&&!/^(?:0|(?:\d+(?:\.\d+)?(?:e-\d+)?)px)$/.test(marker))throw Error('Unsupported paragraph spacing.');
- if(!['display','list-style-type','margin-block-start','margin-block-end'].includes(property)||property==='display'&&!['inline','block'].includes(marker))throw Error('Unsupported inline property.');
+ if((property.startsWith('margin-')||property.startsWith('padding-'))&&!/^(?:0|(?:\d+(?:\.\d+)?(?:e-\d+)?)px)$/.test(marker))throw Error('Unsupported paragraph spacing.');
+ if(!['display','list-style-type','margin-block-start','margin-block-end','padding-inline-start'].includes(property)||property==='display'&&!['inline','block'].includes(marker))throw Error('Unsupported inline property.');
  if(jsx){
   const node=require('@babel/parser').parseExpression(raw,{plugins:['jsx','typescript']}),opening=node.openingElement;
   if(!opening||opening.name.name!==tag)throw Error('Inline properties need an explicit source style.');
@@ -41,9 +41,9 @@ function patch(raw,tag,marker,jsx=false,property='list-style-type'){
   if(expression.type==='ObjectExpression'){
    const properties=expression.properties,last=properties.at(-1);
    if(last?.type==='ObjectProperty'&&!last.computed&&(last.key.name||last.key.value)===camel)return raw.slice(0,last.value.start)+JSON.stringify(marker)+raw.slice(last.value.end);
-   if(property.startsWith('margin-')){
+   if(property.startsWith('margin-')||property.startsWith('padding-')){
     const own=properties.findLastIndex(p=>p.type==='ObjectProperty'&&!p.computed&&(p.key.name||p.key.value)===camel);
-    if(own>=0&&properties.slice(own+1).every(p=>p.type==='ObjectProperty'&&!p.computed)){const value=properties[own].value;return raw.slice(0,value.start)+JSON.stringify(marker)+raw.slice(value.end);}
+    if(own>=0&&properties.slice(own+1).every(p=>p.type==='ObjectProperty'&&!p.computed&&(!property.startsWith('padding-')||!/^(?:padding|all)/.test(p.key.name||p.key.value)))){const value=properties[own].value;return raw.slice(0,value.start)+JSON.stringify(marker)+raw.slice(value.end);}
    }
    const hasMarker=properties.some(p=>p.type==='ObjectProperty'&&!p.computed&&(p.key.name||p.key.value)===camel);
    if(hasMarker)return raw.slice(0,expression.start)+'{...('+raw.slice(expression.start,expression.end)+'),'+camel+':'+JSON.stringify(marker)+'}'+raw.slice(expression.end);

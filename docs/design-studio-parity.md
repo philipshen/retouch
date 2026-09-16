@@ -22039,3 +22039,41 @@ counters, adjacent-list merging, all authored margin/selector effects, and
 universal framework/binding support. This does not prove full Figma parity,
 arbitrary-site support or trusted Homebrew distribution. No desktop rebuild or
 push here.
+
+## List inset and hanging-marker geometry (2026-09-16)
+
+The preceding turn was progress: eight local commits through 6b2078fe were
+pushed and the remote SHA was verified. This continuation addresses the fixed
+list-padding limitation found in the selected-list screenshot. Figma reference:
+https://help.figma.com/hc/en-us/articles/360040449773-Create-bulleted-and-numbered-lists
+
+Inline Typography now has a List inset field in pixels, scoped to the list
+containing the cursor. Larger insets provide room for wide counters; zero places
+text at the container edge with outside markers hanging before it. Nested lists
+retain independent values. This is an explicit source-backed inset control;
+automatic marker fitting and Figma's dedicated hanging-list toggle remain open.
+
+The rich-text protocol supports validated listInset values on new and preserved
+UL/OL nodes. HTML, React and Liquid writers patch padding-inline-start, preserving
+other authored source. JSX style expressions are evaluated once, and trailing
+padding shorthand/spreads cannot override the appended inset. Local history
+captures inset metadata, including edits on already saved lists. New and split
+lists serialize literal pixel insets. Ineffective live padding changes roll back.
+The field currently applies across all screen sizes, as other inline text edits.
+
+Validation includes 1,754 unit tests; source cases cover bounds, CSS shorthand
+priority, unrelated marker preservation, JSX expression retention and placement.
+HTML/React Chromium 145 and Liquid WebKit 26 browser checks pass. Coverage
+exercises three-digit counters, actual saved text geometry,
+independent nested insets, fractional and zero values, negative-value refusal,
+local undo/redo before saving, save/reopen and exact source undo/redo. The HTML
+selected-list conversion regression also passes. Logs are under
+/tmp/retouch-list-inset-{html,react,liquid,units,targeted,selection-regression}.log.
+The inspected /tmp/retouch-list-inset.png shows visible 100/101 counters and a
+nested alphabetical item, with the light inspector's List inset field active.
+
+Remaining gaps include automatic marker sizing across fonts/counts, a dedicated
+hanging-list mode, arbitrary authored list/marker styles and layout, responsive
+inset overrides, and full Figma feature parity. Arbitrary-site support and trusted
+notarized Homebrew distribution remain unfinished. No desktop rebuild or push
+in this continuation.

@@ -41,6 +41,7 @@
         var kept={t:'keep',id:id};
         if(n.__rtBlockTag&&n.__rtBlockTag!==(before&&before.tag))kept.tag=n.__rtBlockTag;
         if(/^(UL|OL|LI)$/.test(n.tagName)&&n.__rtListMarker&&n.__rtListMarker!==before.marker)kept.marker=n.__rtListMarker;
+        if(/^(UL|OL)$/.test(n.tagName)&&Object.prototype.hasOwnProperty.call(n,'__rtListInset')&&n.style.paddingInlineStart!==before.listInset)kept.listInset=n.__rtListInset;
         if(/^(UL|OL)$/.test(n.tagName)&&n.getAttribute('data-retouch-list-spacing')!==(before.listSpacing??null))kept.listSpacing=n.getAttribute('data-retouch-list-spacing')===null?null:Number(n.getAttribute('data-retouch-list-spacing'));
         if(n.tagName==='OL'&&Object.prototype.hasOwnProperty.call(n,'__rtListStart')&&n.getAttribute('start')!==before.start)kept.start=n.__rtListStart;
         if(n.__rtParagraphInline)kept.paragraph='inline';else if(Object.prototype.hasOwnProperty.call(n,'__rtParagraphSpacing'))kept.spacing=n.__rtParagraphSpacing;
@@ -82,6 +83,7 @@
         if(/^(UL|OL)$/.test(n.tagName)&&n.style&&['disc','decimal','lower-alpha','lower-roman'].includes(n.style.listStyleType))list.marker=n.style.listStyleType;
         if(n.tagName==='LI'&&n.style&&['none','inherit'].includes(n.style.listStyleType))list.marker=n.style.listStyleType;
         if(/^(UL|OL)$/.test(n.tagName)&&n.getAttribute('data-retouch-list-spacing')!==null)list.listSpacing=Number(n.getAttribute('data-retouch-list-spacing'));
+        if(/^(UL|OL)$/.test(n.tagName)&&/^\d+(?:\.\d+)?(?:e-\d+)?px$/.test(n.style?.paddingInlineStart))list.listInset=parseFloat(n.style.paddingInlineStart);
         if(snapshot&&n.__rtListTemplate)list.template=n.__rtListTemplate;
         if(n.tagName==='OL'&&n.getAttribute('start')!==null){
           var start=Number(n.getAttribute('start'));
