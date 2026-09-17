@@ -24169,3 +24169,25 @@ production-style flows. The shared layer-interaction browser regression passed.
 Cross-file batches, broader control-flow regions and the remaining Vue structure
 operations are unfinished. No macOS artifact, notarization or Homebrew release
 was produced here; full Figma and arbitrary-site parity remain unproven.
+
+### Vue multi-layer ordering
+
+Selected Vue layers can now move earlier/later or to the first/last position
+within one native source parent. Sparse and adjacent selections retain their
+relative source order. The planner stages moves privately, composes source ID
+maps, and commits one atomic undo step. Controls expose supported directions;
+cross-parent ordering and ineffective moves are refused.
+
+Validation: all 1,875 unit tests passed, with doctor tests also passing after the
+capability text update. Source tests cover all four directions, reversed input
+selection order, adjacent roots, identity mapping, exact undo/redo, and refused
+cross-parent, invalid-direction and ineffective operations. Combined Chromium
+and WebKit runs passed the four ordering commands, including the keyboard
+shortcut, retained selection, styles and locks, exact source history, independent
+Vue counters and preview document identity. Existing responsive comparison,
+single-layer structure, insertion, reparenting, batch duplicate/delete and
+production style retention flows passed in those same runs.
+
+Multi-layer reparenting and frame/group operations remain unfinished. This
+checkpoint does not rebuild the macOS app or establish notarization, Homebrew
+installation, full Figma parity or arbitrary-site support.
