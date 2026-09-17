@@ -130,14 +130,15 @@ SFC, including roots in different containers, as one atomic undo step. Selecting
 a parent and its descendant processes that subtree once. Copies retain independent
 responsive styles; a refused root prevents the entire batch from writing.
 Multi-layer ordering also supports earlier/later and first/last placement within
-one native source parent, preserving the selected roots' relative order.
+one native source parent, preserving the selected roots' relative order. Move into
+and tree drag/drop also move selections into a compatible container as one undo
+step; all selected roots must share the destination's template scope.
 Native sibling actions include duplicate, copy/paste, delete, and moving layers
 earlier/later or to either end. Copies receive independent responsive styles;
 deleting a subtree removes its owned styles. Exact undo restores source bytes.
 Structural edits across control-flow, component-sibling, comment or mixed-text
 boundaries remain unavailable. Copies containing IDs, refs, keys or unknown bound
-attributes need separate identity handling; multi-selection reparenting and
-frame/group actions remain incomplete. Move into and layer-tree drag/drop support native containers
+attributes need separate identity handling; frame/group actions remain incomplete. Move into and layer-tree drag/drop support native containers
 in the same SFC and the same loop, slot and v-pre scope. The destination picker
 filters out incompatible source containers; crossing these scopes remains unsupported. Containers using v-html or v-text cannot receive
 new children.

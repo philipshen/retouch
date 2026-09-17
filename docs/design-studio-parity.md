@@ -24191,3 +24191,28 @@ production style retention flows passed in those same runs.
 Multi-layer reparenting and frame/group operations remain unfinished. This
 checkpoint does not rebuild the macOS app or establish notarization, Homebrew
 installation, full Figma parity or arbitrary-site support.
+
+### Vue multi-layer reparenting
+
+Move into and layer-tree drag/drop now move a selection of Vue source layers
+together. The destination picker intersects the compatible containers for every
+selected layer. The planner normalizes selected subtrees, preserves their source
+order for inside/before/after placement, remaps the destination after each staged
+move, and writes one atomic transaction. Its refresh parent covers both the
+original roots and the destination. Styles keep their existing owners, and source
+ID maps preserve selections and locks through undo/redo.
+
+Validation: all 1,877 unit tests passed; doctor tests passed after the capability
+text update. New source tests cover cross-container moves in all three positions,
+responsive style preservation, self-closing destination expansion, nested
+selection normalization, cyclic destinations, exact undo/redo and all-or-nothing
+refusal when a later root crosses a template scope. Chromium and WebKit passed
+actual picker and multi-layer drag interactions, source order, selection, styles,
+lock remapping, exact history and retained documents/independent Vue counters.
+Both combined runs also passed responsive comparison, sibling ordering,
+copy/paste, insertion, single-layer reparenting, batch duplicate/delete,
+multi-layer ordering and production style retention.
+
+Cross-file or cross-template-scope moves and Vue frame/group operations remain
+unfinished. No macOS build, notarization, Homebrew installation or full-parity
+claim accompanies this checkpoint.

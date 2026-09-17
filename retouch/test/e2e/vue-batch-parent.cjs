@@ -1,0 +1,37 @@
+'use strict';
+const fs = require('node:fs'), assert = require('node:assert/strict');
+exports.run = async ({ page, app, live, file, source }) => {
+  const settled = () => page.waitForFunction(() => !undoBusy && !sourceRequests && !panelTasks);
+  const read = () => fs.readFileSync(file, 'utf8');
+  const row = name => page.getByRole('treeitem', { name, exact: true });
+  const undo = async () => { await page.getByRole('button', { name: 'Undo', exact: true }).click(); await settled(); };
+  const moved = async () => {
+    await app.locator('#move-to > [aria-label="Batch A"]').waitFor();
+    await live.locator('#move-to > [aria-label="Batch B"]').waitFor();
+    assert.deepEqual(await app.locator('#move-to > div').evaluateAll(els => els.map(el => el.getAttribute('aria-label'))), ['Batch A', 'Batch B']);
+    assert.deepEqual(await page.getByRole('treeitem', { selected: true }).allTextContents(), ['div · Batch A', 'div · Batch B']);
+    for (const name of ['A', 'B']) assert.equal(await app.locator('[aria-label="Batch '+name+'"]').evaluate(el => getComputedStyle(el).fontSize), '19px');
+    await page.getByRole('button', { name: 'Unlock div · Keep', exact: true }).waitFor();
+  };
+  await page.getByRole('button', { name: 'Lock div · Keep', exact: true }).click();
+  await row('div · Batch B').click(); await row('div · Batch A').click({ modifiers: ['Meta'] }); await settled();
+  const font = page.getByLabel('Shared Font size', { exact: true });
+  await font.fill('19px'); await font.press('Tab'); await settled(); const styled = read();
+  const action = page.locator('[data-design-action=reparentElement]');
+  if (!await action.isVisible()) await page.getByText('Layer actions', { exact: true }).click();
+  await action.click();
+  await page.getByLabel('Destination container', { exact: true }).selectOption(await app.locator('#move-to').getAttribute('data-rt'));
+  await page.getByRole('button', { name: 'Move layer', exact: true }).click(); await settled(); await moved();
+  const changed = read(); await undo(); assert.equal(read(), styled);
+  await page.getByRole('button', { name: 'Redo', exact: true }).click(); await settled(); await moved(); assert.equal(read(), changed);
+  await undo(); assert.equal(read(), styled);
+  await page.getByText('Layer actions', { exact: true }).click();
+  await row('div · Batch A').dragTo(row('section · move-to')); await settled(); await moved();
+  await undo(); assert.equal(read(), styled); await undo(); assert.equal(read(), source);
+  assert.equal(await app.locator('h1').evaluate(el => el.ownerDocument.defaultView.__viteDocument === el.ownerDocument), true);
+  assert.equal(await live.evaluate(() => window.__viteDocument === document), true);
+  await app.getByRole('button', { name: 'Count 2', exact: true }).waitFor(); await live.getByRole('button', { name: 'Count 1', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Unlock div · Keep', exact: true }).click();
+  await row('h1 · Hello Vite').click(); await settled();
+  console.log('VUE BATCH MOVE PICKER, TREE DRAG, ORDER, STYLES, LOCKS AND EXACT HISTORY PASS');
+};

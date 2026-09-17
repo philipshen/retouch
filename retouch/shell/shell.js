@@ -4316,7 +4316,7 @@ function chooseComponentParent(info){
 function chooseLayerParent(info){
   const selected=matchingEls(info.id)[0];if(!selected)return;
   const sources=sel.multiple?sel.multiple.map(info=>matchingEls(info.id)[0]).filter(Boolean):[selected];
-  const candidates=[...doc().querySelectorAll('[data-rt]')].filter(el=>RetouchLayers.canNestMany(sources,el)&&(!Array.isArray(info.structure?.reparentContainers)||info.structure.reparentContainers.includes(el.getAttribute('data-rt'))));
+  const candidates=[...doc().querySelectorAll('[data-rt]')].filter(el=>RetouchLayers.canNestMany(sources,el)&&(sel.multiple||[info]).every(item=>!Array.isArray(item.structure?.reparentContainers)||item.structure.reparentContainers.includes(el.getAttribute('data-rt'))));
   if(!candidates.length)return toast('No other content container is available on this page.','err');
   const modal=document.createElement('dialog'),heading=document.createElement('h3');heading.textContent=sources.length>1?'Move layers into':'Move layer into';modal.className='layer-move-dialog';modal.append(heading);
   const picker=document.createElement('select');picker.setAttribute('aria-label','Destination container');

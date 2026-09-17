@@ -91,3 +91,38 @@ test('Vue batch ordering treats adjacent roots as a block and refuses cross-pare
   const cross = resolve(); assert.equal(adapter.planOp(cross, { ...operation(cross, 'moveSelection'), direction: 'first' }).refused, true);
   assert.equal(adapter.planOp(before, { ...operation(before, 'moveSelection', ['B', 'C']), direction: 'bad' }).refused, true);
 });
+
+test('Vue batch reparent preserves source order, responsive styles and exact history across containers', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'retouch-vue-batch-parent-')), file = path.join(root, 'App.vue');
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  for (const position of ['inside', 'before', 'after']) {
+    const text = styled().replace('</main>', '<section aria-label="Target"><div aria-label="Anchor">Anchor</div></section></main>');
+    const before = { ...resolve(text), file }, history = new SourceHistory(); fs.writeFileSync(file, text);
+    const result = history.commit(root, adapter.planOp(before, { ...operation(before, 'reparentSelection', ['C', 'A']), position,
+      destinationId: resolve(text, position === 'inside' ? 'Target' : 'Anchor').element.id }));
+    assert.equal(result.ok, true, result.reason);
+    const after = fs.readFileSync(file, 'utf8'), next = resolve(after), target = resolve(after, 'Target').element;
+    assert.deepEqual(target.node.children.filter(node => node.type === 1).map(node => node.props.find(prop => prop.name === 'aria-label').value.content), position === 'before' ? ['A', 'C', 'Anchor'] : ['Anchor', 'A', 'C']);
+    assert.deepEqual(result.selectionIds.map(id => next.elements.find(element => element.id === id).attributes.find(attribute => attribute.name === 'aria-label').value), ['A', 'C']);
+    for (const name of ['A', 'C']) assert.deepEqual(adapter.describe(resolve(after, name)).cssRules, adapter.describe(resolve(text, name)).cssRules);
+    assert.equal(history.apply(root, 'undo', result.undoId, adapter).ok, true); assert.equal(fs.readFileSync(file, 'utf8'), text);
+    assert.equal(history.apply(root, 'redo', result.undoId, adapter).ok, true); assert.equal(fs.readFileSync(file, 'utf8'), after);
+  }
+});
+test('Vue batch reparent expands empty destinations and refuses cycles or a later incompatible root atomically', t => {
+  const text = source.replace('</main>', '<section aria-label="Target"/></main>'), before = resolve(text);
+  const operationFor = destinationId => ({ ...operation(before, 'reparentSelection'), destinationId });
+  const result = adapter.planOp(before, operationFor(resolve(text, 'Target').element.id));
+  assert.equal(result.ok, true, result.reason);
+  assert.match(result.edits[0].after, /<section aria-label="Target">/);
+  assert.equal(adapter.planOp(before, operationFor(before.element.id)).refused, true);
+  const child = before.elements.find(element => element.tag === 'span');
+  assert.equal(adapter.planOp(before, operationFor(child.id)).refused, true);
+  const nested = adapter.planOp(before, { ...operationFor(resolve(text, 'Target').element.id), ids: [before.element.id, child.id] });
+  assert.equal(nested.ok, true, nested.reason); assert.equal(nested.rootCount, 1);
+  const invalid = text.replace('<section><div aria-label="C">', '<section v-for="item in items"><div aria-label="C">');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'retouch-vue-parent-refuse-')), file = path.join(root, 'App.vue');
+  t.after(() => fs.rmSync(root, { recursive: true, force: true })); fs.writeFileSync(file, invalid);
+  const current = { ...resolve(invalid), file }, refused = new SourceHistory().commit(root, adapter.planOp(current, { ...operation(current, 'reparentSelection'), destinationId: resolve(invalid, 'Target').element.id }));
+  assert.equal(refused.refused, true); assert.equal(fs.readFileSync(file, 'utf8'), invalid);
+});

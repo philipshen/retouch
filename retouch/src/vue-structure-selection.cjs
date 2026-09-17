@@ -1,8 +1,8 @@
 'use strict';
-const types = ['duplicateSelection', 'deleteSelection', 'moveSelection'];
+const types = ['duplicateSelection', 'deleteSelection', 'moveSelection', 'reparentSelection'];
 function plan(resolved, op, adapter) {
   try {
-    if (!types.includes(op.type)) throw Error('Choose duplicate, delete or ordering for this selection.');
+    if (!types.includes(op.type)) throw Error('Choose duplicate, delete, ordering or a destination for this selection.');
     if (op.fileHash !== resolved.hash) throw Error('The file changed. Re-select the layers.');
     if (!Array.isArray(op.ids) || op.ids.length < 2 || op.ids.length > 100 || new Set(op.ids).size !== op.ids.length ||
         !op.ids.includes(resolved.element.id) || op.ids.some(id => typeof id !== 'string' || !/^[a-f0-9]{10}$/.test(id)))
@@ -12,7 +12,11 @@ function plan(resolved, op, adapter) {
     if (selected.some(element => !element)) throw Error('Every selected layer must belong to this Vue component.');
     const contains = (parent, child) => parent.start <= child.start && parent.end >= child.end;
     const roots = selected.filter(element => !selected.some(other => other !== element && contains(other, element))).sort((a, b) => a.start - b.start);
-    const common = original.filter(element => roots.every(root => element !== root && contains(element, root))).sort((a, b) => (a.end - a.start) - (b.end - b.start))[0];
+    const reparenting = op.type === 'reparentSelection';
+    const destination = reparenting && original.find(element => element.id === op.destinationId);
+    if (reparenting && (!destination || roots.some(root => contains(root, destination)))) throw Error('Choose a destination outside the selected subtrees.');
+    const affected = reparenting ? [...roots, destination] : roots;
+    const common = original.filter(element => !roots.includes(element) && affected.every(root => contains(element, root))).sort((a, b) => (a.end - a.start) - (b.end - b.start))[0];
     if (!common) throw Error('The selection needs a shared native source parent.');
     const moving = op.type === 'moveSelection', structure = require('./vue-structure.cjs');
     if (moving) {
@@ -20,7 +24,7 @@ function plan(resolved, op, adapter) {
       const parents = roots.map(element => structure.siblings({ ...resolved, element }, adapter).parentId);
       if (new Set(parents).size !== 1) throw Error('Reorder layers within the same source parent.');
     }
-    const ordered = moving && ['after', 'first'].includes(op.direction) ? [...roots].reverse() : roots;
+    const ordered = (moving && ['after', 'first'].includes(op.direction) || reparenting && op.position === 'after') ? [...roots].reverse() : roots;
     const subtreeCount = original.filter(element => roots.some(root => contains(root, element))).length;
     const mapping = new Map(original.map(element => [element.id, element.id]));
     let source = resolved.source, created = [];
@@ -36,8 +40,8 @@ function plan(resolved, op, adapter) {
       }
       // Stage each validated operation against a private source snapshot. No
       // file is written unless every selected root and its style copy succeeds.
-      const result = structure.plan({ ...resolved, source, hash, elements, element },
-        { type: moving ? 'moveElement' : op.type === 'duplicateSelection' ? 'duplicateElement' : 'deleteElement', direction: op.direction, fileHash: hash }, adapter);
+      const result = (reparenting ? require('./vue-reparent.cjs') : structure).plan({ ...resolved, source, hash, elements, element },
+        { type: reparenting ? 'reparentElement' : moving ? 'moveElement' : op.type === 'duplicateSelection' ? 'duplicateElement' : 'deleteElement', direction: op.direction, position: op.position, destinationId: reparenting ? mapping.get(destination.id) : undefined, fileHash: hash }, adapter);
       if (!result.ok) throw Error(result.reason);
       if (result.edits.length !== 1) throw Error('The selected Vue operation did not produce one source edit.');
       const remap = new Map(result.sourceIdMap), removed = new Set(result.removedSourceIds || []);
@@ -50,8 +54,8 @@ function plan(resolved, op, adapter) {
     }
     if (source === resolved.source) throw Error('The selected layers cannot move farther in that direction.');
     const final = adapter.collect(source, resolved.relPath).elements, ids = new Set(final.map(element => element.id));
-    const parentId = mapping.get(common.id), selectionIds = moving ? roots.map(root => mapping.get(root.id)) : op.type === 'duplicateSelection' ? created : [parentId];
-    if (final.length !== original.length + (moving ? 0 : op.type === 'duplicateSelection' ? subtreeCount : -subtreeCount) ||
+    const parentId = mapping.get(common.id), selectionIds = moving || reparenting ? roots.map(root => mapping.get(root.id)) : op.type === 'duplicateSelection' ? created : [parentId];
+    if (final.length !== original.length + (moving || reparenting ? 0 : op.type === 'duplicateSelection' ? subtreeCount : -subtreeCount) ||
         new Set(mapping.values()).size !== mapping.size || [...mapping.values(), ...selectionIds].some(id => !ids.has(id)))
       throw Error('The resulting Vue layers could not be mapped back to source.');
     return { ok: true, structural: true, hash: adapter.contentHash(source), parentId, selectionIds, rootCount: roots.length,
