@@ -125,13 +125,17 @@ typography controls support individual layers and selections within one SFC.
 Add text and Add frame work inside native content containers, including
 self-closing containers. The canvas Text tool supports click placement and dragged
 text boxes, then selects the new text for immediate typing.
+Duplicate and Delete also support selections of up to 100 source layers in one
+SFC, including roots in different containers, as one atomic undo step. Selecting
+a parent and its descendant processes that subtree once. Copies retain independent
+responsive styles; a refused root prevents the entire batch from writing.
 Native sibling actions include duplicate, copy/paste, delete, and moving layers
 earlier/later or to either end. Copies receive independent responsive styles;
 deleting a subtree removes its owned styles. Exact undo restores source bytes.
 Structural edits across control-flow, component-sibling, comment or mixed-text
 boundaries remain unavailable. Copies containing IDs, refs, keys or unknown bound
-attributes need separate identity handling; multi-selection structural actions
-remain incomplete. Move into and layer-tree drag/drop support native containers
+attributes need separate identity handling; multi-selection ordering, reparenting
+and frame/group actions remain incomplete. Move into and layer-tree drag/drop support native containers
 in the same SFC and the same loop, slot and v-pre scope. The destination picker
 filters out incompatible source containers; crossing these scopes remains unsupported. Containers using v-html or v-text cannot receive
 new children.
@@ -148,7 +152,8 @@ The browser fixture verifies repeated text edits, literal interpolation syntax,
 exact undo, compiler-normalized whitespace, retained preview documents and live
 Vue state, base paths, immediate image uploads, responsive padding and typography,
 same-SFC selection styling, comparison screens, sibling ordering and lock remapping,
-duplicate/delete/copy/paste with independent styles and exact history, keyboard
+duplicate/delete/copy/paste, batch duplicate/delete across containers, independent
+styles and exact history, keyboard
 shortcuts with input-field guards, moving between containers through the picker
 and tree drag/drop, text/frame insertion, canvas text placement and
 dragged text boxes with immediate typing and undo, and production style retention with transient

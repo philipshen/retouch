@@ -41,8 +41,9 @@ exports.run = async ({ page, app, live, file, source }) => {
   await undo(); await undo(); assert.equal(fs.readFileSync(file, 'utf8'), source);
   await select('First');
   await page.getByRole('treeitem', { name: 'div · Second', exact: true }).click({ modifiers: ['Meta'] }); await settled();
-  for (const name of ['duplicateElement', 'deleteElement', 'before', 'after', 'first', 'last', 'reparentElement'])
+  for (const name of ['before', 'after', 'first', 'last', 'reparentElement'])
     assert.equal(await page.locator('[data-design-action=' + name + ']').isDisabled(), true, 'Unsupported multi-selection ' + name);
+  for(const name of ['duplicateElement','deleteElement'])assert.equal(await page.locator('[data-design-action='+name+']').isEnabled(),true);
   assert.equal(await app.locator('h1').evaluate(element => element.ownerDocument.defaultView.__viteDocument === element.ownerDocument), true);
   assert.equal(await live.evaluate(() => window.__viteDocument === document), true);
   await app.getByRole('button', { name: 'Count 2', exact: true }).waitFor();

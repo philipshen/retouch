@@ -4285,7 +4285,7 @@ function sharedNativeFraming(infos){
 }
 function sharedNativeOrdering(infos){
  const unavailable={before:false,after:false,first:false,last:false};
- if(infos.length<2||new Set(infos.map(info=>info.file+'#'+info.hash)).size!==1||infos.some(info=>info.kind!=='host'||info.selectionStructureAuthoring===false))return unavailable;
+ if(infos.length<2||new Set(infos.map(info=>info.file+'#'+info.hash)).size!==1||infos.some(info=>info.kind!=='host'||info.selectionStructureAuthoring===false||Array.isArray(info.selectionStructureOps)&&!info.selectionStructureOps.includes('moveSelection')))return unavailable;
  const matches=infos.map(info=>matchingEls(info.id));if(matches.some(nodes=>nodes.length!==1))return unavailable;const all=matches.map(nodes=>nodes[0]),nodes=all.filter(node=>!all.some(other=>other!==node&&other.contains(node))),roots=nodes.map(node=>infos[all.indexOf(node)]);
  if(new Set(roots.map(info=>info.structure?.parentId)).size!==1||roots.some(info=>!info.structure?.canDelete||!info.structure?.parentId))return unavailable;
  const parent=nodes[0]?.parentElement;if(!parent||nodes.some(node=>node.parentElement!==parent))return unavailable;
@@ -4444,12 +4444,13 @@ async function structureSelection(action,extra={}){
   const selection=sel.multiple||[sel.info],info=sel.info;busyPanel(true);
   try{
     const type=['frameSelection','groupSelection','removeFrame','moveSelection'].includes(action)?action:action==='duplicateElement'?'duplicateSelection':action==='deleteElement'?'deleteSelection':'reparentSelection';
+    if(Array.isArray(info.selectionStructureOps)&&!info.selectionStructureOps.includes(type))return toast('This structural action is not available for these selected layers yet.','err');
     const result=await api('POST','/rt/__api/op',{type,id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,...extra});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not update selected layers','err');
     const deletedLocks=result.removedSourceIds?layerLocks.removeSourceIds(result.removedSourceIds):null;
     editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:selection.map(item=>item.id),selectionAfter:result.selectionIds,undoId:result.undoId,...(result.sourceIdMap?{sourceIdMap:result.sourceIdMap}:{}),...(deletedLocks?{deletedLocks,removedSourceIds:result.removedSourceIds}:{})});
     if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);
-    if(/\.[jt]sx$/i.test(info.file)){const parent=await api('GET',resolveUrl(result.parentId));if(!parent?.ok)throw Error('The edited source parent no longer resolves.');await refreshWrittenElement(parent.element,()=>true);}else await reloadFrame();await restoreLayerSelection(result.selectionIds);if(sel)renderPanel();
+    if(info.renderRevisionAttribute||/\.[jt]sx$/i.test(info.file)){const parent=await api('GET',resolveUrl(result.parentId));if(!parent?.ok)throw Error('The edited source parent no longer resolves.');await refreshWrittenElement(parent.element,()=>true);}else await reloadFrame();await restoreLayerSelection(result.selectionIds);if(sel)renderPanel();
     toast(result.rootCount+' layer'+(result.rootCount===1?'':'s')+(action==='duplicateElement'?' duplicated':action==='deleteElement'?' deleted':action==='frameSelection'?' framed':action==='groupSelection'?' grouped':action==='removeFrame'?' released from frame':' moved'),'ok');
   }finally{busyPanel(false);}
 }

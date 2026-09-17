@@ -24136,3 +24136,36 @@ established by this fixture.
 
 This checkpoint does not rebuild or publish the macOS app, notarize an artifact,
 verify a Homebrew installation, or establish full Figma/arbitrary-site parity.
+
+
+### Vue batch duplicate/delete
+
+Duplicate and Delete now support 2–100 selected source layers from one Vue SFC,
+including roots in different native containers with a shared native ancestor.
+Selecting both a parent and its descendant processes the subtree once. Each
+single-root plan is staged against a private source snapshot; only the combined
+validated result reaches the transaction layer. A later invalid root therefore
+prevents all file changes. Style cloning allocates independent owners, deletion
+prunes removed styles, and composed source ID maps preserve the resulting
+selection and layer-lock history across every intermediate identity shift.
+
+Each batch creates one undo step. The editor exposes explicit supported selection
+operations, waits for the compiled parent revision, and selects all copied roots
+without reloading the preview. Multi-selection ordering, reparenting and
+frame/group actions remain disabled until their Vue planners are implemented.
+Single-layer actions and multi-selection responsive CSS remain available.
+
+Validation: all 1,873 unit tests passed, followed by the doctor tests after the
+capability text update. New source tests cover cross-container cloning, independent
+responsive styles, combined identity maps, complete style cleanup, exact
+single-step history, ancestor/descendant normalization, stale/invalid selections,
+and all-or-nothing refusal when a later subtree contains a unique ref. Chromium
+and WebKit passed multi-selection across containers, keeping new copies selected,
+editing only those copies, batch deletion, lock remapping, exact undo/redo and
+retained documents/Vue state. The combined browser runs also passed the existing
+responsive/compare, ordering, single-layer structure, insertion/text-tool and
+production-style flows. The shared layer-interaction browser regression passed.
+
+Cross-file batches, broader control-flow regions and the remaining Vue structure
+operations are unfinished. No macOS artifact, notarization or Homebrew release
+was produced here; full Figma and arbitrary-site parity remain unproven.
