@@ -24216,3 +24216,29 @@ multi-layer ordering and production style retention.
 Cross-file or cross-template-scope moves and Vue frame/group operations remain
 unfinished. No macOS build, notarization, Homebrew installation or full-parity
 claim accompanies this checkpoint.
+
+### Vue frames and groups
+
+Frame selection and Group selection now wrap 1–100 selected native Vue layers,
+normalizing selected descendants and requiring consecutive roots in one content
+container. Groups use a display:contents wrapper. Source offset mapping tracks
+all original layers across wrapper insertion/removal, verifies their parsed
+parents, and restores the selection and layer locks through history. Remove frame
+and Ungroup preserve child source and prune only responsive styles owned by the
+removed wrapper. Wrappers with Vue directives or v-pre cannot be released by
+this planner because removing them would also remove template behavior.
+
+Validation: all 1,880 unit tests passed; doctor tests passed after the capability
+text update. Source tests cover frames/groups, reversed selection order,
+ancestor/descendant normalization, complete identity maps, style cleanup with the
+managed block before the template, exact history, nonconsecutive/cross-parent
+refusals and directive-bound wrappers. Chromium and WebKit passed actual controls
+for framing, grouping, wrapper styling and release; child geometry remained
+unchanged for the group fixture. Both browsers retained selection, child styles,
+locks, independent Vue counters and preview documents through undo/redo. Combined
+runs also passed responsive comparisons, ordering, insertion, copy/paste,
+single/batch reparenting, batch duplicate/delete and production style retention.
+
+These checks establish native Vue wrapper editing, not Figma-equivalent group
+scaling or layout preservation under every site's selectors. Broader template
+structures, arbitrary-site parity and macOS/Homebrew release remain incomplete.

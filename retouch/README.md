@@ -132,13 +132,17 @@ responsive styles; a refused root prevents the entire batch from writing.
 Multi-layer ordering also supports earlier/later and first/last placement within
 one native source parent, preserving the selected roots' relative order. Move into
 and tree drag/drop also move selections into a compatible container as one undo
-step; all selected roots must share the destination's template scope.
+step; all selected roots must share the destination's template scope. Frame and
+Group wrap consecutive native sibling layers; Group uses display:contents to
+retain their participation in the parent layout. Remove frame/Ungroup releases
+the children and removes only the wrapper's owned responsive styles.
 Native sibling actions include duplicate, copy/paste, delete, and moving layers
 earlier/later or to either end. Copies receive independent responsive styles;
 deleting a subtree removes its owned styles. Exact undo restores source bytes.
 Structural edits across control-flow, component-sibling, comment or mixed-text
 boundaries remain unavailable. Copies containing IDs, refs, keys or unknown bound
-attributes need separate identity handling; frame/group actions remain incomplete. Move into and layer-tree drag/drop support native containers
+attributes need separate identity handling. Move into and layer-tree drag/drop
+support native containers
 in the same SFC and the same loop, slot and v-pre scope. The destination picker
 filters out incompatible source containers; crossing these scopes remains unsupported. Containers using v-html or v-text cannot receive
 new children.
@@ -156,7 +160,7 @@ exact undo, compiler-normalized whitespace, retained preview documents and live
 Vue state, base paths, immediate image uploads, responsive padding and typography,
 same-SFC selection styling, comparison screens, sibling ordering and lock remapping,
 duplicate/delete/copy/paste, batch duplicate/delete across containers, independent
-styles and exact history, multi-layer ordering, keyboard
+styles and exact history, multi-layer ordering, frame/group/release, keyboard
 shortcuts with input-field guards, moving between containers through the picker
 and tree drag/drop, text/frame insertion, canvas text placement and
 dragged text boxes with immediate typing and undo, and production style retention with transient

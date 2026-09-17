@@ -40,8 +40,8 @@ function create(options = {}) {
     return {
       id: element.id, kind: 'host', tag: element.tag, file: resolved.relPath, hash: resolved.hash,
       renderRevisionAttribute: 'data-rt-revision',
-      linkedStyleAuthoring: false, selectionStructureOps: require('../vue-structure-selection.cjs').types,
-      structure: { ...require('../vue-structure.cjs').describe(resolved, adapter), ...require('../vue-insert.cjs').describe(resolved), ...require('../vue-reparent.cjs').describe(resolved, adapter) },
+      linkedStyleAuthoring: false, selectionStructureOps: [...require('../vue-structure-selection.cjs').types, ...require('../vue-frame-selection.cjs').types],
+      structure: { ...require('../vue-structure.cjs').describe(resolved, adapter), ...require('../vue-insert.cjs').describe(resolved), ...require('../vue-reparent.cjs').describe(resolved, adapter), ...require('../vue-frame-selection.cjs').describe(resolved, adapter) },
       className: attr(element, 'class')?.value || '', classNameDynamic: true,
       classNameReason: 'Use the responsive CSS properties for Vue styles.',
       text: range ? element.node.children.map(child => child.content).join('') : null,
@@ -57,6 +57,7 @@ function create(options = {}) {
   };
   function planOp(resolved, op) {
     if (op.fileHash && op.fileHash !== resolved.hash) return refuse('The file changed. Re-select the element.');
+    if (require('../vue-frame-selection.cjs').types.includes(op.type)) return require('../vue-frame-selection.cjs').plan(resolved, op, adapter);
     if (op.type === 'setCSS') return require('../vue-css.cjs').plan(resolved, op, adapter);
     if (op.type === 'setCSSSelection') return require('../vue-css.cjs').planSelection(resolved, op, adapter);
     if (op.type === 'insertElement') return require('../vue-insert.cjs').plan(resolved, op, adapter);
@@ -107,7 +108,7 @@ function create(options = {}) {
       return source.stamp(text, file, root, compilerOptions(), { revision: source.contentHash(text), transformDocument: out => require('../vue-css.cjs').warmInto(out, text, relative, options.styleModule?.(relative)) });
     }, contentHash: source.contentHash,
     assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets', imageOnly: true },
-    capabilities: { classAttr: 'class', ops: ['setText', 'setTag', 'setSrc', 'renameElement', 'setCSS', 'setCSSSelection', 'insertElement', 'reparentElement', ...require('../vue-structure.cjs').types, ...require('../vue-structure-selection.cjs').types] },
+    capabilities: { classAttr: 'class', ops: ['setText', 'setTag', 'setSrc', 'renameElement', 'setCSS', 'setCSSSelection', 'insertElement', 'reparentElement', ...require('../vue-structure.cjs').types, ...require('../vue-structure-selection.cjs').types, ...require('../vue-frame-selection.cjs').types] },
     applyOp: (resolved, op) => require('../transactions.cjs').applyPlan(resolved.appRoot || path.dirname(resolved.file), planOp(resolved, op)),
   };
   return adapter;
