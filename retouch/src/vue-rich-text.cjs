@@ -56,6 +56,7 @@ function context(resolved, adapter) {
         return {text:first<0?group.nodes.map(node=>node.content).join(''):group.nodes.slice(0,first).map(node=>node.content).join('')+expression(group.nodes[first],group.nodes[last])+group.nodes.slice(last+1).map(node=>node.content).join('')};
       }
       const node=group.nodes[0];
+      if(node.type===NodeTypes.COMMENT)return {comment:node.content.replace(/\r\n?/g,'\n')};
       if (node.type !== NodeTypes.ELEMENT || node.tagType !== ElementTypes.ELEMENT || node.ns !== 0 || ['script','style','template','iframe'].includes(node.tag)) throw Error('This text contains Vue logic that needs separate preservation.');
       // v-pre disappears from Vue's AST; its removal would change interpretation.
       const token = node.loc.source.match(/^<(?:[^"'<>]|"[^"]*"|'[^']*')*>/)?.[0] || '';
@@ -64,11 +65,32 @@ function context(resolved, adapter) {
     });
   }
   function html(nodes) {
-    return nodes.map(node => node.nodeName === '#text' ? { text: node.value } : { tag: node.tagName, attrs: (node.attrs || []).map(attr => [attr.name,attr.value]).sort(), children: html(node.childNodes || []) });
+    return nodes.map(node => node.nodeName === '#text' ? { text: node.value } : node.nodeName === '#comment' ? {comment:node.data} : { tag: node.tagName, attrs: (node.attrs || []).map(attr => [attr.name,attr.value]).sort(), children: html(node.childNodes || []) });
   }
   const expected=vue(element.node.children);
+  // Even in preserve mode Vue trims boundary whitespace and condenses some
+  // whitespace-only nodes around comments. Mirror only those compiler-owned
+  // whitespace changes before comparing with HTML; authored comments and tags
+  // remain byte-for-byte, and non-whitespace parser disagreements still fail.
+  const whitespace=[];
+  const relative=offset=>offset-element.node.loc.start.offset;
+  function normalizeWhitespace(node){
+    if(node.type!==NodeTypes.ELEMENT)return;
+    const open=node.loc.source.match(/^<(?:[^"'<>]|"[^"]*"|'[^']*')*>/)?.[0],close=node.loc.source.lastIndexOf('</'+node.tag);
+    if(!open||close<open.length)return;
+    let cursor=node.loc.start.offset+open.length;
+    const gap=end=>{if(end>cursor){const raw=element.node.loc.source.slice(relative(cursor),relative(end));if(!/^\s*$/.test(raw))throw Error('The Vue text contains unmapped source.');whitespace.push({start:relative(cursor),end:relative(end),marker:''});}};
+    for(const child of node.children){
+      gap(child.loc.start.offset);
+      if(child.type===NodeTypes.TEXT&&/^\s+$/.test(child.loc.source)&&child.loc.source!==child.content)whitespace.push({start:relative(child.loc.start.offset),end:relative(child.loc.end.offset),marker:child.content});
+      normalizeWhitespace(child);cursor=child.loc.end.offset;
+    }
+    gap(node.loc.start.offset+close);
+  }
+  normalizeWhitespace(element.node);
   let masked=element.node.loc.source;
-  for(const entry of [...expressions].reverse())masked=masked.slice(0,entry.start)+entry.marker+masked.slice(entry.end);
+  const edits=[...expressions,...whitespace.filter(entry=>!expressions.some(expression=>entry.start>=expression.start&&entry.end<=expression.end))].sort((a,b)=>b.start-a.start);
+  for(const entry of edits)masked=masked.slice(0,entry.start)+entry.marker+masked.slice(entry.end);
   const start=element.start+opening.length,end=element.start+close,value=masked.slice(opening.length,masked.lastIndexOf('</'+element.tag));
   const browser=parseFragment(masked).childNodes;
   if(browser.length!==1||browser[0].tagName!==element.tag||JSON.stringify(expected)!==JSON.stringify(html(browser[0].childNodes)))throw Error('The browser and Vue interpret this text differently.');
@@ -84,6 +106,7 @@ function describe(resolved, adapter, rendered) {
       return groups(nodes).map(group=>{
         const index=originals.findIndex(prior=>prior.nodes.some(node=>node.loc.start.offset===group.nodes[0].loc.start.offset)),item=items[index];
         if(!item)throw Error('The rendered Vue text could not be matched.');
+        if(group.nodes[0].type===NodeTypes.COMMENT)return item;
         if(!group.text)return {...item,children:normalize(item.children,originals[index].nodes[0].children,group.nodes[0].children)};
         const first=group.nodes.findIndex(node=>node.type===NodeTypes.INTERPOLATION),last=group.nodes.findLastIndex(node=>node.type===NodeTypes.INTERPOLATION);
         const literal=node=>({t:'text',value:node.content});

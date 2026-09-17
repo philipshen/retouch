@@ -138,3 +138,27 @@ test('Vue bound link destinations survive rich-text formatting and cannot be rew
  const text='<template><main><p><a href="/fallback" :href="destination">Docs</a></p></main></template>',r=resolve(text),link=adapter.describe(r).richText.children[0];assert.equal(link.editableLink,false);assert.equal(adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'keep',id:link.id,href:'/changed'}]}).refused,true);
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-vue-bound-link-')),file=path.join(root,'App.vue');t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(file,text);const history=new SourceHistory(),result=history.commit(root,adapter.planOp({...r,file},{type:'setChildren',fileHash:r.hash,children:[{t:'keep',id:link.id,children:[{t:'wrap',tag:'em',children:[{t:'text',value:'Guide'}]}]}]}));assert.equal(result.ok,true,result.reason);const after=fs.readFileSync(file,'utf8');assert.equal(history.apply(root,'undo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),text);assert.equal(history.apply(root,'redo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),after);
 });
+
+test('Vue comment boundaries preserve adjacent live values, nested formatting and exact history',t=>{
+ const text='<script setup>const count=1</script><template><main><p>Before<!-- keep <tag> & {{ raw }} \r\n second line -->{{ count }}<em title="owned">inside<!-- nested -->tail</em><!-- final -->after</p><aside>Outside</aside></main></template>';
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-vue-comments-')),file=path.join(root,'App.vue');t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(file,text);
+ const r={...resolve(text),file},info=adapter.describe(r);assert.equal(info.canSetChildren,true);
+ const [literal,comment,dynamic,em,last,tail]=info.richText.children;
+ assert.equal(comment.t,'comment');assert.equal(last.t,'comment');assert.equal(em.children[1].t,'comment');
+ const token=dynamic.parts.find(part=>part.t==='token');assert.ok(token);
+ const children=[{t:'wrap',tag:'strong',children:[{t:'text',value:literal.value}]},{t:'keep',id:comment.id},{t:'keep',id:token.id},{t:'keep',id:em.id,children:[{t:'text',value:'Changed'},{t:'keep',id:em.children[1].id},{t:'text',value:' tail'}]},{t:'keep',id:last.id},{t:'text',value:tail.value}];
+ const history=new SourceHistory(),result=history.commit(root,adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children}));assert.equal(result.ok,true,result.reason);
+ const after=fs.readFileSync(file,'utf8');assert.match(after,/<strong>Before<\/strong><!-- keep <tag> & \{\{ raw \}\} \r\n second line -->\{\{ count \}\}<em title="owned">Changed<!-- nested --> tail<\/em><!-- final -->after/);
+ assert.equal(adapter.describe(resolve(after)).canSetChildren,true);
+ assert.equal(history.apply(root,'undo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),text);assert.equal(history.apply(root,'redo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),after);
+ for(const invalid of [[{t:'keep',id:comment.id,children:[{t:'text',value:'changed'}]}],[{t:'keep',id:comment.id},{t:'keep',id:comment.id}],[{t:'copy',id:comment.id,children:[]}]])assert.equal(adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:invalid}).refused,true);
+});
+
+test('Vue comments follow compiler whitespace normalization without changing source identities',()=>{
+ const r=resolve('<template><main><p>\n  <!-- before -->\n  Hello\n  <!-- between -->\n  <em>World<!-- inside --></em>\n  <!-- after -->\n</p></main></template>');
+ const info=adapter.describe(r);assert.equal(info.canSetChildren,true);
+ assert.equal(info.richText.children.filter(item=>item.t==='comment').length,3);
+ const preserve=adapter.create({compilerOptions:{whitespace:'preserve'}}).describe(r);assert.equal(preserve.canSetChildren,true);
+ assert.deepEqual(info.richText.children.filter(item=>item.t==='comment').map(item=>item.id),preserve.richText.children.filter(item=>item.t==='comment').map(item=>item.id));
+ assert.equal(info.richText.children.find(item=>item.t==='element').children[1].t,'comment');
+});

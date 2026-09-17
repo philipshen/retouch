@@ -24517,3 +24517,33 @@ launch or notarization was attempted. Public distribution, this artifact's upgra
 path, Intel execution and full Figma/arbitrary-site parity remain unfinished.
 Evidence: `desktop/verification/2026-09-17-vue-rich-developer-id.json` and the linked
 local logs. This checkpoint is local and has not been pushed.
+
+## Vue text editing around authored comments (2026-09-17)
+
+Native Vue text containers can now be formatted when their children include
+comments, including nested comments and comments separating live interpolations.
+The adapter maps comments to the shared preserved-node descriptor and keeps their
+original source bytes. Comment contents cannot be edited or duplicated through a
+rich-text operation. Compiler-trimmed boundary whitespace and whitespace-only
+nodes are normalized for the independent HTML/Vue structure comparison; all
+non-whitespace structure disagreements still refuse the edit. Windows-style
+comment line endings are normalized only for that comparison, not in source.
+
+Source tests cover literal formatting around comments, nested attributed runs,
+live-value preservation, exact Undo/Redo, invalid comment rewrites/copies and
+compiler whitespace modes. The browser fixture formats a literal next to comments
+and a live value, verifies unchanged comments and working event handlers, and
+checks exact history and retained editor/live documents and counters. Combined
+Chromium and WebKit Vue workflows passed with responsive CSS, structure, grouping,
+rich text, bindings, live values and production checks. Follow-up Chromium/WebKit
+checks cover CRLF comment source. All 1,900 unit tests passed on the final code.
+
+Evidence: `/tmp/retouch-vue-comments-final-units.log`,
+`/tmp/retouch-vue-comments-combined-chromium.log`,
+`/tmp/retouch-vue-comments-combined-webkit.log`,
+`/tmp/retouch-vue-comments-crlf-chromium.log`, and
+`/tmp/retouch-vue-comments-crlf-webkit.log`.
+Compiler configurations that remove comments from the rendered DOM still fail the
+rendered-structure check; authoring across that transformation remains unfinished.
+This checkpoint does not rebuild the desktop artifact or establish full Figma or
+arbitrary-site parity.
