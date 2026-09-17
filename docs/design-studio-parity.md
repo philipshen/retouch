@@ -24867,3 +24867,29 @@ Screenshots: `/tmp/retouch-variable-picker-modes-{chromium,webkit}.png`.
 No source binding format or backend behavior changed in this checkpoint. No push,
 desktop rebuild or release was performed; full Figma parity and trusted desktop
 distribution remain unfinished.
+
+### 2026-09-17 — Binding status and actions in the picker
+
+The picker now shows the current variable and collection, inherited screen scope,
+local override state, or the number of bound layers and mixed bindings. Reset and
+detach actions are available for links owned in the current scope. Where a smaller
+screen contributes a binding, the picker can remove the current override to reveal
+it. Reset preserves each layer's existing variable/modes; detach preserves its
+current authored appearance. Mode drafts are independent of these actions.
+Property entry-point buttons have a purple bound state with an accessible
+local/inherited description.
+
+Validation: Vue workflows passed Chromium and WebKit with picker-based reset of
+a local color override, smaller-screen fallback, two-layer detach, exact source
+undo and retained preview state. React and local Liquid collection workflows
+passed Chromium with picker-based detach; React additionally reset a mixed
+selection through the picker and recovered its distinct original modes. These
+use the real adapter transactions; local Liquid evidence is not live Shopify
+verification. The inherited-state and local-override/action screenshots were
+inspected. Logs: `/tmp/retouch-picker-actions-{chromium,webkit,react,liquid}.log`.
+Screenshots include `/tmp/retouch-variable-picker-modes-chromium.png` and
+`/tmp/retouch-picker-binding-actions-chromium.png`.
+
+No backend or binding-format changes were made. This is a local source checkpoint;
+no push, desktop rebuild, notarization or release occurred. Full design parity and
+trusted desktop distribution remain unfinished.
