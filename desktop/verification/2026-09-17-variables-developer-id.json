@@ -1,0 +1,106 @@
+{
+  "sourceCommit": "d70896e1496d256b29ea2c1a0d9a1c19d2b3e0a4",
+  "sourceTreeDirty": false,
+  "sourceFiles": 292,
+  "sourceManifestMatchedCheckout": true,
+  "nativeBuildInputsMatchedCheckout": true,
+  "extractedManifestMatches": true,
+  "archiveSha256": "ac0e69faf05430dbf395c302271b895e6b497772b18adb5dad0e596cdd1c4242",
+  "date": "2026-09-17",
+  "app": "/Users/philipshen/Developer/retouch-worktrees/desktop-variables-d70896e1/Retouch.app",
+  "archive": "/Users/philipshen/Developer/retouch-worktrees/desktop-variables-d70896e1/Retouch-0.1.0-mac.zip",
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signing": {
+    "authority": "Developer ID Application: Philip Shen (2HN3MWMRX2)",
+    "strictVerification": true,
+    "hardenedRuntime": true,
+    "secureTimestamp": true
+  },
+  "gatekeeper": {
+    "exitCode": 3,
+    "result": "Unnotarized Developer ID"
+  },
+  "packagedRuntime": {
+    "packagedFiles": 1605,
+    "packagedSymlinks": 3,
+    "addedDependencyRoots": [
+      "node_modules/.bin/liquid",
+      "node_modules/.bin/liquidjs",
+      "node_modules/@vue/reactivity",
+      "node_modules/@vue/runtime-core",
+      "node_modules/@vue/runtime-dom",
+      "node_modules/@vue/server-renderer",
+      "node_modules/commander",
+      "node_modules/csstype",
+      "node_modules/liquidjs",
+      "node_modules/vue"
+    ],
+    "integrity": "Packaged bytes, modes, symlink targets and inventories match"
+  },
+  "desktopUnitTestsPassed": 32,
+  "packagedRuntimeUnitTestsPassed": 1925,
+  "packageTamperChecks": "passed",
+  "packagedBrowserChecks": {
+    "chromium": "passed combined Vue responsive CSS/comparisons, text/color/effect libraries, variable picker/modes/binding actions, structure, frames/groups, rich text, live values, bindings, exact history, retained state and production checks",
+    "webkit": "passed combined Vue responsive CSS/comparisons, text/color/effect libraries, variable picker/modes/binding actions, structure, frames/groups, rich text, live values, bindings, exact history, retained state and production checks"
+  },
+  "localCask": "/Users/philipshen/Developer/retouch-worktrees/desktop-variables-d70896e1/retouch-studio.rb",
+  "localCaskSyntax": "passed",
+  "homebrew": {
+    "candidate": "/Users/philipshen/Developer/retouch-worktrees/desktop-variables-d70896e1/Retouch-0.1.0-mac.zip",
+    "installation": {
+      "verification": {
+        "sourceCommit": "d70896e1496d256b29ea2c1a0d9a1c19d2b3e0a4",
+        "sourceTreeDirty": false,
+        "sourceFiles": 292,
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ],
+        "signature": "strict verification passed; trust and notarization are separate checks"
+      },
+      "manifestMatchesArchive": true,
+      "quarantine": "0381;6aab700a;;AD030477-E1B1-484B-9511-3533C4BB5C06",
+      "registered": "retouch-studio 0.1.0",
+      "recordedAppDirectory": "/Users/philipshen/Developer/retouch-worktrees/desktop-variables-d70896e1/brew-apps"
+    },
+    "originalInventoriesRestored": true,
+    "temporaryAppAndTapRemoved": true,
+    "quarantineRetained": true,
+    "nativeLaunch": "not attempted",
+    "trustedDistribution": "not established; candidate is not notarized",
+    "version": "Homebrew 7.0.1",
+    "cleanupNote": "Used recorded app directory after uninstall rejected --appdir; removed both the temporary qualified cask trust and its automatically added local-path alias."
+  },
+  "testTree": "ac8eb8acfe06f3a2a3b5e9d4bcdd2abf1ba8f2db",
+  "unverified": [
+    "native launch for this artifact",
+    "Intel runtime execution",
+    "notarization; existing notarytool Keychain profile name still pending",
+    "Homebrew upgrade for this artifact",
+    "public release",
+    "full Figma and arbitrary-site parity"
+  ],
+  "logs": [
+    "/tmp/retouch-desktop-variables-build.log",
+    "/tmp/retouch-desktop-variables-units.log",
+    "/tmp/retouch-desktop-variables-tamper.log",
+    "/tmp/retouch-desktop-variables-signature.log",
+    "/tmp/retouch-desktop-variables-gatekeeper.log",
+    "/tmp/retouch-desktop-variables-source-match.json",
+    "/tmp/retouch-desktop-variables-prepare.json",
+    "/tmp/retouch-desktop-variables-runtime-units.log",
+    "/tmp/retouch-desktop-variables-chromium.log",
+    "/tmp/retouch-desktop-variables-webkit.log",
+    "/tmp/retouch-desktop-variables-final.json",
+    "/tmp/retouch-desktop-variables-original-final.json",
+    "/tmp/retouch-desktop-variables-homebrew.log",
+    "/tmp/retouch-desktop-variables-homebrew-cleanup.log",
+    "/tmp/retouch-desktop-variables-homebrew-final.log",
+    "/tmp/retouch-desktop-variables-homebrew.json",
+    "/tmp/retouch-desktop-variables-homebrew-before.json"
+  ]
+}

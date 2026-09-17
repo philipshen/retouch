@@ -1,5 +1,35 @@
 # Retouch for macOS
 
+## Latest variable-editor candidate (2026-09-17, d70896e1)
+
+The universal Developer ID signed archive includes the latest Vue reusable-style
+and collection-variable support, searchable value previews, picker modes and
+binding actions, and property entry points across the supported inspectors.
+It was built from clean commit `d70896e1`.
+
+Archive: `/Users/philipshen/Developer/retouch-worktrees/desktop-variables-d70896e1/Retouch-0.1.0-mac.zip`
+
+SHA-256: `ac0e69faf05430dbf395c302271b895e6b497772b18adb5dad0e596cdd1c4242`
+
+All 292 packaged source entries and native inputs match the checkout. The exact
+ZIP was extracted into a separate test directory: 1,925 runtime unit tests and
+the combined Vue workflows passed in Chromium and WebKit. All 32 desktop tests,
+tamper checks and strict signatures passed. Final verification confirmed 1,605
+packaged files and three symlinks remained unchanged in the tested runtime.
+
+Homebrew 7.0.1 installed this checksum-bound cask into an isolated app directory.
+The installed manifest/signature matched, quarantine remained intact, and
+uninstall restored the original formula, cask, tap, trust and developer-mode
+inventories. Homebrew's uninstall command uses its stored app-directory receipt;
+it does not accept `--appdir`. Remove cask trust while a temporary custom tap still
+exists so Homebrew can also remove its local-path alias, then verify the trust
+inventory after untapping.
+
+Gatekeeper reports **Unnotarized Developer ID**. This candidate was not launched.
+The previously requested notarytool Keychain profile name is still pending;
+notarization, trusted launch, Intel execution, upgrades and public release remain
+unverified. See [the receipt](verification/2026-09-17-variables-developer-id.json).
+
 ## Latest Vue rich-text candidate (2026-09-17, 7dbc62a6)
 
 The universal Developer ID signed archive includes Vue rich-text formatting,

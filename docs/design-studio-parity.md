@@ -27,7 +27,7 @@ changing those files. The original checkout may continue to evolve independently
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. Vite 8 React now has an explicit development plugin; installed-package startup, TSX text editing, hot-update state retention, process shutdown/restart and persisted exact undo pass in Chromium/WebKit (see docs/cli.md). Vue now has a Vite compiler adapter with source-backed responsive CSS, native structure and grouping, link editing, and rich text that retains live values and authored bindings. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Comparison cards now show current scope coverage and offer an explicit width-and-larger style-scope action. Compact comparison defaults, explicit screen controls, add/reveal, remove/restore, keyboard focus and empty-state recovery now have browser coverage. Literal Liquid class edits retain main/comparison state and support preview-failure retry. Fully editable comparison canvases and cross-framework parity remain. |
 | Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop. Controlled native testing resumed with user authorization; rebuilt bundles still require individual launch verification under desktop/AGENTS.md. Current archive details and exact runtime evidence are in desktop/README.md. Current native interaction remains unverified. File flows, Intel runtime and broader lifecycle verification remain. |
-| Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. The `34494d4` candidate has verified Developer ID signing, archive integrity and packaged-runtime checks; see [its receipt](../desktop/verification/2026-09-14-runtime-path-developer-id.json). Its local cask syntax passes, but installation was not rerun for this candidate. Gatekeeper rejects it as unnotarized. Notarization, public publishing, upgrades, trusted quarantined launch and Intel execution remain unverified. |
+| Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. The latest `d70896e1` candidate has verified Developer ID signing, archive/source integrity, extracted-runtime checks and isolated Homebrew install/uninstall with quarantine retained and original inventories restored; see [its receipt](../desktop/verification/2026-09-17-variables-developer-id.json). Gatekeeper rejects it as unnotarized. Notarization, public publishing, upgrades, trusted quarantined launch and Intel execution remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
 
 Figma reference material used to anchor the inventory:
@@ -24893,3 +24893,26 @@ Screenshots include `/tmp/retouch-variable-picker-modes-chromium.png` and
 No backend or binding-format changes were made. This is a local source checkpoint;
 no push, desktop rebuild, notarization or release occurred. Full design parity and
 trusted desktop distribution remain unfinished.
+
+### 2026-09-17 — Packaged variable-editor verification
+
+Built a new universal Developer ID candidate from clean `d70896e1`, incorporating
+the recent editor checkpoints. All 292 source entries and native build inputs
+match the checkout; the ZIP's manifest matches the built app. All 32 desktop
+tests, tamper tests and strict signing checks passed. The exact archive's extracted
+runtime passed 1,925 unit tests and the combined Vue Chromium/WebKit workflows,
+including the variable picker, modes and binding actions. Final integrity checks
+confirmed 1,605 packaged files and three symlinks remained unchanged.
+
+Homebrew installed the exact checksum-bound archive into an isolated app directory.
+Its installed manifest/signature passed and quarantine was retained. Cleanup
+corrected an unsupported uninstall flag and removed both the temporary qualified
+cask trust and its custom-remote path alias. Original formula/cask/tap/trust and
+developer-mode inventories were verified restored. The temporary app and tap were
+removed. See the [receipt](../desktop/verification/2026-09-17-variables-developer-id.json)
+and desktop README for artifact paths, hash and logs.
+
+Gatekeeper assessment still rejects the candidate as Unnotarized Developer ID.
+No native launch, notarization, upgrade, Intel execution or public publishing was
+performed. The existing notary-profile question remains pending. No push occurred;
+full Figma parity and trusted desktop distribution remain active requirements.
