@@ -24671,3 +24671,46 @@ build checks. Evidence: `/tmp/retouch-vue-linked-styles-final-units.log`,
 No desktop rebuild, push or release accompanies this source checkpoint. Vue
 variable collections and other framework capabilities remain incomplete; full
 Figma parity and trusted desktop distribution remain unfinished.
+
+### 2026-09-17 — Vue collection variables and persistent binding drafts
+
+Native Vue layers now bind typed collection values through the existing Variables
+editor and Collection bindings controls. Aliases, explicit collection modes,
+numeric units, base/breakpoint inheritance, local overrides, reset, detach and
+removal of a larger-screen override use the native Vue CSS writer. Same-file
+selections preserve each layer's binding and modes when reset. Project collection
+updates include unvisited SFCs and the catalog in one exact history transaction;
+removing a referenced variable refuses the whole transaction.
+
+Collection responses and history restores now carry Vue template hashes and
+compiled stylesheet revisions. The canvas and comparison previews wait for the
+affected visible components and their CSS, preserving document identity and live
+state. The manifest uses a supported layer to inspect each changed stylesheet,
+including when a surrounding native container has computed inline styles.
+
+The browser exposed an inspector refresh between mode preview and Apply that
+silently discarded the chosen mode. Binding drafts now survive a refresh only
+for the same selection, file revision, property and screen scope. Successful
+writes clear them, so undo shows the restored binding rather than an old draft.
+The Vue browser test forces a panel refresh before applying Dark mode and checks
+that undo does not revive the applied draft.
+
+The older HTML binding fixture contained a permanently self-referential alias,
+which current library validation refuses before startup. Its preview-cycle test
+now uses two independently valid collection modes whose combination creates the
+cycle. This preserves coverage of preview refusal while using a valid saved
+library, and the complete HTML binding workflow passes.
+
+Validation: all 1,925 unit tests passed. The combined Vue browser suites passed
+in Chromium and WebKit, covering responsive CSS, reusable text/color/effect
+styles, collection variables, structure, rich text, bindings, exact history,
+retained document state and production exclusion. The HTML collection-binding
+workflow passed in Chromium. A final targeted Vue variable run also passed;
+its inspected screenshot shows the Dark-mode tablet binding controls and purple
+text alongside the phone's unchanged base color. Evidence logs are under
+`/tmp/retouch-vue-variables-{final-units,complete-chromium,complete-webkit,html-bindings,final-chromium}.log`;
+the screenshot is `/tmp/retouch-vue-variables-chromium.png`.
+
+This is a source checkpoint. No desktop rebuild or notarization was performed
+for these changes. Full Figma parity and the trusted public desktop/Homebrew
+release remain unfinished.

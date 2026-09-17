@@ -698,6 +698,24 @@
       }));
       if(failures.length)throw Error('Could not refresh '+failures.join(', ')+'.');
     },
+    async syncHistory(manifest){
+      if(!open)return;const expectedRoute=path();
+      await Promise.all([...cards].map(async card=>{
+        card.styleSyncError=null;
+        try{
+          const d=card.frame.contentDocument;if(!d?.body||d.URL==='about:blank')throw Error('Preview is still loading.');
+          const url=new URL(d.URL);if(url.pathname+url.search+url.hash!==expectedRoute)return;
+          const target=RetouchHistoryRender.targets(manifest,d);if(!target)throw Error('The source restore cannot be verified.');
+          for(let attempt=0,stable=0;attempt<160;attempt++){
+            if(!open||!cards.includes(card)||path()!==expectedRoute)return;
+            if(card.frame.contentDocument!==d)throw Error('Preview navigated while waiting for the source restore.');
+            stable=RetouchHistoryRender.matches(target,d)?stable+1:0;if(stable>=3)return;
+            await new Promise(resolve=>setTimeout(resolve,50));
+          }
+          throw Error('The updated templates and styles have not reached this preview.');
+        }catch(error){if(open&&cards.includes(card))card.styleSyncError='Source saved; comparison refresh failed: '+error.message;}
+      }));
+    },
     async syncCSS(info){
       const infos=Array.isArray(info)?info:[info];if(!open||!infos.length||infos.some(item=>!item.cssAuthoring))return;
       const expectedRoute=path();

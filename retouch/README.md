@@ -166,7 +166,12 @@ one undo step. The Vite integration tracks each component's source revision so
 simultaneous template/style updates retain state; script changes still use Vue's
 normal component reload. `retouch()` returns a Vite plugin array, accepted in the
 same `plugins: [retouch(), vue()]` configuration.
-Computed inline styles, other structural operations, variable collections,
+Collection variables support typed property bindings, aliases, per-binding modes,
+responsive inheritance, local overrides, and same-file selections. Collection
+edits propagate through linked Vue files and undo restores the catalog and source
+while waiting for both template and stylesheet revisions. Inspector refreshes
+preserve uncommitted variable/mode/unit choices for the same source and scope.
+Computed inline styles, other structural operations,
 component-property edits, external templates, template
 preprocessors and SSR editing remain incomplete.
 Broad or dynamically named bindings that can replace source markers are not

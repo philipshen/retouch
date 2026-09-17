@@ -18,6 +18,7 @@ try{
  const productionSource=process.env.RT_VUE_CSS==='1'?await require('./vue-css.cjs').run({page,app,live,file,source}):null;
  if(process.env.RT_VUE_TEXT_STYLES==='1')await require('./vue-text-styles.cjs').run({page,app,live,file,source});
  if(process.env.RT_VUE_LINKED_STYLES==='1')await require('./vue-linked-styles.cjs').run({page,app,live,file,source});
+ if(process.env.RT_VUE_VARIABLES==='1')await require('./vue-variables.cjs').run({page,app,live,file,source});
  if(process.env.RT_VUE_STRUCTURE==='1')await require('./vue-structure.cjs').run({page,app,live,file,source});
  if(process.env.RT_VUE_COPY==='1')await require('./vue-copy.cjs').run({page,app,live,file,source});
  if(process.env.RT_VUE_INSERT==='1')await require('./vue-insert.cjs').run({page,app,live,file,source});

@@ -19,3 +19,8 @@ test('render readiness waits for every visible source and repeated instance, and
  assert.equal(render.matches(targets,document(ready.map(row=>row[0]==='second'?['second','old-b']:row))),false);
  assert.equal(render.targets(null,document([])),null);
 });
+test('Vue restore readiness requires both all template revisions and the active compiled stylesheet',()=>{
+ const css={selector:'[data-rt-vue-css="0123456789"]',property:'--retouch-css-revision',value:'new-css'},manifest={attribute:'data-rt-revision',renderer:'vue',groups:[{ids:['first'],hash:'new',css}]},doc=document([['first','new']]);doc.styleSheets=[];const target=render.targets(manifest,doc);assert.equal(render.matches(target,doc),false);
+ const rule=value=>({selectorText:css.selector,style:{getPropertyValue:()=>value}});doc.styleSheets=[{cssRules:[rule('old-css')]}];assert.equal(render.matches(target,doc),false);doc.styleSheets[0].cssRules=[rule('new-css')];assert.equal(render.matches(target,doc),true);doc.styleSheets[0].disabled=true;assert.equal(render.matches(target,doc),false);
+ const absent=document([]);assert.equal(render.matches(render.targets(manifest,absent),absent),true,'Unvisited files do not require a stylesheet in this page');
+});

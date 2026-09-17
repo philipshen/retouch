@@ -1,5 +1,6 @@
 'use strict';
-const MagicString=require('magic-string'),html=require('./adapters/html.cjs'),css=require('./html-css.cjs'),bindings=require('./variable-bindings.cjs'),V=require('../shell/html-css-values.js');
+const MagicString=require('magic-string'),bindings=require('./variable-bindings.cjs'),V=require('../shell/html-css-values.js');
+function create(html=require('./adapters/html.cjs'),css=require('./html-css.cjs')){
 const attribute='data-rt-variables',properties=bindings.properties,refuse=reason=>({ok:false,refused:true,reason});
 function links({element}){
  const raw=element.node.attrs.find(a=>a.name===attribute)?.value;if(raw===undefined)return {};
@@ -43,4 +44,6 @@ function planFile(file,relPath,before,library){try{
  let source=before;for(const target of targets){const element=html.collect(source,relPath).elements.find(e=>e.id===target.id);if(!element)throw Error('A linked layer could not be resolved.');const result=plan({file,relPath,source,hash:html.contentHash(source),element},{type:'refreshVariable',width:target.width,property:target.property},library);if(!result.ok)return result;source=result.edits[0]?.after||source;}
  return {ok:true,updated:targets.length,edits:source===before?[]:[{file,before,after:source}]};
 }catch(error){return refuse(error.message);}}
-module.exports={links,describe,plan,planFile,properties};
+return {links,describe,plan,planFile,properties};
+}
+module.exports={...create(),create};

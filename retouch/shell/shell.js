@@ -3174,8 +3174,8 @@ async function writeVariableSelection(type,width,extra){
  try{
   const result=await api('POST','/rt/__api/op',{type:type+'Selection',id:info.id,ids,fileHash:info.hash,width,...selectionSourceContexts(selection),...extra});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected variable bindings.');
-  if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
-  sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});else await reloadFrame();renderPanel();toast('Selected bindings updated','ok');
+  if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',managedCSS:!!info.cssRendering,id:info.id,selectionIds:ids,undoId:result.undoId});
+  sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});else if(info.cssRendering){await RetouchRenderSync.syncCSS({frame:iframe,entries:result.selection.map(item=>({id:item.id,rules:item.cssRules,texts:item.cssRuleTexts,rendering:item.cssRendering}))});await window.RetouchComparisons?.syncCSS(result.selection);}else await reloadFrame();renderPanel();toast('Selected bindings updated','ok');
  }finally{busyPanel(false);}
 }
 function selectionColorOptions(width){
@@ -3785,7 +3785,7 @@ function moveHTMLLayer(info,target,width,g,action='move',opener,initial=null){
 window.RetouchVariableModePreview=async request=>{const result=await api('POST','/rt/__api/variables/resolve',request);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not preview variable modes.');return result;};
 window.RetouchVariableLibraryRequest=async operation=>{
  if(!operation){const result=await api('GET','/rt/__api/variables');if(!result?.ok)throw Error(result?.reason||result?.error||'Could not load variable collections.');return result;}
- busyPanel(true);try{const result=await api('POST','/rt/__api/variables',operation);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save variable collections.');if(result.undoId)editorHistory.record({type:'sourceHistory',undoId:result.undoId});if(result.updated){const info=sel?.info,ids=sel?.multiple?.map(item=>item.id),fresh=info?await api('GET',resolveUrl(info.id,info.context)):null;if(fresh?.ok&&sel?.info.id===info.id)sel.info=fresh.element;if(fresh?.ok&&fresh.element.classVariables)await refreshTextStyleElement(fresh.element);else await reloadFrame();if(ids?.length>1)await restoreLayerSelection(ids);else if(sel)renderPanel();}return result;}finally{busyPanel(false);}
+ busyPanel(true);try{const result=await api('POST','/rt/__api/variables',operation);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save variable collections.');if(result.undoId)editorHistory.record({type:'sourceHistory',undoId:result.undoId});if(result.updated){const info=sel?.info,ids=sel?.multiple?.map(item=>item.id),fresh=info?await api('GET',resolveUrl(info.id,info.context)):null;if(fresh?.ok&&sel?.info.id===info.id)sel.info=fresh.element;if(result.renderRevisions?.renderer==='vue')await refreshSourceHistory(result.renderRevisions);else if(fresh?.ok&&fresh.element.classVariables)await refreshTextStyleElement(fresh.element);else await reloadFrame();if(ids?.length>1)await restoreLayerSelection(ids);else if(sel)renderPanel();}return result;}finally{busyPanel(false);}
 };
 window.RetouchColorStyleRequest=async operation=>{
  const info=sel?.info;busyPanel(true);
@@ -3991,15 +3991,16 @@ async function refreshSourceHistory(manifest) {
   if(!target){await reloadFrame();return;}
   const route=iframe.contentWindow.location.href;
   let stable=0;
-  for(let attempt=0;attempt<40;attempt++){
+  for(let attempt=0;attempt<(manifest.renderer==='vue'?160:40);attempt++){
     if(iframe.contentWindow.location.href!==route)return;
     try{
       const d=doc(),stylesReady=[...d.querySelectorAll('link[rel="stylesheet"]')].every(link=>link.disabled||!!link.sheet);
       stable=stylesReady&&RetouchHistoryRender.matches(target,d)?stable+1:0;
-      if(stable>=3)return;
+      if(stable>=3){if(manifest.renderer==='vue')await window.RetouchComparisons?.syncHistory(manifest);return;}
     }catch{stable=0;}
     await new Promise(resolve=>setTimeout(resolve,50));
   }
+  if(manifest.renderer==='vue')throw Error('The updated Vue templates and styles have not reached the preview yet.');
   // Frameworks may require a reload even with stable source identities. Wait
   // for the server-rendered revision before asking the canvas to load it.
   for(let attempt=0;attempt<20;attempt++){
