@@ -24746,3 +24746,31 @@ Screenshots: `/tmp/retouch-variable-picker-{chromium,webkit}.png`.
 This checkpoint is local source work. No push, desktop rebuild, notarization or
 release was performed. Full Figma parity and trusted desktop distribution remain
 unfinished.
+
+### 2026-09-17 — Variables beside CSS property fields
+
+Supported fields in the shared HTML/Vue CSS inspector now have a compact,
+keyboard-accessible Apply variable button beside the value. It opens the
+searchable picker with that property's type, current unit, inherited binding
+modes and screen scope. The entry point works while Collection bindings is
+closed, and disabled property fields also disable their variable action. The
+same metadata is attached to shared CSS selection fields. React/Liquid class
+fields still need corresponding per-property entry points.
+
+The binding controller is scoped to the current panel; a stale disconnected
+panel cannot open or apply a choice. Initial library loading is shared with the
+advanced controls. Loading failure reveals its error instead of silently doing
+nothing, and closing the picker can return focus to a rebuilt property button.
+
+Validation: all 1,925 unit tests passed. Targeted Vue workflows passed in Chromium
+and WebKit with the advanced section closed/rebuilt before opening the text-color
+picker, plus a Padding entry-point check proving number-only choices, a 12px
+source/rendered change and exact undo. The existing mode/unit, alias, responsive
+and retained-state coverage also passed. The HTML binding workflow passed.
+Logs: `/tmp/retouch-property-variable-{units,chromium,webkit,html}.log`.
+The Chromium picker screenshot was inspected with the new inline field buttons.
+These checks do not prove all property combinations or complete design parity.
+
+Local source checkpoint only; no push, desktop rebuild or release. Full Figma
+parity, arbitrary-site authoring and trusted desktop distribution remain active
+requirements.

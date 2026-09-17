@@ -1,6 +1,7 @@
 (function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory(require('./html-css-values.js'),require('./responsive.js'),require('./inspector.js'));else root.RetouchCollectionBindings=factory(root.RetouchHTMLCSSValues,root.RetouchResponsive,root.RetouchInspector);})(typeof globalThis!=='undefined'?globalThis:this,function(V,R,I){
  'use strict';
  let expanded=false,target='color',draft=null;
+ const controllers=new WeakMap();
  const paints=['color','background-color','border-color','fill','stroke'],numbers=['width','height','min-width','max-width','min-height','max-height','gap','padding','margin','font-size','letter-spacing','border-width','border-radius','opacity','font-weight','line-height','flex-grow','flex-shrink',...['top','right','bottom','left'].flatMap(side=>['padding-'+side,'margin-'+side]),...['top-left','top-right','bottom-left','bottom-right'].map(corner=>'border-'+corner+'-radius')];
  const unitless=['opacity','font-weight','line-height','flex-grow','flex-shrink'];
  // Track the nearest contributing managed screen scope, not just the nearest link.
@@ -31,7 +32,7 @@
   const selection=Array.isArray(input)?input:[input],info=selection[0],multiple=selection.length>1;
   const I=RetouchInspector,details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Collection bindings';details.append(summary);parent.append(details);details.open=expanded;
   const status=I.note(details,''),controls=document.createElement('fieldset');status.setAttribute('role','status');controls.style.cssText='border:0;padding:0;margin:0;min-width:0';details.append(controls);
-  let library=null,values=[],selected='',modes={},unit='',busy=false;
+  let library=null,values=[],selected='',modes={},unit='',busy=false,loadPromise=null;
   const inherit=(property,ignoreOwn=false)=>options.inherited?options.inherited(property,ignoreOwn):inherited(info,width,property,ignoreOwn);
   const ownLinks=()=>selection.map(item=>item.variableLinks?.[width]?.[target]);
   const link=()=>{const links=ownLinks();return links[0]&&links.every(item=>JSON.stringify(item)===JSON.stringify(links[0]))?links[0]:null;};
@@ -41,7 +42,7 @@
   const init=()=>{const current=link()||(!multiple&&inherit(target)?.link);selected=current?.id||'';modes={...current?.modes};unit=current?.unit??(unitless.includes(target)?'':'px');if(draft?.key===draftKey()){selected=draft.selected;modes={...draft.modes};unit=draft.unit;}};init();
   async function run(action){if(busy)return;busy=true;controls.disabled=true;status.textContent='Working…';try{await action();if(details.isConnected){render();status.textContent='';}}catch(error){values=[];if(details.isConnected){render();status.textContent=error.message;}}finally{busy=false;controls.disabled=false;}}
   const preview=async()=>{values=[];if(selected)values=(await RetouchVariableModePreview({revision:library.revision,modes,variableId:selected})).values;};
-  const load=()=>run(async()=>{library=await RetouchVariableLibraryRequest();await preview();});
+  const load=()=>loadPromise||(loadPromise=run(async()=>{library=await RetouchVariableLibraryRequest();await preview();}).finally(()=>{loadPromise=null;}));
   function browse(choices,type,trigger){
    const context=draftKey(),current=()=>[...document.querySelectorAll('[data-variable-picker-context]')].some(node=>node.dataset.variablePickerContext===context);
    const dialog=document.createElement('dialog');dialog.className='variable-picker';dialog.setAttribute('aria-label','Apply variable');
@@ -63,7 +64,7 @@
    }
    search.addEventListener('input',list);dialog.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();dialog.close();return;}if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key)||applying)return;const rows=[...results.querySelectorAll('button')];if(!rows.length)return;const index=rows.indexOf(document.activeElement);if(index<0&&!['ArrowDown','ArrowUp'].includes(event.key))return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?rows.length-1:index<0?(event.key==='ArrowDown'?0:rows.length-1):(index+(event.key==='ArrowDown'?1:-1)+rows.length)%rows.length;rows[next].focus();});
    const observer=new MutationObserver(()=>{if(!current())dialog.close();});observer.observe(document.body,{childList:true,subtree:true});
-   dialog.addEventListener('close',()=>{observer.disconnect();dialog.remove();const focus=trigger.isConnected?trigger:[...document.querySelectorAll('[data-variable-picker-context]')].find(node=>node.dataset.variablePickerContext===context)?.querySelector('.variable-picker-trigger');focus?.focus();},{once:true});list();dialog.showModal();search.focus();
+   dialog.addEventListener('close',()=>{observer.disconnect();dialog.remove();const focus=trigger.isConnected?trigger:[...parent.querySelectorAll('.property-variable')].find(button=>button.getAttribute('aria-label')===trigger.getAttribute('aria-label'))||[...document.querySelectorAll('[data-variable-picker-context]')].find(node=>node.dataset.variablePickerContext===context)?.querySelector('.variable-picker-trigger');focus?.focus();},{once:true});list();dialog.showModal();search.focus();
   }
   function render(){
    details.dataset.variablePickerContext=draftKey();
@@ -96,8 +97,24 @@
     controls.append(I.button('Reset collection binding',()=>run(()=>writeBinding('resetVariable',width,{property:target,libraryRevision:library.revision}))),I.button('Detach collection binding',()=>run(()=>writeBinding('detachVariable',width,{property:target}))));
    }
   }
+  controllers.set(parent,{details,open:async(property,trigger)=>{
+   if(loadPromise)await loadPromise;if(!details.isConnected||busy)return;target=property;init();remember();render();
+   if(!library)await load();if(!details.isConnected)return;if(!library){for(let node=details;node&&node!==parent.parentElement;node=node.parentElement)if(node.tagName==='DETAILS')node.open=true;status.scrollIntoView({block:'nearest'});return;}
+   const type=paints.includes(target)?'color':numbers.includes(target)?'number':target==='visibility'?'boolean':'string';
+   browse(library.variables.filter(variable=>variable.type===type),type,trigger);
+  }});
   render();
   details.addEventListener('toggle',()=>{expanded=details.open;if(expanded&&!library&&!busy)load();});if(expanded)load();
  }
- return {mount,inherited,classInherited};
+ function decorate(parent){
+  const controller=controllers.get(parent);if(!controller?.details.isConnected)return;
+  const supported=new Set([...paints,...numbers,'visibility','font-family']);
+  for(const input of parent.querySelectorAll('[data-variable-property]')){
+   const property=input.dataset.variableProperty;if(!supported.has(property))continue;
+   const field=input.closest('.inspector-field');if(!field)continue;let row=field.closest('.property-row');if(!row){row=document.createElement('div');row.className='property-row';field.before(row);row.append(field);}
+   if(row.querySelector('.property-variable'))continue;
+   const label=(new Map(V.fields).get(property)||property).toLowerCase(),button=I.button('Apply variable to '+label,()=>controller.open(property,button));button.classList.add('property-variable');button.textContent='◈';button.setAttribute('aria-label','Apply variable to '+label);button.setAttribute('aria-haspopup','dialog');button.title='Apply variable to '+label;button.disabled=input.disabled;row.append(button);
+  }
+ }
+ return {mount,inherited,classInherited,decorate};
 });
