@@ -1,0 +1,101 @@
+{
+  "sourceCommit": "7dbc62a62315e6140463fbea79b83dd60a3d5a97",
+  "sourceTreeDirty": false,
+  "sourceFiles": 288,
+  "sourceManifestMatchedCheckout": true,
+  "nativeBuildInputsMatchedCheckout": true,
+  "extractedManifestMatches": true,
+  "archiveSha256": "33f6149f668e98e04aa2f69ecd6c99b19440b5ae2ea964b5c2481c03a088eaf3",
+  "date": "2026-09-17",
+  "app": "/Users/philipshen/Developer/retouch-worktrees/desktop-vue-rich-7dbc62a6/Retouch.app",
+  "archive": "/Users/philipshen/Developer/retouch-worktrees/desktop-vue-rich-7dbc62a6/Retouch-0.1.0-mac.zip",
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signing": {
+    "authority": "Developer ID Application: Philip Shen (2HN3MWMRX2)",
+    "strictVerification": true,
+    "hardenedRuntime": true,
+    "secureTimestamp": true
+  },
+  "gatekeeper": {
+    "exitCode": 3,
+    "result": "Unnotarized Developer ID"
+  },
+  "packagedRuntime": {
+    "packagedFiles": 1601,
+    "packagedSymlinks": 3,
+    "addedDependencyRoots": [
+      "node_modules/.bin/liquid",
+      "node_modules/.bin/liquidjs",
+      "node_modules/@vue/reactivity",
+      "node_modules/@vue/runtime-core",
+      "node_modules/@vue/runtime-dom",
+      "node_modules/@vue/server-renderer",
+      "node_modules/commander",
+      "node_modules/csstype",
+      "node_modules/liquidjs",
+      "node_modules/vue"
+    ],
+    "integrity": "Packaged bytes, modes, symlink targets and inventories match"
+  },
+  "desktopUnitTestsPassed": 32,
+  "packagedRuntimeUnitTestsPassed": 1898,
+  "packageTamperChecks": "passed",
+  "packagedBrowserChecks": {
+    "chromium": "passed combined Vue responsive CSS/comparisons, structure, frames/groups, links, rich text, responsive paragraph splits, live interpolations, presentation/event bindings, bound link text, exact history, retained state and production checks",
+    "webkit": "passed same combined Vue workflows"
+  },
+  "localCask": "/Users/philipshen/Developer/retouch-worktrees/desktop-vue-rich-7dbc62a6/retouch-studio.rb",
+  "localCaskSyntax": "passed",
+  "unverified": [
+    "native launch for this artifact",
+    "Intel runtime execution",
+    "notarization; existing notarytool Keychain profile name requested",
+    "Homebrew upgrade for this artifact",
+    "public release",
+    "full Figma and arbitrary-site parity"
+  ],
+  "logs": [
+    "/tmp/retouch-desktop-vue-rich-build.log",
+    "/tmp/retouch-desktop-vue-rich-units.log",
+    "/tmp/retouch-desktop-vue-rich-tamper.log",
+    "/tmp/retouch-desktop-vue-rich-signature.log",
+    "/tmp/retouch-desktop-vue-rich-gatekeeper.log",
+    "/tmp/retouch-desktop-vue-rich-source-match.json",
+    "/tmp/retouch-desktop-vue-rich-prepare.json",
+    "/tmp/retouch-desktop-vue-rich-runtime-units.log",
+    "/tmp/retouch-desktop-vue-rich-chromium.log",
+    "/tmp/retouch-desktop-vue-rich-webkit.log",
+    "/tmp/retouch-desktop-vue-rich-final.json",
+    "/tmp/retouch-desktop-vue-rich-homebrew.log",
+    "/tmp/retouch-desktop-vue-rich-homebrew.json"
+  ],
+  "testTree": "11bd1de02fd9014f7563b7622d2b3e0ca6a309d6",
+  "homebrew": {
+    "candidate": "/Users/philipshen/Developer/retouch-worktrees/desktop-vue-rich-7dbc62a6/Retouch-0.1.0-mac.zip",
+    "installation": {
+      "verification": {
+        "sourceCommit": "7dbc62a62315e6140463fbea79b83dd60a3d5a97",
+        "sourceTreeDirty": false,
+        "sourceFiles": 288,
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ],
+        "signature": "strict verification passed; trust and notarization are separate checks"
+      },
+      "manifestMatchesArchive": true,
+      "quarantine": "0381;6aab4ed3;;06D46F83-1344-47E1-B0F8-AEE366EC3EE0",
+      "registered": "retouch-studio 0.1.0"
+    },
+    "originalInventoriesRestored": true,
+    "temporaryAppAndTapRemoved": true,
+    "quarantineRetained": true,
+    "nativeLaunch": "not attempted",
+    "trustedDistribution": "not established; candidate is not notarized",
+    "version": "7.0.1",
+    "scope": "Temporary local tap and isolated app directory; only generated cask trusted before tap validation; existing formula/cask/tap/trust/developer inventories restored."
+  }
+}

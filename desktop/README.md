@@ -1,27 +1,32 @@
 # Retouch for macOS
 
-## Latest Vue/editor candidate (2026-09-17, 8876d323)
+## Latest Vue rich-text candidate (2026-09-17, 7dbc62a6)
 
-The universal Developer ID signed archive includes the Vue compiler adapter,
-responsive CSS, layer insertion/ordering/copy/paste, batch structure, frames/groups,
-and link destinations from clean commit `8876d323`.
+The universal Developer ID signed archive includes Vue rich-text formatting,
+responsive paragraph splits, live values, presentation/event bindings, and bound
+link text editing, alongside the preceding editor workflows from clean commit
+`7dbc62a6`.
 
-Archive: `/Users/philipshen/Developer/retouch-worktrees/desktop-vue-8876d323/Retouch-0.1.0-mac.zip`
+Archive: `/Users/philipshen/Developer/retouch-worktrees/desktop-vue-rich-7dbc62a6/Retouch-0.1.0-mac.zip`
 
-SHA-256: `6dba338039fea79f6f7aab38eca63241e18255fe38514f6f6305ad398fdd51fb`
+SHA-256: `33f6149f668e98e04aa2f69ecd6c99b19440b5ae2ea964b5c2481c03a088eaf3`
 
-All 287 packaged source entries and native inputs match the source revision.
-All 32 desktop tests, package tamper checks, and 1,882 extracted-runtime unit
+All 288 packaged source entries and native inputs match the source revision.
+All 32 desktop tests, package tamper checks, and 1,898 extracted-runtime unit
 tests passed. The bundled runtime passed the combined Vue workflows in Chromium
-and WebKit. Final verification confirmed all 1,600 packaged files and three
-symlinks remained unchanged in the tested copy. A checksum-bound local cask
-passes Ruby syntax checking.
+and WebKit. Final verification confirmed all 1,601 packaged files and three
+symlinks remained unchanged in the tested copy.
 
-Gatekeeper reports **Unnotarized Developer ID**. Native launch and Homebrew
-installation were not attempted for this artifact. The existing notarytool
-Keychain profile name is still needed for notarization. Trusted distribution,
-public release, upgrades and Intel execution remain unverified. See
-[the receipt](verification/2026-09-17-vue-developer-id.json).
+Homebrew 7.0.1 installed the checksum-bound local cask into an isolated app
+directory. The installed signature and source manifest passed verification;
+quarantine remained intact. Uninstall and temporary tap/cask trust cleanup restored
+the original package, tap, trust and developer-mode inventories.
+
+Gatekeeper reports **Unnotarized Developer ID**. Native launch was not attempted
+for this artifact. The existing notarytool Keychain profile name is still needed
+for notarization. Trusted distribution, public release, upgrades and Intel
+execution remain unverified. See
+[the receipt](verification/2026-09-17-vue-rich-developer-id.json).
 
 ## Testing an extracted package without dependency drift
 

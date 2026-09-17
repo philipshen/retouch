@@ -24495,3 +24495,25 @@ rich-text, and production-build checks. Evidence:
 `/tmp/retouch-vue-bound-link-combined-chromium.log`, and
 `/tmp/retouch-vue-bound-link-combined-webkit.log`. No desktop artifact or release
 was produced by this checkpoint; full parity remains incomplete.
+
+## Signed Vue rich-text desktop candidate (2026-09-17)
+
+Built a universal Developer ID signed package from clean commit `7dbc62a6`,
+including all recent Vue rich-text, live-value, binding and responsive split work.
+All 288 source entries and native build inputs match that revision. The 32 desktop
+tests, tamper checks, 1,898 extracted-runtime unit tests and combined Chromium/
+WebKit Vue workflows passed. Final integrity checks confirm the tested copy kept
+all 1,601 packaged files and three symlinks unchanged.
+
+Homebrew 7.0.1 installed the exact checksum-bound ZIP through a temporary local
+cask, verified its installed signature and manifest, retained quarantine, and
+uninstalled it. Original formula/cask/tap/trust/developer inventories were restored.
+Only the generated cask was trusted, before tap validation; no global trust
+setting was disabled. The first tap attempt failed before installation because
+trust was initially applied after validation; its temporary clone was removed.
+
+Gatekeeper still rejects this artifact as Unnotarized Developer ID. No native
+launch or notarization was attempted. Public distribution, this artifact's upgrade
+path, Intel execution and full Figma/arbitrary-site parity remain unfinished.
+Evidence: `desktop/verification/2026-09-17-vue-rich-developer-id.json` and the linked
+local logs. This checkpoint is local and has not been pushed.
