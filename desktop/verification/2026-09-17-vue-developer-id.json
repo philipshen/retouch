@@ -1,0 +1,73 @@
+{
+  "sourceCommit": "8876d32376eceb6a9c49e2e367b6bb32af7c4108",
+  "sourceTreeDirty": false,
+  "sourceFiles": 287,
+  "sourceManifestMatchedCheckout": true,
+  "nativeBuildInputsMatchedCheckout": true,
+  "extractedManifestMatches": true,
+  "archiveSha256": "6dba338039fea79f6f7aab38eca63241e18255fe38514f6f6305ad398fdd51fb",
+  "date": "2026-09-17",
+  "app": "/Users/philipshen/Developer/retouch-worktrees/desktop-vue-8876d323/Retouch.app",
+  "archive": "/Users/philipshen/Developer/retouch-worktrees/desktop-vue-8876d323/Retouch-0.1.0-mac.zip",
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signing": {
+    "authority": "Developer ID Application: Philip Shen (2HN3MWMRX2)",
+    "strictVerification": true,
+    "hardenedRuntime": true,
+    "secureTimestamp": true
+  },
+  "gatekeeper": {
+    "exitCode": 3,
+    "result": "Unnotarized Developer ID"
+  },
+  "packagedRuntime": {
+    "packagedFiles": 1600,
+    "packagedSymlinks": 3,
+    "addedDependencyRoots": [
+      "node_modules/.bin/liquid",
+      "node_modules/.bin/liquidjs",
+      "node_modules/@vue/reactivity",
+      "node_modules/@vue/runtime-core",
+      "node_modules/@vue/runtime-dom",
+      "node_modules/@vue/server-renderer",
+      "node_modules/commander",
+      "node_modules/csstype",
+      "node_modules/liquidjs",
+      "node_modules/vue"
+    ],
+    "integrity": "Packaged bytes, modes, symlink targets and inventories match"
+  },
+  "desktopUnitTestsPassed": 32,
+  "packagedRuntimeUnitTestsPassed": 1882,
+  "packageTamperChecks": "passed",
+  "packagedBrowserChecks": {
+    "chromium": "passed combined Vue source editing, responsive CSS/comparisons, single/batch structure, frames/groups, link destinations, exact history, retained state and production style retention",
+    "webkit": "passed same combined Vue workflows"
+  },
+  "localCask": "/Users/philipshen/Developer/retouch-worktrees/desktop-vue-8876d323/retouch-studio.rb",
+  "localCaskSyntax": "passed",
+  "unverified": [
+    "native launch for this artifact",
+    "Intel runtime execution",
+    "notarization; existing notarytool Keychain profile name requested",
+    "Homebrew installation and upgrade for this artifact",
+    "public release",
+    "full Figma and arbitrary-site parity"
+  ],
+  "logs": [
+    "/tmp/retouch-desktop-vue-build.log",
+    "/tmp/retouch-desktop-vue-units.log",
+    "/tmp/retouch-desktop-vue-tamper.log",
+    "/tmp/retouch-desktop-vue-signature.log",
+    "/tmp/retouch-desktop-vue-gatekeeper.log",
+    "/tmp/retouch-desktop-vue-source-match.json",
+    "/tmp/retouch-desktop-vue-prepare.json",
+    "/tmp/retouch-desktop-vue-runtime-units.log",
+    "/tmp/retouch-desktop-vue-chromium.log",
+    "/tmp/retouch-desktop-vue-webkit.log",
+    "/tmp/retouch-desktop-vue-final.json"
+  ]
+}

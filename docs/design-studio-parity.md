@@ -24266,3 +24266,20 @@ also inspected in a captured Chromium screenshot.
 This adds literal anchor destination editing; Vue rich-text range creation and
 formatting, dynamic routing components and full cross-framework parity remain
 unfinished. No native artifact or Homebrew release was produced here.
+
+
+### Packaged Vue/editor candidate
+
+A new universal Developer ID signed archive binds the latest editor source
+(`8876d323`) into the macOS app. The extracted runtime passed all 1,882 unit tests
+and the combined Vue browser flows in Chromium and WebKit; all 32 desktop tests
+and package tamper checks passed. Final integrity verification compared 1,600
+packaged files and three symlinks against the tested copy. The complete source
+manifest and native inputs match the clean revision. A local checksum-bound
+Homebrew cask passes Ruby syntax checking.
+
+Gatekeeper rejects this candidate as Unnotarized Developer ID. No native launch
+or Homebrew installation was attempted. Notarization still needs the existing
+Keychain profile name; public publishing, upgrade and Intel execution remain
+unverified. See the [artifact receipt](../desktop/verification/2026-09-17-vue-developer-id.json).
+This updates the desktop artifact without establishing full delivery or parity.
