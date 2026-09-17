@@ -24945,3 +24945,24 @@ action collapsed the input. The containing property row now expands to fill
 the available space. Browser checks require at least 60px of editable width;
 the updated Liquid screenshot confirms both percentage values remain readable.
 This is local Liquid coverage, not live Shopify theme verification.
+
+## Variable picker keyboard return (2026-09-17)
+
+Closing the variable picker now restores its originating control, including
+percentage fields inside Type settings. The inspector opens the containing
+section or tab when needed. Matching includes the field label and display unit,
+so a rebuilt main typography field cannot take focus from a settings field that
+controls the same property. Focus identity survives source revisions while
+application still requires the complete source/context guard.
+
+Successful writes finish before automatic picker closure. The existing panel
+focus queue retains the destination through subsequent refreshes; deliberate
+input or selection changes still cancel queued focus.
+
+Verification: 1,926 unit tests passed. Vue, React, and local Liquid variable
+flows passed in Chromium and WebKit, covering pointer interaction then Escape,
+inspector rebuild then Escape, and focus after application, alongside existing
+mode, responsive, and exact-history checks. HTML Tab/Shift+Tab flows passed in
+both engines, including unchanged-value navigation and a deliberate click
+during a held save cancelling queued focus. The Tab expectation now includes
+the variable action between the percentage input and Use %.

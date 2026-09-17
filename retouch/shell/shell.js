@@ -39,17 +39,17 @@ let panelTasks = 0;
 let pendingVectorEntry=null,vectorEntrySerial=0;
 let pendingPanelFocus=null;
 const panelSelectionKey=()=>sel?JSON.stringify([sel.info.file,sel.scope,sel.instanceId,(sel.multiple||[sel.info]).map(info=>info.id).sort()]):null;
-const controlIdentity=el=>JSON.stringify([el.tagName,el.getAttribute('aria-label'),el.getAttribute('name'),el.dataset.canvasTool,el.matches('button,summary')?el.textContent:null]);
+const controlIdentity=el=>JSON.stringify([el.tagName,el.getAttribute('aria-label'),el.getAttribute('name'),el.dataset.canvasTool,el.dataset.variableUnit,el.dataset.variableField,el.matches('button,summary')?el.textContent:null]);
 // Source refresh can rebuild a slider again after the save releases the panel.
 // Retain its destination briefly; deliberate input still cancels the request below.
 window.RetouchPanelFocus={refreshSavedControl(target){
   const active=document.activeElement;
   if(panelBody.contains(active)&&active!==target&&active.matches('input,textarea,select'))return;
   window.RetouchPanelFocus.queue(target);if(active===target)active.blur();renderPanel();restorePanelFocus();
-},queue(target,label){
+},queue(target,label,options={}){
   if(!panelBody.contains(target))return;
   const identityTarget=target.cloneNode(true);if(label)identityTarget.setAttribute('aria-label',label);
-  pendingPanelFocus={selection:panelSelectionKey(),identity:controlIdentity(identityTarget),index:0,expires:0,retain:true};
+  pendingPanelFocus={selection:panelSelectionKey(),identity:controlIdentity(identityTarget),index:0,expires:0,retain:true,reveal:options.reveal===true};
 },queueControl(target,label){
   if(!panelBody.contains(target)||typeof label!=='string')return;
   pendingPanelFocus={selection:panelSelectionKey(),controlLabel:label,index:0,expires:0,retain:true};
@@ -60,6 +60,7 @@ function restorePanelFocus(){
   if(pending.selection!==panelSelectionKey()||Date.now()>pending.expires){pendingPanelFocus=null;return;}
   const candidates=[...panelBody.querySelectorAll('input,select,textarea,button,summary,[tabindex]')].filter(el=>pending.controlLabel?el.matches('input,select,textarea')&&el.getAttribute('aria-label')===pending.controlLabel:controlIdentity(el)===pending.identity);
   const target=(pending.gradientPaint?candidates.filter(el=>el.closest('[data-gradient-paint]')?.dataset.gradientPaint===pending.gradientPaint):candidates)[pending.index];
+  if(target&&!target.matches(':disabled')&&pending.reveal&&!target.getClientRects().length)window.RetouchInspectorUI?.reveal(target);
   if(target&&!target.matches(':disabled')&&target.getClientRects().length){if(!pending.retain)pendingPanelFocus=null;if(document.activeElement!==target)target.focus();}
 }
 panelBody.addEventListener('keydown',event=>{
