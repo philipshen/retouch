@@ -24966,3 +24966,20 @@ mode, responsive, and exact-history checks. HTML Tab/Shift+Tab flows passed in
 both engines, including unchanged-value navigation and a deliberate click
 during a held save cancelling queued focus. The Tab expectation now includes
 the variable action between the percentage input and Use %.
+
+## Property-compatible variable choices (2026-09-17)
+
+The variable picker now validates resolved previews against the selected
+property, using the same numeric conversion as application. Choices remain
+disabled while resolving; incompatible values and resolution failures show
+an explanation. Arrow navigation skips unavailable choices. Mode changes
+resolve availability again, and a failed application no longer enables
+previously incompatible rows. Disabled explanations retain readable contrast
+in the light theme.
+
+Validation: 1,926 unit tests passed. Vue Chromium/WebKit checks cover an opacity
+variable that is valid in Light and invalid in Dark, skipping an incompatible
+spacing variable with the keyboard, no source changes while previewing modes,
+application failure and retry, and exact Undo. React and local Liquid collection
+flows also passed in both browsers. The existing desktop archive predates this
+change.

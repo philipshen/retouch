@@ -1272,7 +1272,7 @@ html, body { overflow:clip; }
 .variable-picker-option { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 32px; padding: 6px 8px; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 5px; }
 .variable-picker-option > span:last-child { overflow-wrap: anywhere; }
 .variable-picker-option[aria-pressed="true"] { background: #e5f4ff; }
-.variable-picker-option:hover, .variable-picker-option:focus-visible { background: #e5f4ff; outline: 1px solid #0d99ff; outline-offset: -1px; }
+.variable-picker-option:not(:disabled):hover, .variable-picker-option:focus-visible { background: #e5f4ff; outline: 1px solid #0d99ff; outline-offset: -1px; }
 .variable-picker-type { color: var(--muted); width: 16px; flex: 0 0 16px; text-align: center; }
 .variable-picker-trigger { width: 100%; margin: 6px 0; }
 
@@ -1297,3 +1297,8 @@ html, body { overflow:clip; }
 .variable-picker-binding-actions { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
 .variable-picker-binding-actions button { font-size: 11px; }
 .property-row > .property-variable.is-bound { color: var(--instance); background: #f4edff; }
+
+.variable-picker-reason { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.4; font-weight: normal; }
+.variable-picker-reason[hidden] { display: none; }
+
+.variable-picker-option:disabled { opacity: 1; color: var(--muted); cursor: not-allowed; }
