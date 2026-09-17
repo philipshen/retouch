@@ -35,7 +35,8 @@ function create(options = {}) {
   const describe = resolved => {
     const element = resolved.element;
     const range = textRange(element);
-    const rendered = range ? source.collect(resolved.source, resolved.relPath, compilerOptions(), { preserveWhitespace: false }).elements.find(item => item.id === element.id) : null;
+    const rendered = source.collect(resolved.source, resolved.relPath, compilerOptions(), { preserveWhitespace: false }).elements.find(item => item.id === element.id);
+    const rich = require('../vue-rich-text.cjs').describe(resolved, adapter, rendered);
     const canSetSrc = element.tag === 'img' && unique(element, 'src') && !element.scope.picture && !attr(element, 'srcset') && !bound(element, 'src') && !bound(element, 'srcset');
     return {
       id: element.id, kind: 'host', tag: element.tag, file: resolved.relPath, hash: resolved.hash,
@@ -46,8 +47,8 @@ function create(options = {}) {
       classNameReason: 'Use the responsive CSS properties for Vue styles.',
       text: range ? element.node.children.map(child => child.content).join('') : null,
       renderedText: rendered?.node.children.every(child => child.type === NodeTypes.TEXT) ? rendered.node.children.map(child => child.content).join('') : null,
-      textDynamic: !range, textReason: 'This Vue region contains expressions, directives, or nested markup. Its template logic is preserved.',
-      mixedText: false, canSetChildren: false,
+      textDynamic: !range && !rich.canSetChildren, textReason: 'This Vue region contains expressions, directives, or nested markup. Its template logic is preserved.',
+      mixedText: rich.canSetChildren && !range, ...rich,
       src: attr(element, 'src')?.value ?? null, srcDynamic: bound(element, 'src'), canSetSrc,
       srcReason: canSetSrc ? null : 'Select an image with a literal source and no responsive source bindings.',
       href: element.tag === 'a' ? attr(element, 'href')?.value ?? null : undefined,
@@ -61,6 +62,7 @@ function create(options = {}) {
   function planOp(resolved, op) {
     if (op.fileHash && op.fileHash !== resolved.hash) return refuse('The file changed. Re-select the element.');
     if (require('../vue-frame-selection.cjs').types.includes(op.type)) return require('../vue-frame-selection.cjs').plan(resolved, op, adapter);
+    if (op.type === 'setChildren') return require('../vue-rich-text.cjs').plan(resolved, op, adapter, literalText);
     if (op.type === 'setCSS') return require('../vue-css.cjs').plan(resolved, op, adapter);
     if (op.type === 'setCSSSelection') return require('../vue-css.cjs').planSelection(resolved, op, adapter);
     if (op.type === 'insertElement') return require('../vue-insert.cjs').plan(resolved, op, adapter);
@@ -116,7 +118,7 @@ function create(options = {}) {
       return source.stamp(text, file, root, compilerOptions(), { revision: source.contentHash(text), transformDocument: out => require('../vue-css.cjs').warmInto(out, text, relative, options.styleModule?.(relative)) });
     }, contentHash: source.contentHash,
     assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets', imageOnly: true },
-    capabilities: { classAttr: 'class', ops: ['setText', 'setTag', 'setSrc', 'setHref', 'renameElement', 'setCSS', 'setCSSSelection', 'insertElement', 'reparentElement', ...require('../vue-structure.cjs').types, ...require('../vue-structure-selection.cjs').types, ...require('../vue-frame-selection.cjs').types] },
+    capabilities: { classAttr: 'class', ops: ['setText', 'setChildren', 'setTag', 'setSrc', 'setHref', 'renameElement', 'setCSS', 'setCSSSelection', 'insertElement', 'reparentElement', ...require('../vue-structure.cjs').types, ...require('../vue-structure-selection.cjs').types, ...require('../vue-frame-selection.cjs').types] },
     applyOp: (resolved, op) => require('../transactions.cjs').applyPlan(resolved.appRoot || path.dirname(resolved.file), planOp(resolved, op)),
   };
   return adapter;

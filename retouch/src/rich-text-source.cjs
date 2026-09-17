@@ -54,7 +54,7 @@ function rewrite(value,sourceId,children,options) {
   if(blocks.contains(children)){const error=blocks.placement(children,options?.parentTag||'div',id=>kept.get(id));if(error)throw Error(error);}
   function build(items) {
     return items.map(item=>{
-      if(item.t==='text')return escapeText(item.value);
+      if(item.t==='text')return (options?.escapeText||escapeText)(item.value);
       if(item.t==='break')return '<br>';
       if(item.t==='paragraph')return require('./text-paragraphs.cjs').markup(build(item.children),false,item.spacing);
       if(item.t==='block')return blocks.markup(item,build(item.children),false,item.template?kept.get(item.template)?.listTemplate:null);

@@ -119,10 +119,16 @@ export default defineConfig({
 
 With `@vitejs/plugin-vue` present, `retouch()` also selects Vue automatically.
 Retouch uses the Vue plugin's template compiler options for source mapping.
-The initial adapter supports literal text, literal image sources, text-layer tag
+The Vue adapter supports literal text, literal image sources, text-layer tag
 changes, layer names, link destinations, and responsive CSS in `.vue` files.
 The Link inspector edits or removes literal anchor destinations while preserving
-nested content and event handlers. Vue-bound destinations remain read-only. Layout, appearance and
+nested content and event handlers. Vue-bound destinations remain read-only.
+Static native text supports in-place rich formatting and text links. The compiler
+and browser must agree on its structure; Vue expressions, component children,
+directives and descendants with managed responsive style identities require
+further preservation support. Vue text editing uses temporary child nodes and
+restores the framework-owned nodes before writing, allowing HMR to retain preview
+documents and application state for the verified static-text flows. Layout, appearance and
 typography controls support individual layers and selections within one SFC.
 Add text and Add frame work inside native content containers, including
 self-closing containers. The canvas Text tool supports click placement and dragged

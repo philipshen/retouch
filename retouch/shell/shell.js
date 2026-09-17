@@ -780,9 +780,12 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
   const editId = info.id;
   renderPanel(true);
   const originalHTML=el.innerHTML;
+  // Keep Vue's VNode-owned children untouched while the editor changes markup.
+  const originalNodes=info.renderRevisionAttribute==='data-rt-revision'&&info.canSetChildren?[...el.childNodes]:null;
+  if(originalNodes)el.replaceChildren(...originalNodes.map(node=>node.cloneNode(true)));
   if (info.richText) {
     try { RetouchRichTextSource.prepare(el,info.richText); }
-    catch(err) { toast(err.message,'err');return; }
+    catch(err) { if(originalNodes)el.replaceChildren(...originalNodes);toast(err.message,'err');return; }
   }
   editing = {
     el,
@@ -790,6 +793,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
     info,
     original: el.textContent,
     originalHTML,
+    originalNodes,
     snapshot: new Map(),
     originalTree: null,
   };
@@ -836,7 +840,8 @@ async function persistInlineEdit() {
   inlineFormatCleanup();editing = null;syncHistoryControls();
   ed.el.removeAttribute('contenteditable');
   const children = serializeChildren(ed.el, ed.snapshot);
-  if (JSON.stringify(children) === JSON.stringify(ed.originalTree)) { if(ed.info.richText)ed.el.innerHTML=ed.originalHTML;return; }
+  const restoreOriginal=()=>{if(ed.originalNodes)ed.el.replaceChildren(...ed.originalNodes);else ed.el.innerHTML=ed.originalHTML;};
+  if (JSON.stringify(children) === JSON.stringify(ed.originalTree)) { if(ed.originalNodes||ed.info.richText)restoreOriginal();return; }
 
   // A pure-text element with a pure-text result uses setText (smaller diff).
   // An element whose SOURCE has mixed children must use setChildren even when
@@ -853,9 +858,11 @@ async function persistInlineEdit() {
   // tracks by reference. Letting React (dev Fast Refresh) reconcile against
   // our hand-mutated DOM crashes its committer (removeChild NotFoundError),
   // so a structural commit reloads the frame after the write: React remounts
-  // clean from the new source. Text-only commits keep the smooth HMR path.
+  // clean from the new source. Vue edits use isolated child copies and restore
+  // their original nodes before HMR; they do not need this reload.
   const structural = op.type === 'setChildren',expectedFormatting=structural?JSON.stringify(serializeChildren(ed.el)):null;
   const waitForCompiler = op.type === 'setText' && !!ed.info.renderRevisionAttribute;
+  if(ed.originalNodes)restoreOriginal();
   Object.assign(op, sourcePayload(ed.info));
   // Keep editing disabled until structural or compiler-tracked writes reach the preview.
   if(structural||waitForCompiler)busyPanel(true);
@@ -875,7 +882,7 @@ async function persistInlineEdit() {
       // leaving the manually edited DOM text untouched despite a fresh revision.
       if(waitForCompiler)await refreshWrittenElement(res.element||{...ed.info,renderedText:op.text},()=>true,{verifyText:true});
       if (structural) {
-        await reloadFrame();
+        if(!ed.originalNodes)await reloadFrame();
         await refreshWrittenElement(ed.info,el=>JSON.stringify(serializeChildren(el))===expectedFormatting);
       } else if (window.__RT_RENDERING?.reloadAfterWrite) await reloadFrame();
       else if (sel && sel.info && sel.info.id === ed.id) {
@@ -885,7 +892,7 @@ async function persistInlineEdit() {
       if(op.type==='setText')await window.RetouchComparisons?.syncText(ed.info);
       toast('Saved', 'ok');
     } else {
-      ed.el.innerHTML = ed.originalHTML;
+      if(!ed.originalNodes)restoreOriginal();
       toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
     }
   } finally { if(structural||waitForCompiler)busyPanel(false); }
@@ -1627,6 +1634,9 @@ function plainInlineFormatting(node){
   if(node.nodeType===3)return true;if(node.nodeType!==1||node.getAttribute('data-rt-i'))return false;
   const stamps=['data-rt','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'];
   const id=node.getAttribute('data-rt'),span=node.tagName==='SPAN';
+  // Vue adds scoped-style attributes to otherwise bare authored formatting.
+  // Ignore them only when the source adapter proves this exact node is plain.
+  if(editing.info.renderRevisionAttribute==='data-rt-revision'&&(editing.info.plainFormattingIds?.includes(id)||editing.info.plainLinkIds?.includes(id)))stamps.push(...node.getAttributeNames().filter(name=>/^data-v-[a-f0-9]+(?:-s)?$/.test(name)));
   if(node.tagName==='A'){
     const keepId=node.getAttribute('data-rt-keep'),sourceLink=nodes=>(nodes||[]).some(item=>item.id===keepId&&item.plainLink||sourceLink(item.children));
     const proven=!id&&!keepId||editing.info.plainLinkIds?.includes(id)||keepId&&sourceLink(editing.info.richText?.children);

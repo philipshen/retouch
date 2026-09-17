@@ -24283,3 +24283,36 @@ or Homebrew installation was attempted. Notarization still needs the existing
 Keychain profile name; public publishing, upgrade and Intel execution remain
 unverified. See the [artifact receipt](../desktop/verification/2026-09-17-vue-developer-id.json).
 This updates the desktop artifact without establishing full delivery or parity.
+
+### Vue static rich text and retained editing state
+
+Vue native text regions now expose structured formatting through the existing
+inline editor. A compiler preflight excludes expressions, directives, component
+children, interpretation boundaries and descendants with managed style identities.
+The adapter compares Vue's native tree with browser parsing before using the
+shared rich-text rewrite engine, then reparses the final SFC and verifies all
+outside source identities. Render descriptors follow compiler-normalized
+whitespace while keeping source-owned run IDs. Text escaping honors custom
+Vue interpolation delimiters.
+
+Vue editing now uses temporary copies of text children, retaining the original
+VNode-owned nodes. It restores the originals before writing or finishing an
+unchanged edit. Vue can therefore reconcile the new source through HMR without
+a preview reload. This also removes the WebKit module-import interruptions found
+with the previous shared reload path. Scoped-style attributes are ignored during
+plain formatting reconstruction only when the source proves the exact layer is
+a bare formatting run or plain link; authored attributes remain protected.
+
+Validation: all 1,887 unit tests passed, and the doctor tests passed after its
+capability update. Source tests cover attributed runs, escaping, custom
+delimiters, line breaks, links, stable outside IDs, exact source history,
+compiler whitespace, reconstruction evidence and refusals. Final combined
+Chromium/WebKit runs passed bold/italic creation, reopening formatted runs,
+unchanged-edit original-node restoration, link creation/splitting/removal,
+invalid URLs, local and exact source undo/redo, retained main/live documents and
+independent Vue counters. All preceding Vue responsive comparison, structure,
+frame/group, ordering and production-style flows passed in those same runs.
+
+Dynamic rich text, component children, managed-style descendant preservation and
+broader source structures still need work. This checkpoint does not rebuild the
+native artifact or establish notarization, Homebrew delivery or full parity.
