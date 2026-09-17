@@ -24472,3 +24472,26 @@ production style retention/instrumentation exclusion. Evidence:
 `/tmp/retouch-vue-bound-text-combined-chromium.log`, and
 `/tmp/retouch-vue-bound-text-combined-webkit.log`. Full Figma parity, remaining
 framework capabilities and desktop distribution are still unfinished.
+
+## Vue rich text with bound link destinations (2026-09-17)
+
+Text inside native anchors with Vue-bound `href` values can now be formatted
+without replacing the destination expression. The shared rich-text source writer
+accepts an adapter-supplied URL edit policy; Vue marks bound destinations as
+non-editable both in the descriptor and in the source rewrite. The rendered URL
+can be read/copied, while literal destination changes and removal are refused.
+This also covers property/attribute modifiers and a literal fallback coexisting
+with a binding. Other adapters retain their existing URL-edit behavior.
+
+Validation: all 1,898 unit tests passed, including preservation across shorthand,
+longhand and property binding syntax, literal-URL mutation/refusal, fallback
+ownership and exact undo/redo. The Chromium fixture passed formatting inside the
+anchor, read-only URL controls, reactive destination changes through real clicks,
+exact source history and retained main/live state.
+Combined Chromium and WebKit runs also passed the new bound-link workflow with
+all preceding Vue CSS/comparison, structure, grouping, binding, live-value,
+rich-text, and production-build checks. Evidence:
+`/tmp/retouch-vue-bound-link-all-units.log`,
+`/tmp/retouch-vue-bound-link-combined-chromium.log`, and
+`/tmp/retouch-vue-bound-link-combined-webkit.log`. No desktop artifact or release
+was produced by this checkpoint; full parity remains incomplete.

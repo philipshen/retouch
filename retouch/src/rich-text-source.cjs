@@ -9,7 +9,7 @@ const blockValues=require('./rich-text-blocks.cjs');
 const inlineNode=node=>blockValues.inlineTag(node.tagName||node.nodeName)&&(node.childNodes||[]).every(inlineNode);
 const escapeText=value=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\{/g,'&#123;').replace(/\}/g,'&#125;');
 
-function describe(value,sourceId,{tokens=[]}={}) {
+function describe(value,sourceId,{tokens=[],canEditHref}={}) {
   const duplicates=[];
   const tree=parseFragment(value,{sourceCodeLocationInfo:true,onParseError:error=>{if(error.code==='duplicate-attribute')duplicates.push(error.startOffset);}}),kept=new Map();
   const id=key=>crypto.createHash('sha1').update(sourceId+'|'+key).digest('hex').slice(0,10);
@@ -37,7 +37,7 @@ function describe(value,sourceId,{tokens=[]}={}) {
       if (!loc) throw new Error('The stored HTML needs browser repairs; edit its source before formatting it.');
       const nodeId=id(key),raw=value.slice(loc.startOffset,loc.endOffset);
       if (!node.tagName) {kept.set(nodeId,{tag:'#comment',inline:true,raw,opaque:true});return {t:'comment',id:nodeId};}
-      const hrefSource=require('./link-source.cjs').htmlHref(value,node);
+      const hrefSource=canEditHref?.(node)===false?null:require('./link-source.cjs').htmlHref(value,node);
       const opaque=['script','style','svg','template','iframe'].includes(node.tagName);
       const listTemplate=['ul','ol'].includes(node.tagName)&&!duplicates.some(offset=>offset>=loc.startOffset&&offset<loc.startTag.endOffset)?{tag:node.tagName,attributes:node.attrs.filter(attr=>['class','style'].includes(attr.name)).map(attr=>({name:attr.name,raw:value.slice(loc.attrs[attr.name].startOffset,loc.attrs[attr.name].endOffset)}))}:null;
       kept.set(nodeId,{listTemplate,tag:node.tagName,inline:inlineNode(node),inlineChildren:(node.childNodes||[]).every(inlineNode),raw,opaque,hrefSource:hrefSource?{missing:!!hrefSource.missing,start:hrefSource.start-loc.startOffset,end:hrefSource.end-loc.startOffset}:null,open:value.slice(loc.startOffset,loc.startTag.endOffset),close:loc.endTag?value.slice(loc.endTag.startOffset,loc.endOffset):null});

@@ -21,7 +21,7 @@ function attributes(node) {
       return [prop.name,prop.value?.content||''];
     }
     const argument=prop.arg?.isStatic?prop.arg.content.toLowerCase():null;
-    const binding=prop.name==='bind'&&argument&&(['class','style','title','lang','dir'].includes(argument)||/^aria-[a-z-]+$/.test(argument));
+    const binding=prop.name==='bind'&&argument&&(['class','style','title','lang','dir'].includes(argument)||/^aria-[a-z-]+$/.test(argument)||node.tag==='a'&&argument==='href');
     const event=prop.name==='on';
     if(!binding&&!event)throw Error('This text contains Vue logic that needs separate preservation.');
     // Validate with Vue, then retain the original directive attribute spelling
@@ -31,6 +31,8 @@ function attributes(node) {
     return [parsed[0].name,parsed[0].value];
   }).sort();
 }
+// A rendered destination is not an editable literal when Vue supplies it.
+const canEditHref=node=>!node.attrs?.some(attr=>/^(?::href|\.href|v-bind:href)(?:\.|$)/.test(attr.name));
 function context(resolved, adapter) {
   const element = resolved.element;
   if (element.node.ns !== 0 || !tags.has(element.tag) || element.node.isSelfClosing || element.node.props.some(prop => prop.type === NodeTypes.DIRECTIVE && ['html','text'].includes(prop.name))) throw Error('Choose a native text container.');
@@ -71,7 +73,7 @@ function context(resolved, adapter) {
   const browser=parseFragment(masked).childNodes;
   if(browser.length!==1||browser[0].tagName!==element.tag||JSON.stringify(expected)!==JSON.stringify(html(browser[0].childNodes)))throw Error('The browser and Vue interpret this text differently.');
   const tokens=expressions.map(entry=>entry.marker);
-  return {start,end,value,tokens,expressions,descriptor:source.describe(value,element.id,{tokens}).descriptor};
+  return {start,end,value,tokens,expressions,descriptor:source.describe(value,element.id,{tokens,canEditHref}).descriptor};
 }
 function describe(resolved, adapter, rendered) {
   try {
@@ -117,7 +119,7 @@ function plan(resolved, op, adapter, escapeText) {
     // Placeholders are compiler-owned. Literal edits cannot manufacture them,
     // and each live expression must survive exactly once, even inside kept runs.
     if(data.tokens.some(token=>JSON.stringify(op.children).includes(token)))throw Error('Edit the literal text around the live value.');
-    let replacement=source.rewrite(data.value,resolved.element.id,op.children,{parentTag:resolved.element.tag,escapeText,copyMarkup,tokens:data.tokens});
+    let replacement=source.rewrite(data.value,resolved.element.id,op.children,{parentTag:resolved.element.tag,escapeText,copyMarkup,tokens:data.tokens,canEditHref});
     for(const entry of data.expressions){
       if(replacement.split(entry.marker).length!==2)throw Error('Keep each live Vue value exactly once while editing its surrounding text.');
       replacement=replacement.replace(entry.marker,()=>entry.raw);

@@ -128,3 +128,13 @@ test('Vue rich text keeps structural, marker, URL and content-changing bindings 
   const r=resolve('<template><main><p>Before <span '+attribute+'>Text</span> after</p></main></template>');assert.equal(adapter.describe(r).canSetChildren,false,attribute);
  }
 });
+
+test('Vue bound link destinations survive rich-text formatting and cannot be rewritten as literal URLs',t=>{
+ for(const binding of [':href="destination"','v-bind:href="destination"','.href="destination"',':href.prop="destination"',':href.attr="destination"']){
+  const text='<template><main><p>Read <a '+binding+' class="link">the docs</a> now</p></main></template>',r=resolve(text),info=adapter.describe(r);assert.equal(info.canSetChildren,true,binding);const link=info.richText.children[1];assert.equal(link.editableLink,false);assert.equal(link.plainLink,false);
+  const result=adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'text',value:'Read '},{t:'keep',id:link.id,children:[{t:'wrap',tag:'strong',children:[{t:'text',value:'the guide'}]}]},{t:'text',value:' now'}]});assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes('<a '+binding+' class="link"><strong>the guide</strong></a>'));
+  for(const href of ['/literal',null])assert.equal(adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'keep',id:link.id,href}]}).refused,true);
+ }
+ const text='<template><main><p><a href="/fallback" :href="destination">Docs</a></p></main></template>',r=resolve(text),link=adapter.describe(r).richText.children[0];assert.equal(link.editableLink,false);assert.equal(adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'keep',id:link.id,href:'/changed'}]}).refused,true);
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-vue-bound-link-')),file=path.join(root,'App.vue');t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(file,text);const history=new SourceHistory(),result=history.commit(root,adapter.planOp({...r,file},{type:'setChildren',fileHash:r.hash,children:[{t:'keep',id:link.id,children:[{t:'wrap',tag:'em',children:[{t:'text',value:'Guide'}]}]}]}));assert.equal(result.ok,true,result.reason);const after=fs.readFileSync(file,'utf8');assert.equal(history.apply(root,'undo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),text);assert.equal(history.apply(root,'redo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),after);
+});
