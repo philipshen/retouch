@@ -25061,3 +25061,15 @@ collection copy, unchanged source files, and successful import into a fresh
 project with internal and cross-collection alias resolution. The complete
 collection-authoring and transfer workflows passed, as did 1,927 unit tests.
 The latest desktop archive predates this change.
+
+## Collection mode order (2026-09-17)
+
+Collection modes now have left/right controls that change their order in the
+values table. Boundary directions are disabled, and focus follows the moved
+mode to an available direction for continued keyboard use. Reordering preserves
+mode identities, default selection, typed values, and aliases, and uses the
+existing revision-checked save/history path.
+
+Chromium/WebKit library flows verify column order, unchanged defaults and values,
+boundary states, keyboard return movement, and exact Undo/Redo. All 1,927 unit
+tests passed. The latest desktop archive predates this change.
