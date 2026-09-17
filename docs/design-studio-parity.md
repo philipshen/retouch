@@ -24930,3 +24930,18 @@ and detach. The Vue Chromium and WebKit variable flows cover direct percentage
 field application, tablet/desktop versus phone isolation, scaling after a font
 size change, exact source Undo, and retained document/application state. The
 previous signed desktop archive predates this change and has not been rebuilt.
+
+## Shared tracking and readable variable fields (2026-09-17)
+
+React and local Liquid shared percentage tracking now have Chromium/WebKit
+verification with different font sizes in the same selection. A 24% variable
+authors a relative value for both layers, preserves their different pixel
+spacing, affects the tablet range without changing the phone, and restores
+exact source with Undo/Redo. Existing collection mode, update, override, detach,
+and sizing checks pass in all four renderer/browser combinations.
+
+Visual inspection found that decorating a percentage field with its variable
+action collapsed the input. The containing property row now expands to fill
+the available space. Browser checks require at least 60px of editable width;
+the updated Liquid screenshot confirms both percentage values remain readable.
+This is local Liquid coverage, not live Shopify theme verification.
