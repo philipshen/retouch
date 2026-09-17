@@ -1284,3 +1284,8 @@ html, body { overflow:clip; }
 .variable-picker-option .variable-picker-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .variable-picker-option .variable-picker-value { flex: 0 1 120px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 10px; text-align: right; }
 .variable-picker-option .variable-picker-swatch { width: 16px; height: 16px; border: 1px solid #0002; border-radius: 3px; }
+
+.variable-picker-modes { border: 0; padding: 6px 0 8px; margin: 8px 0; border-bottom: 1px solid var(--line); max-height: 160px; overflow: auto; }
+.variable-picker-modes legend { font-size: 11px; font-weight: 600; }
+.variable-picker-modes .inspector-field { font-size: 11px; margin: 4px 0; }
+.variable-picker-modes select { min-width: 0; max-width: 180px; height: 28px; border: 1px solid transparent; border-radius: 5px; background: var(--bg); color: var(--ink); padding: 0 6px; font: 11px var(--font); }

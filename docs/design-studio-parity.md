@@ -24840,3 +24840,30 @@ Screenshots: `/tmp/retouch-variable-picker-{chromium,webkit}.png`.
 This remains local source work, with no push, desktop rebuild or release.
 Complete Figma parity, all-site authoring and trusted desktop distribution remain
 unfinished.
+
+### 2026-09-17 — Variable modes inside the picker
+
+The variable picker now includes compact mode controls for collections with more
+than one mode. Each control can use the collection default or an explicit named
+mode. Swatches, resolved values and alias descriptions update together; choosing
+a variable applies the selected modes in the current property/screen scope.
+The picker keeps its own mode draft: closing discards it, while inspector refresh
+preserves the open dialog's choices. Native select keyboard behavior is retained,
+and mode controls are disabled while an application is in flight.
+
+Validation: Vue variable workflows passed in Chromium and WebKit, including
+Dark-mode application from the property picker, base-phone independence, exact
+source undo, refresh persistence, cancellation without mode leakage, and a held
+Dark preview response delivered after a newer Light response. The obsolete
+response did not overwrite Light. HTML verified independent cross-collection
+mode changes can resolve or expose an alias cycle without writing; applying the
+cyclic choice still refuses. The Chromium mode-picker screenshot was inspected.
+The fixture now focuses the screen control before changing its preset, matching
+mouse/keyboard interaction and releasing the inspector's focused-control refresh
+deferral after the picker restores focus to its opener.
+
+Logs: `/tmp/retouch-picker-modes-{chromium,webkit,html}.log`.
+Screenshots: `/tmp/retouch-variable-picker-modes-{chromium,webkit}.png`.
+No source binding format or backend behavior changed in this checkpoint. No push,
+desktop rebuild or release was performed; full Figma parity and trusted desktop
+distribution remain unfinished.
