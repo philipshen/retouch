@@ -24994,3 +24994,20 @@ tests, tamper checks, strict signatures, and final packaged-byte integrity passe
 The local cask passes syntax checks. Its installation/upgrade, native launch,
 notarization, Intel execution, and public distribution remain unverified. See
 [the desktop receipt](../desktop/verification/2026-09-17-inspector-developer-id.json).
+
+## Derive and duplicate collection modes (2026-09-17)
+
+New modes can now copy any existing mode, rather than only the collection
+default. Each mode also has a Duplicate action that generates a unique name
+and a fresh mode identity. Literal values are copied independently, aliases
+retain their target identities, and existing variables and the default mode
+remain unchanged. Collection modes stay open after saves so the result is
+immediately available for editing. The existing 16-mode limit applies to both
+creation actions, and revision-checked project saves retain their existing
+validation and history behavior.
+
+Chromium/WebKit library flows verify all four variable types, alias preservation
+and resolution in the copied mode, independent edits, copying a non-default
+mode, duplicate naming, exact multi-step Undo/Redo, and existing stale-write
+refusal. All 1,926 unit tests passed. The latest desktop archive predates this
+change.
