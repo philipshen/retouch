@@ -4,7 +4,7 @@ const virtual='virtual:retouch-group-scale.jsx',resolvedVirtual='\0retouch-group
 const vueStylePrefix='virtual:retouch-vue-css/';
 function retouch(options={}){
  if(options.adapter!==undefined&&!['react','vue'].includes(options.adapter))throw Error('[retouch] Choose the react or vue source adapter.');
- let config,sidecar,sourceAdapter;const vueStyleModules=new Map();
+ let config,sidecar,sourceAdapter;const vueStyleModules=new Map(),vueSourceRevisions=new Map();
  function vueStyleFile(id){
   const key=id.replace(/^\0/,'').split('?')[0];if(!key.startsWith(vueStylePrefix)||!key.endsWith('.css'))return null;
   const encoded=key.slice(vueStylePrefix.length,-4);if(!/^[A-Za-z0-9_-]+$/.test(encoded))return null;
@@ -12,7 +12,7 @@ function retouch(options={}){
   try{const file=fs.realpathSync(path.resolve(config.root,relative)),rel=path.relative(config.root,file);if(rel.startsWith('..'+path.sep)||path.isAbsolute(rel)||file.split(path.sep).includes('node_modules'))return null;return {file,relative:rel.split(path.sep).join('/')};}catch{return null;}
  }
  async function closeSidecar(){if(!sidecar)return;const active=sidecar;sidecar=null;active.retouchIndex.close();active.closeAllConnections();await new Promise(resolve=>active.close(resolve));}
- return {
+ const plugin={
   name:'vite-plugin-retouch',apply:'serve',enforce:'pre',
   configResolved(value){
    config=value;if(value.command!=='serve')return;
@@ -60,7 +60,7 @@ function retouch(options={}){
    if(id.split(path.sep).includes('node_modules'))return null;
    try{
     const real=fs.realpathSync(id),realRelative=path.relative(config.root,real);if(real.split(path.sep).includes('node_modules')||realRelative.startsWith('..'+path.sep)||path.isAbsolute(realRelative))return null;
-    if(sourceAdapter.name==='vue')return sourceAdapter.stamp(source,real,config.root);
+    if(sourceAdapter.name==='vue'){vueSourceRevisions.set(id,sourceAdapter.contentHash(source));return sourceAdapter.stamp(source,real,config.root);}
     const helper=path.join(path.dirname(real),'.retouch-group-scale.jsx'),runtime=require('./react-group-scale-runtime.cjs');if(fs.existsSync(helper))this.addWatchFile(helper);
     return require('./stamp.cjs').stamp(source,real,config.root,{groupScaleRuntime:virtual,redirectGroupScaleRuntime:fs.existsSync(helper)&&fs.readFileSync(helper,'utf8')===runtime.component()});
    }catch(error){this.warn('[retouch] Stamping skipped for '+id+': '+error.message);return null;}
@@ -81,5 +81,10 @@ function retouch(options={}){
   },
   closeBundle:closeSidecar
  };
+ return [plugin,{name:'retouch-vue-source-hmr',apply:'serve',enforce:'post',transform(code,id,options){
+  if(config?.command!=='serve'||sourceAdapter?.name!=='vue'||options?.ssr||id.includes('?')||!id.endsWith('.vue'))return null;
+  const revision=vueSourceRevisions.get(id);if(!revision)return null;
+  return require('./vue-hmr.cjs').transform(code,fs.realpathSync(id),revision);
+ }}];
 }
 module.exports={retouch};module.exports.default=retouch;

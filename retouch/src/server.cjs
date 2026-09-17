@@ -140,8 +140,8 @@ function handle(req, res, ctx) {
       if(!bytes)return json(res,413,{ok:false,reason:kind+' style requests must be 512 KB or smaller.'});
       let operation;try{operation=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid '+kind+' style JSON.'});}
       try{
-        const renderer=['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html',linked=ctx.adapter.capabilities?.ops?.includes('setCSS')||['react','liquid'].includes(ctx.adapter.name);
-        const plan=operation?.type==='update'&&linked?require('./text-style-update.cjs').plan(ctx.appRoot,operation,renderer,kind):library.planChange(ctx.appRoot,operation);
+        const renderer=ctx.adapter.name==='vue'&&kind==='text'?'vue':['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html',linked=ctx.adapter.capabilities?.ops?.includes('setCSS')||['react','liquid'].includes(ctx.adapter.name);
+        const plan=operation?.type==='update'&&linked?require('./text-style-update.cjs').plan(ctx.appRoot,operation,renderer,kind,ctx.adapter):library.planChange(ctx.appRoot,operation);
         if(!plan.ok)return json(res,409,plan);
         const applied=library.commitPlan(ctx.appRoot,plan,(root,planned)=>ctx.history.commit(root,planned,{route:historyRoute(req)}));
         for(const edit of applied.edits)if(ctx.adapter.matches(edit.file))ctx.index.indexFile(edit.file);
@@ -284,7 +284,7 @@ function handle(req, res, ctx) {
         } else if (op.type === 'updateTextStyle') {
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source layer changed. Re-select it before updating the style.'});
           if (!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!['react','liquid'].includes(ctx.adapter.name)) return json(res,409,{ok:false,reason:'Linked text style updates are not available for this renderer yet.'});
-          result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties},['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html'));
+          result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties},['react','liquid','vue'].includes(ctx.adapter.name)?ctx.adapter.name:'html','text',ctx.adapter));
         } else if (op.type === 'resetTextStyleSelection' || op.type === 'detachTextStyleSelection' || op.type === 'applyTextStyleSelection' || op.type === 'applyTextStyle' || op.type === 'detachTextStyle' || op.type === 'resetTextStyle') {
           const reactStyles=ctx.adapter.name==='react',liquidStyles=ctx.adapter.name==='liquid';
           if (!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactStyles&&!liquidStyles) return json(res,409,{ok:false,reason:'Linked text style application is not available for this renderer yet.'});
@@ -295,7 +295,7 @@ function handle(req, res, ctx) {
             style=op.type==='resetTextStyleSelection'?library:library.styles.find(item=>item.id===op.styleId);
             if(!style)return json(res,409,{ok:false,reason:'That text style no longer exists.'});
           }
-          result=applyPlan(ctx.appRoot,op.type.endsWith('Selection')?require('./text-style-selection.cjs').plan(resolved,op,style,ctx.adapter):require(reactStyles?'./jsx-text-styles.cjs':liquidStyles?'./liquid-text-styles.cjs':'./html-text-styles.cjs').plan(resolved,op,style));
+          result=applyPlan(ctx.appRoot,op.type.endsWith('Selection')?require('./text-style-selection.cjs').plan(resolved,op,style,ctx.adapter):(ctx.adapter.name==='vue'?require('./vue-text-styles.cjs').create(ctx.adapter):require(reactStyles?'./jsx-text-styles.cjs':liquidStyles?'./liquid-text-styles.cjs':'./html-text-styles.cjs')).plan(resolved,op,style));
         } else result = applyPlan(ctx.appRoot, ctx.adapter.planOp(resolved, op));
       } catch (err) {
         return json(res, err.statusCode || 500, { ok: false, error: err.message });

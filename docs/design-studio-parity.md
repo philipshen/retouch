@@ -24587,3 +24587,51 @@ covered by the corresponding preserved-comment browser runs. Evidence:
 No desktop rebuild or release accompanies this source checkpoint. Full Figma
 parity, remaining framework/render transformations and trusted desktop
 distribution remain unfinished.
+
+### 2026-09-17 — Vue reusable typography and multi-file HMR
+
+Vue native layers now use the saved text-style library: create/import/export,
+apply at base or a breakpoint, inherit into a larger screen scope, preserve local
+overrides, reset, detach, and apply/reset/detach a same-file selection atomically.
+Shared updates scan Vue project files, including unvisited components, and save
+the catalog plus linked source files as one exact undo/redo transaction. The
+planner uses Vue source locations and compiler options; computed metadata,
+unsupported owners, stale revisions and modified managed CSS refuse before writes.
+Color/effect style libraries remain outside this Vue capability.
+
+The real browser workflow exposed a plugin-vue HMR race. Its global last-changed
+filename can point at an unvisited component or catalog file by the time an edited
+component is evaluated. This causes a template-only update to recreate component
+state. A development-only post-transform keeps the compiler's template-only
+eligibility decision and substitutes the module's previous source revision for
+the global filename comparison. An unchanged-source dependency reevaluation still
+reloads, and script changes keep the compiler's normal reload behavior. The Vite
+integration now returns pre/post plugins as an array; ordinary Vite configuration
+continues to use `plugins: [retouch(), vue()]`.
+
+The saved-style browser workflow checks responsive comparison CSS, visible local
+overrides, unvisited-file propagation, exact catalog/source undo and redo,
+multi-selection application/detach/history, retained main/live counters and
+preview document identity. It also makes a real external script edit and verifies
+that Vue recreates the component, then restores the fixture and counters.
+
+Validation: all 1,913 unit tests passed, including actual Vue HTTP routes and
+revision/refusal/atomic-history checks. Combined Vue suites passed in Chromium
+and WebKit with both preserved and stripped comments, including responsive CSS,
+structure, rich text, bound values/events/links, exact history and production
+build checks. A React Vite browser smoke test also passed after the plugin-array
+change. Evidence:
+`/tmp/retouch-vue-text-styles-final-units.log`,
+`/tmp/retouch-vue-text-styles-complete-chromium.log`,
+`/tmp/retouch-vue-text-styles-complete-webkit.log`,
+`/tmp/retouch-vue-text-styles-stripped-chromium.log`,
+`/tmp/retouch-vue-text-styles-stripped-webkit.log`, and
+`/tmp/retouch-vue-text-styles-react-smoke.log`.
+The explicit script-reload browser check is included in the stripped-comment runs.
+The Chromium screenshot `/tmp/retouch-vue-text-styles-chromium.png` was visually
+inspected. The HMR compatibility transform recognizes the tested plugin-vue
+output; it does not claim universal plugin-version compatibility.
+
+No desktop rebuild, push or release accompanies this source checkpoint. Full
+Figma parity, remaining framework capabilities and trusted desktop distribution
+remain unfinished.

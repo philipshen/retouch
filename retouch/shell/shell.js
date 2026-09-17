@@ -2239,7 +2239,7 @@ function renderPanelContents(textEditing=false) {
   if(info.cssAuthoring){
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
     const position=target?.namespaceURI!=='http://www.w3.org/2000/svg'?RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,(g,action,opener,initial)=>moveHTMLLayer(info,target,width,g,action,opener,initial)):null;
-    panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS,position,info.linkedStyleAuthoring===false?null:writeTextStyle));
+    panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS,position,info.linkedStyleAuthoring===false&&!info.textStyleAuthoring?null:writeTextStyle));
     const imageFill=RetouchImageFill.mount(info,target,null,changes=>setHTMLCSS(changes,null,width),info.cssRules?.[width]||{},imageFillUpload(info),/\.liquid$/i.test(info.file)?(src,initialize,action,stack)=>setLiquidImageFill(info,src,initialize,action,stack):null,projectImageBrowser(info));if(imageFill)panelBody.append(imageFill);
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{},(save,preview)=>repositionImage(target,save,preview)));
     if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
@@ -3214,7 +3214,7 @@ function mountSelectionEffectStyles(){
 }
 function mountSelectionTextStyles(){
   const selection=sel.multiple,element=matchingEls(sel.info.id)[0];
-  if(!element||!selection.every(info=>info.linkedStyleAuthoring!==false&&(info.classTextStyles||info.cssAuthoring)))return;
+  if(!element||!selection.every(info=>(info.linkedStyleAuthoring!==false||info.textStyleAuthoring)&&(info.classTextStyles||info.cssAuthoring)))return;
   const scope=sel.info.classTextStyles?styleScope:String(styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0);
   const links=selection.map(info=>info.textStyleLinks?.[scope]).filter(Boolean),overrides=selection.reduce((sum,info)=>sum+(info.textStyleOverrides?.[scope]?.length||0),0);
   async function write(type,styleId,libraryRevision){
@@ -3223,9 +3223,9 @@ function mountSelectionTextStyles(){
       const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
       const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,...selectionSourceContexts(selection),scope:styleScope,width,styleId,libraryRevision});
       if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update text styles in this selection.');
-      if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+      if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',managedCSS:!!info.cssRendering,id:info.id,selectionIds:ids,undoId:result.undoId});
       sel.info=result.element;sel.multiple=result.selection;
-      if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});else await reloadFrame();
+      if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});else if(info.cssRendering){await RetouchRenderSync.syncCSS({frame:iframe,entries:result.selection.map(item=>({id:item.id,rules:item.cssRules,texts:item.cssRuleTexts,rendering:item.cssRendering}))});await window.RetouchComparisons?.syncCSS(result.selection);}else await reloadFrame();
       renderPanel();toast('Selected text styles updated','ok');
     }finally{busyPanel(false);}
   }
@@ -3825,6 +3825,7 @@ window.RetouchTextStyleRequest=async operation=>{
   }finally{busyPanel(false);}
 };
 async function refreshTextStyleElement(info){
+  if(info.cssRendering){await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:info.cssRules,texts:info.cssRuleTexts,rendering:info.cssRendering});await window.RetouchComparisons?.syncCSS(info);return;}
   if(info.classTextStyles||info.classVariables)await refreshWrittenElement(info,el=>{
     try{return JSON.stringify(JSON.parse(el.getAttribute('data-rt-text-styles')||'{}'))===JSON.stringify(info.textStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-color-styles')||'{}'))===JSON.stringify(info.colorStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-effect-styles')||'{}'))===JSON.stringify(info.effectStyleLinks||{})&&(!info.classVariables||JSON.stringify(JSON.parse(el.getAttribute('data-rt-variables')||'{}'))===JSON.stringify(info.variableLinks||{}))&&(info.className||'').split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token));}catch{return false;}
   },{classSource:true});else await reloadFrame();
@@ -3843,7 +3844,7 @@ async function writeTextStyle(type,width,extra={}){
   try{
     const result=await api('POST','/rt/__api/op',{type,id:info.id,fileHash:info.hash,context:info.context,width,...extra});
     if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save text style');
-    if(result.undoId)editorHistory.record({type:'setCSS',id:info.id,context:info.context,undoId:result.undoId});
+    if(result.undoId)editorHistory.record({type:'setCSS',managedCSS:!!info.cssRendering,id:info.id,context:info.context,undoId:result.undoId});
     if(sel?.info.id===info.id){
       sel.info=result.element;
       await refreshTextStyleElement(result.element);

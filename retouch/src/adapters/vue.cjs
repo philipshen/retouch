@@ -41,7 +41,7 @@ function create(options = {}) {
     return {
       id: element.id, kind: 'host', tag: element.tag, file: resolved.relPath, hash: resolved.hash,
       renderRevisionAttribute: 'data-rt-revision',
-      linkedStyleAuthoring: false, selectionStructureOps: [...require('../vue-structure-selection.cjs').types, ...require('../vue-frame-selection.cjs').types],
+      linkedStyleAuthoring: false, textStyleAuthoring: true, selectionStructureOps: [...require('../vue-structure-selection.cjs').types, ...require('../vue-frame-selection.cjs').types],
       structure: { ...require('../vue-structure.cjs').describe(resolved, adapter), ...require('../vue-insert.cjs').describe(resolved), ...require('../vue-reparent.cjs').describe(resolved, adapter), ...require('../vue-frame-selection.cjs').describe(resolved, adapter) },
       className: attr(element, 'class')?.value || '', classNameDynamic: true,
       classNameReason: 'Use the responsive CSS properties for Vue styles.',
@@ -57,6 +57,7 @@ function create(options = {}) {
       canSetTag: !!range, canRename: unique(element, 'data-rt-name') && !bound(element, 'data-rt-name'), layerName: attr(element, 'data-rt-name')?.value || '',
       context: resolved.context || null,
       ...require('../vue-css.cjs').describe(resolved, adapter),
+      ...require('../vue-text-styles.cjs').create(adapter).describe(resolved),
     };
   };
   function planOp(resolved, op) {
@@ -118,7 +119,7 @@ function create(options = {}) {
       return source.stamp(text, file, root, compilerOptions(), { revision: source.contentHash(text), transformDocument: out => require('../vue-css.cjs').warmInto(out, text, relative, options.styleModule?.(relative)) });
     }, contentHash: source.contentHash,
     assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets', imageOnly: true },
-    capabilities: { classAttr: 'class', ops: ['setText', 'setChildren', 'setTag', 'setSrc', 'setHref', 'renameElement', 'setCSS', 'setCSSSelection', 'insertElement', 'reparentElement', ...require('../vue-structure.cjs').types, ...require('../vue-structure-selection.cjs').types, ...require('../vue-frame-selection.cjs').types] },
+    capabilities: { classAttr: 'class', ops: ['applyTextStyle', 'resetTextStyle', 'detachTextStyle', 'updateTextStyle', 'applyTextStyleSelection', 'resetTextStyleSelection', 'detachTextStyleSelection', 'setText', 'setChildren', 'setTag', 'setSrc', 'setHref', 'renameElement', 'setCSS', 'setCSSSelection', 'insertElement', 'reparentElement', ...require('../vue-structure.cjs').types, ...require('../vue-structure-selection.cjs').types, ...require('../vue-frame-selection.cjs').types] },
     applyOp: (resolved, op) => require('../transactions.cjs').applyPlan(resolved.appRoot || path.dirname(resolved.file), planOp(resolved, op)),
   };
   return adapter;

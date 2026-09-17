@@ -159,8 +159,15 @@ new children.
 Retouch stores styles in a dedicated block while preserving authored script/style
 blocks and template expressions. During development, a stable CSS module lets Vite
 update styles independently without resetting component state; authored styles
-remain in production builds. Computed inline styles, other structural operations,
-linked style libraries, component-property edits, external templates, template
+remain in production builds. Saved text styles support application to one layer or
+same-file selections, breakpoint inheritance, local overrides, reset and detach.
+Shared typography updates include unvisited Vue files and the style catalog in
+one undo step. The Vite integration tracks each component's source revision so
+simultaneous template/style updates retain state; script changes still use Vue's
+normal component reload. `retouch()` returns a Vite plugin array, accepted in the
+same `plugins: [retouch(), vue()]` configuration.
+Computed inline styles, other structural operations, linked color/effect styles,
+component-property edits, external templates, template
 preprocessors and SSR editing remain incomplete.
 Broad or dynamically named bindings that can replace source markers are not
 editable yet. Repeated template elements share their authored source identity.
