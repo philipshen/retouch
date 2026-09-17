@@ -97,8 +97,8 @@
     controls.append(I.button('Reset collection binding',()=>run(()=>writeBinding('resetVariable',width,{property:target,libraryRevision:library.revision}))),I.button('Detach collection binding',()=>run(()=>writeBinding('detachVariable',width,{property:target}))));
    }
   }
-  controllers.set(parent,{details,open:async(property,trigger)=>{
-   if(loadPromise)await loadPromise;if(!details.isConnected||busy)return;target=property;init();remember();render();
+  controllers.set(parent,{details,open:async(property,trigger,requestedUnit)=>{
+   if(loadPromise)await loadPromise;if(!details.isConnected||busy)return;target=property;init();if(requestedUnit!==undefined&&!link()&&!inherit(property))unit=requestedUnit;remember();render();
    if(!library)await load();if(!details.isConnected)return;if(!library){for(let node=details;node&&node!==parent.parentElement;node=node.parentElement)if(node.tagName==='DETAILS')node.open=true;status.scrollIntoView({block:'nearest'});return;}
    const type=paints.includes(target)?'color':numbers.includes(target)?'number':target==='visibility'?'boolean':'string';
    browse(library.variables.filter(variable=>variable.type===type),type,trigger);
@@ -113,7 +113,7 @@
    const property=input.dataset.variableProperty;if(!supported.has(property))continue;
    const field=input.closest('.inspector-field');if(!field)continue;let row=field.closest('.property-row');if(!row){row=document.createElement('div');row.className='property-row';field.before(row);row.append(field);}
    if(row.querySelector('.property-variable'))continue;
-   const label=(new Map(V.fields).get(property)||property).toLowerCase(),button=I.button('Apply variable to '+label,()=>controller.open(property,button));button.classList.add('property-variable');button.textContent='◈';button.setAttribute('aria-label','Apply variable to '+label);button.setAttribute('aria-haspopup','dialog');button.title='Apply variable to '+label;button.disabled=input.disabled;row.append(button);
+   const label=(new Map(V.fields).get(property)||property).toLowerCase(),button=I.button('Apply variable to '+label,()=>controller.open(property,button,input.dataset.variableUnit));button.classList.add('property-variable');button.textContent='◈';button.setAttribute('aria-label','Apply variable to '+label);button.setAttribute('aria-haspopup','dialog');button.title='Apply variable to '+label;button.disabled=input.disabled;row.append(button);
   }
  }
  return {mount,inherited,classInherited,decorate};

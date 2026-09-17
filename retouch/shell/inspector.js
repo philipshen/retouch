@@ -260,7 +260,7 @@
     const control=button((action==='move'?'Move':'Resize')+' on canvas',()=>start(control));control.dataset.canvasTool=action;control.retouchCanvasStart=initial=>start(control,initial);return control;
   }
   function numericPreview(input,el,property,format=value=>value+'px',render=null){
-    input.retouchPreviewTarget=el;
+    const percent=input.getAttribute('aria-label')?.includes('(%)');if(property!=='letter-spacing'||!percent)input.dataset.variableProperty=property;if(['font-size','line-height','letter-spacing'].includes(property))input.dataset.variableUnit=percent?'%':'px';input.retouchPreviewTarget=el;
     input.retouchNumericPreview=()=>{
       const preview=root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true});
       return {current:()=>el.isConnected&&preview.current(),update:value=>{preview.update(format(value));render?.(value);},restore:()=>{preview.restore();render?.(null);}};
@@ -838,7 +838,7 @@
         const input=document.createElement('input');input.type='text';input.spellcheck=false;input.placeholder='CSS color';
         const computed=css.getPropertyValue(property);
         input.value=root.RetouchBackgroundPaintUI.sourceColor(info,'',property)??computed;input.dataset.paintProperty=property;root.RetouchBackgroundPaintUI.bindSource(input,info,'',property,el);input.retouchPaintPreview=()=>root.RetouchPaintPicker.propertyPreview({el,input,property});
-        field(sec,label+' with alpha',input);note(sec,computed,'computed-value');
+        input.dataset.variableProperty=property;field(sec,label+' with alpha',input);note(sec,computed,'computed-value');
         sec.append(button('Clear local '+label.toLowerCase(),()=>colorAction(property,null).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();})));
         input.onchange=()=>{const value=input.value.trim();if(!root.RetouchHTMLCSSValues.valid(property==='border-color'?'border-color':'color',value,false)||!el.ownerDocument.defaultView.CSS.supports(property==='border-color'?'border-color':'color',value)){input.setCustomValidity('Enter a supported literal CSS color.');input.reportValidity();return;}input.setCustomValidity('');colorAction(property,value).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();});};input.oninput=()=>input.setCustomValidity('');if(property==='background-color'&&backgroundAction)root.RetouchBackgroundPaintUI.bind(info,el,input,backgroundAction,()=>root.RetouchBackgroundPaintUI.sourceState(info,''));fieldDraft(input);
       }
@@ -865,7 +865,7 @@
       const choices=[...new Set([current,...values])].filter(value=>el.ownerDocument.defaultView.CSS.supports(property,value));
       const control=select(sec,label,choices.map(value=>[value,property==='isolation'?(value==='isolate'?'Isolate children':'Blend with surroundings'):value]),current,write);
       const reset=button('Reset '+label.toLowerCase(),()=>write(null));reset.disabled=root.RetouchReactSelection.change(info.className,'',property,null)===info.className;sec.append(reset);
-      control.disabled=!appearanceReady(false,property);reset.disabled||=!appearanceReady(true,property);if(control.disabled)control.title='Preview the selected edit range and resolve important inline '+label.toLowerCase()+' rules.';
+      control.dataset.variableProperty=property;control.disabled=!appearanceReady(false,property);reset.disabled||=!appearanceReady(true,property);if(control.disabled)control.title='Preview the selected edit range and resolve important inline '+label.toLowerCase()+' rules.';
       if(property==='visibility')note(sec,'Hidden layers keep their layout space. Select them in Layers to show them again.');
     }
     const widthToken=borderWidthToken;
@@ -875,7 +875,7 @@
       if(v>0)for(const side of ['top','right','bottom','left'])if(css.getPropertyValue('border-'+side+'-style')==='none')next=borderClasses(next,'style','solid',info.anchorInheritedClasses,side);
       save(next);
     });
-    borderWidth.placeholder='Mixed';
+    borderWidth.dataset.variableProperty='border-width';borderWidth.placeholder='Mixed';
     const resetWidth=button('Reset border width',()=>save(borderClasses(info.className,'width',null)));resetWidth.disabled=borderClasses(info.className,'width',null)===info.className;sec.append(resetWidth);
     for(const side of ['top','right','bottom','left']){
       const name='Border '+side+' width',property='border-'+side+'-width';
@@ -895,7 +895,7 @@
     try {const c=colorHex(css.borderTopColor,el.ownerDocument);if(c)borderColor.value=c;} catch {}
     // Color inputs accept sRGB hex, while computed CSS may use lab/oklch.
     // Show the browser's computed value separately instead of mislabelling it.
-    field(sec,'Border color',borderColor);note(sec,css.borderTopColor,'computed-value');
+    borderColor.dataset.variableProperty='border-color';field(sec,'Border color',borderColor);note(sec,css.borderTopColor,'computed-value');
     borderColor.onchange=()=>colorAction?colorAction('border-color',borderColor.value).catch(error=>{borderColor.setCustomValidity(error.message);borderColor.reportValidity();}):save(replace(info.className,t=>t.startsWith('border-')&&!widthToken(t)&&!/^border(?:-[trblxyse])?-(solid|dashed|dotted|double|hidden|none|collapse|separate|spacing-|opacity-)/.test(t),`border-[${borderColor.value}]`));
     const radius=value=>/^[\d.]+px$/.test(value)?parseFloat(value):NaN;
     const radii=[css.borderTopLeftRadius,css.borderTopRightRadius,css.borderBottomRightRadius,css.borderBottomLeftRadius];
@@ -1066,7 +1066,7 @@
     const choices=fontFamilies(d,current),supported=choices.some(([value])=>value===current);
     const choose=value=>{if(options.disabled)return;if(options.preview){current=value;options.mixed=false;if(![...quick.options].some(option=>option.value===value))quick.add(new Option(fontDisplayName(value),value));quick.value=value;render();}onChange(value);};
     const quick=select(parent,options.label||'Page font',supported?choices:[[current,options.mixed?'Mixed':fontDisplayName(current)],...choices],current,choose);
-    quick.disabled=!!options.disabled;if(!supported)quick.options[0].disabled=true;
+    quick.dataset.variableProperty='font-family';quick.disabled=!!options.disabled;if(!supported)quick.options[0].disabled=true;
     const currentStatus=note(parent,'');currentStatus.setAttribute('aria-label','Current font files');currentStatus.setAttribute('role','status');
     const browse=document.createElement('details');browse.className='font-browser';
     const summary=document.createElement('summary');summary.textContent='Browse page fonts';browse.append(summary);

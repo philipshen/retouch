@@ -24774,3 +24774,38 @@ These checks do not prove all property combinations or complete design parity.
 Local source checkpoint only; no push, desktop rebuild or release. Full Figma
 parity, arbitrary-site authoring and trusted desktop distribution remain active
 requirements.
+
+### 2026-09-17 — React/Liquid property variable entry points
+
+The class-based inspector now exposes the same variable picker beside compatible
+paint, font-family, numeric typography, opacity, visibility, border/corner and
+padding fields. Shared class selection fields carry property metadata too, so a
+mixed React selection can apply one variable directly from its shared color row
+and undo to the original distinct bindings. The existing source adapters still
+own all binding plans and scope-specific class writes.
+
+Typography entry points carry their displayed unit into a new binding. The pixel
+line-height field now applies a number as pixels rather than a unitless line-height
+multiplier. Existing own/inherited binding units remain intact. Percentage letter
+spacing requires a numeric conversion that the binding model does not yet represent;
+its relative field does not advertise the action, while its pixel field does.
+Remaining per-property gaps include transformed/frame sizing and other controls
+whose displayed quantity differs from the underlying CSS variable value.
+
+Browser fixture setup was updated to reveal disclosures only when closed: direct
+property application no longer requires opening More properties first, unlike the
+older workflow. This is a local source checkpoint; it does not rebuild or release
+the desktop app. Full design parity and trusted desktop distribution remain
+unfinished.
+
+Validation: all 1,925 unit tests passed. React and local Liquid collection-binding
+workflows passed in Chromium and WebKit, including direct text-color application
+at md, phone/tablet isolation, mode changes, catalog propagation, direct pixel
+line-height and padding, detach and exact source undo. React also verified direct
+shared-color application over mixed bindings, restoration of distinct modes,
+multi-file library undo/redo and retained document identity. The local Liquid
+fixture uses LiquidJS and compiled Tailwind; this is not live Shopify evidence.
+React/Chromium and Liquid/WebKit screenshots were inspected. Logs are
+`/tmp/retouch-class-variable-{react,liquid}-{chromium,webkit}.log` and
+`/tmp/retouch-class-variable-units.log`; screenshots use the same prefix and
+renderer/browser suffix with `.png`. No push was performed.
