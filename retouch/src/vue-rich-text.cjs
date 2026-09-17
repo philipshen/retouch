@@ -4,10 +4,10 @@ const { parseFragment } = require('parse5');
 const source = require('./rich-text-source.cjs');
 const tags = new Set(['h1','h2','h3','h4','h5','h6','p','div','span','blockquote','label','a','li']);
 // Vue emits adjacent literal and interpolation nodes as one browser text node.
-function groups(nodes) {
+function groups(nodes,commentsAsText=false) {
   const result=[];
   for(const node of nodes){
-    if([NodeTypes.TEXT,NodeTypes.INTERPOLATION].includes(node.type)){
+    if([NodeTypes.TEXT,NodeTypes.INTERPOLATION].includes(node.type)||commentsAsText&&node.type===NodeTypes.COMMENT){
       if(result.at(-1)?.text)result.at(-1).nodes.push(node);
       else result.push({text:true,nodes:[node]});
     }else result.push({text:false,nodes:[node]});
@@ -35,6 +35,7 @@ function attributes(node) {
 const canEditHref=node=>!node.attrs?.some(attr=>/^(?::href|\.href|v-bind:href)(?:\.|$)/.test(attr.name));
 function context(resolved, adapter) {
   const element = resolved.element;
+  const commentsAsText=adapter.compilerOptions?.().comments===false;
   if (element.node.ns !== 0 || !tags.has(element.tag) || element.node.isSelfClosing || element.node.props.some(prop => prop.type === NodeTypes.DIRECTIVE && ['html','text'].includes(prop.name))) throw Error('Choose a native text container.');
   const opening = element.node.loc.source.match(/^<(?:[^"'<>]|"[^"]*"|'[^']*')*>/)?.[0];
   const close = element.node.loc.source.lastIndexOf('</' + element.tag);
@@ -44,16 +45,17 @@ function context(resolved, adapter) {
     let marker='RTVUE'+adapter.contentHash(resolved.source+'|expression|'+node.loc.start.offset).slice(0,20)+'TOKEN';
     while(resolved.source.includes(marker))marker+='X';
     const start=node.loc.start.offset-element.node.loc.start.offset,end=last.loc.end.offset-element.node.loc.start.offset;
-    expressions.push({marker,raw:element.node.loc.source.slice(start,end),start,end});
+    expressions.push({marker,raw:element.node.loc.source.slice(start,end),start,end,empty:node.type===NodeTypes.COMMENT});
     return marker;
   }
   function vue(nodes) {
-    return groups(nodes).map(group => {
+    return groups(nodes,commentsAsText).map(group => {
       if(group.text){
         const first=group.nodes.findIndex(node=>node.type===NodeTypes.INTERPOLATION),last=group.nodes.findLastIndex(node=>node.type===NodeTypes.INTERPOLATION);
         // Multiple expressions have no observable DOM boundary. Preserve their
         // shared dynamic portion together, including separators between them.
-        return {text:first<0?group.nodes.map(node=>node.content).join(''):group.nodes.slice(0,first).map(node=>node.content).join('')+expression(group.nodes[first],group.nodes[last])+group.nodes.slice(last+1).map(node=>node.content).join('')};
+        const literal=node=>node.type===NodeTypes.COMMENT?expression(node):node.content.replace(/\r\n?/g,'\n');
+        return {text:first<0?group.nodes.map(literal).join(''):group.nodes.slice(0,first).map(literal).join('')+expression(group.nodes[first],group.nodes[last])+group.nodes.slice(last+1).map(literal).join('')};
       }
       const node=group.nodes[0];
       if(node.type===NodeTypes.COMMENT)return {comment:node.content.replace(/\r\n?/g,'\n')};
@@ -95,7 +97,9 @@ function context(resolved, adapter) {
   const browser=parseFragment(masked).childNodes;
   if(browser.length!==1||browser[0].tagName!==element.tag||JSON.stringify(expected)!==JSON.stringify(html(browser[0].childNodes)))throw Error('The browser and Vue interpret this text differently.');
   const tokens=expressions.map(entry=>entry.marker);
-  return {start,end,value,tokens,expressions,descriptor:source.describe(value,element.id,{tokens,canEditHref}).descriptor};
+  const described=source.describe(value,element.id,{tokens,canEditHref});
+  const tokenIds=new Map([...described.kept].filter(([,entry])=>entry.tag==='#text').map(([id,entry])=>[entry.raw,id]));
+  return {start,end,value,tokens,expressions,commentsAsText,tokenIds,descriptor:described.descriptor};
 }
 function describe(resolved, adapter, rendered) {
   try {
@@ -118,7 +122,8 @@ function describe(resolved, adapter, rendered) {
     const descendants=adapter.collect(resolved.source,resolved.relPath).elements.filter(element=>element.start>resolved.element.start&&element.end<resolved.element.end);
     const plainFormattingIds=descendants.filter(element=>['strong','b','em','i','u','s','sup','sub','br'].includes(element.tag)&&!element.node.props.length).map(element=>element.id);
     const plainLinkIds=descendants.filter(element=>element.tag==='a'&&element.node.props.length===1&&element.node.props[0].type===NodeTypes.ATTRIBUTE&&element.node.props[0].name==='href'&&require('../shell/link-values.js').valid(element.node.props[0].value?.content)).map(element=>element.id);
-    return { canSetChildren: true, plainFormattingIds, plainLinkIds, richText: rendered?{children:normalize(data.descriptor.children,resolved.element.node.children,rendered.node.children)}:data.descriptor };
+    const richText=rendered&&data.commentsAsText?require('./vue-rich-comments.cjs').project(data,resolved.element.node,rendered.node,adapter.compilerOptions(),groups):rendered?{children:normalize(data.descriptor.children,resolved.element.node.children,rendered.node.children)}:data.descriptor;
+    return { canSetChildren: true, plainFormattingIds, plainLinkIds, richText };
   }
   catch { return { canSetChildren: false }; }
 }

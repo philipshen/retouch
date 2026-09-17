@@ -570,7 +570,14 @@ async function classifyNode(node,current=()=>true) {
 function captureInspectorSelectionTarget(el,sourceId){
   if(!el)return ()=>null;
   const id=sourceId||el.getAttribute('data-rt-i')||el.getAttribute('data-rt'),context=renderContext(el),occurrence=matchingInDocument(el.ownerDocument,id,{context}).indexOf(el);
-  return ()=>el.isConnected&&el.ownerDocument===doc()?el:occurrence>=0?matchingInDocument(doc(),id,{context})[occurrence]:null;
+  return ()=>{
+    if(el.isConnected&&el.ownerDocument===doc()&&[el.getAttribute('data-rt'),el.getAttribute('data-rt-i')].includes(id))return el;
+    const matches=matchingInDocument(doc(),id,{context});
+    // A Layers row can outlive its Vue node until the next tree refresh.
+    // Recover a unique source identity even if the old node was already
+    // detached at capture time; never guess between repeated instances.
+    return occurrence>=0?matches[occurrence]:matches.length===1?matches[0]:null;
+  };
 }
 async function select(node,{toggle=false,sourceId,current=()=>true}={}) {
   stopDrawing?.();
@@ -2259,6 +2266,17 @@ function renderPanelContents(textEditing=false) {
   const tsec = document.createElement('div');
   tsec.className = 'sec';
   tsec.innerHTML = '<h3>Text</h3>';
+  if(target&&(info.text!=null||info.mixedText)&&(!info.textSource||info.textSource.format==='text'||info.richText)){
+    const edit=RetouchInspector.button('Edit text',()=>{
+      if(mode!=='edit'||editing||panelTasks||sourceRequests||undoBusy||sel?.info!==info||!target.isConnected)return;
+      void startInlineEdit(target,null,false);
+    });
+    // The containing fieldset owns temporary request/history busy state.
+    // Do not retain that transient state in a newly rendered button.
+    edit.id='textInlineEdit';edit.disabled=textEditing||mode!=='edit';
+    edit.title='Edit this text layer in place, including its text runs.';
+    tsec.appendChild(edit);
+  }
   if (info.textSource) {
     const provenance = document.createElement('p');
     provenance.className = 'filepath';
@@ -4077,6 +4095,8 @@ modeBtn.onclick = () => {
   mode = mode === 'edit' ? 'interact' : 'edit';
   modeBtn.textContent = mode === 'edit' ? 'Edit mode' : 'Interact mode';
   modeBtn.classList.toggle('mode-edit', mode === 'edit');
+  const textEdit=document.getElementById('textInlineEdit');
+  if(textEdit)textEdit.disabled=mode!=='edit'||!!editing;
   if (mode === 'interact') { hoverEl = null; }
 };
 for(const button of [undoBtn,redoBtn])button.addEventListener('pointerdown',event=>{if(editing)event.preventDefault();});
@@ -4298,16 +4318,18 @@ const layers = RetouchLayers.mount({
   onSelect:async(el,options)=>{
     const serial=++inspectorSelectionSerial,pending=inspectorTextCommit,target=captureInspectorSelectionTarget(el,options?.sourceId);
     if(pending)await pending;
-    if(serial!==inspectorSelectionSerial||panelTasks||undoBusy||sourceRequests)return;
-    el=target();if(!el)return;
-    await commitInlineEdit();if(options?.component&&options.sourceId)componentLibrarySelections.add(options.sourceId);await select(el,options);el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});
+    if(serial!==inspectorSelectionSerial||panelTasks||undoBusy||sourceRequests)return false;
+    el=target();if(!el)return false;
+    await commitInlineEdit();if(options?.component&&options.sourceId)componentLibrarySelections.add(options.sourceId);await select(el,options);
+    if(renderedSelection?.element!==el)return false;
+    el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});return true;
   },
   onSelectMany:async(nodes,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await selectMany(nodes,options);},
   onAction:action=>structureAction(action),
   onContextMenu:async({event,select:choose,selected,opener,keyboard})=>{
     if(event.defaultPrevented||event.isComposing||mode!=='edit'||editing||panelTasks||undoBusy||sourceRequests||document.querySelector('dialog[open]'))return;
     event.preventDefault();event.stopPropagation();const serial=++canvasContextSerial;
-    try{if(!selected)await choose();if(serial!==canvasContextSerial||mode!=='edit'||!sel||!opener.isConnected)return;const box=opener.getBoundingClientRect();window.RetouchActions?.contextMenu({x:keyboard?box.left:event.clientX,y:keyboard?box.bottom:event.clientY,opener});}catch(error){toast(error.message,'err');}
+    try{if(!selected&&!await choose())return;if(serial!==canvasContextSerial||mode!=='edit'||!sel||!opener.isConnected)return;const box=opener.getBoundingClientRect();window.RetouchActions?.contextMenu({x:keyboard?box.left:event.clientX,y:keyboard?box.bottom:event.clientY,opener});}catch(error){toast(error.message,'err');}
   },
 });
 window.RetouchLayerNavigation={

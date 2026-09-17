@@ -21,7 +21,7 @@ function collect(source, relPath, compilerOptions = {}, { preserveWhitespace = t
   // custom elements and interpolation delimiters). Callbacks cannot suppress
   // syntax errors. Source editing preserves whitespace; render verification
   // can request the application's compiler whitespace normalization instead.
-  const ast = dom.parse(template.content, { ...compilerOptions, comments: true, whitespace: preserveWhitespace ? 'preserve' : compilerOptions.whitespace || 'condense', onError(error) { throw error; } });
+  const ast = dom.parse(template.content, { ...compilerOptions, comments: preserveWhitespace || compilerOptions.comments !== false, whitespace: preserveWhitespace ? 'preserve' : compilerOptions.whitespace || 'condense', onError(error) { throw error; } });
   const offset = template.loc.start.offset;
   const elements = [], excluded = [];
   function walk(parent, route, scope) {

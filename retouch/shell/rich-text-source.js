@@ -13,12 +13,17 @@
       el.childNodes[0].textContent.trim()===item.value.trim())return;
 
     function walk(nodes,items,container) {
-      // Vue may represent an empty dynamic text value with no DOM text node.
+      // Stripped comments and empty dynamic values may have no DOM text node.
       // Plan a placeholder only after the complete descriptor has matched.
-      if(!nodes.length&&items.length===1&&items[0].t==='text'&&items[0].parts?.some(part=>part.t==='token')&&items[0].parts.every(part=>part.t==='token'||part.value==='')){
-        var empty=verifyOnly?{nodeType:3,textContent:''}:d.createTextNode('');
-        actions.push(function(){container.appendChild(empty);});nodes=[empty];
-      }
+      var at=0,aligned=[];
+      items.forEach(function(item){
+        if(nodes[at]?.nodeType!==3&&item.t==='text'&&item.parts?.some(part=>part.t==='token')&&item.parts.every(part=>part.t==='token'||part.value==='')){
+          var empty=verifyOnly?{nodeType:3,textContent:''}:d.createTextNode(''),anchor=nodes[at]||null;
+          actions.push(function(){container.insertBefore(empty,anchor);});aligned.push(empty);
+        }else aligned.push(nodes[at++]);
+      });
+      if(at!==nodes.length||aligned.some(node=>!node))throw new Error('The rendered text structure changed. Reload before editing it.');
+      nodes=aligned;
       if(nodes.length!==items.length)throw new Error('The rendered text structure changed. Reload before editing it.');
       items.forEach(function(item,i){
         var node=nodes[i];
@@ -33,13 +38,14 @@
           if(node.nodeType!==3)throw new Error('The renderer changed the stored text.');
           var parts=item.parts||[{t:'text',value:item.value}];
           var escaped=function(value){return value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');};
-          var pattern='^'+parts.map(function(part){return part.t==='token'?'([\\s\\S]*?)':escaped(part.value);}).join('')+'$';
+          var pattern='^'+parts.map(function(part){return part.t==='token'?(part.empty?'':'([\\s\\S]*?)'):escaped(part.value);}).join('')+'$';
           var match=new RegExp(pattern).exec(node.textContent);
           if(!match)throw new Error('The rendered text differs from its source. Reload before editing it.');
           if(parts.some(function(part){return part.t==='token';}))actions.push(function(){
             var fragment=d.createDocumentFragment(),group=1;
             parts.forEach(function(part){
               if(part.t==='text')fragment.appendChild(d.createTextNode(part.value));
+              else if(part.empty){var comment=d.createComment('');comment.__rtKeep=part.id;fragment.appendChild(comment);}
               else {var token=d.createElement('span');token.setAttribute('data-rt-keep',part.id);token.setAttribute('contenteditable','false');token.textContent=match[group++];fragment.appendChild(token);}
             });
             node.replaceWith(fragment);

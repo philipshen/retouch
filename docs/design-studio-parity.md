@@ -24,7 +24,7 @@ changing those files. The original checkout may continue to evolve independently
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG/JPEG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Completed source and lock history now survives editor-tab reload within a running server session. Source Undo/Redo now recovers across normal server restarts; crash recovery, complete gesture grouping, version browsing and collaborative editing remain. |
-| Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. Vite 8 React now has an explicit development plugin; installed-package startup, TSX text editing, hot-update state retention, process shutdown/restart and persisted exact undo pass in Chromium/WebKit (see docs/cli.md). HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
+| Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. Vite 8 React now has an explicit development plugin; installed-package startup, TSX text editing, hot-update state retention, process shutdown/restart and persisted exact undo pass in Chromium/WebKit (see docs/cli.md). Vue now has a Vite compiler adapter with source-backed responsive CSS, native structure and grouping, link editing, and rich text that retains live values and authored bindings. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Comparison cards now show current scope coverage and offer an explicit width-and-larger style-scope action. Compact comparison defaults, explicit screen controls, add/reveal, remove/restore, keyboard focus and empty-state recovery now have browser coverage. Literal Liquid class edits retain main/comparison state and support preview-failure retry. Fully editable comparison canvases and cross-framework parity remain. |
 | Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop. Controlled native testing resumed with user authorization; rebuilt bundles still require individual launch verification under desktop/AGENTS.md. Current archive details and exact runtime evidence are in desktop/README.md. Current native interaction remains unverified. File flows, Intel runtime and broader lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. The `34494d4` candidate has verified Developer ID signing, archive integrity and packaged-runtime checks; see [its receipt](../desktop/verification/2026-09-14-runtime-path-developer-id.json). Its local cask syntax passes, but installation was not rerun for this candidate. Gatekeeper rejects it as unnotarized. Notarization, public publishing, upgrades, trusted quarantined launch and Intel execution remain unverified. |
@@ -24543,7 +24543,47 @@ Evidence: `/tmp/retouch-vue-comments-final-units.log`,
 `/tmp/retouch-vue-comments-combined-webkit.log`,
 `/tmp/retouch-vue-comments-crlf-chromium.log`, and
 `/tmp/retouch-vue-comments-crlf-webkit.log`.
-Compiler configurations that remove comments from the rendered DOM still fail the
-rendered-structure check; authoring across that transformation remains unfinished.
+Compiler configurations that remove comments were not covered at this checkpoint;
+the following checkpoint adds that source/render mapping.
 This checkpoint does not rebuild the desktop artifact or establish full Figma or
 arbitrary-site parity.
+
+## Stripped Vue comments and direct text entry (2026-09-17)
+
+Vue projects using `compilerOptions.comments: false` can now edit literal text
+around authored comments, including when the compiler merges adjacent text nodes.
+A compiler-backed projection preserves comments as zero-width source anchors and
+matches normalized literal content exactly. Adjacent interpolations separated by
+removed comments share one protected range because the rendered string does not
+expose their individual boundaries. Condensed/preserved whitespace, entities,
+and visible CRLF are handled without rewriting the original comment bytes.
+Temporary anchors exist only in isolated editing nodes; the original Vue-owned
+nodes are restored before source writes and HMR.
+
+The Text inspector, context menu and Actions search now expose an explicit
+**Edit text** command. It enters the selected text container even when its child
+runs are expanded in Layers. The command uses the inspector fieldset's temporary
+busy state rather than retaining a disabled state from an in-flight refresh.
+
+The combined workflow exposed stale Layers rows after Vue HMR: a row could refer
+to an already-detached node, causing selection to remain on the previous layer.
+Selection capture now resolves a unique matching source ID in that case, while
+refusing ambiguous repeated instances. A context menu opens only if its requested
+selection succeeds; it cannot offer commands for the previous selection after a
+failed selection handoff.
+
+Validation: all 1,904 unit tests passed. Combined Chromium and WebKit runs with
+comment stripping passed responsive CSS/comparisons, native structure, groups,
+rich text, bound values/events/links, exact history, retained main/live state and
+production checks. They also cover inspector/context/search text entry, detached
+node recovery and ambiguous-ID refusal. The default compiler configuration is
+covered by the corresponding preserved-comment browser runs. Evidence:
+`/tmp/retouch-vue-stripped-complete-units.log`,
+`/tmp/retouch-vue-stripped-complete-chromium.log`,
+`/tmp/retouch-vue-stripped-complete-webkit.log`,
+`/tmp/retouch-vue-preserved-complete-chromium.log`, and
+`/tmp/retouch-vue-preserved-complete-webkit.log`.
+
+No desktop rebuild or release accompanies this source checkpoint. Full Figma
+parity, remaining framework/render transformations and trusted desktop
+distribution remain unfinished.

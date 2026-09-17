@@ -77,3 +77,12 @@ test('read-only matching accepts absent empty dynamic text but still requires li
  assert.equal(matches(el,{children:[{t:'text',parts:[{t:'token',id:'empty'}]}]}),true);
  assert.equal(matches(el,{children:[{t:'text',parts:[{t:'text',value:'Required'},{t:'token',id:'empty'}]}]}),false);
 });
+
+test('stripped comment anchors consume no rendered text and matching never mutates the DOM',()=>{
+ const {matches,prepare}=require('../shell/rich-text-source.js');
+ const descriptor={children:[{t:'text',parts:[{t:'text',value:'Hello '},{t:'token',id:'comment',empty:true},{t:'token',id:'live'},{t:'text',value:'!'}]}]};
+ let fragment;const document={createDocumentFragment(){return {children:[],appendChild(node){this.children.push(node);}};},createTextNode(text){return {nodeType:3,textContent:text};},createComment(){return {nodeType:8};},createElement(tagName){return {nodeType:1,tagName,setAttribute(name,value){this[name]=value;}};}};
+ const node={nodeType:3,textContent:'Hello 23!',replaceWith(value){fragment=value;}},el={ownerDocument:document,childNodes:[node]};assert.equal(matches(el,descriptor),true);assert.equal(fragment,undefined);prepare(el,descriptor);assert.equal(fragment.children[1].nodeType,8);assert.equal(fragment.children[1].__rtKeep,'comment');assert.equal(fragment.children[2].textContent,'23');
+ assert.equal(matches({ownerDocument:{},childNodes:[{nodeType:3,textContent:'Hello extra!'}]},{children:[{t:'text',parts:[{t:'text',value:'Hello '},{t:'token',id:'comment',empty:true},{t:'text',value:'!'}]}]}),false,'a missing comment cannot swallow unexplained visible content');
+ const gap={t:'text',parts:[{t:'token',id:'gap',empty:true}]},element={t:'element',id:'run',tag:'em',children:[]},run={nodeType:1,tagName:'EM',childNodes:[]};assert.equal(matches({ownerDocument:{},childNodes:[run]},{children:[gap,element,gap]}),true);
+});

@@ -162,3 +162,31 @@ test('Vue comments follow compiler whitespace normalization without changing sou
  assert.deepEqual(info.richText.children.filter(item=>item.t==='comment').map(item=>item.id),preserve.richText.children.filter(item=>item.t==='comment').map(item=>item.id));
  assert.equal(info.richText.children.find(item=>item.t==='element').children[1].t,'comment');
 });
+
+test('stripped Vue comments retain source anchors across merged literals, live values and exact history',t=>{
+ const a=adapter.create({compilerOptions:{comments:false}}),text='<template><main><p>\n<!-- first -->\nHello <!-- middle --> there {{ count }}<!-- pair -->{{ count + 1 }}!<em>inside<!-- nested -->tail</em><!-- last -->\n</p></main></template>';
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-vue-stripped-')),file=path.join(root,'App.vue');t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(file,text);
+ const r={...resolve(text,a),file},info=a.describe(r);assert.equal(info.canSetChildren,true);
+ const allParts=items=>items.flatMap(item=>item.t==='element'?allParts(item.children):item.parts||[]),parts=allParts(info.richText.children);
+ assert.equal(parts.filter(part=>part.empty).length,4);assert.equal(parts.filter(part=>part.t==='token'&&!part.empty).length,1,'adjacent values separated only by removed comments need one opaque range');
+ const serialize=items=>items.flatMap(item=>item.t==='element'?[{t:'keep',id:item.id,children:serialize(item.children)}]:item.parts.map(part=>part.t==='token'?{t:'keep',id:part.id}:{t:'wrap',tag:'strong',children:[{t:'text',value:part.value}]}));
+ const history=new SourceHistory(),result=history.commit(root,a.planOp(r,{type:'setChildren',fileHash:r.hash,children:serialize(info.richText.children)}));assert.equal(result.ok,true,result.reason);const after=fs.readFileSync(file,'utf8');assert.deepEqual(after.match(/<!--[\s\S]*?-->/g),text.match(/<!--[\s\S]*?-->/g));assert.match(after,/\{\{ count \}\}<!-- pair -->\{\{ count \+ 1 \}\}/);assert.equal(a.describe(resolve(after,a)).canSetChildren,true);
+ assert.equal(history.apply(root,'undo',result.undoId,a).ok,true);assert.equal(fs.readFileSync(file,'utf8'),text);assert.equal(history.apply(root,'redo',result.undoId,a).ok,true);assert.equal(fs.readFileSync(file,'utf8'),after);
+ const empty=parts.find(part=>part.empty);assert.equal(a.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'keep',id:empty.id},{t:'keep',id:empty.id}]}).refused,true);
+});
+
+test('stripped comment projection follows preserved and condensed whitespace and nested empty gaps',()=>{
+ for(const whitespace of ['preserve','condense']){
+  const a=adapter.create({compilerOptions:{comments:false,whitespace}}),r=resolve('<template><p>Hello  <!-- gap -->  world<em>A</em><!-- empty --><b>B<!-- end --></b></p></template>',a),info=a.describe(r);
+  assert.equal(info.canSetChildren,true,whitespace);const first=info.richText.children[0];assert.equal(first.parts.filter(part=>part.t==='text').map(part=>part.value).join(''),whitespace==='preserve'?'Hello    world':'Hello world');assert.equal(first.parts.filter(part=>part.empty).length,1);assert.equal(info.richText.children[2].parts[0].empty,true);assert.equal(info.richText.children[3].children[0].parts[1].empty,true);
+ }
+});
+
+
+test('stripped comments preserve visible CRLF and entities in compiler whitespace modes',()=>{
+ for(const whitespace of ['preserve','condense']){
+  const a=adapter.create({compilerOptions:{comments:false,whitespace}}),r=resolve('<template><p>Hello &amp;\r\n<!-- note -->\r\nWorld</p></template>',a),info=a.describe(r);assert.equal(info.canSetChildren,true,whitespace);
+  assert.equal(info.richText.children[0].value,whitespace==='preserve'?'Hello &\r\n\r\nWorld':'Hello & World');
+  const parts=info.richText.children[0].parts,children=parts.map(part=>part.t==='token'?{t:'keep',id:part.id}:{t:'wrap',tag:'strong',children:[{t:'text',value:part.value}]}),result=a.planOp(r,{type:'setChildren',fileHash:r.hash,children});assert.equal(result.ok,true,result.reason);assert.match(result.edits[0].after,/<!-- note -->/);assert.equal(a.describe(resolve(result.edits[0].after,a)).canSetChildren,true);
+ }
+});

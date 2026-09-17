@@ -112,7 +112,7 @@ function create(options = {}) {
     return { ok: true, hash: source.contentHash(after), edits: [{ file: resolved.file, before: resolved.source, after }] };
   }
   const adapter = {
-    name: 'vue', matches: file => /\.vue$/i.test(file), collect, describe, planOp,
+    name: 'vue', matches: file => /\.vue$/i.test(file), collect, describe, planOp, compilerOptions,
     stamp: (text, file, root) => {
       const relative = root ? path.relative(root, file).split(path.sep).join('/') : file;
       return source.stamp(text, file, root, compilerOptions(), { revision: source.contentHash(text), transformDocument: out => require('../vue-css.cjs').warmInto(out, text, relative, options.styleModule?.(relative)) });
