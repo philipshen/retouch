@@ -10,7 +10,7 @@ exports.run=async({page,app,live,file,source})=>{
  await page.getByRole('treeitem',{name:'div · rich-split',exact:true}).press('Enter');await page.waitForFunction(()=>document.querySelector('#app').contentDocument.querySelector('#rich-split')?.isContentEditable);
  await target.locator('span[title]').evaluate(el=>{const d=el.ownerDocument,r=d.createRange();r.setStart(el.firstChild,6);r.collapse(true);const s=d.getSelection();s.removeAllRanges();s.addRange(r);});
  await target.press('Enter');await fonts(2);assert.deepEqual(await target.locator('span[title]').allTextContents(),['Split ','here']);
- await page.getByRole('button',{name:'Finish text editing',exact:true}).click();await settled();const split=read();assert.notEqual(split,source);await fonts(2);
+ await page.getByRole('button',{name:'Finish text editing',exact:true}).click();await settled();const split=read();assert.notEqual(split,source);await fonts(2);assert.equal(await target.locator(':scope > p').count(),2);assert.equal(await target.locator('[data-retouch-paragraph]').count(),0);
  const owners=await target.locator('span[title]').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('data-rt-style')));assert.equal(new Set(owners).size,2);assert.ok(owners.every(id=>/^[a-f0-9]{10}$/.test(id)));
  for(const size of ['390x844','768x1024']){await screen.selectOption(size);await settled();await fonts(2);}
  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),source);await fonts(1);

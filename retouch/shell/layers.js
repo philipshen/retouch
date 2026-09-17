@@ -5,7 +5,7 @@
       if(node.nodeType===3)return node.textContent;
       if(node.nodeType!==1)return '';
       const text=textLabel(node);
-      return node.tagName==='BR'||node.hasAttribute('data-retouch-paragraph')||['UL','OL','LI'].includes(node.tagName)?' '+text+' ':text;
+      return node.tagName==='BR'||node.hasAttribute('data-retouch-paragraph')||['P','UL','OL','LI'].includes(node.tagName)?' '+text+' ':text;
     }).join('');
   }
   function label(el, textLayer=false) {
@@ -22,12 +22,12 @@
     if(el.tagName!=='DIV'&&!/^(H[1-6]|P|BLOCKQUOTE|PRE|SPAN|A|LABEL|STRONG|B|EM|I|U|S|SUP|SUB|CODE|MARK|SMALL|ABBR)$/.test(el.tagName))return false;
     const rootDisplay=(el.ownerDocument.defaultView?.getComputedStyle(el)||el.style)?.display;
     if(rootDisplay&&/flex|grid|table/.test(rootDisplay))return false;
-    const paragraphs=el.querySelector('[data-retouch-paragraph]'),list=el.tagName==='DIV'&&[...el.children].some(n=>['UL','OL'].includes(n.tagName));
+    const paragraphs=el.querySelector('[data-retouch-paragraph]')||[...el.children].some(child=>child.tagName==='P'),list=el.tagName==='DIV'&&[...el.children].some(n=>['UL','OL'].includes(n.tagName));
     if(el.tagName==='DIV'&&!paragraphs&&!list)return false;
     for(const child of el.querySelectorAll('*')) {
       if(child.hasAttribute('data-rt-i')||child.hasAttribute('data-rt-layer-name')||child.hasAttribute('role')||child.getAttribute('contenteditable')==='false'||preserve(child))return false;
-      const paragraph=child.tagName==='SPAN'&&child.hasAttribute('data-retouch-paragraph'),listPart=list&&['UL','OL','LI'].includes(child.tagName);
-      if(!inlineTags.has(child.tagName)&&!listPart)return false;
+      const paragraph=child.tagName==='SPAN'&&child.hasAttribute('data-retouch-paragraph')||child.tagName==='P'&&child.parentElement===el,listPart=list&&['UL','OL','LI'].includes(child.tagName);
+      if(!inlineTags.has(child.tagName)&&!paragraph&&!listPart)return false;
       const style=child.ownerDocument.defaultView?.getComputedStyle(child)||child.style,display=style?.display;
       if(display&&!['inline','contents'].includes(display)&&!(paragraph&&display==='block')&&!(listPart&&['block','list-item'].includes(display)))return false;
       if(style?.position&& !['static','relative'].includes(style.position)||style?.float&&style.float!=='none')return false;

@@ -35,7 +35,7 @@ exports.run = async ({ page, app, live, file, source }) => {
   await page.getByRole('treeitem', { name: 'p · Editable Vue source', exact: true }).first().click({ modifiers: ['Meta'] });
   const sharedSize = page.getByLabel('Shared Font size', { exact: true });
   await sharedSize.fill('30px'); await sharedSize.press('Tab'); await settled();
-  await wait(async () => await style(app, 'font-size') === '30px' && await app.locator('p').evaluateAll(elements => elements.every(element => getComputedStyle(element).fontSize === '30px')));
+  await wait(async () => await style(app, 'font-size') === '30px' && await app.locator('main > p').evaluateAll(elements => elements.every(element => getComputedStyle(element).fontSize === '30px')));
   await page.getByRole('button', { name: 'Undo', exact: true }).click(); await settled();
   assert.equal(fs.readFileSync(file, 'utf8'), source);
   await app.getByRole('button', { name: 'Count 2', exact: true }).waitFor();

@@ -24370,3 +24370,35 @@ Evidence: `/tmp/retouch-vue-rich-split-all-units.log`,
 `/tmp/retouch-vue-rich-split-combined-chromium.log`, and
 `/tmp/retouch-vue-rich-split-combined-webkit.log`. No desktop artifact or public
 release was produced by this checkpoint; full Figma parity remains incomplete.
+
+## Native paragraph text layers (2026-09-17)
+
+A text container with ordinary direct `<p>` children is now recognized as one
+text layer, without requiring Retouch paragraph markers. Enter from its selected
+layer opens text editing; splitting a paragraph preserves its native markup and
+uses the source adapter's existing rich-text/history path. Layer labels include
+spaces between paragraphs. Individual runs remain available through Show text
+runs, and directly locked paragraphs remain separate layers.
+
+Grid/flex containers, component boundaries, positioned content, images, and
+unsupported nested layout retain separate layer selection. This is shared
+renderer-independent layer recognition; it does not add source operations to
+adapters that lack them. The Vue split fixture now uses real paragraphs instead
+of Retouch-marked span paragraphs. Its shared CSS assertion targets the actual
+selected `main > p` layers rather than all fixture paragraphs.
+
+Validation: 1,890 unit tests passed. Chromium and WebKit layer-browser tests
+passed paragraph grouping and labels, direct-lock preservation, grid/component
+boundaries, explicit source-run selection, live updates, and keyboard targets.
+The combined Chromium/WebKit Vue workflows also passed responsive CSS, structural
+edits, grouping, links, text formatting and splitting, exact history, retained
+page state, and production-build checks. The focused split check asserts that
+saved paragraphs remain native `<p>` elements without Retouch paragraph markers.
+The typography-preview check now reads readiness and script absence from the
+same document observation, avoiding a WebKit navigation race between reads.
+
+Evidence is in `/tmp/retouch-native-paragraph-units.log`,
+`/tmp/retouch-native-paragraph-layers-{chromium,webkit}.log`,
+`/tmp/retouch-native-paragraph-vue-chromium-combined.log`, and
+`/tmp/retouch-native-paragraph-vue-webkit.log`. Full parity and desktop delivery
+remain incomplete.
