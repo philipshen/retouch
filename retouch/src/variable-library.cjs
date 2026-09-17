@@ -28,10 +28,16 @@ function commitPlan(root,plan,apply=applyPlan){
  const result=apply(root,plan);if(!result.ok)fail(result.reason);return result;
 }
 function resolve(root,request){
- if(!request||typeof request!=='object'||Array.isArray(request)||Object.keys(request).some(key=>!['revision','modes','variableId'].includes(key)))fail('Invalid variable mode preview.',422);
+ if(!request||typeof request!=='object'||Array.isArray(request)||Object.keys(request).some(key=>!['revision','modes','variableId','variableIds'].includes(key)))fail('Invalid variable mode preview.',422);
  const current=read(root);if(request.revision!==current.revision)fail('Variable collections changed. Reload before previewing modes.');
  const resolver=model.resolver({version:current.version,collections:current.collections,variables:current.variables},request.modes);
  if(request.variableId!==undefined)model.cssName(request.variableId);
+ if(request.variableIds!==undefined){
+  if(request.variableId!==undefined||!Array.isArray(request.variableIds)||request.variableIds.length<1||request.variableIds.length>100||new Set(request.variableIds).size!==request.variableIds.length)fail('Preview between 1 and 100 distinct variables.',422);
+  for(const id of request.variableIds)model.cssName(id);
+  const values=[],errors=[];for(const id of request.variableIds){try{values.push(resolver.resolve(id));}catch(error){errors.push({id,reason:error.message});}}
+  return {revision:current.revision,values,errors};
+ }
  const values=request.variableId===undefined?resolver.resolveAll():[resolver.resolve(request.variableId)];return {revision:current.revision,values};
 }
 module.exports={LIMIT,read,planChange,commitPlan,resolve};

@@ -1280,3 +1280,7 @@ html, body { overflow:clip; }
 .property-row > .property-variable { width: 24px; min-width: 24px; height: 28px; flex: 0 0 24px; padding: 0; margin: 0; color: var(--muted); background: transparent; border: 0; border-radius: 4px; font-size: 16px; }
 .property-row > .property-variable:hover, .property-row > .property-variable:focus-visible { color: var(--accent); background: #e5f4ff; }
 .property-row > .property-variable:disabled { opacity: .35; }
+
+.variable-picker-option .variable-picker-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.variable-picker-option .variable-picker-value { flex: 0 1 120px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 10px; text-align: right; }
+.variable-picker-option .variable-picker-swatch { width: 16px; height: 16px; border: 1px solid #0002; border-radius: 3px; }

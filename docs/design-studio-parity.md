@@ -20,7 +20,7 @@ changing those files. The original checkout may continue to evolve independently
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML, React and local Liquid support linear/radial/angular gradient stacks, repetition, color interpolation, explicit radial sizing, draggable stops/centers/rotation, keyboard editing and exact undo. HTML also supports shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Images now support direct canvas repositioning inside their frame, with automatic reveal, numeric preview, cancellation and one-step source undo verified on HTML in Chromium/WebKit. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A searchable page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Explicit variable-axis editing, declared-file range/default inspection and bounded axis sliders have HTML/React/local Liquid browser coverage. Full font browsing, actual glyph-font resolution, live Shopify font verification, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | React can extract a source subtree into an explicitly reusable same-file component, preserve call-site keys/module references, select and duplicate linked instances, and Undo/Redo through the UI. Chromium/WebKit checks verify unchanged rendering and exact source restoration. Stable JavaScript parent-local values become explicit props, with browser-verified callback/state behavior. Typed captures, scoped JSX styles and other context-dependent expressions still need extraction support. React instance text/number/boolean props have source-backed controls and Undo/Redo, including omitted values, literal defaults, finite typed choices and searchable property lists. Local imported TypeScript contracts resolve through aliases, wildcard barrels, nested namespace re-exports and project path mappings with dependency revision guards. A searchable project component browser groups source aliases, shows authored/on-page counts, selects mounted instances and views off-page definitions. It also discovers direct module-level function/arrow exports and marked definitions without authored usages, exposing declared property types/defaults. Existing React/Liquid inspection and detach remain; complete export/class/wrapper discovery, insertion, cross-file creation, variants, computed-default/expression/enum prop authoring, shared libraries and live Shopify proof remain incomplete. |
-| Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Reusable text styles support responsive links, inherited-scope display, local override/reset, project-wide updates and shared undo in HTML, React and local Liquid. Validated JSON library import/export preserves style identity. HTML, React and local Liquid color styles link text/background/border/SVG paint with scoped overrides and project updates; palettes support sRGB and Display P3. HTML effect styles link shadows and layer/backdrop filters with project updates, overrides and undo. React/Liquid effect links, variables, aliases, collections/modes and shared remote library workflows remain. |
+| Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Reusable text styles support responsive links, inherited-scope display, local override/reset, project-wide updates and shared undo in HTML, React and local Liquid. Validated JSON library import/export preserves style identity. HTML, React and local Liquid color styles link text/background/border/SVG paint with scoped overrides and project updates; palettes support sRGB and Display P3. HTML effect styles link shadows and layer/backdrop filters with project updates, overrides and undo. Subsequent checkpoints below add React/Liquid effect links and typed variable collections, aliases and modes across HTML, React, local Liquid and Vue, plus Vue reusable styles. Searchable property-level variable selection now has resolved values and bounded previews. Shared remote library workflows and complete per-property parity remain. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG/JPEG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Completed source and lock history now survives editor-tab reload within a running server session. Source Undo/Redo now recovers across normal server restarts; crash recovery, complete gesture grouping, version browsing and collaborative editing remain. |
@@ -24809,3 +24809,34 @@ React/Chromium and Liquid/WebKit screenshots were inspected. Logs are
 `/tmp/retouch-class-variable-{react,liquid}-{chromium,webkit}.log` and
 `/tmp/retouch-class-variable-units.log`; screenshots use the same prefix and
 renderer/browser suffix with `.png`. No push was performed.
+
+### 2026-09-17 — Resolved variable picker values
+
+The shared picker now previews resolved colors and typed values in the selected
+modes, including aliases. Color choices show a swatch; result tooltips and
+accessible descriptions explain the alias path, mode and resolved value. A
+cyclic or missing variable is marked Unavailable independently, so it does not
+hide valid choices. Applying still performs a fresh focused resolution and uses
+the existing revision-guarded source transaction.
+
+Preview requests accept 1–100 distinct variable IDs and return individual values
+and errors from one library revision. Existing whole-library and focused preview
+behavior is unchanged. The picker renders up to 100 matching results, debounces
+batch requests, and asks users to refine larger searches. Searching can find
+variables beyond the initial batch. Obsolete search responses and responses for
+closed dialogs cannot update the current picker or apply a choice.
+
+Validation: the full 1,925-test unit suite passed, followed by the expanded
+seven-test variable-library suite covering bounded batches, duplicate IDs,
+mixed valid/cyclic/unknown aliases, mutually exclusive request shapes, stale
+revisions and unchanged source. Vue workflows passed Chromium and WebKit with
+103 color variables, search beyond the initial 100, alias swatches/values,
+keyboard application, panel refresh, cancellation during a held focused request,
+responsive modes and exact history. HTML verified Unavailable display for a
+cycle and refusal without a write. The Chromium screenshot was inspected.
+Logs: `/tmp/retouch-variable-values-{units,library,chromium,webkit,html}.log`.
+Screenshots: `/tmp/retouch-variable-picker-{chromium,webkit}.png`.
+
+This remains local source work, with no push, desktop rebuild or release.
+Complete Figma parity, all-site authoring and trusted desktop distribution remain
+unfinished.
