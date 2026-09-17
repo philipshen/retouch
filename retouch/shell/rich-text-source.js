@@ -2,7 +2,7 @@
   // Match a source descriptor against the already-rendered DOM. No source
   // HTML is injected; any renderer transformation we cannot match fails
   // before the editable DOM is changed.
-  function prepare(el,descriptor) {
+  function prepare(el,descriptor,{verifyOnly=false}={}) {
     var actions=[],d=el.ownerDocument;
     // Liquid surrounds plain output with template indentation. There is no
     // markup or interpolation to protect in this case; keep the DOM intact.
@@ -12,14 +12,20 @@
       el.childNodes.length===1 && el.childNodes[0].nodeType===3 &&
       el.childNodes[0].textContent.trim()===item.value.trim())return;
 
-    function walk(nodes,items) {
+    function walk(nodes,items,container) {
+      // Vue may represent an empty dynamic text value with no DOM text node.
+      // Plan a placeholder only after the complete descriptor has matched.
+      if(!nodes.length&&items.length===1&&items[0].t==='text'&&items[0].parts?.some(part=>part.t==='token')&&items[0].parts.every(part=>part.t==='token'||part.value==='')){
+        var empty=verifyOnly?{nodeType:3,textContent:''}:d.createTextNode('');
+        actions.push(function(){container.appendChild(empty);});nodes=[empty];
+      }
       if(nodes.length!==items.length)throw new Error('The rendered text structure changed. Reload before editing it.');
       items.forEach(function(item,i){
         var node=nodes[i];
         if(item.t==='element') {
           if(node.nodeType!==1||node.tagName.toLowerCase()!==item.tag)throw new Error('The renderer changed the stored markup. Edit its source text instead.');
           actions.push(function(){node.setAttribute('data-rt-keep',item.id);if(item.opaque)node.setAttribute('contenteditable','false');});
-          if(!item.opaque)walk(Array.from(node.childNodes),item.children);
+          if(!item.opaque)walk(Array.from(node.childNodes),item.children,node);
         } else if(item.t==='comment') {
           if(node.nodeType!==8)throw new Error('The rendered text structure changed.');
           actions.push(function(){node.__rtKeep=item.id;});
@@ -41,8 +47,8 @@
         }
       });
     }
-    walk(Array.from(el.childNodes),descriptor.children);
-    actions.forEach(function(action){action();});
+    walk(Array.from(el.childNodes),descriptor.children,el);
+    if(!verifyOnly)actions.forEach(function(action){action();});
   }
   function storedText(text,original,source) {
     var index=original.indexOf(source);
@@ -53,7 +59,8 @@
     if(suffix && text.endsWith(suffix))text=text.slice(0,-suffix.length);
     return text;
   }
-  var api={prepare:prepare,storedText:storedText};
+  function matches(el,descriptor){try{prepare(el,descriptor,{verifyOnly:true});return true;}catch{return false;}}
+  var api={prepare:prepare,matches:matches,storedText:storedText};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   if(root)root.RetouchRichTextSource=api;
 })(typeof window!=='undefined'?window:null);

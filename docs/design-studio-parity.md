@@ -24402,3 +24402,43 @@ Evidence is in `/tmp/retouch-native-paragraph-units.log`,
 `/tmp/retouch-native-paragraph-vue-chromium-combined.log`, and
 `/tmp/retouch-native-paragraph-vue-webkit.log`. Full parity and desktop delivery
 remain incomplete.
+
+## Vue live values inside rich text (2026-09-17)
+
+Literal words around Vue interpolations can now be edited and formatted while
+preserving the expression source. Compiler locations identify each dynamic
+portion before HTML validation; placeholders never come from editable DOM or
+client attribute maps. Every dynamic portion must survive exactly once, including
+when its containing run is kept or split. Removal, duplication, and forged
+placeholder text refuse the write. Custom delimiters and expressions containing
+HTML-like strings retain their exact original bytes.
+
+Adjacent expressions share a browser text node, so the dynamic portion between
+the first and last expression is protected together, including any intervening
+literal separator. This avoids guessing boundaries from rendered values. Literal
+prefixes/suffixes and surrounding static markup remain editable. Directives,
+component children and other unsupported template structures remain outside this
+rich-text path.
+
+Empty live values are also editable around: the editor plans a protected empty
+placeholder only after the complete source descriptor matches. Read-only render
+verification performs the same match without changing DOM nodes or attributes.
+Vue structural text saves now verify the fresh compiler descriptor plus compiled
+revision, allowing live values to change and Vue to merge text nodes. This fixes
+an observed reload fallback that reset component state after a successful edit.
+
+Validation: all 1,895 unit tests passed. Tests cover expression preservation,
+normalized whitespace, custom delimiters, adjacent expressions, source-owned
+splits, duplicate/forged-token refusal, exact undo/redo and read-only DOM matching.
+Chromium and WebKit passed the combined Vue workflows: editing/formatting literal
+words around live values, continued independent counter updates, protected-value
+delete refusal, initially empty values, exact undo/redo, retained documents and
+component state, plus all preceding responsive CSS, structure, grouping, links,
+rich-text, and production-style/exclusion checks. The refusal test verifies one
+409 API response and its URL; it accounts for WebKit reporting that same failed
+resource twice while retaining the final check for unexpected browser errors.
+
+Evidence: `/tmp/retouch-vue-live-text-all-units.log`,
+`/tmp/retouch-vue-live-text-combined-chromium.log`, and
+`/tmp/retouch-vue-live-text-combined-webkit.log`. No native artifact or public
+release was produced here. Full Figma parity remains incomplete.

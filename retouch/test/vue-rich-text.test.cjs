@@ -18,8 +18,8 @@ test('Vue rich text supports line breaks, links and custom delimiter literals wi
  const result=a.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'text',value:'[[literal]]'},{t:'break'},{t:'link',href:'/docs',children:[{t:'wrap',tag:'em',children:[{t:'text',value:'Docs'}]}]}]});
  assert.equal(result.ok,true,result.reason);assert.match(result.edits[0].after,/&#91;&#91;literal\]\]/);assert.equal(a.describe(resolve(result.edits[0].after,a)).canSetChildren,true);
 });
-test('Vue rich text refuses dynamic content, template boundaries and browser repairs',()=>{
- for(const content of ['{{ count }}','<span :class="kind">Text</span>','<Widget/>','<span v-if="show">Text</span>','<span v-pre>{{ x }}</span>','<span ref="label">Text</span>','<div>Invalid paragraph child</div>']){
+test('Vue rich text refuses directives, component boundaries and browser repairs',()=>{
+ for(const content of ['<span :class="kind">Text</span>','<Widget/>','<span v-if="show">Text</span>','<span v-pre>{{ x }}</span>','<span ref="label">Text</span>','<div>Invalid paragraph child</div>']){
   const r=resolve('<template><main><p>'+content+'</p></main></template>');assert.equal(adapter.describe(r).canSetChildren,false,content);
   assert.equal(adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'text',value:'Lost'}]}).refused,true,content);
  }
@@ -86,4 +86,29 @@ test('Vue rich-text copies replace reset style markers even when they have no ac
  assert.equal(result.ok,true,result.reason);const next=resolve(result.edits[0].after),owners=next.elements.filter(el=>el.tag==='span').map(el=>el.attributes.find(a=>a.name==='data-rt-style').value);
  assert.equal(owners[0],'0123456789');assert.notEqual(owners[0],owners[1]);assert.match(owners[1],/^[a-f0-9]{10}$/);
  assert.deepEqual(require('../src/vue-css.cjs').documentState(next.source,'App.vue').model.layers,{});
+});
+
+test('Vue literal formatting preserves live expressions and exact source history',t=>{
+ const text='<script setup>const count=2</script><template><main><p>Hello\n {{ count < 4 ? "<four>" : "&more" }} <em>people {{ count }}</em>!</p><div>Outside</div></main></template>';
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-vue-live-text-')),file=path.join(root,'App.vue');t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(file,text);
+ const r={...resolve(text),file},info=adapter.describe(r);assert.equal(info.canSetChildren,true);assert.equal(info.mixedText,true);
+ const [greeting,em,ending]=info.richText.children,token=greeting.parts.find(part=>part.t==='token');assert.equal(greeting.parts[0].value,'Hello ');assert.ok(token.id);assert.equal(em.children[0].parts.filter(part=>part.t==='token').length,1);
+ const history=new SourceHistory(),result=history.commit(root,adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'wrap',tag:'strong',children:[{t:'text',value:'Welcome '}]},{t:'keep',id:token.id},{t:'text',value:' '},{t:'keep',id:em.id},{t:'text',value:ending.value}]}));
+ assert.equal(result.ok,true,result.reason);const after=fs.readFileSync(file,'utf8');assert.match(after,/<strong>Welcome <\/strong>{{ count < 4 \? "<four>" : "&more" }} <em>people {{ count }}<\/em>!/);assert.equal(adapter.describe(resolve(after)).canSetChildren,true);
+ assert.equal(history.apply(root,'undo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),text);assert.equal(history.apply(root,'redo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),after);
+ for(const children of [[{t:'text',value:'Flattened'}],[{t:'keep',id:token.id},{t:'keep',id:token.id}],[{t:'keep',id:token.id,children:[{t:'text',value:'Changed'}]}]])assert.equal(adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children}).refused,true);
+});
+
+test('Vue adjacent expressions preserve one unambiguous dynamic portion with custom delimiters',()=>{
+ const a=adapter.create({compilerOptions:{delimiters:['[[',']]']}}),r=resolve('<template><main><p>Before [[ first ]] / [[ second ]] after</p></main></template>',a),info=a.describe(r);assert.equal(info.canSetChildren,true);
+ const parts=info.richText.children[0].parts;assert.equal(parts.length,3);assert.equal(parts[0].value,'Before ');assert.equal(parts[2].value,' after');const token=parts[1];assert.equal(token.t,'token');
+ const result=a.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'text',value:'Literal [[ notCode ]] '},{t:'keep',id:token.id},{t:'text',value:' finished'}]});assert.equal(result.ok,true,result.reason);assert.match(result.edits[0].after,/Literal &#91;&#91; notCode \]\] \[\[ first \]\] \/ \[\[ second \]\] finished/);
+});
+
+test('Vue live text rejects forged placeholders and implicit duplicate expressions but supports a preserved split',()=>{
+ const r=resolve('<template><main><p><span title="Run">Before {{ count }}</span></p><div>Outside</div></main></template>'),span=adapter.describe(r).richText.children[0],token=span.children[0].parts.find(part=>part.t==='token');
+ const expression=r.element.node.children[0].children.find(node=>node.type===5),marker='RTVUE'+adapter.contentHash(r.source+'|expression|'+expression.loc.start.offset).slice(0,20)+'TOKEN';
+ for(const children of [[{t:'keep',id:span.id},{t:'keep',id:token.id}],[{t:'text',value:marker},{t:'keep',id:span.id}]])assert.equal(adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children}).refused,true);
+ const result=adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'keep',id:span.id,children:[{t:'text',value:'Before'}]},{t:'copy',id:span.id,children:[{t:'keep',id:token.id}]}]});
+ assert.equal(result.ok,true,result.reason);assert.match(result.edits[0].after,/<span title="Run">Before<\/span><span title="Run">{{ count }}<\/span>/);
 });

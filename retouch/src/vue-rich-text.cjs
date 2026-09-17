@@ -3,15 +3,40 @@ const { NodeTypes, ElementTypes } = require('@vue/compiler-dom');
 const { parseFragment } = require('parse5');
 const source = require('./rich-text-source.cjs');
 const tags = new Set(['h1','h2','h3','h4','h5','h6','p','div','span','blockquote','label','a','li']);
+// Vue emits adjacent literal and interpolation nodes as one browser text node.
+function groups(nodes) {
+  const result=[];
+  for(const node of nodes){
+    if([NodeTypes.TEXT,NodeTypes.INTERPOLATION].includes(node.type)){
+      if(result.at(-1)?.text)result.at(-1).nodes.push(node);
+      else result.push({text:true,nodes:[node]});
+    }else result.push({text:false,nodes:[node]});
+  }
+  return result;
+}
 function context(resolved, adapter) {
   const element = resolved.element;
   if (element.node.ns !== 0 || !tags.has(element.tag) || element.node.isSelfClosing || element.node.props.some(prop => prop.type === NodeTypes.DIRECTIVE && ['html','text'].includes(prop.name))) throw Error('Choose a native text container.');
   const opening = element.node.loc.source.match(/^<(?:[^"'<>]|"[^"]*"|'[^']*')*>/)?.[0];
   const close = element.node.loc.source.lastIndexOf('</' + element.tag);
   if (!opening || close < opening.length) throw Error('The text container is incomplete.');
+  const expressions=[];
+  function expression(node,last=node){
+    let marker='RTVUE'+adapter.contentHash(resolved.source+'|expression|'+node.loc.start.offset).slice(0,20)+'TOKEN';
+    while(resolved.source.includes(marker))marker+='X';
+    const start=node.loc.start.offset-element.node.loc.start.offset,end=last.loc.end.offset-element.node.loc.start.offset;
+    expressions.push({marker,raw:element.node.loc.source.slice(start,end),start,end});
+    return marker;
+  }
   function vue(nodes) {
-    return nodes.map(node => {
-      if (node.type === NodeTypes.TEXT) return { text: node.content };
+    return groups(nodes).map(group => {
+      if(group.text){
+        const first=group.nodes.findIndex(node=>node.type===NodeTypes.INTERPOLATION),last=group.nodes.findLastIndex(node=>node.type===NodeTypes.INTERPOLATION);
+        // Multiple expressions have no observable DOM boundary. Preserve their
+        // shared dynamic portion together, including separators between them.
+        return {text:first<0?group.nodes.map(node=>node.content).join(''):group.nodes.slice(0,first).map(node=>node.content).join('')+expression(group.nodes[first],group.nodes[last])+group.nodes.slice(last+1).map(node=>node.content).join('')};
+      }
+      const node=group.nodes[0];
       if (node.type !== NodeTypes.ELEMENT || node.tagType !== ElementTypes.ELEMENT || node.ns !== 0 || ['script','style','template','iframe'].includes(node.tag) || node.props.some(prop => prop.type !== NodeTypes.ATTRIBUTE || ['ref','key'].includes(prop.name.toLowerCase()))) throw Error('This text contains Vue logic that needs separate preservation.');
       // v-pre disappears from Vue's AST; its removal would change interpretation.
       const token = node.loc.source.match(/^<(?:[^"'<>]|"[^"]*"|'[^']*')*>/)?.[0] || '';
@@ -22,20 +47,30 @@ function context(resolved, adapter) {
   function html(nodes) {
     return nodes.map(node => node.nodeName === '#text' ? { text: node.value } : { tag: node.tagName, attrs: (node.attrs || []).map(attr => [attr.name,attr.value]).sort(), children: html(node.childNodes || []) });
   }
-  const start = element.start + opening.length, end = element.start + close, value = resolved.source.slice(start,end);
-  const browser = parseFragment(element.node.loc.source).childNodes;
-  if (browser.length !== 1 || browser[0].tagName !== element.tag || JSON.stringify(vue(element.node.children)) !== JSON.stringify(html(browser[0].childNodes))) throw Error('The browser and Vue interpret this text differently.');
-  return { start, end, value, descriptor: source.describe(value, element.id).descriptor };
+  const expected=vue(element.node.children);
+  let masked=element.node.loc.source;
+  for(const entry of [...expressions].reverse())masked=masked.slice(0,entry.start)+entry.marker+masked.slice(entry.end);
+  const start=element.start+opening.length,end=element.start+close,value=masked.slice(opening.length,masked.lastIndexOf('</'+element.tag));
+  const browser=parseFragment(masked).childNodes;
+  if(browser.length!==1||browser[0].tagName!==element.tag||JSON.stringify(expected)!==JSON.stringify(html(browser[0].childNodes)))throw Error('The browser and Vue interpret this text differently.');
+  const tokens=expressions.map(entry=>entry.marker);
+  return {start,end,value,tokens,expressions,descriptor:source.describe(value,element.id,{tokens}).descriptor};
 }
 function describe(resolved, adapter, rendered) {
   try {
     const data = context(resolved,adapter);
     require('./vue-css.cjs').structuralStyles(resolved,adapter,data,false);
     function normalize(items,raw,nodes) {
-      return nodes.map(node=>{
-        const index=raw.findIndex(prior=>prior.type===node.type&&prior.loc.start.offset===node.loc.start.offset),item=items[index];
+      const originals=groups(raw);
+      return groups(nodes).map(group=>{
+        const index=originals.findIndex(prior=>prior.nodes.some(node=>node.loc.start.offset===group.nodes[0].loc.start.offset)),item=items[index];
         if(!item)throw Error('The rendered Vue text could not be matched.');
-        return node.type===NodeTypes.TEXT?{t:'text',value:node.content,parts:[{t:'text',value:node.content}]}:{...item,children:normalize(item.children,raw[index].children,node.children)};
+        if(!group.text)return {...item,children:normalize(item.children,originals[index].nodes[0].children,group.nodes[0].children)};
+        const first=group.nodes.findIndex(node=>node.type===NodeTypes.INTERPOLATION),last=group.nodes.findLastIndex(node=>node.type===NodeTypes.INTERPOLATION);
+        const literal=node=>({t:'text',value:node.content});
+        const parts=first<0?group.nodes.map(literal):[...group.nodes.slice(0,first).map(literal),item.parts.find(part=>part.t==='token'),...group.nodes.slice(last+1).map(literal)];
+        if(parts.some(part=>!part))throw Error('A Vue expression could not be matched.');
+        return {...item,parts,value:parts.map(part=>part.t==='text'?part.value:'').join('')};
       });
     }
     const descendants=adapter.collect(resolved.source,resolved.relPath).elements.filter(element=>element.start>resolved.element.start&&element.end<resolved.element.end);
@@ -62,7 +97,14 @@ function plan(resolved, op, adapter, escapeText) {
       allocated.add(fresh);copies.set(fresh,id);
       return markup.replace(/^<([a-z][a-z0-9-]*)/i,'<$1 data-rt-style="'+fresh+'"');
     };
-    const replacement = source.rewrite(data.value,resolved.element.id,op.children,{parentTag:resolved.element.tag,escapeText,copyMarkup});
+    // Placeholders are compiler-owned. Literal edits cannot manufacture them,
+    // and each live expression must survive exactly once, even inside kept runs.
+    if(data.tokens.some(token=>JSON.stringify(op.children).includes(token)))throw Error('Edit the literal text around the live value.');
+    let replacement=source.rewrite(data.value,resolved.element.id,op.children,{parentTag:resolved.element.tag,escapeText,copyMarkup,tokens:data.tokens});
+    for(const entry of data.expressions){
+      if(replacement.split(entry.marker).length!==2)throw Error('Keep each live Vue value exactly once while editing its surrounding text.');
+      replacement=replacement.replace(entry.marker,()=>entry.raw);
+    }
     let after = resolved.source.slice(0,data.start) + replacement + resolved.source.slice(data.end);
     const beforeElements = adapter.collect(resolved.source,resolved.relPath).elements, next = adapter.collect(after,resolved.relPath).elements;
     const root = next.find(element => element.id === resolved.element.id);

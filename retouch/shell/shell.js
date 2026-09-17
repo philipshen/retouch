@@ -883,7 +883,10 @@ async function persistInlineEdit() {
       if(waitForCompiler)await refreshWrittenElement(res.element||{...ed.info,renderedText:op.text},()=>true,{verifyText:true});
       if (structural) {
         if(!ed.originalNodes)await reloadFrame();
-        await refreshWrittenElement(ed.info,el=>JSON.stringify(serializeChildren(el))===expectedFormatting);
+        // Live expressions may change value or text-node boundaries during HMR.
+        // Match the fresh compiler descriptor, keeping its dynamic portions live.
+        const fresh=ed.originalNodes&&res.element?.richText?res.element:null;
+        await refreshWrittenElement(fresh||ed.info,el=>fresh?RetouchRichTextSource.matches(el,fresh.richText):JSON.stringify(serializeChildren(el))===expectedFormatting);
       } else if (window.__RT_RENDERING?.reloadAfterWrite) await reloadFrame();
       else if (sel && sel.info && sel.info.id === ed.id) {
         sel.info.hash = res.hash;

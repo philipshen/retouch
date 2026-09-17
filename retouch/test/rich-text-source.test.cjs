@@ -64,3 +64,16 @@ test('line breaks use fixed HTML markup and cannot carry attributes or content',
  assert.equal(rewrite('old','source',[{t:'text',value:'one'},{t:'break'},{t:'wrap',tag:'strong',children:[{t:'text',value:'two'},{t:'break'}]}]),'one<br><strong>two<br></strong>');
  for(const node of [{t:'break',children:[]},{t:'break',onclick:'bad'}])assert.throws(()=>rewrite('old','source',[node]),/Bad line break/);
 });
+
+test('render verification accepts changing protected values without mutating the DOM',()=>{
+ const {matches}=require('../shell/rich-text-source.js');
+ const descriptor={children:[{t:'element',id:'run',tag:'strong',children:[{t:'text',parts:[{t:'text',value:'Count '},{t:'token',id:'value'},{t:'text',value:'!'}]}]}]};
+ const node={nodeType:3,textContent:'Count 2!',replaceWith(){throw Error('Verification mutated text');}},run={nodeType:1,tagName:'STRONG',childNodes:[node],setAttribute(){throw Error('Verification mutated attributes');}},el={ownerDocument:{},childNodes:[run]};
+ assert.equal(matches(el,descriptor),true);node.textContent='Count 17!';assert.equal(matches(el,descriptor),true);node.textContent='Changed 17!';assert.equal(matches(el,descriptor),false);node.textContent='Count 17!';run.tagName='EM';assert.equal(matches(el,descriptor),false);
+});
+
+test('read-only matching accepts absent empty dynamic text but still requires literal content',()=>{
+ const {matches}=require('../shell/rich-text-source.js'),el={ownerDocument:{},childNodes:[],appendChild(){throw Error('Verification changed the DOM');}};
+ assert.equal(matches(el,{children:[{t:'text',parts:[{t:'token',id:'empty'}]}]}),true);
+ assert.equal(matches(el,{children:[{t:'text',parts:[{t:'text',value:'Required'},{t:'token',id:'empty'}]}]}),false);
+});
