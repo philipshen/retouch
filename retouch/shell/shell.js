@@ -855,9 +855,10 @@ async function persistInlineEdit() {
   // so a structural commit reloads the frame after the write: React remounts
   // clean from the new source. Text-only commits keep the smooth HMR path.
   const structural = op.type === 'setChildren',expectedFormatting=structural?JSON.stringify(serializeChildren(ed.el)):null;
+  const waitForCompiler = op.type === 'setText' && !!ed.info.renderRevisionAttribute;
   Object.assign(op, sourcePayload(ed.info));
-  // Keep editing disabled until the structural write has mounted its new DOM.
-  if(structural)busyPanel(true);
+  // Keep editing disabled until structural or compiler-tracked writes reach the preview.
+  if(structural||waitForCompiler)busyPanel(true);
   try {
     const res = await api('POST', '/rt/__api/op', op);
     if (res && res.ok) {
@@ -869,6 +870,10 @@ async function persistInlineEdit() {
         ed.info.text = op.text;
         for (const m of (ed.info.textSource ? [] : matchingEls(ed.id))) if (m !== ed.el) m.textContent = op.text;
       }
+      // Confirm the framework consumed the edited text before allowing undo.
+      // Otherwise rapid save/undo can coalesce into the original virtual node,
+      // leaving the manually edited DOM text untouched despite a fresh revision.
+      if(waitForCompiler)await refreshWrittenElement(res.element||{...ed.info,renderedText:op.text},()=>true,{verifyText:true});
       if (structural) {
         await reloadFrame();
         await refreshWrittenElement(ed.info,el=>JSON.stringify(serializeChildren(el))===expectedFormatting);
@@ -883,7 +888,7 @@ async function persistInlineEdit() {
       ed.el.innerHTML = ed.originalHTML;
       toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
     }
-  } finally { if(structural)busyPanel(false); }
+  } finally { if(structural||waitForCompiler)busyPanel(false); }
 }
 
 // Reload the iframe to its current path, preserving scroll where possible.

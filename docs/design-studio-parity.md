@@ -24059,3 +24059,42 @@ and exact undo.
 This source checkpoint does not rebuild or release the desktop app and does not
 establish full Figma parity, arbitrary-site compatibility, notarization or
 Homebrew installation.
+
+
+### Vue text/frame insertion and canvas text creation
+
+Native Vue containers now support the existing Add text and Add frame actions.
+The compiler-backed insertion planner appends one authored child, preserves
+existing structural IDs and surrounding source bytes, and expands self-closing
+containers without discarding attributes. It respects existing CRLF line endings
+and compiler options. Parent loops remain intact: inserting inside a repeated
+container edits that source container at each occurrence. Generated v-html/v-text
+children and incompatible content containers are refused.
+
+The existing canvas Text tool now works with Vue: click to place text or drag a
+text box, then type into the selected new layer. Source placement uses the shared
+validated position/dimension model and existing containing-block coordinate
+mapping. Text/frame insertion and subsequent typing remain separate exact history
+steps. Source writes are immediate.
+
+The browser test exposed a save/undo race in compiler-backed inline text editing.
+Undo could arrive before Vue consumed the typed text, causing HMR to coalesce
+back to the original virtual node while the manually edited DOM retained the new
+text. The commit now keeps history controls busy until the compiled source
+revision and normalized text are visible. Rapid undo then restores text without
+falling through to a preview reload.
+
+Validation: all 1,867 unit tests passed. New tests cover text/frame insertion,
+self-closing containers, CRLF preservation, exact undo/redo, custom interpolation
+delimiters, real Vue server rendering of inserted repeated children, invalid
+geometry and generated-content refusals. Chromium and WebKit passed button-based
+text/frame creation, automatic text selection, literal interpolation characters,
+canvas click placement, dragged text dimensions/wrapping, rapid typing/undo,
+retained documents and independent Vue counters. The combined browser flow also
+passed responsive CSS/comparison previews, ordering/lock remapping,
+duplicate/copy/paste/delete, independent styles and production style retention.
+
+Multi-selection structure, reparenting, richer template/control-flow support,
+linked libraries and other previously documented Vue limits remain unfinished.
+No native package, notarization or Homebrew release was performed by this source
+checkpoint; full Figma and arbitrary-site parity remain unproven.

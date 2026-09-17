@@ -122,13 +122,17 @@ Retouch uses the Vue plugin's template compiler options for source mapping.
 The initial adapter supports literal text, literal image sources, text-layer tag
 changes, layer names, and responsive CSS in `.vue` files. Layout, appearance and
 typography controls support individual layers and selections within one SFC.
+Add text and Add frame work inside native content containers, including
+self-closing containers. The canvas Text tool supports click placement and dragged
+text boxes, then selects the new text for immediate typing.
 Native sibling actions include duplicate, copy/paste, delete, and moving layers
 earlier/later or to either end. Copies receive independent responsive styles;
 deleting a subtree removes its owned styles. Exact undo restores source bytes.
 Structural edits across control-flow, component-sibling, comment or mixed-text
 boundaries remain unavailable. Copies containing IDs, refs, keys or unknown bound
-attributes need separate identity handling; multi-selection structural actions,
-insertion and reparenting remain incomplete.
+attributes need separate identity handling; multi-selection structural actions
+and reparenting remain incomplete. Containers using v-html or v-text cannot receive
+new children.
 Retouch stores styles in a dedicated block while preserving authored script/style
 blocks and template expressions. During development, a stable CSS module lets Vite
 update styles independently without resetting component state; authored styles
@@ -143,7 +147,8 @@ exact undo, compiler-normalized whitespace, retained preview documents and live
 Vue state, base paths, immediate image uploads, responsive padding and typography,
 same-SFC selection styling, comparison screens, sibling ordering and lock remapping,
 duplicate/delete/copy/paste with independent styles and exact history, keyboard
-shortcuts with input-field guards, and production style retention with transient
+shortcuts with input-field guards, text/frame insertion, canvas text placement and
+dragged text boxes with immediate typing and undo, and production style retention with transient
 instrumentation excluded. Tested with Vite 8.3.0, Vue 3.5.42 and
 `@vitejs/plugin-vue` 6.0.9 in Chromium and WebKit. This does not establish compatibility with every Vue setup.
 
