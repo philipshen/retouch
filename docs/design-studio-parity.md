@@ -24983,3 +24983,14 @@ spacing variable with the keyboard, no source changes while previewing modes,
 application failure and retry, and exact Undo. React and local Liquid collection
 flows also passed in both browsers. The existing desktop archive predates this
 change.
+
+## Inspector desktop archive checkpoint (2026-09-17)
+
+The signed universal archive built from clean `53438725` includes percentage
+tracking, picker focus restoration, and property-compatible variable previews.
+The exact extracted archive passed 1,926 runtime unit tests and combined Vue
+Chromium/WebKit workflows. Source and native input hashes match; 32 desktop
+tests, tamper checks, strict signatures, and final packaged-byte integrity passed.
+The local cask passes syntax checks. Its installation/upgrade, native launch,
+notarization, Intel execution, and public distribution remain unverified. See
+[the desktop receipt](../desktop/verification/2026-09-17-inspector-developer-id.json).

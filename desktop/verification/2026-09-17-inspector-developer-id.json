@@ -1,0 +1,77 @@
+{
+  "sourceCommit": "534387254fd93a7aadf892dee082767912724f1b",
+  "sourceTreeDirty": false,
+  "sourceFiles": 292,
+  "sourceManifestMatchedCheckout": true,
+  "nativeBuildInputsMatchedCheckout": true,
+  "extractedManifestMatches": true,
+  "archiveSha256": "3bb9e61f9a7d8570ef4f7fa63a1db98c48deac6206e8dcca03f4dbf54af11e2c",
+  "date": "2026-09-17",
+  "app": "/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-53438725/Retouch.app",
+  "archive": "/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-53438725/Retouch-0.1.0-mac.zip",
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signing": {
+    "authority": "Developer ID Application: Philip Shen (2HN3MWMRX2)",
+    "strictVerification": true,
+    "hardenedRuntime": true,
+    "secureTimestamp": true
+  },
+  "gatekeeper": {
+    "exitCode": 3,
+    "result": "Unnotarized Developer ID"
+  },
+  "packagedRuntime": {
+    "packagedFiles": 1605,
+    "packagedSymlinks": 3,
+    "addedDependencyRoots": [
+      "node_modules/.bin/liquid",
+      "node_modules/.bin/liquidjs",
+      "node_modules/@vue/reactivity",
+      "node_modules/@vue/runtime-core",
+      "node_modules/@vue/runtime-dom",
+      "node_modules/@vue/server-renderer",
+      "node_modules/commander",
+      "node_modules/csstype",
+      "node_modules/liquidjs",
+      "node_modules/vue"
+    ],
+    "integrity": "Packaged bytes, modes, symlink targets and inventories match"
+  },
+  "desktopUnitTestsPassed": 32,
+  "packagedRuntimeUnitTestsPassed": 1926,
+  "packageTamperChecks": "passed",
+  "packagedBrowserChecks": {
+    "chromium": "passed combined Vue responsive CSS/comparisons, reusable styles, variable compatibility and picker focus, structure, rich text, exact history, retained state and production checks",
+    "webkit": "passed combined Vue responsive CSS/comparisons, reusable styles, variable compatibility and picker focus, structure, rich text, exact history, retained state and production checks"
+  },
+  "localCask": "/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-53438725/retouch-studio.rb",
+  "localCaskSyntax": "passed",
+  "homebrewInstallation": "not run for this artifact; prior candidate installation evidence is separate",
+  "testTree": "96830e2b99546f76554194b534a6d311bcd327d7",
+  "unverified": [
+    "native launch for this artifact",
+    "Intel runtime execution",
+    "notarization; existing notarytool Keychain profile name still pending",
+    "Homebrew installation and upgrade for this artifact",
+    "public release",
+    "full Figma and arbitrary-site parity"
+  ],
+  "logs": [
+    "/tmp/retouch-desktop-inspector-build.log",
+    "/tmp/retouch-desktop-inspector-chromium.log",
+    "/tmp/retouch-desktop-inspector-final.json",
+    "/tmp/retouch-desktop-inspector-gatekeeper.log",
+    "/tmp/retouch-desktop-inspector-original-final.json",
+    "/tmp/retouch-desktop-inspector-prepare.json",
+    "/tmp/retouch-desktop-inspector-runtime-units.log",
+    "/tmp/retouch-desktop-inspector-signature.log",
+    "/tmp/retouch-desktop-inspector-source-match.json",
+    "/tmp/retouch-desktop-inspector-tamper.log",
+    "/tmp/retouch-desktop-inspector-tests.log",
+    "/tmp/retouch-desktop-inspector-units.log",
+    "/tmp/retouch-desktop-inspector-webkit.log"
+  ]
+}

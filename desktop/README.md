@@ -1,6 +1,27 @@
 # Retouch for macOS
 
-## Latest variable-editor candidate (2026-09-17, d70896e1)
+## Latest inspector candidate (2026-09-17, 53438725)
+
+The universal Developer ID signed archive now includes percentage tracking
+variables, readable percentage controls, exact picker focus restoration, and
+property-compatible variable choices. It was built from clean commit `53438725`.
+
+Archive: `/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-53438725/Retouch-0.1.0-mac.zip`
+
+SHA-256: `3bb9e61f9a7d8570ef4f7fa63a1db98c48deac6206e8dcca03f4dbf54af11e2c`
+
+All 292 source entries and native inputs match the checkout. The exact ZIP was
+extracted and passed 1,926 runtime unit tests plus combined Vue workflows in
+Chromium and WebKit. All 32 desktop tests and package tamper checks passed.
+Final verification confirmed 1,605 packaged files and three symlinks remained
+unchanged. The generated local cask passes Ruby syntax validation; installation
+and upgrade have not been tested for this artifact.
+
+Gatekeeper reports **Unnotarized Developer ID**. This bundle was not launched.
+Notarization, trusted public distribution, and Intel execution remain unverified.
+See [the receipt](verification/2026-09-17-inspector-developer-id.json).
+
+## Previous variable-editor candidate (2026-09-17, d70896e1)
 
 The universal Developer ID signed archive includes the latest Vue reusable-style
 and collection-variable support, searchable value previews, picker modes and
