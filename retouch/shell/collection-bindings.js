@@ -42,13 +42,38 @@
   async function run(action){if(busy)return;busy=true;controls.disabled=true;status.textContent='Working…';try{await action();if(details.isConnected){render();status.textContent='';}}catch(error){values=[];if(details.isConnected){render();status.textContent=error.message;}}finally{busy=false;controls.disabled=false;}}
   const preview=async()=>{values=[];if(selected)values=(await RetouchVariableModePreview({revision:library.revision,modes,variableId:selected})).values;};
   const load=()=>run(async()=>{library=await RetouchVariableLibraryRequest();await preview();});
+  function browse(choices,type,trigger){
+   const context=draftKey(),current=()=>[...document.querySelectorAll('[data-variable-picker-context]')].some(node=>node.dataset.variablePickerContext===context);
+   const dialog=document.createElement('dialog');dialog.className='variable-picker';dialog.setAttribute('aria-label','Apply variable');
+   const header=document.createElement('header'),title=document.createElement('h2');title.textContent='Apply variable';const close=I.button('Close variable picker',()=>dialog.close());close.textContent='×';close.setAttribute('aria-label','Close variable picker');header.append(title,close);
+   const search=document.createElement('input');search.type='search';search.placeholder='Search variables';search.setAttribute('aria-label','Search variables');
+   const scope=I.note(dialog,(new Map(V.fields).get(target)||target)+' · '+(options.scopeLabel||(width?width+'px and larger':'All sizes'))),results=document.createElement('div'),message=I.note(dialog,'');results.className='variable-picker-results';message.setAttribute('role','status');
+   dialog.replaceChildren(header,search,scope,results,message);document.body.append(dialog);let applying=false;
+   function list(){
+    results.replaceChildren();const query=search.value.trim().toLocaleLowerCase();let count=0;
+    for(const collection of library.collections){const matches=choices.filter(variable=>variable.collectionId===collection.id&&(collection.name+' / '+variable.name).toLocaleLowerCase().includes(query));if(!matches.length)continue;
+     const group=document.createElement('section'),heading=document.createElement('h3');heading.textContent=collection.name;group.append(heading);
+     for(const variable of matches){const button=I.button('Apply '+collection.name+' / '+variable.name,async()=>{
+      if(applying)return;if(!dialog.open||!current()){dialog.close();return;}applying=true;search.disabled=true;for(const row of results.querySelectorAll('button'))row.disabled=true;message.textContent='Applying…';
+      try{const result=await RetouchVariableModePreview({revision:library.revision,modes,variableId:variable.id}),resolved=result.values.find(item=>item.id===variable.id);if(!resolved)throw Error('This variable could not be resolved.');const value=type==='boolean'?(resolved.value?'visible':'hidden'):String(resolved.value)+(type==='number'?unit:'');if(!V.valid(target,value))throw Error('This variable cannot control the selected property. Choose another variable or unit.');if(!dialog.open||!current()){dialog.close();return;}
+       await writeBinding('applyVariable',width,{property:target,libraryRevision:library.revision,binding:{id:variable.id,modes:{...modes},...(type==='number'?{unit}:{})}});dialog.close();
+      }catch(error){message.textContent=error.message;}finally{applying=false;search.disabled=false;for(const row of results.querySelectorAll('button'))row.disabled=false;}
+     });button.classList.add('variable-picker-option');button.setAttribute('aria-label','Apply '+collection.name+' / '+variable.name);button.setAttribute('aria-pressed',String(variable.id===selected));const icon=document.createElement('span');icon.className='variable-picker-type';icon.textContent={color:'◈',number:'#',boolean:'◐',string:'T'}[type];icon.setAttribute('aria-hidden','true');const name=document.createElement('span');name.textContent=variable.name;button.replaceChildren(icon,name);group.append(button);count++;}results.append(group);
+    }if(!count)I.note(results,'No matching '+type+' variables.');
+   }
+   search.addEventListener('input',list);dialog.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();dialog.close();return;}if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key)||applying)return;const rows=[...results.querySelectorAll('button')];if(!rows.length)return;const index=rows.indexOf(document.activeElement);if(index<0&&!['ArrowDown','ArrowUp'].includes(event.key))return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?rows.length-1:index<0?(event.key==='ArrowDown'?0:rows.length-1):(index+(event.key==='ArrowDown'?1:-1)+rows.length)%rows.length;rows[next].focus();});
+   const observer=new MutationObserver(()=>{if(!current())dialog.close();});observer.observe(document.body,{childList:true,subtree:true});
+   dialog.addEventListener('close',()=>{observer.disconnect();dialog.remove();const focus=trigger.isConnected?trigger:[...document.querySelectorAll('[data-variable-picker-context]')].find(node=>node.dataset.variablePickerContext===context)?.querySelector('.variable-picker-trigger');focus?.focus();},{once:true});list();dialog.showModal();search.focus();
+  }
   function render(){
+   details.dataset.variablePickerContext=draftKey();
    controls.replaceChildren();controls.append(I.button('Reload collection bindings',load));if(!library)return;
    I.note(controls,'Bind '+(multiple?selection.length+' layers':'this layer')+' at '+(options.scopeLabel||(width?width+'px and larger':'all screen sizes'))+'. Collection edits update linked pages.');
    const labels=new Map(RetouchHTMLCSSValues.fields),properties=[...paints,...numbers,'visibility','font-family'];
    I.select(controls,'Collection binding target',properties.map(p=>[p,labels.get(p)||p]),target,value=>{target=value;init();remember();run(preview);});
    const type=paints.includes(target)?'color':numbers.includes(target)?'number':target==='visibility'?'boolean':'string';
    const choices=library.variables.filter(v=>v.type===type);if(!choices.length)I.note(controls,'No '+type+' variables yet. Use Variables in the toolbar to create one.');if(!choices.some(v=>v.id===selected))selected='';
+   const picker=I.button('Browse variables',()=>browse(choices,type,picker));picker.classList.add('variable-picker-trigger');picker.setAttribute('aria-haspopup','dialog');controls.append(picker);
    I.select(controls,'Bound collection variable',[['','Choose a variable…'],...choices.map(v=>[v.id,library.collections.find(c=>c.id===v.collectionId).name+' / '+v.name])],selected,value=>{selected=value;remember();run(preview);});
    for(const collection of library.collections)I.select(controls,'Binding mode for '+collection.name,[['','Default ('+collection.modes.find(m=>m.id===collection.defaultMode).name+')'],...collection.modes.map(m=>[m.id,m.name])],modes[collection.id]||'',value=>{if(value)modes[collection.id]=value;else delete modes[collection.id];remember();run(preview);});
    if(type==='number')I.select(controls,'Binding unit',[...(unitless.includes(target)?[['','Unitless']]:[]),...(!['opacity','font-weight','flex-grow','flex-shrink'].includes(target)?['px','rem','em','%','vw','vh','ch'].map(v=>[v,v]):[])],unit,value=>{unit=value;remember();render();});

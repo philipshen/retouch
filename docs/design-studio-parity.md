@@ -24714,3 +24714,35 @@ the screenshot is `/tmp/retouch-vue-variables-chromium.png`.
 This is a source checkpoint. No desktop rebuild or notarization was performed
 for these changes. Full Figma parity and the trusted public desktop/Homebrew
 release remain unfinished.
+
+### 2026-09-17 — Searchable variable application
+
+The shared Collection bindings inspector now opens a light-theme variable picker.
+It groups compatible variables by collection and searches collection/name paths;
+choosing a result resolves aliases and applies it directly using the current
+mode, unit and screen scope. Arrow keys, Home/End and Enter navigate/apply;
+Escape closes without writing. The selected property and screen scope remain
+visible. This follows the searchable selection workflow described in
+[Figma's variable application reference](https://help.figma.com/hc/en-us/articles/15343107263511-Apply-variables-to-designs).
+It does not yet provide Figma's per-property entry points or complete picker parity.
+
+Browser verification exposed two interaction issues during implementation:
+WebKit can rebuild the inspector on focus changes, and Chromium's search input
+can consume Escape before the dialog closes. The picker now tolerates an
+identical selection/source revision across panel rebuilds, closes on changed
+context, and handles Escape explicitly. Closing during asynchronous alias
+resolution prevents the pending choice from writing. Invalid/cyclic choices
+keep the dialog open with an error and leave source unchanged.
+
+Validation: 1,925 unit tests passed. Targeted Vue variable workflows passed in
+Chromium and WebKit, including search/type filtering, keyboard application,
+forced inspector refresh, cancellation during a held preview response, aliases,
+responsive modes, exact history and retained application state. The HTML binding
+workflow passed with a new cyclic-picker refusal check. Chromium and WebKit
+screenshots were inspected; the final picker is centered, readable, and uses the
+shared light palette. Logs: `/tmp/retouch-variable-picker-{units,chromium,webkit,html}.log`.
+Screenshots: `/tmp/retouch-variable-picker-{chromium,webkit}.png`.
+
+This checkpoint is local source work. No push, desktop rebuild, notarization or
+release was performed. Full Figma parity and trusted desktop distribution remain
+unfinished.
