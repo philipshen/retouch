@@ -12,10 +12,16 @@ function readSource(root){const {file}=paths(root);try{return fs.readFileSync(fi
 function decode(source){if(source===null)return empty();let data;try{data=JSON.parse(source);}catch{fail('Variable library is not valid JSON.');}return model.validate(data);}
 function read(root){const source=readSource(root);return {...decode(source),revision:revision(source)};}
 function planChange(root,operation){
- if(!operation||typeof operation!=='object'||Array.isArray(operation)||operation.type!=='replace'||Object.keys(operation).some(key=>!['type','revision','library'].includes(key)))fail('Invalid variable library operation.',422);
+ if(!operation||typeof operation!=='object'||Array.isArray(operation)||!['replace','import'].includes(operation.type)||Object.keys(operation).some(key=>!['type','revision','library'].includes(key)))fail('Invalid variable library operation.',422);
  const {file}=paths(root),source=readSource(root),current=decode(source);
  if(operation.revision!==revision(source))fail('Variable collections changed. Reload before saving.');
- const library=model.validate(operation.library);model.resolver(library).resolveAll();
+ let library=model.validate(operation.library);
+ if(operation.type==='import'){
+  const merged={version:1,collections:[...current.collections],variables:[...current.variables]};
+  for(const key of ['collections','variables'])for(const entry of library[key]){const existing=current[key].find(item=>item.id===entry.id);if(existing){if(JSON.stringify(existing)!==JSON.stringify(entry))fail('An imported '+(key==='collections'?'collection':'variable')+' conflicts with an existing identity. Existing definitions were preserved.');}else merged[key].push(entry);}
+  library=model.validate(merged);
+ }
+ model.resolver(library).resolveAll();
  // Check each named mode with other collections at their defaults. Combined
  // cross-collection mode choices are also validated when previewed or applied.
  for(const collection of library.collections)for(const mode of collection.modes)if(mode.id!==collection.defaultMode)model.resolver(library,{[collection.id]:mode.id}).resolveAll();

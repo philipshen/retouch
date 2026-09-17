@@ -25026,3 +25026,23 @@ Chromium/WebKit tests verify all four variable types, fresh identities, internal
 and external alias resolution, unchanged originals and incoming aliases,
 independent copied-mode edits, repeated naming, and exact Undo/Redo. All 1,926
 unit tests passed. The latest desktop archive predates this feature.
+
+## Portable collection import/export (2026-09-17)
+
+Variable collections can now be exported as versioned JSON without session
+revision metadata. Choosing an import file stages its collection/variable counts
+for review; Import selected collections commits the operation, while Cancel
+discards it. An invalid replacement file clears any previous staged import.
+The imported collection is selected after a successful save.
+
+The additive import operation preserves identities, modes, aliases, and existing
+definitions. Identical definitions are accepted without changing them; conflicting
+identities or duplicate names reject the complete import. Imported libraries are
+validated and saved through the existing revision-checked project transaction
+and source history. This does not implement shared remote library publication
+or updating conflicting existing definitions from a file.
+
+All 1,927 unit tests passed. Chromium/WebKit tests verify the actual downloaded
+JSON, review/cancel, malformed files, all typed values and aliases, unchanged
+existing definitions, repeated-import no-ops, conflict refusal, and exact
+Undo/Redo. The latest desktop archive predates this change.
