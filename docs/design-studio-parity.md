@@ -25073,3 +25073,20 @@ existing revision-checked save/history path.
 Chromium/WebKit library flows verify column order, unchanged defaults and values,
 boundary states, keyboard return movement, and exact Undo/Redo. All 1,927 unit
 tests passed. The latest desktop archive predates this change.
+
+### Linked scrolling across screen sizes (2026-09-17)
+
+The Screens toolbar now offers optional linked scrolling, off by default and
+persisted per project. Scrolling the main canvas or a visible comparison follows
+relative horizontal and vertical scroll position across the other visible views.
+Nested scroll panels follow only when they have a unique matching source identity
+in both documents. Ambiguous repeated instances, unstamped panels, collapsed
+previews and pages on another route remain independent. No source is changed.
+
+`retouch/test/e2e/linked-scroll.cjs` exercises root and nested scrolling in both
+directions with unequal responsive dimensions, feedback stability, toggle-off
+isolation, collapsed views, ambiguous identities, reload persistence and
+close/reopen lifecycle. The existing comparison scroll suite continues to cover
+scaled wheel input, ancestor handoff and overscroll containment with linking off.
+Relative scroll position is a navigation aid, not semantic alignment of different
+responsive layouts or synchronized application state.

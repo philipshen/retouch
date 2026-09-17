@@ -57,9 +57,17 @@
       restore.textContent=last?'Undo remove: '+last.size[0]:'Undo remove';restore.title=restore.disabled?'Finish removing views, or free the name and dimensions before restoring.':'Restore the last removed comparison in its original position.';
     }
     for(const [index,card] of cards.entries()){card.up.disabled=index===0||removals>0;card.down.disabled=index===cards.length-1||removals>0;card.edit.setAttribute('aria-pressed',String(size.width===card.width&&size.height===card.height));card.scopeButton.disabled=!selected;}
-    layoutPreviews();
+    layoutPreviews();refreshLinkedScroll();
   }
   let cards=[],selected=null,selectedIds=[],selectionDetails=new Map(),route=null,open=false,timer=null,scope={prefix:'',label:'All sizes · base',condition:null},scopeSummary;
+  let linkedScrolling=false;try{linkedScrolling=localStorage.getItem(storageKey+'.linkedScroll')==='true';}catch{}
+  const linkedScroll=window.RetouchLinkedScroll();
+  function refreshLinkedScroll(){
+    const documents=[];
+    if(open&&linkedScrolling)for(const frame of [main,...cards.filter(card=>!card.previewBody.hidden).map(card=>card.frame)])try{const d=frame.contentDocument,loc=frame.contentWindow.location;if(d?.body&&loc.origin===location.origin&&loc.pathname+loc.search+loc.hash===path())documents.push(d);}catch{}
+    linkedScroll.refresh(documents);
+  }
+  main.addEventListener('load',refreshLinkedScroll);
   function path(){try{const loc=main.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
   function scrollViewport(w,dx,dy){
     const d=w.document,html=w.getComputedStyle(d.documentElement),body=d.body&&w.getComputedStyle(d.body);
@@ -182,7 +190,7 @@
   function updateScope(node,state,text){if(node.dataset.scopeApplies!==state)node.dataset.scopeApplies=state;updateProperty(node,'textContent',text);}
   function paint(){
     if(!open)return;
-    layoutPreviews();
+    layoutPreviews();refreshLinkedScroll();
     for(const card of cards){
       if(card.previewBody.hidden)continue;
       const {frame,message,scopeMessage,width,height,reveal}=card;
@@ -239,6 +247,7 @@
     const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.hidden=true;hint.textContent='Click a layer to select it on the main canvas; double-click text to type. F2 edits the selected text layer. Shift-click adds or removes layers. Drag from empty space to select a group. Style scope stays unchanged. Right-click a layer, or press Shift+F10 on a focused preview, to open its editing menu. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll the panel at its center. Enter opens its size.';rail.append(hint);
     const help=document.createElement('button');help.type='button';help.className='control-button';help.textContent='?';help.setAttribute('aria-label','Comparison help');help.setAttribute('aria-controls',hint.id);help.setAttribute('aria-expanded','false');help.title='Selection and keyboard help';help.onclick=()=>{hint.hidden=!hint.hidden;help.setAttribute('aria-expanded',String(!hint.hidden));layoutPreviews();};help.onkeydown=e=>{if(e.key==='Escape'&&!hint.hidden){e.preventDefault();e.stopPropagation();hint.hidden=true;help.setAttribute('aria-expanded','false');layoutPreviews();}};toolbar.append(help);
     scopeSummary=document.createElement('p');scopeSummary.className='hint compare-scope';scopeSummary.setAttribute('aria-label','Comparison style scope');scopeSummary.textContent='Style scope: '+scope.label;rail.append(scopeSummary);
+    const linkScroll=document.createElement('button');linkScroll.type='button';linkScroll.className='control-button';linkScroll.id='comparisonLinkedScroll';linkScroll.textContent='↕';linkScroll.setAttribute('aria-label','Link scrolling across screens');linkScroll.setAttribute('aria-pressed',String(linkedScrolling));linkScroll.title='Scroll pages together by relative position. Matching nested panels follow too.';linkScroll.onclick=()=>{linkedScrolling=!linkedScrolling;linkScroll.setAttribute('aria-pressed',String(linkedScrolling));try{localStorage.setItem(storageKey+'.linkedScroll',String(linkedScrolling));}catch{}refreshLinkedScroll();};toolbar.append(linkScroll);
     const files=document.createElement('div');files.className='compare-files';
     allPreviews=document.createElement('button');allPreviews.id='comparisonVisibility';allPreviews.type='button';allPreviews.className='control-button';allPreviews.title='Collapse previews to manage screen sizes, or expand them again. Keeps each page loaded.';
     allPreviews.onclick=()=>{const hide=cards.some(card=>!card.previewBody.hidden);for(const card of cards)card.setCollapsed(hide);remember();updateControls();};files.append(allPreviews);
@@ -404,7 +413,7 @@
           });marqueeDocument=d;
         }catch{}
       }
-      frame.addEventListener('load',attachMarquee);marqueeCleanup.set(frame,()=>{stopMarquee?.();frame.removeEventListener('load',attachMarquee);});
+      frame.addEventListener('load',attachMarquee);frame.addEventListener('load',refreshLinkedScroll);marqueeCleanup.set(frame,()=>{stopMarquee?.();frame.removeEventListener('load',attachMarquee);frame.removeEventListener('load',refreshLinkedScroll);});
 
       const scopeMessage=document.createElement('p');scopeMessage.className='compare-scope-message';scopeMessage.setAttribute('aria-label',name+' scope coverage');
       const reveal=document.createElement('button');reveal.type='button';reveal.className='control-button';reveal.textContent='Show selection';reveal.setAttribute('aria-label','Show selection in '+name+' comparison');reveal.disabled=true;
@@ -632,7 +641,7 @@
     try{frame.contentWindow.stop();frame.src='about:blank';}catch{done();}
   });}
   async function dispose(){
-    addScreenDialog?.close();
+    linkedScroll.clear();addScreenDialog?.close();
     activeDimensionScrub?.cancel();clearOrderHistory();
     // Unload each browsing context before detaching it, including frames whose
     // framework bootstrap is still awaiting scripts or network responses.
