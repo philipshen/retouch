@@ -25046,3 +25046,18 @@ All 1,927 unit tests passed. Chromium/WebKit tests verify the actual downloaded
 JSON, review/cancel, malformed files, all typed values and aliases, unchanged
 existing definitions, repeated-import no-ops, conflict refusal, and exact
 Undo/Redo. The latest desktop archive predates this change.
+
+## Selected collection export with dependencies (2026-09-17)
+
+Import/export now offers Export selected collection alongside full-library
+export. The selected export includes complete collections referenced by aliases
+in any mode, following dependencies transitively and terminating even when
+collection dependencies point back to one another. Unrelated collections are
+excluded; existing identities, mode defaults, and values remain intact. Export
+refreshes the library before creating the file and refuses a removed selection.
+
+Chromium/WebKit checks verify the downloaded subset, exclusion of an unrelated
+collection copy, unchanged source files, and successful import into a fresh
+project with internal and cross-collection alias resolution. The complete
+collection-authoring and transfer workflows passed, as did 1,927 unit tests.
+The latest desktop archive predates this change.

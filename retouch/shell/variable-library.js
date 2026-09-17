@@ -27,16 +27,28 @@
   }catch(error){if(serial===previewSerial&&panel.isConnected)message.textContent=error.message;}}
   if(panel.open)queueMicrotask(resolve);return panel;
  }
+ async function exportCollections(selectedId=null){
+  library=await window.RetouchVariableLibraryRequest();let output=data();
+  if(selectedId){
+   if(!output.collections.some(item=>item.id===selectedId))throw Error('The selected collection no longer exists. Reload collections before exporting.');
+   const included=new Set([selectedId]),variables=new Map(output.variables.map(item=>[item.id,item]));
+   // Include entire dependency collections so every mode and alias remains portable.
+   for(const id of included)for(const item of output.variables.filter(variable=>variable.collectionId===id))for(const value of Object.values(item.values))if(typeof value==='object')included.add(variables.get(value.alias).collectionId);
+   output={version:1,collections:output.collections.filter(item=>included.has(item.id)),variables:output.variables.filter(item=>included.has(item.collectionId))};
+  }
+  const url=URL.createObjectURL(new Blob([JSON.stringify(output,null,2)+'\n'],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='retouch-variable-collections.json';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+ }
  function render(){
   previewSerial++;body.replaceChildren();if(!library)return;
+  if(!library.collections.some(item=>item.id===collectionId))collectionId=library.collections[0]?.id||'';
   const help=document.createElement('details'),helpTitle=document.createElement('summary');helpTitle.textContent='About variables';help.append(helpTitle);body.append(help);I.note(help,'Collections share typed variables across named modes. Definitions are saved to the project. In HTML, React or Liquid projects, select a layer and open Collection bindings to apply variables and choose modes.');
   const transfer=document.createElement('details'),transferTitle=document.createElement('summary');transferTitle.textContent='Import / export collections';transfer.append(transferTitle);transfer.open=!!importDraft;body.append(transfer);I.note(transfer,'Transfer collection JSON between projects. Import preserves identities and existing definitions. Conflicting identities or names must be resolved before importing.');
-  transfer.append(I.button('Export collections',()=>run(async()=>{library=await window.RetouchVariableLibraryRequest();const url=URL.createObjectURL(new Blob([JSON.stringify(data(),null,2)+'\n'],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='retouch-variable-collections.json';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);},'Collections exported.')));
+  transfer.append(I.button('Export collections',()=>run(()=>exportCollections(),'Collections exported.')));const exportSelected=I.button('Export selected collection',()=>run(()=>exportCollections(collectionId),'Selected collection and alias dependencies exported.'));exportSelected.disabled=!collectionId;transfer.append(exportSelected);I.note(transfer,'Selected exports include whole collections required by aliases in any mode.');
   const file=document.createElement('input');file.type='file';file.accept='.json,application/json';file.hidden=true;file.setAttribute('aria-label','Variable collection library file');transfer.append(I.button('Choose collection file',()=>file.click()),file);
   file.onchange=async()=>{const chosen=file.files[0];file.value='';if(!chosen)return;const loaded=await run(async()=>{if(chosen.size>2*1024*1024)throw Error('Collection files must be 2 MiB or smaller.');let value;try{value=JSON.parse(await chosen.text());}catch{throw Error('Choose a valid collection JSON file.');}if(value?.version!==1||!Array.isArray(value.collections)||!Array.isArray(value.variables))throw Error('Choose a version 1 collection library.');importDraft={name:chosen.name,library:value};},'Review the selected collections before importing.');if(!loaded){importDraft=null;render();}};
   if(importDraft){I.note(transfer,importDraft.name+' · '+importDraft.library.collections.length+' collections · '+importDraft.library.variables.length+' variables');transfer.append(I.button('Import selected collections',()=>run(async()=>{library=await window.RetouchVariableLibraryRequest({type:'import',revision:library.revision,library:importDraft.library});collectionId=importDraft.library.collections[0]?.id||collectionId;variableId='';importDraft=null;},'Collections imported. Existing definitions were preserved.')),I.button('Cancel collection import',()=>{importDraft=null;render();status.textContent='Import canceled.';}));}
   if(library.collections.length)body.append(modePreview());
-  if(!library.collections.some(item=>item.id===collectionId))collectionId=library.collections[0]?.id||'';
+
   I.select(body,'Variable collection',[['','Choose a collection…'],...library.collections.map(item=>[item.id,item.name])],collectionId,value=>{collectionId=value;variableId='';render();});
   const settings=document.createElement('details'),settingsTitle=document.createElement('summary');settingsTitle.textContent='Collection settings';settings.append(settingsTitle);settings.open=!library.collections.length;body.append(settings);settings.append(I.button('Reload collections',load));
   const create=input(settings,'New collection name');settings.append(I.button('Create collection',()=>run(async()=>{const next=data(),id=crypto.randomUUID(),mode=crypto.randomUUID();next.collections.push({id,name:create.value,defaultMode:mode,modes:[{id:mode,name:'Default'}]});await save(next);collectionId=id;variableId='';})));
