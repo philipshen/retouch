@@ -25011,3 +25011,18 @@ and resolution in the copied mode, independent edits, copying a non-default
 mode, duplicate naming, exact multi-step Undo/Redo, and existing stale-write
 refusal. All 1,926 unit tests passed. The latest desktop archive predates this
 change.
+
+## Duplicate variable collections (2026-09-17)
+
+Collection settings now offer Duplicate collection. The copy has a unique name
+and fresh collection, mode, and variable identities, with the original default
+mode mapped to its copy. Internal aliases follow copied variables; aliases to
+other collections remain linked. Existing incoming aliases and layer bindings
+continue to refer to the originals. The new collection is selected for editing.
+The action respects the existing collection/variable count limits and saves
+through revision-checked project history.
+
+Chromium/WebKit tests verify all four variable types, fresh identities, internal
+and external alias resolution, unchanged originals and incoming aliases,
+independent copied-mode edits, repeated naming, and exact Undo/Redo. All 1,926
+unit tests passed. The latest desktop archive predates this feature.
