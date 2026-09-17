@@ -1759,7 +1759,7 @@ function hoverDescription(el) {
 function outlineKind(el, info) {
   if(info?.kind==='instance' && (!info.inlineComponent||componentLibrarySelections.has(info.id)))return 'instance';
   if(!info)return null;
-  return !info.unresolved && (info.classNameDynamic===false || info.text!=null || info.canSetChildren || info.canSetSrc || info.canSetTag) ? 'editable' : 'readonly';
+  return !info.unresolved && (info.classNameDynamic===false || info.text!=null || info.canSetChildren || info.canSetSrc || info.canSetTag || info.canSetHref) ? 'editable' : 'readonly';
 }
 const componentBadge=document.createElement('div');
 componentBadge.className='component-badge';componentBadge.hidden=true;
@@ -2123,6 +2123,7 @@ function renderPanelContents(textEditing=false) {
     panelBody.appendChild(scopes);
   }
 
+  if(info.tag==='a'&&typeof info.canSetHref==='boolean')panelBody.append(linkSection(info));
   if(info.canRename){
     const naming=RetouchInspector.section('Layer');
     const input=document.createElement('input');input.id='layerNameInput';input.type='text';input.maxLength=200;input.value=info.layerName||'';input.placeholder='Use the page’s element label';
@@ -3011,6 +3012,33 @@ function imageFillUpload(info){
   if(sel?.info!==info||info.hash!==hash||styleScope!==scope||classificationSerial!==serial)throw Error('The selected image or screen scope changed before the upload finished.');
   return result.src;
  };
+}
+function linkSection(info) {
+  const section=RetouchInspector.section('Link'),input=document.createElement('input');
+  input.type='text';input.maxLength=2048;input.value=info.href||'';input.placeholder='https://example.com';input.disabled=!info.canSetHref;
+  RetouchInspector.field(section,'Link destination',input);
+  if(!info.canSetHref){RetouchInspector.note(section,info.hrefReason);return section;}
+  const save=async()=>{
+    const href=input.value.trim()||null;
+    if(href!==null&&!RetouchLinkValues.valid(href)){input.setAttribute('aria-invalid','true');return;}
+    input.removeAttribute('aria-invalid');await setHref(href,info);
+  };
+  input.onchange=save;
+  input.onkeydown=event=>{if(event.key==='Escape'){input.value=info.href||'';input.removeAttribute('aria-invalid');input.blur();}else if(event.key==='Enter'){event.preventDefault();input.blur();}};
+  section.append(RetouchInspector.button('Remove link destination',()=>setHref(null,info)));
+  return section;
+}
+async function setHref(href,info){
+  if(sel?.info!==info||panelTasks||undoBusy||sourceRequests||!info.canSetHref||info.href===href)return;
+  busyPanel(true);
+  try{
+    const result=await api('POST','/rt/__api/op',{type:'setHref',id:info.id,fileHash:info.hash,href,context:info.context});
+    if(!result?.ok)return toast(result?.reason||result?.error||'Could not save the link.','err');
+    editorHistory.record({type:'setHref',id:info.id,undoId:result.undoId,context:info.context});
+    info.hash=result.hash;info.href=href;
+    await refreshWrittenElement(info,el=>el.getAttribute('href')===href);
+    renderPanel();toast('Link saved','ok');
+  }finally{busyPanel(false);}
 }
 function imageSection(info) {
   const sec = document.createElement('div');
@@ -3996,6 +4024,7 @@ async function restoreHistory(direction,op) {
         if(op.svgCreatedId){const found=matchingInDocument(el.ownerDocument,op.svgCreatedId,null).length>0;return direction==='undo'?!found:found;}
         if(op.type==='createComponent'&&direction==='undo')return el.getAttribute('data-rt')===op.id;
         if (component?.ok) return (component.definitionIds || [component.definitionId]).includes(el.getAttribute('data-rt'));
+        if (op.type === 'setHref') return el.getAttribute('href')===info.href;
         if (op.type === 'setSrc') return imageMatches(el,info.src,info.srcMatch);
         if (op.type === 'setSVGGradient') return svgGradientsMatch(el,info);
         if (op.type === 'setSVGGeometry') return svgGeometryMatches(el,info);

@@ -24242,3 +24242,27 @@ single/batch reparenting, batch duplicate/delete and production style retention.
 These checks establish native Vue wrapper editing, not Figma-equivalent group
 scaling or layout preservation under every site's selectors. Broader template
 structures, arbitrary-site parity and macOS/Homebrew release remain incomplete.
+
+### Vue link destinations
+
+The main inspector now includes a Link section for native Vue anchors. Literal
+destinations can be added, edited or removed without replacing the anchor,
+nested content, event handlers or other attributes. URL validation shares the
+existing web/contact/relative-link rules. Vue-bound destinations remain read-only;
+broad/dynamic bindings that can override source identity remain unindexed. The
+history refresh verifies the restored href as well as the compiled revision.
+
+Validation: all 1,882 unit tests passed, followed by the doctor tests after its
+capability update. Source tests cover escaped destinations, email/phone/fragment
+links, nested markup and interpolation preservation, attribute preservation,
+stable source IDs, exact undo/redo, absent href creation, binding guards and
+invalid destinations. Chromium and WebKit passed editing, Enter/Tab commits,
+invalid-value refusal and Escape cancellation, removal/restoration, read-only
+bound links, exact source history, retained preview documents and independent
+Vue counters. Combined runs retained all prior Vue CSS, comparison, structure,
+frame/group, ordering and production-style checks. The light-theme inspector was
+also inspected in a captured Chromium screenshot.
+
+This adds literal anchor destination editing; Vue rich-text range creation and
+formatting, dynamic routing components and full cross-framework parity remain
+unfinished. No native artifact or Homebrew release was produced here.

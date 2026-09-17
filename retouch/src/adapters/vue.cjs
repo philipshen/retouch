@@ -50,6 +50,9 @@ function create(options = {}) {
       mixedText: false, canSetChildren: false,
       src: attr(element, 'src')?.value ?? null, srcDynamic: bound(element, 'src'), canSetSrc,
       srcReason: canSetSrc ? null : 'Select an image with a literal source and no responsive source bindings.',
+      href: element.tag === 'a' ? attr(element, 'href')?.value ?? null : undefined,
+      canSetHref: element.tag === 'a' && element.node.ns === 0 && unique(element, 'href') && !bound(element, 'href'),
+      hrefReason: 'This link destination is controlled by a Vue binding.',
       canSetTag: !!range, canRename: unique(element, 'data-rt-name') && !bound(element, 'data-rt-name'), layerName: attr(element, 'data-rt-name')?.value || '',
       context: resolved.context || null,
       ...require('../vue-css.cjs').describe(resolved, adapter),
@@ -87,6 +90,11 @@ function create(options = {}) {
       if (!info.canSetSrc || typeof op.src !== 'string' || op.src.length > 100000 || /[\0-\x1f]/.test(op.src)) return refuse(info.srcReason || 'Invalid image source.');
       try { if (!['https:', 'http:'].includes(new URL(op.src, 'https://retouch.local/').protocol)) return refuse('Unsupported image URL scheme.'); } catch { return refuse('Invalid image URL.'); }
       setAttribute('src', op.src);
+    } else if (op.type === 'setHref') {
+      if (!info.canSetHref) return refuse('Choose a native link with a literal destination.');
+      if (op.href !== null && !require('../../shell/link-values.js').valid(op.href)) return refuse('Use a web, email, phone or relative link destination.');
+      const old = attr(element, 'href');
+      if (op.href === null) { if (old) out.remove(old.start, old.end); } else setAttribute('href', op.href);
     } else if (op.type === 'renameElement') {
       if (!info.canRename || typeof op.name !== 'string' || op.name.length > 200 || /[\x00-\x1f\x7f]/.test(op.name)) return refuse('Use a literal, single-line layer name of up to 200 characters.');
       const name = op.name.trim(), old = attr(element, 'data-rt-name');
@@ -108,7 +116,7 @@ function create(options = {}) {
       return source.stamp(text, file, root, compilerOptions(), { revision: source.contentHash(text), transformDocument: out => require('../vue-css.cjs').warmInto(out, text, relative, options.styleModule?.(relative)) });
     }, contentHash: source.contentHash,
     assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets', imageOnly: true },
-    capabilities: { classAttr: 'class', ops: ['setText', 'setTag', 'setSrc', 'renameElement', 'setCSS', 'setCSSSelection', 'insertElement', 'reparentElement', ...require('../vue-structure.cjs').types, ...require('../vue-structure-selection.cjs').types, ...require('../vue-frame-selection.cjs').types] },
+    capabilities: { classAttr: 'class', ops: ['setText', 'setTag', 'setSrc', 'setHref', 'renameElement', 'setCSS', 'setCSSSelection', 'insertElement', 'reparentElement', ...require('../vue-structure.cjs').types, ...require('../vue-structure-selection.cjs').types, ...require('../vue-frame-selection.cjs').types] },
     applyOp: (resolved, op) => require('../transactions.cjs').applyPlan(resolved.appRoot || path.dirname(resolved.file), planOp(resolved, op)),
   };
   return adapter;
