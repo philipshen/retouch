@@ -24340,3 +24340,33 @@ survive, instead of assuming its component contains no other styles.
 
 Dynamic text and independent styled-run splitting remain incomplete. No native
 artifact, notarization, Homebrew install or full-parity claim was added here.
+
+## Vue responsive text splitting (2026-09-17)
+
+Splitting a static rich-text run now creates an independent managed style owner
+for every copied styled element. Base and breakpoint declarations follow the
+copy; later style edits do not affect its original. Nested copies and repeated
+copies allocate distinct IDs, including markers whose rules were reset. The
+planner keeps unrelated style owners and commits markup plus stylesheet changes
+as one exact-history transaction.
+
+The editing preview retains the original responsive selector until the source
+write creates the new owner, so pressing Enter does not temporarily drop the
+font size. Source serialization still uses the original run as its copy source.
+This extends the prior checkpoint's surviving-run support; dynamic Vue text and
+unsupported copy attributes retain their existing refusals.
+
+Validation: all 1,890 unit tests passed, including nested/multiple copies, base
+and breakpoint rules, independent edits, reset markers, unrelated style
+preservation, and exact undo/redo.
+Chromium and WebKit combined Vue runs passed real Enter-to-split editing,
+responsive font preservation before and after save, distinct saved owners,
+phone/tablet sizing, exact undo/redo and retained main/live documents and counters.
+The previous CSS/comparison, structure, copy/paste, insertion, reparenting, batch,
+ordering, frame/group, links and rich-text flows also passed, with no browser
+errors and with authored styles retained in production builds.
+
+Evidence: `/tmp/retouch-vue-rich-split-all-units.log`,
+`/tmp/retouch-vue-rich-split-combined-chromium.log`, and
+`/tmp/retouch-vue-rich-split-combined-webkit.log`. No desktop artifact or public
+release was produced by this checkpoint; full Figma parity remains incomplete.

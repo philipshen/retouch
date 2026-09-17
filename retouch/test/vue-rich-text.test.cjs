@@ -56,5 +56,34 @@ test('Vue rich text preserves surviving responsive style owners and prunes only 
  const next=resolve(after),span=next.elements.find(element=>element.tag==='span');assert.equal(adapter.describe({...next,element:span}).cssRules[768]['font-size'],'23px');
  assert.equal(history.apply(root,'undo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),text);
  assert.equal(history.apply(root,'redo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),after);
- const duplicate=adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'keep',id:spans[0].id},{t:'copy',id:spans[0].id,children:[{t:'text',value:'Duplicate'}]}]});assert.equal(duplicate.refused,true);assert.match(duplicate.reason,/style|identity|split/i);
+ const duplicate=adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'keep',id:spans[0].id},{t:'copy',id:spans[0].id,children:[{t:'text',value:'Duplicate'}]}]});assert.equal(duplicate.ok,true,duplicate.reason);const duplicated=resolve(duplicate.edits[0].after),runs=duplicated.elements.filter(element=>element.tag==='span');assert.equal(runs.length,2);assert.notEqual(runs[0].attributes.find(attr=>attr.name==='data-rt-style').value,runs[1].attributes.find(attr=>attr.name==='data-rt-style').value);for(const element of runs)assert.equal(adapter.describe({...duplicated,element}).cssRules[768]['font-size'],'17px');
+ const independent=adapter.planOp({...duplicated,element:runs[1]},{type:'setCSS',fileHash:duplicated.hash,width:768,property:'font-size',value:'41px'});assert.equal(independent.ok,true,independent.reason);const separate=resolve(independent.edits[0].after),first=separate.elements.find(element=>element.tag==='span');assert.equal(adapter.describe({...separate,element:first}).cssRules[768]['font-size'],'17px');
+});
+
+test('Vue nested rich-text copies allocate independent base and breakpoint styles with exact history',t=>{
+ let text='<template><main><div><p><span title="Run">Split here</span></p></div><aside>Outside</aside></main></template>';
+ for(const [tag,width,value]of [['p',0,'21px'],['span',0,'19px'],['span',768,'27px'],['aside',0,'33px']]){
+  const r=resolve(text),element=r.elements.find(el=>el.tag===tag),result=adapter.planOp({...r,element},{type:'setCSS',fileHash:r.hash,width,property:'font-size',value});
+  assert.equal(result.ok,true,result.reason);text=result.edits[0].after;
+ }
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-vue-split-')),file=path.join(root,'App.vue');t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(file,text);
+ const r={...resolve(text),file};r.element=r.elements.find(el=>el.tag==='div');
+ const paragraph=adapter.describe(r).richText.children[0],span=paragraph.children[0],history=new SourceHistory();
+ const segment=(t,value)=>({t,id:paragraph.id,children:[{t,id:span.id,children:[{t:'text',value}]}]});
+ const result=history.commit(root,adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[segment('keep','Split'),segment('copy','here'),segment('copy','again')]}));
+ assert.equal(result.ok,true,result.reason);const after=fs.readFileSync(file,'utf8'),next=resolve(after),owners=next.elements.flatMap(el=>el.attributes.filter(a=>a.name==='data-rt-style').map(a=>a.value));
+ assert.equal(owners.length,7);assert.equal(new Set(owners).size,7);
+ for(const element of next.elements.filter(el=>el.tag==='span')){const info=adapter.describe({...next,element});assert.equal(info.cssRules[0]['font-size'],'19px');assert.equal(info.cssRules[768]['font-size'],'27px');}
+ for(const element of next.elements.filter(el=>el.tag==='p'))assert.equal(adapter.describe({...next,element}).cssRules[0]['font-size'],'21px');
+ const outside=next.elements.find(el=>el.tag==='aside');assert.equal(adapter.describe({...next,element:outside}).cssRules[0]['font-size'],'33px');
+ assert.equal(history.apply(root,'undo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),text);
+ assert.equal(history.apply(root,'redo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),after);
+});
+
+test('Vue rich-text copies replace reset style markers even when they have no active rules',()=>{
+ const r=resolve('<template><main><p><span data-rt-style="0123456789">Reset</span></p></main></template>'),span=adapter.describe(r).richText.children[0];
+ const result=adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'keep',id:span.id},{t:'copy',id:span.id,children:[{t:'text',value:'Copy'}]}]});
+ assert.equal(result.ok,true,result.reason);const next=resolve(result.edits[0].after),owners=next.elements.filter(el=>el.tag==='span').map(el=>el.attributes.find(a=>a.name==='data-rt-style').value);
+ assert.equal(owners[0],'0123456789');assert.notEqual(owners[0],owners[1]);assert.match(owners[1],/^[a-f0-9]{10}$/);
+ assert.deepEqual(require('../src/vue-css.cjs').documentState(next.source,'App.vue').model.layers,{});
 });

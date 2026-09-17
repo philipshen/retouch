@@ -117,6 +117,9 @@
   for(const key of Object.keys(node))if(key.startsWith('__rt'))copy[key]=node[key];
   if(source&&!node.__rtReplaceRangeStyle)copy.__rtSourceCopy=source;else delete copy.__rtSourceCopy;
   for(const attr of [...copy.attributes])if(['id','key','ref','value'].includes(attr.name)||/^on/i.test(attr.name)||/^data-rt(?:-|$)/.test(attr.name))copy.removeAttribute(attr.name);
+  // Keep Vue's responsive selector during the editing preview. Serialization
+  // emits a source copy; the Vue planner allocates its independent style owner.
+  if(copy.__rtSourceCopy&&node.closest('[data-rt-revision]')&&/^[a-f0-9]{10}$/.test(node.getAttribute('data-rt-style')||''))copy.setAttribute('data-rt-style',node.getAttribute('data-rt-style'));
   return copy;
  }
  function caret(node){const d=node.ownerDocument;while(node.firstChild&&(node.firstChild.nodeType===3||node.firstChild.nodeType===1&&/^(SPAN|A|STRONG|B|EM|I|U|S|SUP|SUB|CODE|MARK|SMALL|ABBR)$/.test(node.firstChild.tagName)&&node.firstChild.getAttribute('contenteditable')!=='false'&&!node.firstChild.__rtKeep))node=node.firstChild;const r=d.createRange();r.setStart(node,0);r.collapse(true);d.getSelection().removeAllRanges();d.getSelection().addRange(r);}

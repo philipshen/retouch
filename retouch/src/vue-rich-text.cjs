@@ -50,11 +50,19 @@ function plan(resolved, op, adapter, escapeText) {
     if (op.fileHash !== resolved.hash) throw Error('The file changed. Re-select the text.');
     const data = context(resolved,adapter);
     if (resolved.element.tag === 'a' && require('./rich-text.cjs').hasLink(op.children)) throw Error('Text links cannot be nested.');
-    const kept=source.describe(data.value,resolved.element.id).kept;
-    const ownsStyle=nodes=>nodes.some(node=>node.attrs?.some(attr=>attr.name==='data-rt-style')||ownsStyle(node.childNodes||[]));
-    function checkCopies(nodes){for(const node of nodes||[]){if(node.t==='copy'&&kept.has(node.id)&&ownsStyle(parseFragment(kept.get(node.id).raw).childNodes))throw Error('Splitting a responsive text style needs an independent style owner.');if(node.children)checkCopies(node.children);}}
-    checkCopies(op.children);
-    const replacement = source.rewrite(data.value,resolved.element.id,op.children,{parentTag:resolved.element.tag,escapeText});
+    const styles=require('./vue-css.cjs'),prior=styles.documentState(resolved.source,resolved.relPath).model;
+    const model=styles.structuralStyles(resolved,adapter,data,false).model,allocated=new Set(),copies=new Map();
+    function inventory(node){if(node.type===NodeTypes.ELEMENT)for(const prop of node.props)if(prop.type===NodeTypes.ATTRIBUTE&&prop.name.toLowerCase()==='data-rt-style')allocated.add(prop.value?.content);for(const child of node.children||[])inventory(child);}
+    inventory(adapter.collect(resolved.source,resolved.relPath).ast);
+    let ordinal=0;
+    const copyMarkup=(markup,original)=>{
+      const id=parseFragment(original.raw).childNodes[0]?.attrs?.find(attr=>attr.name==='data-rt-style')?.value;
+      if(!id)return markup;
+      let fresh;do{fresh=adapter.contentHash(resolved.source+'|rich-split|'+id+'|'+ordinal++).slice(0,10);}while(allocated.has(fresh));
+      allocated.add(fresh);copies.set(fresh,id);
+      return markup.replace(/^<([a-z][a-z0-9-]*)/i,'<$1 data-rt-style="'+fresh+'"');
+    };
+    const replacement = source.rewrite(data.value,resolved.element.id,op.children,{parentTag:resolved.element.tag,escapeText,copyMarkup});
     let after = resolved.source.slice(0,data.start) + replacement + resolved.source.slice(data.end);
     const beforeElements = adapter.collect(resolved.source,resolved.relPath).elements, next = adapter.collect(after,resolved.relPath).elements;
     const root = next.find(element => element.id === resolved.element.id);
@@ -62,16 +70,14 @@ function plan(resolved, op, adapter, escapeText) {
     context({...resolved,source:after,element:root},adapter);
     const outside = (elements,root) => elements.filter(element => element.start <= root.start || element.end >= root.end).map(element => [element.id,element.tag]);
     if (JSON.stringify(outside(beforeElements,resolved.element)) !== JSON.stringify(outside(next,root))) throw Error('Formatting changed an unrelated Vue layer.');
-    const styles=require('./vue-css.cjs'),prior=styles.documentState(resolved.source,resolved.relPath).model;
     // Remove ownership for the edited contents, then restore surviving owners.
     // The wrapper and unrelated layers retain their original style entries.
-    const model=styles.structuralStyles(resolved,adapter,data,false).model;
     const owners=new Set();
     function visit(node){
       if(node.type===NodeTypes.ELEMENT){
         const markers=node.props.filter(prop=>prop.type===NodeTypes.ATTRIBUTE&&prop.name.toLowerCase()==='data-rt-style');
         if(markers.length>1)throw Error('A text run has duplicate style identities.');
-        if(markers.length){const id=markers[0].value?.content;if(!/^[a-f0-9]{10}$/.test(id||'')||owners.has(id))throw Error('A text run would share an invalid or duplicate style identity.');owners.add(id);if(Object.hasOwn(prior.layers,id))model.layers[id]=prior.layers[id];}
+        if(markers.length){const id=markers[0].value?.content;if(!/^[a-f0-9]{10}$/.test(id||'')||owners.has(id))throw Error('A text run would share an invalid or duplicate style identity.');owners.add(id);const original=copies.get(id)||id;if(Object.hasOwn(prior.layers,original))model.layers[id]=prior.layers[original];}
       }
       for(const child of node.children||[])visit(child);
     }
