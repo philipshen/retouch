@@ -24316,3 +24316,27 @@ frame/group, ordering and production-style flows passed in those same runs.
 Dynamic rich text, component children, managed-style descendant preservation and
 broader source structures still need work. This checkpoint does not rebuild the
 native artifact or establish notarization, Homebrew delivery or full parity.
+
+### Responsive style ownership inside Vue rich text
+
+Rich text can now contain existing Retouch-owned responsive text runs. The
+planner removes style ownership for the edited contents, then restores entries
+for surviving owners. The text container and unrelated layers keep their styles;
+deleted runs lose only their own entries. Final source identity checks also cover
+stylesheet cleanup when the managed block precedes the template. Duplicate or
+invalid style owners are refused. Split-copy operations on owned runs are
+explicitly refused because the shared text copier otherwise strips their style
+identity; independent responsive-style copies remain unfinished.
+
+Validation: all 1,888 unit tests passed. Source tests cover preserving a styled
+run while formatting its contents, deleting another styled run, retaining an
+outside layer's style, exact undo/redo, and refusal of style-dropping split
+copies. Chromium and WebKit passed actual formatting and deletion, phone/tablet
+font sizes, restored ownership, exact history and retained main/live documents
+and counters. Both combined runs also passed the previous Vue CSS/comparison,
+structure, frame/group, link and rich-text flows, plus production style retention.
+The shared deletion fixture now checks that baseline unrelated style entries
+survive, instead of assuming its component contains no other styles.
+
+Dynamic text and independent styled-run splitting remain incomplete. No native
+artifact, notarization, Homebrew install or full-parity claim was added here.

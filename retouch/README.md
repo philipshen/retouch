@@ -124,9 +124,11 @@ changes, layer names, link destinations, and responsive CSS in `.vue` files.
 The Link inspector edits or removes literal anchor destinations while preserving
 nested content and event handlers. Vue-bound destinations remain read-only.
 Static native text supports in-place rich formatting and text links. The compiler
-and browser must agree on its structure; Vue expressions, component children,
-directives and descendants with managed responsive style identities require
-further preservation support. Vue text editing uses temporary child nodes and
+and browser must agree on its structure; Vue expressions, directives and component
+children require further preservation support. Existing
+responsive text-run styles survive formatting; deleting a run removes its owned
+rules. Splitting a run with responsive style ownership remains unavailable.
+Vue text editing uses temporary child nodes and
 restores the framework-owned nodes before writing, allowing HMR to retain preview
 documents and application state for the verified static-text flows. Layout, appearance and
 typography controls support individual layers and selections within one SFC.

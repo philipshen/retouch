@@ -37,7 +37,8 @@ exports.run = async ({ page, app, live, file, source }) => {
   await undo(); assert.equal(fs.readFileSync(file, 'utf8'), source);
   await select('First'); await padding('13px'); await select('First'); await page.keyboard.press('Delete'); await settled();
   await wait(async () => await firstLayers(app).count() === 0);
-  assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /data-rt-vue-css|data-rt-style/);
+  const css=require('../../src/vue-css.cjs');
+  assert.deepEqual(css.documentState(fs.readFileSync(file,'utf8'),'src/App.vue').model,css.documentState(source,'src/App.vue').model,'Deletion removes copied styles and preserves unrelated baseline styles');
   await undo(); await undo(); assert.equal(fs.readFileSync(file, 'utf8'), source);
   await select('First');
   await page.getByRole('treeitem', { name: 'div · Second', exact: true }).click({ modifiers: ['Meta'] }); await settled();

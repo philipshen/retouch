@@ -18,8 +18,8 @@ test('Vue rich text supports line breaks, links and custom delimiter literals wi
  const result=a.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'text',value:'[[literal]]'},{t:'break'},{t:'link',href:'/docs',children:[{t:'wrap',tag:'em',children:[{t:'text',value:'Docs'}]}]}]});
  assert.equal(result.ok,true,result.reason);assert.match(result.edits[0].after,/&#91;&#91;literal\]\]/);assert.equal(a.describe(resolve(result.edits[0].after,a)).canSetChildren,true);
 });
-test('Vue rich text refuses dynamic content, identity-bearing styles, template boundaries and browser repairs',()=>{
- for(const content of ['{{ count }}','<span :class="kind">Text</span>','<Widget/>','<span v-if="show">Text</span>','<span v-pre>{{ x }}</span>','<span ref="label">Text</span>','<span data-rt-style="0123456789">Text</span>','<div>Invalid paragraph child</div>']){
+test('Vue rich text refuses dynamic content, template boundaries and browser repairs',()=>{
+ for(const content of ['{{ count }}','<span :class="kind">Text</span>','<Widget/>','<span v-if="show">Text</span>','<span v-pre>{{ x }}</span>','<span ref="label">Text</span>','<div>Invalid paragraph child</div>']){
   const r=resolve('<template><main><p>'+content+'</p></main></template>');assert.equal(adapter.describe(r).canSetChildren,false,content);
   assert.equal(adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'text',value:'Lost'}]}).refused,true,content);
  }
@@ -40,4 +40,21 @@ test('Vue plain-formatting evidence excludes authored attributes from scoped-att
  const info=adapter.describe(r);
  assert.deepEqual(info.plainFormattingIds,r.elements.filter(element=>element.tag==='strong').map(element=>element.id));
  assert.deepEqual(info.plainLinkIds,[r.elements.find(element=>element.tag==='a').id]);
+});
+test('Vue rich text preserves surviving responsive style owners and prunes only deleted runs with exact undo',t=>{
+ let text='<template><main><p><span>First</span> <span>Second</span></p><div>Outside</div></main></template>';
+ for(const [tag,index,value]of [['span',0,'17px'],['span',1,'23px'],['div',0,'31px']]){
+  const r=resolve(text),element=r.elements.filter(element=>element.tag===tag)[index];
+  const result=adapter.planOp({...r,element},{type:'setCSS',fileHash:r.hash,width:768,property:'font-size',value});assert.equal(result.ok,true,result.reason);text=result.edits[0].after;
+ }
+ const block=text.match(/<style data-rt-vue-css[\s\S]*?<\/style>/)[0];text=block+text.replace(block,'');
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-vue-rich-styles-')),file=path.join(root,'App.vue');t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(file,text);
+ const r={...resolve(text),file},info=adapter.describe(r);assert.equal(info.canSetChildren,true);
+ const spans=info.richText.children.filter(node=>node.t==='element'),history=new SourceHistory();
+ const result=history.commit(root,adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'keep',id:spans[1].id,children:[{t:'wrap',tag:'strong',children:[{t:'text',value:'Edited'}]}]}]}));
+ assert.equal(result.ok,true,result.reason);const after=fs.readFileSync(file,'utf8');assert.doesNotMatch(after,/17px/);assert.match(after,/23px/);assert.match(after,/31px/);
+ const next=resolve(after),span=next.elements.find(element=>element.tag==='span');assert.equal(adapter.describe({...next,element:span}).cssRules[768]['font-size'],'23px');
+ assert.equal(history.apply(root,'undo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),text);
+ assert.equal(history.apply(root,'redo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),after);
+ const duplicate=adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'keep',id:spans[0].id},{t:'copy',id:spans[0].id,children:[{t:'text',value:'Duplicate'}]}]});assert.equal(duplicate.refused,true);assert.match(duplicate.reason,/style|identity|split/i);
 });

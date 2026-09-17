@@ -12,7 +12,7 @@ function context(resolved, adapter) {
   function vue(nodes) {
     return nodes.map(node => {
       if (node.type === NodeTypes.TEXT) return { text: node.content };
-      if (node.type !== NodeTypes.ELEMENT || node.tagType !== ElementTypes.ELEMENT || node.ns !== 0 || ['script','style','template','iframe'].includes(node.tag) || node.props.some(prop => prop.type !== NodeTypes.ATTRIBUTE || ['ref','key','data-rt-style'].includes(prop.name.toLowerCase()))) throw Error('This text contains Vue logic or source-owned styles that need separate preservation.');
+      if (node.type !== NodeTypes.ELEMENT || node.tagType !== ElementTypes.ELEMENT || node.ns !== 0 || ['script','style','template','iframe'].includes(node.tag) || node.props.some(prop => prop.type !== NodeTypes.ATTRIBUTE || ['ref','key'].includes(prop.name.toLowerCase()))) throw Error('This text contains Vue logic that needs separate preservation.');
       // v-pre disappears from Vue's AST; its removal would change interpretation.
       const token = node.loc.source.match(/^<(?:[^"'<>]|"[^"]*"|'[^']*')*>/)?.[0] || '';
       if (/\sv-pre(?:[\s=>]|$)/.test(token.replace(/"[^"]*"|'[^']*'/g,''))) throw Error('This text changes Vue template interpretation.');
@@ -30,6 +30,7 @@ function context(resolved, adapter) {
 function describe(resolved, adapter, rendered) {
   try {
     const data = context(resolved,adapter);
+    require('./vue-css.cjs').structuralStyles(resolved,adapter,data,false);
     function normalize(items,raw,nodes) {
       return nodes.map(node=>{
         const index=raw.findIndex(prior=>prior.type===node.type&&prior.loc.start.offset===node.loc.start.offset),item=items[index];
@@ -49,14 +50,35 @@ function plan(resolved, op, adapter, escapeText) {
     if (op.fileHash !== resolved.hash) throw Error('The file changed. Re-select the text.');
     const data = context(resolved,adapter);
     if (resolved.element.tag === 'a' && require('./rich-text.cjs').hasLink(op.children)) throw Error('Text links cannot be nested.');
+    const kept=source.describe(data.value,resolved.element.id).kept;
+    const ownsStyle=nodes=>nodes.some(node=>node.attrs?.some(attr=>attr.name==='data-rt-style')||ownsStyle(node.childNodes||[]));
+    function checkCopies(nodes){for(const node of nodes||[]){if(node.t==='copy'&&kept.has(node.id)&&ownsStyle(parseFragment(kept.get(node.id).raw).childNodes))throw Error('Splitting a responsive text style needs an independent style owner.');if(node.children)checkCopies(node.children);}}
+    checkCopies(op.children);
     const replacement = source.rewrite(data.value,resolved.element.id,op.children,{parentTag:resolved.element.tag,escapeText});
-    const after = resolved.source.slice(0,data.start) + replacement + resolved.source.slice(data.end);
+    let after = resolved.source.slice(0,data.start) + replacement + resolved.source.slice(data.end);
     const beforeElements = adapter.collect(resolved.source,resolved.relPath).elements, next = adapter.collect(after,resolved.relPath).elements;
     const root = next.find(element => element.id === resolved.element.id);
     if (!root || root.tag !== resolved.element.tag || root.end !== resolved.element.end + after.length - resolved.source.length) throw Error('Formatting changed the surrounding Vue structure.');
     context({...resolved,source:after,element:root},adapter);
     const outside = (elements,root) => elements.filter(element => element.start <= root.start || element.end >= root.end).map(element => [element.id,element.tag]);
     if (JSON.stringify(outside(beforeElements,resolved.element)) !== JSON.stringify(outside(next,root))) throw Error('Formatting changed an unrelated Vue layer.');
+    const styles=require('./vue-css.cjs'),prior=styles.documentState(resolved.source,resolved.relPath).model;
+    // Remove ownership for the edited contents, then restore surviving owners.
+    // The wrapper and unrelated layers retain their original style entries.
+    const model=styles.structuralStyles(resolved,adapter,data,false).model;
+    const owners=new Set();
+    function visit(node){
+      if(node.type===NodeTypes.ELEMENT){
+        const markers=node.props.filter(prop=>prop.type===NodeTypes.ATTRIBUTE&&prop.name.toLowerCase()==='data-rt-style');
+        if(markers.length>1)throw Error('A text run has duplicate style identities.');
+        if(markers.length){const id=markers[0].value?.content;if(!/^[a-f0-9]{10}$/.test(id||'')||owners.has(id))throw Error('A text run would share an invalid or duplicate style identity.');owners.add(id);if(Object.hasOwn(prior.layers,id))model.layers[id]=prior.layers[id];}
+      }
+      for(const child of node.children||[])visit(child);
+    }
+    visit(adapter.collect(after,resolved.relPath).ast);
+    after=styles.replaceModel(after,resolved.relPath,{version:1,layers:Object.fromEntries(Object.entries(model.layers).sort(([a],[b])=>a.localeCompare(b)))});
+    const final=adapter.collect(after,resolved.relPath).elements;
+    if(final.length!==next.length||final.some((element,i)=>element.id!==next[i].id||element.tag!==next[i].tag))throw Error('Text style cleanup changed source identity.');
     return { ok:true, structural:true, hash:adapter.contentHash(after), edits:after===resolved.source?[]:[{file:resolved.file,before:resolved.source,after}] };
   } catch(error) { return {ok:false,refused:true,reason:error.message}; }
 }
