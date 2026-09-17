@@ -401,7 +401,7 @@
       }
      }catch(error){event.stopImmediatePropagation();input.setCustomValidity(error.message);input.reportValidity();}
     },true);
-    if(percentDisplay){input.min=property==='line-height'?'0':'-100';input.max='1000';}if(property==='letter-spacing'&&percentDisplay)delete input.dataset.variableProperty;else input.dataset.variableUnit=percentDisplay?'%':'px';
+    if(percentDisplay){input.min=property==='line-height'?'0':'-100';input.max='1000';}input.dataset.variableUnit=percentDisplay?'%':'px';
     input.onkeydown=null;root.RetouchNumericExpression.calculation(input,{unit:percentDisplay?'%':'px',displayValue:initial});I.fieldDraft(input);
     if(relative)input.title+=' Use px or %; percentages follow each selected layer’s font size.';
     if(percentDisplay)input.retouchNumericRead=raw=>{try{const quantity=E.quantity(raw,'%');return quantity?.unit==='%'?{value:quantity.value,min:(property==='line-height'?0:-100)+(mixedPercentages&&input.value===''?percentages[0]-Math.min(...percentages):0),max:1000+(mixedPercentages&&input.value===''?percentages[0]-Math.max(...percentages):0),format:value=>E.decimal(value)+'%'}:null;}catch{return null;}};

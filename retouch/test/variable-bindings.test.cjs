@@ -38,3 +38,17 @@ test('removing a scope binding removes its CSS override and preserves narrower b
  const result=linked.plan(resolve(source),{type:'removeVariable',property:'color',width:768});assert.equal(result.ok,true,result.reason);const after=resolve(result.edits[0].after);assert.deepEqual(linked.links(after),linked.links(resolve(base)));assert.deepEqual(css.describe(after).cssRules,css.describe(resolve(base)).cssRules);
  assert.equal(linked.plan(after,{type:'removeVariable',property:'color',width:768}).ok,false);
 });
+
+test('percentage tracking bindings preserve percentage metadata and author relative em values',()=>{
+ const library=fixture(),spec={id:id(5),unit:'%'};
+ assert.equal(bindings.resolve(library,'letter-spacing',spec).value,'0.24em');
+ assert.equal(bindings.resolve(library,'padding',spec).value,'24%');
+ assert.equal(bindings.resolve(library,'line-height',spec).value,'24%');
+ let source=apply(original,'letter-spacing',spec,768,library).edits[0].after;
+ assert.equal(css.describe(resolve(source)).cssRules[768]['letter-spacing'],'0.24em');
+ assert.equal(linked.describe(resolve(source)).variableLinks[768]['letter-spacing'].unit,'%');
+ library.variables[1].values[id(2)]=-12.5;
+ const updated=linked.planFile('/tmp/index.html','index.html',source,library);assert.equal(updated.ok,true,updated.reason);source=updated.edits[0].after;
+ assert.equal(css.describe(resolve(source)).cssRules[768]['letter-spacing'],'-0.125em');
+ const detached=linked.plan(resolve(source),{type:'detachVariable',property:'letter-spacing',width:768});assert.equal(detached.ok,true,detached.reason);assert.equal(css.describe(resolve(detached.edits[0].after)).cssRules[768]['letter-spacing'],'-0.125em');
+});

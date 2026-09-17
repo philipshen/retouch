@@ -24916,3 +24916,17 @@ Gatekeeper assessment still rejects the candidate as Unnotarized Developer ID.
 No native launch, notarization, upgrade, Intel execution or public publishing was
 performed. The existing notary-profile question remains pending. No push occurred;
 full Figma parity and trusted desktop distribution remain active requirements.
+
+## Percentage letter-spacing variables (2026-09-17)
+
+Percentage tracking fields now expose the variable picker. A number such as 12
+is displayed as 12% and authored as `0.12em`, retaining `%` in the binding
+metadata so library updates preserve its meaning. Other properties keep their
+existing unit semantics. Shared browser/server conversion validates the authored
+CSS without allowing invalid percentage letter-spacing declarations.
+
+Validation: 1,926 unit tests passed, including negative tracking, library refresh,
+and detach. The Vue Chromium and WebKit variable flows cover direct percentage
+field application, tablet/desktop versus phone isolation, scaling after a font
+size change, exact source Undo, and retained document/application state. The
+previous signed desktop archive predates this change and has not been rebuilt.

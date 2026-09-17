@@ -14,8 +14,8 @@ function resolve(library,property,binding){
  const spec=specification(binding),result=model.resolver(library,spec.modes).resolve(spec.id);let value;
  if(result.type==='color'&&colors.includes(property)&&spec.unit===undefined)value=result.value;
  else if(result.type==='number'){
-  if(lengths.includes(property)&&spec.unit!=='')value=result.value+(spec.unit??'px');
-  else if(property==='line-height')value=String(result.value)+(spec.unit||'');
+  if(lengths.includes(property)&&spec.unit!=='')value=V.variableNumberValue(property,result.value,spec.unit??'px');
+  else if(property==='line-height')value=V.variableNumberValue(property,result.value,spec.unit||'');
   else if(['opacity','font-weight','flex-grow','flex-shrink'].includes(property)&&!spec.unit)value=String(result.value);
  }else if(result.type==='boolean'&&property==='visibility'&&spec.unit===undefined)value=result.value?'visible':'hidden';
  else if(result.type==='string'&&property==='font-family'&&spec.unit===undefined)value=result.value;

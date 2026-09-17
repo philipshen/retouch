@@ -260,7 +260,7 @@
     const control=button((action==='move'?'Move':'Resize')+' on canvas',()=>start(control));control.dataset.canvasTool=action;control.retouchCanvasStart=initial=>start(control,initial);return control;
   }
   function numericPreview(input,el,property,format=value=>value+'px',render=null){
-    const percent=input.getAttribute('aria-label')?.includes('(%)');if(property!=='letter-spacing'||!percent)input.dataset.variableProperty=property;if(['font-size','line-height','letter-spacing'].includes(property))input.dataset.variableUnit=percent?'%':'px';input.retouchPreviewTarget=el;
+    const percent=input.getAttribute('aria-label')?.includes('(%)')||Number.isFinite(input.retouchSpacingPercent);input.dataset.variableProperty=property;if(['font-size','line-height','letter-spacing'].includes(property))input.dataset.variableUnit=percent?'%':'px';input.retouchPreviewTarget=el;
     input.retouchNumericPreview=()=>{
       const preview=root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true});
       return {current:()=>el.isConnected&&preview.current(),update:value=>{preview.update(format(value));render?.(value);},restore:()=>{preview.restore();render?.(null);}};
@@ -336,7 +336,7 @@
   }
   function relativeNumber(parent,label,value,min,max,onChange) {
     const row=document.createElement('div');row.className='relative-field';parent.append(row);
-    const input=number(row,label,value,min,max,()=>{}),initial=input.value;
+    const input=number(row,label,value,min,max,()=>{}),initial=input.value;if(/^(Shared )?(Line height|Letter spacing) \(%\)$/.test(label)){input.dataset.variableProperty=label.includes('Letter spacing')?'letter-spacing':'line-height';input.dataset.variableUnit='%';}
     const normalize=root.RetouchNumericExpression.calculation(input,{unit:'%'});
     let submitted=null;
     const commit=()=>{
