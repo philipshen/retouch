@@ -4316,7 +4316,7 @@ function chooseComponentParent(info){
 function chooseLayerParent(info){
   const selected=matchingEls(info.id)[0];if(!selected)return;
   const sources=sel.multiple?sel.multiple.map(info=>matchingEls(info.id)[0]).filter(Boolean):[selected];
-  const candidates=[...doc().querySelectorAll('[data-rt]')].filter(el=>RetouchLayers.canNestMany(sources,el));
+  const candidates=[...doc().querySelectorAll('[data-rt]')].filter(el=>RetouchLayers.canNestMany(sources,el)&&(!Array.isArray(info.structure?.reparentContainers)||info.structure.reparentContainers.includes(el.getAttribute('data-rt'))));
   if(!candidates.length)return toast('No other content container is available on this page.','err');
   const modal=document.createElement('dialog'),heading=document.createElement('h3');heading.textContent=sources.length>1?'Move layers into':'Move layer into';modal.className='layer-move-dialog';modal.append(heading);
   const picker=document.createElement('select');picker.setAttribute('aria-label','Destination container');
@@ -4331,7 +4331,7 @@ async function moveLayerInto(info,destinationId,position='inside'){
     const result=await api('POST','/rt/__api/op',{type:'reparentElement',id:info.id,fileHash:info.hash,destinationId,position});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not move layer','err');
     editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter:[result.movedId],sourceIdMap:result.sourceIdMap,undoId:result.undoId});
-    if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);if(/\.[jt]sx$/i.test(info.file)){const parent=await api('GET',resolveUrl(result.parentId));if(!parent?.ok)throw Error('The moved parent could not be resolved.');await refreshWrittenElement(parent.element,()=>true);}else await reloadFrame();
+    if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);if(info.renderRevisionAttribute||/\.[jt]sx$/i.test(info.file)){const parent=await api('GET',resolveUrl(result.parentId));if(!parent?.ok)throw Error('The moved parent could not be resolved.');await refreshWrittenElement(parent.element,()=>true);}else await reloadFrame();
     const fresh=await api('GET',resolveUrl(result.movedId));if(fresh?.ok){sel={hostId:result.movedId,instanceId:null,scope:'host',info:fresh.element};renderPanel();}
     toast('Layer moved','ok');
   }finally{busyPanel(false);}

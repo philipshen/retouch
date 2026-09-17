@@ -116,4 +116,4 @@ function edit(resolved, op, adapter, { parsed, items, index, parentId }) {
   return { ok: true, structural: true, hash: adapter.contentHash(after), parentId, sourceIdMap,
     ...(deleting ? { removedSourceIds } : { createdId: created[0].id }), edits: [{ file: resolved.file, before: resolved.source, after }] };
 }
-module.exports = { describe, plan, types };
+module.exports = { describe, plan, types, siblings };

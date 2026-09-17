@@ -41,7 +41,7 @@ function create(options = {}) {
       id: element.id, kind: 'host', tag: element.tag, file: resolved.relPath, hash: resolved.hash,
       renderRevisionAttribute: 'data-rt-revision',
       linkedStyleAuthoring: false, selectionStructureAuthoring: false,
-      structure: { ...require('../vue-structure.cjs').describe(resolved, adapter), ...require('../vue-insert.cjs').describe(resolved) },
+      structure: { ...require('../vue-structure.cjs').describe(resolved, adapter), ...require('../vue-insert.cjs').describe(resolved), ...require('../vue-reparent.cjs').describe(resolved, adapter) },
       className: attr(element, 'class')?.value || '', classNameDynamic: true,
       classNameReason: 'Use the responsive CSS properties for Vue styles.',
       text: range ? element.node.children.map(child => child.content).join('') : null,
@@ -60,6 +60,7 @@ function create(options = {}) {
     if (op.type === 'setCSS') return require('../vue-css.cjs').plan(resolved, op, adapter);
     if (op.type === 'setCSSSelection') return require('../vue-css.cjs').planSelection(resolved, op, adapter);
     if (op.type === 'insertElement') return require('../vue-insert.cjs').plan(resolved, op, adapter);
+    if (op.type === 'reparentElement') return require('../vue-reparent.cjs').plan(resolved, op, adapter);
     if (require('../vue-structure.cjs').types.includes(op.type)) return require('../vue-structure.cjs').plan(resolved, op, adapter);
     const element = resolved.element, info = describe(resolved), out = new MagicString(resolved.source);
     function setAttribute(name, value) {
@@ -105,7 +106,7 @@ function create(options = {}) {
       return source.stamp(text, file, root, compilerOptions(), { revision: source.contentHash(text), transformDocument: out => require('../vue-css.cjs').warmInto(out, text, relative, options.styleModule?.(relative)) });
     }, contentHash: source.contentHash,
     assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets', imageOnly: true },
-    capabilities: { classAttr: 'class', ops: ['setText', 'setTag', 'setSrc', 'renameElement', 'setCSS', 'setCSSSelection', 'insertElement', ...require('../vue-structure.cjs').types] },
+    capabilities: { classAttr: 'class', ops: ['setText', 'setTag', 'setSrc', 'renameElement', 'setCSS', 'setCSSSelection', 'insertElement', 'reparentElement', ...require('../vue-structure.cjs').types] },
     applyOp: (resolved, op) => require('../transactions.cjs').applyPlan(resolved.appRoot || path.dirname(resolved.file), planOp(resolved, op)),
   };
   return adapter;

@@ -131,7 +131,9 @@ deleting a subtree removes its owned styles. Exact undo restores source bytes.
 Structural edits across control-flow, component-sibling, comment or mixed-text
 boundaries remain unavailable. Copies containing IDs, refs, keys or unknown bound
 attributes need separate identity handling; multi-selection structural actions
-and reparenting remain incomplete. Containers using v-html or v-text cannot receive
+remain incomplete. Move into and layer-tree drag/drop support native containers
+in the same SFC and the same loop, slot and v-pre scope. The destination picker
+filters out incompatible source containers; crossing these scopes remains unsupported. Containers using v-html or v-text cannot receive
 new children.
 Retouch stores styles in a dedicated block while preserving authored script/style
 blocks and template expressions. During development, a stable CSS module lets Vite
@@ -147,7 +149,8 @@ exact undo, compiler-normalized whitespace, retained preview documents and live
 Vue state, base paths, immediate image uploads, responsive padding and typography,
 same-SFC selection styling, comparison screens, sibling ordering and lock remapping,
 duplicate/delete/copy/paste with independent styles and exact history, keyboard
-shortcuts with input-field guards, text/frame insertion, canvas text placement and
+shortcuts with input-field guards, moving between containers through the picker
+and tree drag/drop, text/frame insertion, canvas text placement and
 dragged text boxes with immediate typing and undo, and production style retention with transient
 instrumentation excluded. Tested with Vite 8.3.0, Vue 3.5.42 and
 `@vitejs/plugin-vue` 6.0.9 in Chromium and WebKit. This does not establish compatibility with every Vue setup.

@@ -24098,3 +24098,41 @@ Multi-selection structure, reparenting, richer template/control-flow support,
 linked libraries and other previously documented Vue limits remain unfinished.
 No native package, notarization or Homebrew release was performed by this source
 checkpoint; full Figma and arbitrary-site parity remain unproven.
+
+
+### Vue moves between native containers
+
+Vue now supports Move into and native layer-tree drag/drop between compatible
+containers in one SFC. The destination picker uses source-proven container IDs.
+The planner supports inside/before/after placement, expands self-closing
+destinations, preserves the moved subtree and its responsive style owners, and
+remaps every affected source ID for selection and layer-lock history. Moves are
+atomic and snapshot undo/redo restores exact source bytes. The preview now waits
+for the compiled parent revision instead of unconditionally reloading after Vue
+reparenting.
+
+Loop and slot bindings retain their lexical scope. The planner also retains
+component ancestry and v-pre interpretation boundaries; Vue omits v-pre from its
+AST, so the opening token is checked with quoted values excluded. Moving within
+the same loop or v-pre region is supported. Crossing those boundaries, generated
+content destinations, cycles, stale source, incompatible sibling regions and
+moves without a mapped common ancestor are refused. Multi-selection structure
+and cross-scope moves remain unfinished parity work.
+
+Validation: all 1,870 unit tests passed. New source tests cover moving forward
+and backward through the file, inside/before/after placement, empty-container
+expansion, responsive style ownership, source ID remapping, exact history and
+scope/cycle/staleness refusals. Chromium and WebKit passed the destination picker
+and real tree drag/drop, styles and locks following source IDs, exact undo/redo,
+retained documents and independent Vue counters. The combined runs also passed
+responsive CSS/comparison previews, ordering, duplicate/copy/paste/delete,
+text/frame insertion, canvas text boxes and production style retention.
+
+The initial drag fixture attempted the gesture while the expanded actions area
+was changing the tree scroll position. It now selects the source in the visible
+tree before dragging; no synthetic drag events or direct API writes substitute
+for the browser gesture. Broader scrolling/autoscroll combinations were not
+established by this fixture.
+
+This checkpoint does not rebuild or publish the macOS app, notarize an artifact,
+verify a Homebrew installation, or establish full Figma/arbitrary-site parity.
