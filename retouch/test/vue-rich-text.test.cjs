@@ -19,7 +19,7 @@ test('Vue rich text supports line breaks, links and custom delimiter literals wi
  assert.equal(result.ok,true,result.reason);assert.match(result.edits[0].after,/&#91;&#91;literal\]\]/);assert.equal(a.describe(resolve(result.edits[0].after,a)).canSetChildren,true);
 });
 test('Vue rich text refuses directives, component boundaries and browser repairs',()=>{
- for(const content of ['<span :class="kind">Text</span>','<Widget/>','<span v-if="show">Text</span>','<span v-pre>{{ x }}</span>','<span ref="label">Text</span>','<div>Invalid paragraph child</div>']){
+ for(const content of ['<span :innerHTML="content">Text</span>','<Widget/>','<span v-if="show">Text</span>','<span v-pre>{{ x }}</span>','<span ref="label">Text</span>','<div>Invalid paragraph child</div>']){
   const r=resolve('<template><main><p>'+content+'</p></main></template>');assert.equal(adapter.describe(r).canSetChildren,false,content);
   assert.equal(adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'text',value:'Lost'}]}).refused,true,content);
  }
@@ -111,4 +111,20 @@ test('Vue live text rejects forged placeholders and implicit duplicate expressio
  for(const children of [[{t:'keep',id:span.id},{t:'keep',id:token.id}],[{t:'text',value:marker},{t:'keep',id:span.id}]])assert.equal(adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children}).refused,true);
  const result=adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'keep',id:span.id,children:[{t:'text',value:'Before'}]},{t:'copy',id:span.id,children:[{t:'keep',id:token.id}]}]});
  assert.equal(result.ok,true,result.reason);assert.match(result.edits[0].after,/<span title="Run">Before<\/span><span title="Run">{{ count }}<\/span>/);
+});
+
+test('Vue rich-text formatting preserves native presentation bindings and event handlers byte for byte',t=>{
+ const opening='<span :class="kind" v-bind:style="appearance" :aria-label="label" @click.stop="count++" v-on:mouseenter="hover = true" @[eventName]="handler" v-on="handlers">',text='<template><main><p>Hello '+opening+'world {{ count }}</span>!</p><div>Outside</div></main></template>';
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-vue-bound-run-')),file=path.join(root,'App.vue');t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(file,text);
+ const r={...resolve(text),file},info=adapter.describe(r);assert.equal(info.canSetChildren,true);const span=info.richText.children[1],token=span.children[0].parts.find(part=>part.t==='token'),history=new SourceHistory();
+ const result=history.commit(root,adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'text',value:'Hello '},{t:'keep',id:span.id,children:[{t:'wrap',tag:'strong',children:[{t:'text',value:'people'}]},{t:'text',value:' '},{t:'keep',id:token.id}]},{t:'text',value:'!'}]}));
+ assert.equal(result.ok,true,result.reason);const after=fs.readFileSync(file,'utf8');assert.ok(after.includes(opening+'<strong>people</strong> {{ count }}</span>'));assert.equal(adapter.describe(resolve(after)).canSetChildren,true);
+ assert.equal(history.apply(root,'undo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),text);assert.equal(history.apply(root,'redo',result.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),after);
+ const copy=adapter.planOp(r,{type:'setChildren',fileHash:r.hash,children:[{t:'copy',id:span.id,children:[{t:'keep',id:token.id}]}]});assert.equal(copy.refused,true,'splits must not drop or duplicate the bound run behavior');
+});
+
+test('Vue rich text keeps structural, marker, URL and content-changing bindings guarded',()=>{
+ for(const attribute of ['v-if="show"','v-for="item in items"','v-html="content"','v-text="content"',':innerHTML="content"',':textContent="content"','v-bind="props"',':[name]="value"',':data-rt="id"',':data-rt-style="id"',':href="url"','v-model="value"','v-custom="value"']){
+  const r=resolve('<template><main><p>Before <span '+attribute+'>Text</span> after</p></main></template>');assert.equal(adapter.describe(r).canSetChildren,false,attribute);
+ }
 });

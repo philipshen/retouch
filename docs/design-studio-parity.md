@@ -24442,3 +24442,33 @@ Evidence: `/tmp/retouch-vue-live-text-all-units.log`,
 `/tmp/retouch-vue-live-text-combined-chromium.log`, and
 `/tmp/retouch-vue-live-text-combined-webkit.log`. No native artifact or public
 release was produced here. Full Figma parity remains incomplete.
+
+## Vue bound rich-text runs (2026-09-17)
+
+Rich-text formatting now preserves native Vue presentation bindings for class,
+style, title, language/direction and ARIA attributes, plus event handlers in
+shorthand, longhand, dynamic-event-name and event-object forms. Vue's compiler
+validates the directive structure; its original attribute bytes participate in
+the independent HTML shape check and remain untouched during source rewriting.
+Literal formatting and protected live-value editing can coexist within a bound
+run.
+
+Structural directives, content-replacing bindings, ambiguous property spreads or
+dynamic property names, source-marker bindings and bound URLs retain their prior
+guards. Splitting a bound run still refuses rather than dropping or duplicating
+its behavior; independent directive-aware split semantics remain unfinished.
+
+Source tests cover exact directive preservation, live expressions within bound
+runs, exact undo/redo and the remaining binding guards. The browser fixture uses
+a dynamic click-event name and a handler object, verifying that formatting leaves
+click behavior, reactive classes and computed colors working through undo/redo.
+
+Validation: all 1,897 unit tests and the combined Chromium/WebKit Vue runs passed.
+The browser checks include exact directive bytes, formatting inside bound runs,
+working dynamic event names, reactive class/color changes, exact undo/redo,
+retained main/live documents and counters, the existing editor workflows, and
+production style retention/instrumentation exclusion. Evidence:
+`/tmp/retouch-vue-bound-text-all-units.log`,
+`/tmp/retouch-vue-bound-text-combined-chromium.log`, and
+`/tmp/retouch-vue-bound-text-combined-webkit.log`. Full Figma parity, remaining
+framework capabilities and desktop distribution are still unfinished.

@@ -14,6 +14,23 @@ function groups(nodes) {
   }
   return result;
 }
+function attributes(node) {
+  return node.props.map(prop=>{
+    if(prop.type===NodeTypes.ATTRIBUTE){
+      if(['ref','key'].includes(prop.name.toLowerCase()))throw Error('This text has a source identity that needs separate preservation.');
+      return [prop.name,prop.value?.content||''];
+    }
+    const argument=prop.arg?.isStatic?prop.arg.content.toLowerCase():null;
+    const binding=prop.name==='bind'&&argument&&(['class','style','title','lang','dir'].includes(argument)||/^aria-[a-z-]+$/.test(argument));
+    const event=prop.name==='on';
+    if(!binding&&!event)throw Error('This text contains Vue logic that needs separate preservation.');
+    // Validate with Vue, then retain the original directive attribute spelling
+    // for the independent HTML shape check. Never emit a reconstructed binding.
+    const parsed=parseFragment('<span '+prop.loc.source+'></span>').childNodes[0]?.attrs;
+    if(parsed?.length!==1)throw Error('The Vue binding has ambiguous source attributes.');
+    return [parsed[0].name,parsed[0].value];
+  }).sort();
+}
 function context(resolved, adapter) {
   const element = resolved.element;
   if (element.node.ns !== 0 || !tags.has(element.tag) || element.node.isSelfClosing || element.node.props.some(prop => prop.type === NodeTypes.DIRECTIVE && ['html','text'].includes(prop.name))) throw Error('Choose a native text container.');
@@ -37,11 +54,11 @@ function context(resolved, adapter) {
         return {text:first<0?group.nodes.map(node=>node.content).join(''):group.nodes.slice(0,first).map(node=>node.content).join('')+expression(group.nodes[first],group.nodes[last])+group.nodes.slice(last+1).map(node=>node.content).join('')};
       }
       const node=group.nodes[0];
-      if (node.type !== NodeTypes.ELEMENT || node.tagType !== ElementTypes.ELEMENT || node.ns !== 0 || ['script','style','template','iframe'].includes(node.tag) || node.props.some(prop => prop.type !== NodeTypes.ATTRIBUTE || ['ref','key'].includes(prop.name.toLowerCase()))) throw Error('This text contains Vue logic that needs separate preservation.');
+      if (node.type !== NodeTypes.ELEMENT || node.tagType !== ElementTypes.ELEMENT || node.ns !== 0 || ['script','style','template','iframe'].includes(node.tag)) throw Error('This text contains Vue logic that needs separate preservation.');
       // v-pre disappears from Vue's AST; its removal would change interpretation.
       const token = node.loc.source.match(/^<(?:[^"'<>]|"[^"]*"|'[^']*')*>/)?.[0] || '';
       if (/\sv-pre(?:[\s=>]|$)/.test(token.replace(/"[^"]*"|'[^']*'/g,''))) throw Error('This text changes Vue template interpretation.');
-      return { tag: node.tag, attrs: node.props.map(prop => [prop.name, prop.value?.content || '']).sort(), children: vue(node.children) };
+      return { tag: node.tag, attrs: attributes(node), children: vue(node.children) };
     });
   }
   function html(nodes) {
