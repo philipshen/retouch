@@ -10,8 +10,8 @@ function sourceInventory(root,renderer){
 function plan(root,operation,renderer='html',family='text',adapter){
  const catalog=family==='color'?require('./color-styles.cjs'):family==='effect'?require('./effect-styles.cjs'):require('./text-styles.cjs');
  try{
-  if(!['html','react','liquid','vue'].includes(renderer)||renderer==='vue'&&family!=='text')throw Error('Unsupported text style renderer.');
-  const linked=renderer==='vue'?require('./vue-text-styles.cjs').create(adapter):require(family==='effect'?(renderer==='react'?'./jsx-effect-styles.cjs':renderer==='liquid'?'./liquid-effect-styles.cjs':'./html-effect-styles.cjs'):family==='color'?(renderer==='react'?'./jsx-color-styles.cjs':renderer==='liquid'?'./liquid-color-styles.cjs':'./html-color-styles.cjs'):renderer==='react'?'./jsx-text-styles.cjs':renderer==='liquid'?'./liquid-text-styles.cjs':'./html-text-styles.cjs');
+  if(!['html','react','liquid','vue'].includes(renderer))throw Error('Unsupported text style renderer.');
+  const linked=renderer==='vue'?(family==='text'?require('./vue-text-styles.cjs').create(adapter):require('./vue-linked-styles.cjs').create(family,adapter)):require(family==='effect'?(renderer==='react'?'./jsx-effect-styles.cjs':renderer==='liquid'?'./liquid-effect-styles.cjs':'./html-effect-styles.cjs'):family==='color'?(renderer==='react'?'./jsx-color-styles.cjs':renderer==='liquid'?'./liquid-color-styles.cjs':'./html-color-styles.cjs'):renderer==='react'?'./jsx-text-styles.cjs':renderer==='liquid'?'./liquid-text-styles.cjs':'./html-text-styles.cjs');
   if(operation?.type!=='update')throw Error('Use a text style update operation.');
   const before=catalog.read(root),change=catalog.planChange(root,operation);
   const previous=before.styles.find(style=>style.id===operation.id),next=change.result.styles.find(style=>style.id===operation.id);

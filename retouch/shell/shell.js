@@ -3186,8 +3186,8 @@ function selectionColorOptions(width){
     try{
       const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,...selectionSourceContexts(selection),width:react?0:width,scope:react?width:undefined,property,styleId,libraryRevision,...(type.startsWith('detach')?{}:selectionBackgroundStates(selection,property))});
       if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected colors.');
-      if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
-      sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});else await reloadFrame();renderPanel();toast('Selected colors updated','ok');
+      if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',managedCSS:!!info.cssRendering,id:info.id,selectionIds:ids,undoId:result.undoId});
+      sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});else if(info.cssRendering){await RetouchRenderSync.syncCSS({frame:iframe,entries:result.selection.map(item=>({id:item.id,rules:item.cssRules,texts:item.cssRuleTexts,rendering:item.cssRendering}))});await window.RetouchComparisons?.syncCSS(result.selection);}else await reloadFrame();renderPanel();toast('Selected colors updated','ok');
     }finally{busyPanel(false);}
   }
   const inheritedForSelection=(info,property)=>info.classColorStyles?RetouchResponsive.inheritedLink(Object.fromEntries(Object.entries(info.colorStyleLinks||{}).filter(([,group])=>group[property]).map(([key,group])=>[key,group[property]])),width,matchingEls(info.id)[0]?.ownerDocument):RetouchColorStyles.inheritedLink(info.colorStyleLinks,width,property);
@@ -3204,9 +3204,9 @@ function mountSelectionEffectStyles(){
       const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
       const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,...selectionSourceContexts(selection),scope:styleScope,width,styleId,libraryRevision});
       if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update effect styles in this selection.');
-      if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+      if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',managedCSS:!!info.cssRendering,id:info.id,selectionIds:ids,undoId:result.undoId});
       sel.info=result.element;sel.multiple=result.selection;
-      if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});else await reloadFrame();
+      if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument),{classSource:true});else if(info.cssRendering){await RetouchRenderSync.syncCSS({frame:iframe,entries:result.selection.map(item=>({id:item.id,rules:item.cssRules,texts:item.cssRuleTexts,rendering:item.cssRendering}))});await window.RetouchComparisons?.syncCSS(result.selection);}else await reloadFrame();
       renderPanel();toast('Selected effect styles updated','ok');
     }finally{busyPanel(false);}
   }

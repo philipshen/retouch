@@ -1,5 +1,6 @@
 'use strict';
-const MagicString=require('magic-string'),html=require('./adapters/html.cjs'),css=require('./html-css.cjs'),catalog=require('./effect-styles.cjs');
+const MagicString=require('magic-string'),catalog=require('./effect-styles.cjs');
+function create(html=require('./adapters/html.cjs'),css=require('./html-css.cjs')){
 const attribute='data-rt-effect-styles',visibility=catalog.visibility,owners=Object.fromEntries(Object.entries(visibility).map(([property,key])=>[key,property]));
 const refuse=reason=>({ok:false,refused:true,reason});
 const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
@@ -81,4 +82,6 @@ function planFile(file,relPath,before,style){
   return {ok:true,updated,edits:source===before?[]:[{file,before,after:source}]};
  }catch(error){return refuse(error.message);}
 }
-module.exports={links,describe,plan,planFile};
+return {links,describe,plan,planFile};
+}
+module.exports={...create(),create};

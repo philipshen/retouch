@@ -24635,3 +24635,39 @@ output; it does not claim universal plugin-version compatibility.
 No desktop rebuild, push or release accompanies this source checkpoint. Full
 Figma parity, remaining framework capabilities and trusted desktop distribution
 remain unfinished.
+
+### 2026-09-17 — Vue color and effect libraries
+
+Vue native layers now support reusable color and effect styles alongside text
+styles. The existing light-theme library controls apply colors to text,
+backgrounds, borders and SVG paint properties, and effects to shadow/filter
+stacks. Base and breakpoint links, inheritance, local overrides, reset, detach,
+and same-file selection operations use the managed Vue stylesheet. Project
+updates include unvisited SFCs and the catalog in one source-history transaction.
+Main/live component state and comparison documents survive these updates.
+
+Color/effect semantics are shared with the existing HTML planners through
+explicit adapter/CSS dependencies. The Vue bridge supplies compiler-derived
+attributes and source locations; it never sends an SFC through an HTML parser.
+Native Vue coverage checks reject unindexed metadata owners, computed link
+bindings, stale source and unsupported CSS writes before a transaction commits.
+Hidden-shadow visibility remains part of the shared effect, including wide-gamut
+color data, and a local visibility override survives shared updates until reset.
+
+The browser workflow imports each library through its file control, applies and
+updates styles, checks an unvisited component and catalog/source undo/redo,
+creates and detaches breakpoint links, applies and detaches selections, and
+checks retained counters and document identity. It also exercises local blur
+reset and comparison-preview CSS updates.
+
+Validation: all 1,920 unit tests passed, including the existing HTML, React and
+Liquid style suites and seven new Vue color/effect tests. Combined Chromium and
+WebKit Vue runs passed reusable text/color/effect libraries, responsive CSS,
+structure, rich text, bindings, exact history, retained state and production
+build checks. Evidence: `/tmp/retouch-vue-linked-styles-final-units.log`,
+`/tmp/retouch-vue-linked-styles-complete-chromium.log`, and
+`/tmp/retouch-vue-linked-styles-complete-webkit.log`.
+
+No desktop rebuild, push or release accompanies this source checkpoint. Vue
+variable collections and other framework capabilities remain incomplete; full
+Figma parity and trusted desktop distribution remain unfinished.
