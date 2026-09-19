@@ -26241,3 +26241,24 @@ changes or full unit-suite rerun. Renderer-specific transformed hierarchies,
 changing ancestor transforms during playback, flex/grid constraints, and large
 scenes need further verification. No desktop rebuild or push in this increment;
 full parity and notarized Homebrew distribution remain unfinished.
+
+### Smart Animate with changing rotation pivots
+
+Smart Animate now interpolates the computed transform origin along with rotation,
+scale, and size. Previously, a changing pivot was omitted: endpoint translation
+could align the bounds while the intermediate layer visibly drifted. The new
+browser regression reproduced that failure before the fix.
+
+The transformed-layer suite now checks five progress samples against independently
+rendered reference geometry in both outgoing and incoming documents. Coverage
+includes parents and children simultaneously changing rotation, scale, size and
+position, changing pixel pivots, fixed percentage pivots on resizing layers, and
+both individual transform properties and matrix-computed CSS transforms. Chromium
+and WebKit passed, including exact cancellation cleanup and unsupported-ancestor
+exclusion. The existing HTML important-style Smart Animate/history/Back/concurrent
+app update checks also passed both browsers. Syntax and diff checks passed.
+Computed origin lengths interpolate in pixels; this does not promise preservation
+of an authored percentage expression when that expression itself changes. General
+flex/grid constraints and renderer-specific transformed hierarchy integration
+remain unverified. No full unit rerun, desktop rebuild, or push in this increment.
+Full Figma parity and notarized Homebrew distribution remain unfinished.
