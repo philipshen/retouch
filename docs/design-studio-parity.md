@@ -25169,3 +25169,24 @@ handles now remain above the toolbar. The unchanged geometry/reachability/undo
 assertions pass in Chromium and WebKit. Capture tests in both engines verify
 initial geometry, saved-size precedence, workspace fit, editing and exact undo.
 All 1,935 unit tests passed. The latest desktop archive predates these changes.
+
+
+### Author-CSS responsive capture (2026-09-19)
+
+`retouch capture --responsive` retains document author stylesheets and inline
+CSS. Stylesheet order and separate sheet boundaries are preserved, including
+link media conditions and imports. Cross-origin sheets use the browser's
+loaded responses; imported resources resolve against redirected stylesheet
+URLs and inline resources respect the document base URL. The captured DOM
+state stays fixed, and shadow components/canvases retain computed styling.
+Unavailable author stylesheets cause a clear refusal instead of a partial
+unstyled result. Recovery is bounded to 256 sheets, 2 MiB each and 20 MiB total.
+
+The desktop source adds Keep responsive layout to the website dialog, enabled
+initially. Swift compilation and literal command-argument tests passed; the
+current packaged desktop app predates this option. Chromium and WebKit compare
+original/offline geometry and pseudo content at seven widths (including both
+sides of a breakpoint), with fluid sizes, flex reflow, media attributes,
+redirects/imports, local image dependencies, source edits and exact undo.
+The existing capture regression suites remain passing. Full app behavior,
+responsive shadow components and universal capture fidelity remain unfinished.

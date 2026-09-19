@@ -11,6 +11,7 @@ for raw in ["file:///etc/passwd", "javascript:alert(1)", "https://name:pass@exam
 let address = Studio.captureURL(" https://example.com/page?q=';$HOME&x=1 ")!
 let folder = URL(fileURLWithPath:"/tmp/Website's $HOME; copy")
 let arguments = Studio.captureLaunchArguments(address, folder:folder, width:390, height:844, cli:"/tmp/retouch ' cli")
+precondition(Studio.captureLaunchArguments(address, folder:folder, width:390, height:844, responsive:true).last!.hasSuffix(" --open --responsive"))
 precondition(arguments.count == 3 && arguments[0] == "-l" && arguments[1] == "-c")
 // Replace only the trusted executable prefix, then use the shell to print argv.
 let executable = "exec " + Studio.shellQuote(Studio.bundledLauncher)

@@ -13,7 +13,19 @@ function collect(page){
   }catch{}})();pending.add(task);task.finally(()=>pending.delete(task));
  };
  page.on('response',response);
- return {async resolve(fontFaces,context){
+ async function drain(){let timer;try{await Promise.race([Promise.all([...pending]),new Promise(resolve=>{timer=setTimeout(resolve,5000);})]);}finally{clearTimeout(timer);}}
+ return {async resolveStyles(entries){
+  await drain();const styleSheets=[],warnings=[];
+  let total=0;
+  for(const entry of entries||[]){
+   if(styleSheets.length>=256){warnings.push('Author stylesheets exceed the capture count limit.');break;}
+   const cached=typeof entry.css==='string'?{css:entry.css,url:entry.base}:sheets.get(entry.sheet);
+   if(!cached){warnings.push('An author stylesheet was unavailable in the captured responses.');continue;}
+   const size=Buffer.byteLength(cached.css);if(size>2*1024*1024||total+size>20*1024*1024){warnings.push('Author stylesheets exceed the capture size limit.');continue;}total+=size;
+   styleSheets.push({css:cached.css,media:entry.media,base:cached.url});
+  }
+  return {styleSheets,warnings,stylesheetCache:[...sheets].map(([url,value])=>({...value,requestURL:url}))};
+ },async resolve(fontFaces,context){
   // load has finished by this point; bound draining for failed/streaming CSS.
   let timer;try{await Promise.race([Promise.all([...pending]),new Promise(resolve=>{timer=setTimeout(resolve,5000);})]);}finally{clearTimeout(timer);page.off('response',response);}
   const warnings=new Set(),faces=[];let parser,parsed=0;

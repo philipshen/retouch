@@ -165,8 +165,8 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
               let host = url.host, !host.isEmpty, url.user == nil, url.password == nil else { return nil }
         return url
     }
-    static func captureLaunchArguments(_ url: URL, folder: URL, width: Int, height: Int, cli: String? = nil) -> [String] {
-        ["-l", "-c", "exec " + shellQuote(bundledLauncher) + " " + shellQuote(cli ?? bundledCLI) + " capture " + shellQuote(url.absoluteString) + " --out " + shellQuote(folder.path) + " --width=" + String(width) + " --height=" + String(height) + " --open"]
+    static func captureLaunchArguments(_ url: URL, folder: URL, width: Int, height: Int, responsive: Bool = false, cli: String? = nil) -> [String] {
+        ["-l", "-c", "exec " + shellQuote(bundledLauncher) + " " + shellQuote(cli ?? bundledCLI) + " capture " + shellQuote(url.absoluteString) + " --out " + shellQuote(folder.path) + " --width=" + String(width) + " --height=" + String(height) + " --open" + (responsive ? " --responsive" : "")]
     }
     @objc private func openWebsite() {
         guard projectProcess == nil else { showLogs(); return }
@@ -178,7 +178,9 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         width.setAccessibilityLabel("Capture width"); height.setAccessibilityLabel("Capture height")
         let dimensions = NSStackView(views: [NSTextField(labelWithString: "Width"), width, NSTextField(labelWithString: "Height"), height])
         dimensions.spacing = 8
-        let controls = NSStackView(views: [urlInput, dimensions]); controls.orientation = .vertical; controls.alignment = .leading; controls.spacing = 12
+        let responsive = NSButton(checkboxWithTitle: "Keep responsive layout", target: nil, action: nil); responsive.state = .on
+        responsive.toolTip = "Keep loaded stylesheets and CSS breakpoints. Script-driven layout changes are not included."
+        let controls = NSStackView(views: [urlInput, dimensions, responsive]); controls.orientation = .vertical; controls.alignment = .leading; controls.spacing = 12
         alert.accessoryView = controls; alert.addButton(withTitle: "Choose save location…"); alert.addButton(withTitle: "Cancel")
         alert.window.initialFirstResponder = urlInput
         while alert.runModal() == .alertFirstButtonReturn {
@@ -189,7 +191,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
             picker.message = "Choose a new folder name for your editable website."
             guard picker.runModal() == .OK, let folder = picker.url else { return }
             guard !FileManager.default.fileExists(atPath: folder.path) else { alert.informativeText = "That location already exists. Choose a new folder name to preserve its contents."; continue }
-            startProject(folder: folder.deletingLastPathComponent(), arguments: Self.captureLaunchArguments(url, folder: folder, width: w, height: h), log: "Capturing website into " + folder.path, capturing: true)
+            startProject(folder: folder.deletingLastPathComponent(), arguments: Self.captureLaunchArguments(url, folder: folder, width: w, height: h, responsive: responsive.state == .on), log: "Capturing website into " + folder.path, capturing: true)
             return
         }
     }

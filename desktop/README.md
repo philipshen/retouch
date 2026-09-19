@@ -444,7 +444,9 @@ and logs. You can also start a project externally through
 `retouch -- <your usual command>`. Enter its local `/rt` URL in the app for an externally started project. The app checks the sidecar health endpoint before
 opening the editor. Cmd+L focuses the address and Cmd+R reloads the editor.
 It remembers the last successful URL. **Open website…** now accepts an HTTP(S)
-page, canvas dimensions and a new save location. It captures an editable HTML
+page, canvas dimensions and a new save location. **Keep responsive layout**
+preserves loaded author CSS and its breakpoints; turn it off for a computed-style
+snapshot. Shadow components retain frozen styles in either mode. It captures an editable HTML
 copy and starts its local editor automatically; edits do not update the source
 website. Stop cancels capture or stops the editor while retaining a completed
 copy. Playwright is included in the locked CLI dependencies. The desktop build

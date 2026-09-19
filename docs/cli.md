@@ -228,7 +228,7 @@ through editing, configuration restart, normal process restart and shutdown.
 
 ```sh
 npx playwright@1.59.1 install chromium
-retouch capture https://example.com --out ./captured-page --width=1440 --height=900 --open
+retouch capture https://example.com --out ./captured-page --width=1440 --height=900 --responsive --open
 # To reopen the saved copy later:
 # retouch html ./captured-page
 ```
@@ -246,6 +246,15 @@ uses the captured viewport. The Screen menu includes **Captured size** to return
 to that view; a saved preview choice, including **Fit workspace**, takes
 precedence when reopening the project. Cancelling an unfinished
 capture closes its browser and removes temporary output.
+
+`--responsive` preserves loaded author stylesheets and inline CSS, including
+media queries, fluid dimensions, flex/grid layouts and generated content.
+Stylesheet responses are reused for cross-origin CSS and imports. The captured
+DOM remains fixed: scripts, client-side route changes and conditional rendering
+are not reconstructed. Shadow components and canvases retain captured styling.
+The mode refuses an unavailable author stylesheet; omitting `--responsive`
+uses the computed-style snapshot mode instead. The desktop source exposes this
+choice as **Keep responsive layout** (enabled initially).
 
 This is a rendered page-state import, not recovery of the original application.
 JavaScript-rendered text, computed styling, generated before/after content, form
@@ -282,8 +291,9 @@ Shadow-local IDs and references are remapped to avoid collisions in the copy.
 Adopted stylesheets contribute computed appearance and font definitions. The
 original component scripts and encapsulation are not retained.
 
-Current limitations: layout is captured at one viewport; responsive behavior and
-application logic are not reconstructed. Unavailable font stylesheet responses,
+Current limitations: computed-style mode captures layout at one viewport.
+Author-stylesheet mode preserves CSS responsiveness, but application logic and
+script-driven layout changes are not reconstructed. Unavailable font stylesheet responses,
 runtime-created fonts, unsupported SVG dependencies and declarative closed
 shadow roots are not fully portable. Browser-owned shadow internals are not
 exported. Standard form controls remain editable HTML controls, but native

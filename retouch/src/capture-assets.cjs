@@ -4,11 +4,16 @@ const extensions={'text/css':'.css','image/png':'.png','image/jpeg':'.jpg','imag
 const svgResources=new Set(['image','feImage','use','linearGradient','radialGradient','pattern','textPath','filter','clipPath','mask']);
 const paintAttributes=new Set(['fill','stroke','clip-path','filter','mask','marker-start','marker-mid','marker-end','cursor']);
 async function bounded(promise,milliseconds){let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Asset download timed out.')),milliseconds);})]);}finally{clearTimeout(timer);}}
-async function localize({html,fontFaces=[],baseURL,directory,context,page,signal}){
+async function localize({html,fontFaces=[],styleSheets=[],stylesheetCache=[],baseURL,directory,context,page,signal}){
+ const cachedSheets=new Map(stylesheetCache.map(entry=>[entry.requestURL,entry]));
  const tree=parse5.parse(html),warnings=new Set(),records=new Map(),unresolved=new Set(),deadline=Date.now()+60000;let downloaded=0,savedBytes=0;
  const absolute=(value,base)=>{if(!value||value.startsWith('#')||value.startsWith('data:'))return value;try{return new URL(value,base).href;}catch{return value;}};
  const head=tree.childNodes.find(node=>node.tagName==='html')?.childNodes.find(node=>node.tagName==='head');
- if(fontFaces.length&&head){const css=fontFaces.filter(face=>typeof face.css==='string'&&typeof face.base==='string').map(face=>rewrite(face.css,url=>absolute(url,face.base))).join('\n').replace(/</g,'\\3c ');head.childNodes.push({nodeName:'style',tagName:'style',attrs:[],namespaceURI:'http://www.w3.org/1999/xhtml',parentNode:head,childNodes:[{nodeName:'#text',value:css}]});}
+ if(head)for(const face of [...fontFaces,...styleSheets].filter(face=>typeof face.css==='string'&&typeof face.base==='string')){
+  const css=rewrite(face.css,url=>absolute(url,face.base)).replace(/</g,'\\3c ');
+  head.childNodes.push({nodeName:'style',tagName:'style',attrs:face.media?[{name:'media',value:face.media}]:[],namespaceURI:'http://www.w3.org/1999/xhtml',parentNode:head,childNodes:[{nodeName:'#text',value:css}]});
+ }
+
  async function localizeTree(root,base,insideAsset,ancestors){
   const references=[],urls=new Set(),failures=new Set();
   const track=value=>{const url=absolute(value,base);if(/^(https?:|blob:)/.test(url))urls.add(url);return url;};
@@ -33,7 +38,7 @@ async function localize({html,fontFaces=[],baseURL,directory,context,page,signal
   const record={url,status:'loading'};records.set(url,record);
   try{
    let bytes,type,charset='utf-8',finalURL=url;
-   if(url.startsWith('blob:')){
+   if(cachedSheets.has(url)){const cached=cachedSheets.get(url);bytes=Buffer.from(cached.css);type='text/css';finalURL=cached.url;downloaded+=bytes.length;}else if(url.startsWith('blob:')){
     const loaded=await bounded(page.evaluate(async url=>{const response=await fetch(url,{signal:AbortSignal.timeout(10000)}),blob=await response.blob();if(blob.size>10*1024*1024)throw Error('Asset exceeds 10 MiB.');const bytes=new Uint8Array(await blob.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));return {type:blob.type,data:btoa(binary)};},url),Math.max(1,Math.min(10000,deadline-Date.now())));type=loaded.type;bytes=Buffer.from(loaded.data,'base64');downloaded+=bytes.length;
    }else{
     const cookies=await context.cookies(url),headers={referer:baseURL};if(cookies.length)headers.cookie=cookies.map(cookie=>cookie.name+'='+cookie.value).join('; ');
