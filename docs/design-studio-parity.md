@@ -26262,3 +26262,29 @@ of an authored percentage expression when that expression itself changes. Genera
 flex/grid constraints and renderer-specific transformed hierarchy integration
 remain unverified. No full unit rerun, desktop rebuild, or push in this increment.
 Full Figma parity and notarized Homebrew distribution remain unfinished.
+
+### Smart Animate under flex/grid size constraints
+
+Animated width and height now temporarily pin their corresponding min/max sizes.
+This prevents flex-basis, shrink/grow constraints, and authored min/max rules from
+holding a matched layer at its destination size throughout the transition. The
+browser regression initially reproduced that incorrect starting width on a flex
+item. Overrides use the existing per-property ownership tracking and restore the
+original inline values/priorities on completion or cancellation. If the app edits
+width/height or either constraint, the entire dimension group is released and
+still-owned constraints are restored immediately, preserving the app's edit.
+
+The new layout suite passed Chromium and WebKit with horizontal/vertical flex,
+grid max-size constraints, fixed min/max constraints, and content-box/border-box
+padding and borders. It samples both documents at five progress points, checks
+sibling positions, tests concurrent width/height/min/max edits, and verifies helper
+cleanup and restored styles. The transformed-ancestor suite also passed both
+engines. Important-style integration now includes min/max width and height;
+Smart Animate authoring/history, navigation, Back, completion and cancellation
+passed for HTML, Liquid, React and Vue in both browsers. Syntax and diff checks
+passed. No source-operation changes or full unit-suite rerun.
+
+This covers interpolating changed used dimensions, not arbitrary nonlinear layout
+reflow. Flex wrapping, intrinsic track changes, unmatched responsive siblings and
+app stylesheet edits during playback still need work. No desktop rebuild or push.
+Full Figma parity and notarized Homebrew distribution remain unfinished.
