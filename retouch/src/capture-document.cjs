@@ -32,7 +32,7 @@ module.exports=function captureDocument({shadowKey}={}){
   if(tag==='img'){const url=absolute(node.currentSrc||node.src);target.setAttribute('src',url);target.removeAttribute('loading');}
   if(tag==='source')return null;
   if(tag==='a'){const raw=node.getAttribute('href')||'',url=raw.startsWith('#')?fragment(node,raw):absolute(raw);if(url&&!url.startsWith('data:')&&!url.startsWith('blob:'))target.setAttribute('href',url);target.setAttribute('rel','noopener noreferrer');}
-  if(node.namespaceURI==='http://www.w3.org/2000/svg'&&node.hasAttribute('href')){const raw=node.getAttribute('href');if(raw.startsWith('#'))target.setAttribute('href',fragment(node,raw));else if(tag==='image'||tag==='use')target.setAttribute('href',absolute(raw));}
+  if(node.namespaceURI==='http://www.w3.org/2000/svg'&&node.hasAttribute('href')){const raw=node.getAttribute('href');if(raw.startsWith('#'))target.setAttribute('href',fragment(node,raw));else if(['image','feImage','use','linearGradient','radialGradient','pattern','textPath','filter','clipPath','mask'].includes(tag))target.setAttribute('href',absolute(raw));}
   if(node.namespaceURI==='http://www.w3.org/2000/svg'&&node.hasAttribute('xlink:href')){const raw=node.getAttribute('xlink:href');target.setAttributeNS('http://www.w3.org/1999/xlink','xlink:href',raw.startsWith('#')?fragment(node,raw):absolute(raw));}
   if(tag==='form')target.setAttribute('method','dialog');
   if(tag==='input'){if(!['password','file','hidden'].includes(node.type))target.setAttribute('value',node.value);if(node.checked)target.setAttribute('checked','');}

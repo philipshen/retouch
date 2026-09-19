@@ -11,3 +11,8 @@ test('capture handles escaped delimiters, data URLs and malformed trailing CSS w
 test('rewritten data URLs cannot terminate an HTML style element',()=>{
  const result=rewrite('url("data:image/svg+xml,\\3c /style>\\3c script>")',url=>url);assert.doesNotMatch(result,/</);assert.match(result,/\\3c /);const urls=[];rewrite(result,url=>{urls.push(url);return url;});assert.equal(urls[0],'data:image/svg+xml,</style><script>');
 });
+
+test('capture rewrites quoted stylesheet imports and preserves conditions and literals',()=>{
+ const seen=[],css=`@import /* comment */ "one.css" layer(theme) screen; @IMPORT 'two.css' supports(display:grid); @import url(three.css); a{content:'@import "fake.css"';} /* @import "no.css" */`;
+ const result=rewrite(css,url=>{seen.push(url);return './'+url;});assert.deepEqual(seen,['one.css','two.css','three.css']);assert.ok(result.includes('"./one.css" layer(theme) screen'));assert.ok(result.includes('"./two.css" supports(display:grid)'));assert.ok(result.includes(`content:'@import "fake.css"'`));
+});

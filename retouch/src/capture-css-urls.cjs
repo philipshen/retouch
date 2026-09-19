@@ -6,6 +6,10 @@ function rewrite(text,replace){
  const quoted=position=>{const quote=text[position++];while(position<text.length){if(text[position]==='\\'){position+=2;continue;}if(text[position++]===quote)return position;}return position;};
  while(index<text.length){
   if(text.startsWith('/*',index)){const end=text.indexOf('*/',index+2);index=end<0?text.length:end+2;continue;}
+  if(text.slice(index,index+7).toLowerCase()==='@import'&&!/[\w-]/.test(text[index+7]||'')){
+   let cursor=index+7;while(cursor<text.length){if(/\s/.test(text[cursor])){cursor++;continue;}if(text.startsWith('/*',cursor)){const end=text.indexOf('*/',cursor+2);if(end<0)break;cursor=end+2;continue;}break;}
+   if(text[cursor]==='"'||text[cursor]==="'"){const end=quoted(cursor);if(text[end-1]===text[cursor]){result+=text.slice(start,cursor)+quote(replace(decode(text.slice(cursor+1,end-1))));start=index=end;continue;}}
+  }
   if(text[index]==='"'||text[index]==="'"){index=quoted(index);continue;}
   if(!/[\w-]/.test(text[index-1]||'')&&text.slice(index,index+4).toLowerCase()==='url('){
    const begin=index;let cursor=index+4;while(/\s/.test(text[cursor]||'')&&cursor<text.length)cursor++;

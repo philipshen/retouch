@@ -255,6 +255,15 @@ content shares a file. Downloads are limited to 256 assets, 10 MiB per asset,
 100 MiB total and one minute. Missing, oversized or unsupported resources remain
 remote and are reported in `capture.json` and the command output.
 
+External SVG fragment IDs are preserved while sharing one saved resource.
+Nested image, paint and stylesheet dependencies are resolved against the final
+URL after redirects and embedded in saved assets, avoiding relative-path
+ambiguity when an SVG is reused through `<use>`. Quoted CSS imports are included.
+Dependency traversal is bounded to 16 ancestor URLs; cycles and unavailable
+resources are listed in `unresolvedReferences` and per-asset dependency reports.
+Browser restrictions on nested external `<use>` and SVG image documents still
+apply; this does not guarantee arbitrary SVG pixel parity.
+
 Font definitions also come from cross-origin stylesheet responses loaded by the
 capture browser. Redirects, nested imports and active media/supports conditions
 are preserved without refetching a potentially different stylesheet. Recovery
@@ -269,7 +278,7 @@ original component scripts and encapsulation are not retained.
 
 Current limitations: layout is captured at one viewport; responsive behavior and
 application logic are not reconstructed. Unavailable font stylesheet responses,
-runtime-created fonts, nested external SVG resources and declarative closed
+runtime-created fonts, unsupported SVG dependencies and declarative closed
 shadow roots are not fully portable. Browser-owned shadow internals are not
 exported. Standard form controls remain editable HTML controls, but native
 appearance can differ after computed styles are serialized.
