@@ -25840,3 +25840,25 @@ multiple actions in one interaction or all Figma state-management controls. It
 brings the inspector structure closer to the reference without establishing
 pixel-identical or full Figma parity. No desktop artifact was rebuilt;
 notarized Homebrew distribution and the broader any-site goal remain incomplete.
+
+### Movable interaction details (2026-09-20)
+
+The floating interaction editor can now be dragged by the unused area of its
+header. Its header also accepts keyboard focus: arrow keys move one pixel,
+Shift+arrow moves ten pixels, and Home restores the default anchored position.
+Escape cancels an active drag or held-key move without closing the editor;
+Escape outside a movement still closes it. Trigger and Close controls keep their
+normal behavior. Pointer cancellation restores the position before the drag.
+
+Custom placement survives source saves and undo while the interaction remains
+open. It stays inside the viewport, below the toolbars and above the bottom dock,
+including when a desktop window becomes narrow. Placement is temporary editor
+state and does not change source or add history entries. It is not persisted
+across reloads or selection changes.
+
+The expanded details suite passed HTML, Liquid, compiled React and compiled Vue
+fixtures in Chromium and WebKit, covering drag, keyboard movement, cancellation,
+reset, save/undo retention, edge clamping, responsive bounds and existing editor
+lifecycle behavior. The narrow viewport screenshot was inspected. This closes
+the draggable-details gap listed above; visual connection graphs and the broader
+Figma parity and notarized desktop distribution work remain incomplete.

@@ -1397,3 +1397,7 @@ html, body { overflow:clip; }
 #prototypePanel .prototype-add{padding:0;width:24px;height:24px;border:0;background:transparent;font-size:20px;font-weight:400;color:var(--ink)}
 #prototypePanel .prototype-add:hover{background:var(--hover)}
 .prototype-details>header>select{width:auto;max-width:calc(100% - 32px);border:0;background:transparent;color:var(--ink);font:600 11px Inter,system-ui,sans-serif;padding:4px 16px 4px 0}
+.prototype-details>header{cursor:grab;touch-action:none;user-select:none}
+.prototype-details>header.dragging{cursor:grabbing}
+.prototype-details>header:focus-visible{outline:2px solid var(--accent,#0d99ff);outline-offset:-2px}
+.prototype-details>header>select,.prototype-details>header>button{cursor:default;touch-action:auto}
