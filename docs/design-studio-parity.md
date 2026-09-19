@@ -25347,3 +25347,39 @@ The new browser suite checks 138 selectors against their pre-wrap matches, both
 single and multiple wrappers, two viewport sizes, hover/focus states, original
 cascade ordering, layers and flex geometry. Chromium and WebKit passed. All
 1,959 unit tests passed. No desktop artifact was rebuilt or branch pushed.
+
+### Picture CSS transactions and retained previews (2026-09-19)
+
+Creating a generated HTML picture now adapts supported parent/sibling-dependent
+CSS in the same source transaction as the markup. The planner discovers head and
+body inline CSS, local linked sheets and recursive imports, respecting the
+first document base URL, escaped import URLs, query strings and fragments.
+Cycles are deduplicated; ordinary asset URLs are left untouched. Simple rules
+that cannot match generated nodes keep their original bytes. Every stylesheet
+read is checked for staleness before any write, including unchanged dependencies.
+Undo/redo restores exact HTML and CSS snapshots together.
+
+Inline styles refresh through verified ownership snapshots; linked stylesheets
+and inline imports reload without replacing preview documents. The baseline
+parser uses an inert document so import rules survive CSSOM comparison. Head and
+body ownership records share state with class editing. Disabled linked sheets
+retain their disabled state. Comparison refresh/retry and editor history carry
+the stylesheet-refresh requirements. Source identity is revalidated after inline
+CSS rewriting.
+
+The full UI browser suite passed in Chromium and WebKit with direct-child and
+sibling rules, head/body inline styles, linked/inline imports, media conditions,
+disabled styles, comparison geometry, retained documents/form values and exact
+multi-file history. Existing picture-source and Liquid class-scope reset suites
+also passed in both engines. The 138-selector differential suite passed in both
+engines, and all 1,968 unit tests passed. The Chromium UI screenshot was inspected.
+
+This does not establish arbitrary-site CSS equivalence. Remote, integrity-bound,
+non-UTF-8, symlinked/out-of-project and unsupported selector styles refuse before
+source mutation. Limits are 256 linked sheets, 2 MiB per sheet and 20 MiB total
+input/output. Runtime-owned or ambiguous inline styles can still require a
+preview reload after a successful source write. Manual last-source removal leaves
+inert compatibility selectors in place; undo of picture creation restores the
+original CSS. Full selector coverage, automatic compatibility-rule cleanup,
+cross-adapter source authoring and native notarized distribution remain open.
+No desktop artifact was rebuilt or branch pushed.

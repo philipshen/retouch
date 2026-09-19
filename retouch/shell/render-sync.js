@@ -42,12 +42,13 @@
   }
   function scriptSignature(node) { return Array.from(node.querySelectorAll('script'), el => el.outerHTML).join('\n'); }
   async function revalidateStyles(d, revision) {
-    for (const link of d.querySelectorAll('link[rel="stylesheet"]')) {
+    for (const link of [...d.querySelectorAll('link[rel]')].filter(link=>link.rel.toLowerCase().split(/\s+/).includes('stylesheet'))) {
       const url = new URL(link.href, d.location.href);
       if (url.origin !== d.location.origin) continue;
       url.searchParams.set('__rt_revision', revision);
+      if(link.disabled){link.href=url.href;continue;}
       await new Promise((resolve, reject) => {
-        const next = link.cloneNode();
+        const next = link.cloneNode();next.disabled=link.disabled;
         const timer = setTimeout(() => { next.remove(); reject(new Error('Stylesheet refresh timed out')); }, 8000);
         next.onload = () => { clearTimeout(timer); link.remove(); resolve(); };
         next.onerror = () => { clearTimeout(timer); next.remove(); reject(new Error('Stylesheet refresh failed')); };
@@ -55,7 +56,7 @@
       });
     }
   }
-  async function sync({ frame, serverRendered = false, select, matches = () => true, current = () => true, revalidate = false, timeout = 8000, fetcher = root.fetch.bind(root) }) {
+  async function sync({ frame, serverRendered = false, select, matches = () => true, current = () => true, revalidate = false, authorStyles = false, timeout = 8000, fetcher = root.fetch.bind(root) }) {
     const d = frame.contentDocument, href = frame.contentWindow.location.href, started = Date.now();
     const unchanged = () => current() && frame.contentDocument === d && frame.contentWindow.location.href === href;
     while (Date.now() - started < timeout) {
@@ -76,10 +77,13 @@
           const fresh = new root.DOMParser().parseFromString(html, 'text/html');
           const source = select(fresh), live = select(d);
           if (source.length && source.length === live.length && source.every(matches)) {
+            const stylePlans=authorStyles?await inlineStylePlans(d,fresh,true):[];
             if (!unchanged()) throw new Error('Preview navigated while synchronizing the saved edit');
             if (source.some((node, i) => scriptSignature(node) !== scriptSignature(live[i]))) throw new Error('Saved source changes scripts; live preview cannot safely reconcile this edit');
             source.forEach((node, i) => reconcile(live[i], node));
+            await applyInlineStyles(stylePlans);
             if (revalidate) await revalidateStyles(d, Date.now().toString(36));
+            if (!unchanged()) throw new Error('Preview navigated while synchronizing the saved edit');
             d.dispatchEvent(new frame.contentWindow.CustomEvent('retouch:render', { detail: { source: 'server' } }));
             return { ok: true, method: 'server' };
           }
@@ -133,21 +137,33 @@
   const inlineStyles=new WeakMap();
   const styleAttributes=node=>JSON.stringify([...node.attributes].filter(attr=>attr.name!=='nonce').map(attr=>[attr.name,attr.value]).sort());
   const styleRules=node=>{try{return JSON.stringify([...node.sheet.cssRules].map(rule=>rule.cssText));}catch{return null;}};
-  function parsedStyleRules(text){try{const sheet=new root.CSSStyleSheet();sheet.replaceSync(text);return JSON.stringify([...sheet.cssRules].map(rule=>rule.cssText));}catch{return null;}}
+  function parsedStyleRules(text){try{const d=root.document.implementation.createHTMLDocument(''),style=d.createElement('style');style.textContent=text;d.head.append(style);return styleRules(style);}catch{return null;}}
+  async function applyInlineStyles(plans){
+    await Promise.all(plans.map(({entry,text})=>new Promise((resolve,reject)=>{
+      const node=entry.node;let timer;
+      const finish=error=>{clearTimeout(timer);node.removeEventListener('load',loaded);node.removeEventListener('error',failed);entry.rules=styleRules(node);error?reject(error):resolve();};
+      const loaded=()=>finish(),failed=()=>finish(Error('Inline stylesheet import refresh failed.'));
+      node.addEventListener('load',loaded);node.addEventListener('error',failed);
+      timer=setTimeout(()=>finish(Error('Inline stylesheet import refresh timed out.')),8000);
+      node.textContent=text;entry.text=text;entry.rules=styleRules(node);
+      try{if(![...node.sheet.cssRules].some(rule=>rule.type===3))finish();}catch{finish(Error('The refreshed inline stylesheet is unavailable.'));}
+    })));
+  }
   function captureInlineStyles(d){
     if(!d||inlineStyles.has(d)||!/^https?:/.test(d.URL))return;
-    const live=[...d.querySelectorAll('head style')].map(node=>({node,text:node.textContent,attrs:styleAttributes(node),rules:styleRules(node)})),state={entries:null,error:null},controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);inlineStyles.set(d,state);
+    const live=[...d.querySelectorAll('style')].map(node=>({node,head:!!node.closest('head'),text:node.textContent,attrs:styleAttributes(node),rules:styleRules(node)})),state={entries:null,error:null},controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);inlineStyles.set(d,state);
     // A non-executing response gives us the server's CSS, independently of
     // startup scripts that ran before the iframe load event.
     state.ready=(async()=>{try{
       const response=await root.fetch(d.URL,{cache:'no-store',signal:controller.signal});if(!response.ok)throw Error('Could not identify the preview stylesheets.');
       const fresh=new root.DOMParser().parseFromString(await response.text(),'text/html');
-      state.entries=[...fresh.querySelectorAll('head style')].map(source=>{const text=source.textContent,attrs=styleAttributes(source),rules=parsedStyleRules(text),matches=live.filter(item=>item.text===text&&item.attrs===attrs&&rules!==null&&item.rules===rules);return matches.length===1?{...matches[0],serverText:text}:{node:null,text,serverText:text,attrs,rules};});
+      const captured=new Map();const entries=selector=>[...fresh.querySelectorAll(selector)].map(source=>{if(captured.has(source))return captured.get(source);const text=source.textContent,attrs=styleAttributes(source),rules=parsedStyleRules(text),matches=live.filter(item=>item.head===!!source.closest('head')&&item.text===text&&item.attrs===attrs&&rules!==null&&item.rules===rules);const entry=matches.length===1?{...matches[0],serverText:text}:{node:null,text,serverText:text,attrs,rules};captured.set(source,entry);return entry;});
+      state.entries=entries('head style');state.authorEntries=entries('style:not([data-rt-css])');
     }catch(error){state.error=error;}finally{clearTimeout(timer);}})();
   }
   root.document?.addEventListener('load',event=>{if(root.__RT_RENDERING?.reloadAfterWrite&&event.target?.tagName==='IFRAME')try{captureInlineStyles(event.target.contentDocument);}catch{}},true);
-  async function inlineStylePlans(d,fresh){
-    const source=[...fresh.querySelectorAll('head style')],state=inlineStyles.get(d);if(state)await state.ready;const baseline=state?.entries;
+  async function inlineStylePlans(d,fresh,author=false){
+    const source=[...fresh.querySelectorAll(author?'style:not([data-rt-css])':'head style')],state=inlineStyles.get(d);if(state)await state.ready;const baseline=author?state?.authorEntries:state?.entries;
     if(state?.error)throw state.error;
     if(!source.length&&!baseline?.length)return [];
     if(!baseline||source.length!==baseline.length)throw Error('The inline stylesheet structure changed. Reload the preview before applying these styles.');
@@ -173,7 +189,7 @@
       for(const {live,removed,added}of plans)for(const el of live){const classes=new Set(tokens(el.getAttribute('class')).filter(token=>!removed.has(token)));for(const token of added)classes.add(token);if(classes.size)el.setAttribute('class',[...classes].join(' '));else el.removeAttribute('class');}
       // Reapply even identical CSS: WebKit can retain stale nested-media
       // declarations after a class-only undo following a stylesheet update.
-      for(const {entry,text}of stylePlans){entry.node.textContent=text;entry.text=text;entry.rules=styleRules(entry.node);}
+      await applyInlineStyles(stylePlans);
       for(const item of entries)applied.set(item.id,item.classes);
       if(revalidate)await revalidateStyles(d,Date.now().toString(36));
       d.dispatchEvent(new frame.contentWindow.CustomEvent('retouch:render',{detail:{source:'server'}}));return {ok:true,method:'classes'};

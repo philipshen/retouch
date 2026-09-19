@@ -20,6 +20,12 @@ function transform(selector){
     if(node.type==='nesting')throw Error('Nested CSS selectors cannot yet be adapted for a picture.');
     if(node.type==='pseudo'&&(/^:(?:nth-(?:last-)?of-type|first-of-type|last-of-type|only-of-type)$/i.test(node.value)||/^:nth-(?:last-)?child$/i.test(node.value)&&/\bof\b/i.test(node.toString())))throw Error('Type-based or filtered sibling positions cannot yet be adapted for a picture.');
    });
+   // Simple rules whose subjects cannot be generated nodes are invariant under
+   // this wrap. Preserve their original bytes rather than adding inert filters.
+   let sensitive=false;
+   original.walk(node=>{if(node.type==='combinator'&&/[>+~|]/.test(node.value)||node.type==='pseudo'&&(positions.has(node.value.toLowerCase())||node.nodes?.length)||node.type==='tag'&&['picture','source'].includes(node.value.toLowerCase())||node.type==='universal')sensitive=true;});
+   const simple=original.nodes.reduce((groups,node)=>{if(node.type==='combinator')groups.push([]);else groups.at(-1).push(node);return groups;},[[]]);
+   if(!sensitive&&simple.every(group=>group.some(node=>['class','id','tag'].includes(node.type)))){root.append(original);continue;}
    for(const node of original.nodes)if(node.type==='pseudo'&&lists.has(node.value.toLowerCase()))container(node);
    const compounds=[[]],combinators=[];
    for(const node of original.nodes){if(node.type==='combinator'){combinators.push(node.clone());compounds.push([]);}else compounds.at(-1).push(node);}

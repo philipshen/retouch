@@ -42,7 +42,7 @@ function plan(resolved,op){
    changes.push({start,end,text:''});insert(at,resolved.source.slice(start,end));moved={node,at};
   }
   const out=new MagicString(resolved.source);for(const change of changes)if(change.start===change.end)out.appendLeft(change.start,change.text);else out.overwrite(change.start,change.end,change.text);
-  const after=out.toString(),next=html.collect(after,resolved.relPath).elements;
+  let after=out.toString();const next=html.collect(after,resolved.relPath).elements;
   const delta=op.action==='add'?(wrapperAdded?2:1):op.action==='remove'?(unwrap?-2:-1):0;
   if(next.length!==elements.length+delta)return refuse('The source edit changes unrelated parsed markup.');
   const shifted=offset=>offset+changes.reduce((sum,change)=>sum+(offset>=change.end?change.text.length-(change.end-change.start):0),0);
@@ -61,7 +61,9 @@ function plan(resolved,op){
   if(descriptor?.reason||!descriptor)return refuse(descriptor?.reason||'The picture source no longer resolves.');
   if(op.action==='add'&&descriptor.sources.length!==state.sources.length+1)return refuse('The added source is not part of the selected image.');
   const survivors=new Set(mapped.values());
-  return {ok:true,hash:html.contentHash(after),imageId:selected.id,imageBeforeId:image.id,sourceIndex,scope:{id:rootElement?.id||null,tag:root.tagName},sourceIdMap:elements.filter(element=>!removed.has(element.node)).flatMap(element=>{const id=mapped.get(element.node).id;return id===element.id?[]:[[element.id,id]];}),removedSourceIds:elements.filter(element=>removed.has(element.node)).map(element=>element.id),createdSourceIds:next.filter(element=>!survivors.has(element)).map(element=>element.id),structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
+  const styles=wrapperAdded?require('./picture-style-plan.cjs').plan(resolved,{source:after}):null;
+  if(styles){after=styles.source;const styled=html.collect(after,resolved.relPath).elements;if(styled.length!==next.length||styled.some((element,index)=>element.id!==next[index].id||element.tag!==next[index].tag))return refuse('Stylesheet adaptation changed unrelated markup.');}
+  return {ok:true,hash:html.contentHash(after),imageId:selected.id,imageBeforeId:image.id,sourceIndex,scope:{id:rootElement?.id||null,tag:root.tagName},authorStyles:!!styles?.inlineRefresh,revalidateStyles:!!styles?.edits.slice(1).some(edit=>edit.before!==edit.after),sourceIdMap:elements.filter(element=>!removed.has(element.node)).flatMap(element=>{const id=mapped.get(element.node).id;return id===element.id?[]:[[element.id,id]];}),removedSourceIds:elements.filter(element=>removed.has(element.node)).map(element=>element.id),createdSourceIds:next.filter(element=>!survivors.has(element)).map(element=>element.id),structural:true,edits:styles?.edits||[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return refuse(error.message);}
 }
 module.exports={plan};
