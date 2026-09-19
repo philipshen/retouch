@@ -26038,3 +26038,31 @@ This creates same-page Scroll to connections only. Cross-page/frame graph editin
 automatic edge scrolling, dense handle placement and native touch/pen verification
 remain open. No desktop artifact was rebuilt or branch pushed. Full Figma parity
 and notarized Homebrew distribution remain unfinished.
+
+### Edge scrolling during prototype connection drags (2026-09-20)
+
+Holding a new-connection or reconnect drag near a visible edge now scrolls toward
+hidden destinations. Speed increases toward the edge and uses elapsed frame time;
+page and nested-container distances account for canvas zoom. Scrollable ancestors
+under the pointer are tried from the inside out, with CSS overscroll containment
+preserved, followed by the document and finite canvas. Hidden/clip overflow is not
+programmatically opened. Neither source attributes nor page styles are changed.
+
+The preview curve, candidate outline and destination label refresh while the
+pointer remains still. Escape, release and existing drag teardown stop the motion;
+scroll position is retained so cancellation does not jump back unexpectedly.
+The handle description and empty-destination prompt explain edge scrolling.
+
+Browser checks cover page scrolling at 50/100/200 percent zoom, nested horizontal
+and vertical scrolling, contained boundaries, canvas panning after page exhaustion,
+Escape stopping page/canvas movement, drops after scrolling, retained document and
+form values, unchanged source while dragging, and exact one-step connection undo.
+The suite passed HTML, Liquid, compiled React and compiled Vue in Chromium and
+WebKit. Existing creation, reconnect and connection-overlay suites also passed
+both engines. The nested destination screenshot was inspected. This is a browser-only change;
+source-operation semantics are unchanged.
+
+Cross-page connections, comparison canvases, dense handle placement, native touch
+and pen verification, rotated scroll containers, scroll-snap interaction and sites
+that override scrolling still need work. No desktop artifact was rebuilt or branch
+pushed. Full Figma parity and notarized Homebrew distribution remain unfinished.
