@@ -237,7 +237,7 @@ Capture uses a fresh browser session and waits for page load, web fonts (up to
 three seconds), and an optional `--wait=1000` delay in milliseconds. The output
 directory must not exist; its parent must exist. Width and height accept whole
 numbers from 240 to 7680. The command saves `index.html` and a `capture.json`
-record of the source URL, viewport, timestamp and known limitations. Playwright
+record of the source URL, viewport, timestamp, asset results and known limitations. Playwright
 is resolved from the current project or the Retouch installation; it is an
 optional dependency for capture, not a requirement for editing local projects.
 
@@ -248,8 +248,16 @@ text/style editing and undo/redo operate on that copy. Original application
 scripts, event handlers, embedded documents and form submission are not retained.
 Capture does not reuse browser logins or modify the source site.
 
+Referenced images, CSS images and readable font definitions are saved under
+`capture-assets/` and rewritten to local paths. Temporary blob images are read
+before the capture browser closes. Repeated URLs download once, and identical
+content shares a file. Downloads are limited to 256 assets, 10 MiB per asset,
+100 MiB total and one minute. Missing, oversized or unsupported resources remain
+remote and are reported in `capture.json` and the command output.
+
 Current limitations: layout is captured at one viewport; responsive behavior and
-application logic are not reconstructed. Image URLs may still depend on the
-original site; downloadable fonts and shadow DOM contents are not included.
+application logic are not reconstructed. Cross-origin stylesheets whose font
+definitions cannot be read, runtime-created fonts, nested external SVG resources
+and shadow DOM contents are not fully portable.
 Cross-origin or otherwise unreadable canvases are reported as unavailable.
 The desktop app does not yet expose URL capture in its onboarding UI.

@@ -20,11 +20,12 @@ async function capture({url,directory,width=1440,height=900,wait=1000,browserTyp
   await page.waitForTimeout(wait);await bounded(page.evaluate(()=>Promise.race([document.fonts.ready,new Promise(resolve=>setTimeout(resolve,3000))])));
   const snapshot=await bounded(page.evaluate(require('./capture-document.cjs')));if(typeof snapshot.html!=='string')throw Error('The page did not return a captured document.');if(Buffer.byteLength(snapshot.html)>20*1024*1024)throw Error('The captured document exceeds 20 MiB.');
   snapshot.html=require('./capture-sanitize.cjs').sanitize(snapshot.html);
-  const manifest={version:1,kind:'rendered-page-capture',sourceUrl:snapshot.url,title:snapshot.title,capturedAt:new Date().toISOString(),viewport:{width,height},layers:snapshot.layers,warnings:snapshot.warnings,limitations:['Captured layout reflects one viewport and page state.','Application scripts and live interactions are not included.','Images and CSS image URLs may require access to the original site.','This project is an editable copy; changes do not update the original site.']};
-  staging=fs.mkdtempSync(path.join(parent,'.retouch-capture-'));fs.writeFileSync(path.join(staging,'index.html'),snapshot.html,{flag:'wx'});fs.writeFileSync(path.join(staging,'capture.json'),JSON.stringify(manifest,null,2)+'\n',{flag:'wx'});
+  staging=fs.mkdtempSync(path.join(parent,'.retouch-capture-'));const saved=await require('./capture-assets.cjs').localize({html:snapshot.html,fontFaces:snapshot.fontFaces,baseURL:snapshot.url,directory:staging,context,page});snapshot.html=saved.html;
+  const manifest={version:1,kind:'rendered-page-capture',sourceUrl:snapshot.url,title:snapshot.title,capturedAt:new Date().toISOString(),viewport:{width,height},layers:snapshot.layers,warnings:[...snapshot.warnings,...saved.warnings],assets:saved.assets,limitations:['Captured layout reflects one viewport and page state.','Application scripts and live interactions are not included.','Assets reported as remote still require access to the original site.','This project is an editable copy; changes do not update the original site.']};
+  fs.writeFileSync(path.join(staging,'index.html'),snapshot.html,{flag:'wx'});fs.writeFileSync(path.join(staging,'capture.json'),JSON.stringify(manifest,null,2)+'\n',{flag:'wx'});
   // Reserve the destination exclusively before moving files. Never replace an
   // existing project, including one created while the browser was working.
-  fs.mkdirSync(target);try{for(const name of ['index.html','capture.json'])fs.renameSync(path.join(staging,name),path.join(target,name));}catch(error){fs.rmSync(target,{recursive:true,force:true});throw error;}
+  fs.mkdirSync(target);try{for(const name of fs.readdirSync(staging))fs.renameSync(path.join(staging,name),path.join(target,name));}catch(error){fs.rmSync(target,{recursive:true,force:true});throw error;}
   return {directory:target,...manifest};
  }finally{if(staging)fs.rmSync(staging,{recursive:true,force:true});await browser?.close();}
 }

@@ -25,7 +25,7 @@ module.exports=function captureDocument(){
   for(const attr of node.attributes){const name=attr.name.toLowerCase();if(name.startsWith('on')||name.startsWith('data-rt')||['style','src','srcset','href','xlink:href','action','formaction','form','method','is','nonce','integrity','crossorigin','autofocus','autoplay','srcdoc','value','checked','selected'].includes(name))continue;target.setAttributeNS(attr.namespaceURI,attr.name,attr.value);}
   target.setAttribute('style',styles(node));const id=String(count);target.setAttribute('data-capture-node',id);
   for(const pseudo of ['::before','::after']){const content=getComputedStyle(node,pseudo).content;if(content&&content!=='none'&&content!=='normal')rules.push('[data-capture-node="'+id+'"]'+pseudo+'{'+styles(node,pseudo)+'}');}
-  if(tag==='img'){const url=absolute(node.currentSrc||node.src);if(url.startsWith('blob:'))warnings.add('Temporary image URLs may expire.');target.setAttribute('src',url);target.removeAttribute('loading');}
+  if(tag==='img'){const url=absolute(node.currentSrc||node.src);target.setAttribute('src',url);target.removeAttribute('loading');}
   if(tag==='source')return null;
   if(tag==='a'){const raw=node.getAttribute('href')||'',url=raw.startsWith('#')?raw:absolute(raw);if(url&&!url.startsWith('data:')&&!url.startsWith('blob:'))target.setAttribute('href',url);target.setAttribute('rel','noopener noreferrer');}
   if(node.namespaceURI==='http://www.w3.org/2000/svg'&&node.hasAttribute('href')){const raw=node.getAttribute('href');if(raw.startsWith('#'))target.setAttribute('href',raw);else if(tag==='image'||tag==='use')target.setAttribute('href',absolute(raw));}
@@ -39,7 +39,11 @@ module.exports=function captureDocument(){
  }
  const root=clone(document.documentElement);output.replaceChild(root,output.documentElement);const head=output.createElement('head'),charset=output.createElement('meta'),title=output.createElement('title');charset.setAttribute('charset','utf-8');title.textContent=document.title;head.append(charset,title);root.prepend(head);
  const style=output.createElement('style');style.textContent=rules.join('\n').replace(/</g,'\\3c ');head.append(style);
- // Computed font-family alone cannot reproduce downloadable font faces.
- if([...document.fonts].length)warnings.add('Web font files are not included; unavailable fonts use their fallback.');
- return {html:'<!doctype html>\n'+output.documentElement.outerHTML+'\n',title:document.title,url:location.href,layers:count,warnings:[...warnings]};
+ const fontFaces=[],seen=new Set();
+ function fonts(sheet){if(!sheet||sheet.disabled||seen.has(sheet)||sheet.media?.mediaText&&!matchMedia(sheet.media.mediaText).matches)return;seen.add(sheet);try{scan(sheet.cssRules,sheet.href||document.baseURI);}catch{warnings.add('Font definitions in a cross-origin stylesheet could not be read.');}}
+ function scan(rules,base){for(const rule of rules){if(rule.type===CSSRule.FONT_FACE_RULE)fontFaces.push({css:rule.cssText,base});else if(rule.type===CSSRule.IMPORT_RULE)fonts(rule.styleSheet);else if(rule.cssRules){if(rule.type===CSSRule.MEDIA_RULE&&!matchMedia(rule.conditionText).matches)continue;if(rule.type===CSSRule.SUPPORTS_RULE&&!CSS.supports(rule.conditionText))continue;scan(rule.cssRules,base);}}}
+ if(document.fonts.status==='loading')warnings.add('Some web fonts were still loading when this page was captured.');
+ for(const sheet of document.styleSheets)fonts(sheet);
+ if([...document.fonts].length&&!fontFaces.length)warnings.add('Web fonts without readable CSS definitions are not included.');
+ return {html:'<!doctype html>\n'+output.documentElement.outerHTML+'\n',title:document.title,url:location.href,layers:count,fontFaces,warnings:[...warnings]};
 };
