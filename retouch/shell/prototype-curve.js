@@ -21,7 +21,7 @@
    for(let i=0;i<2;i++){const p=i?b:a;handles[i].setAttribute('cx',p[0]);handles[i].setAttribute('cy',p[1]);handles[i].setAttribute('aria-description','X '+points[i*2]+', Y '+points[i*2+1]+'. Arrow keys adjust; Shift makes larger steps; Escape cancels.');}
    inputs.forEach((input,i)=>{input.value=points[i];input.setCustomValidity('');});
   }
-  async function commit(focus){if(points.every((p,i)=>p===value.values[i]))return;await change({type:'cubic-bezier',values:[...points]});if(focus&&parent.isConnected)parent.querySelector('[aria-label="'+focus+'"]')?.focus({preventScroll:true});else if(focus)document.querySelector('#prototypePanel [aria-label="'+focus+'"]')?.focus({preventScroll:true});}
+  async function commit(focus){if(points.every((p,i)=>p===value.values[i]))return;await change({type:'cubic-bezier',values:[...points]});if(focus&&parent.isConnected)parent.querySelector('[aria-label="'+focus+'"]')?.focus({preventScroll:true});else if(focus)document.querySelector('.prototype-details [aria-label="'+focus+'"]')?.focus({preventScroll:true});}
   function end(cancel=false){if(!gesture)return;const prior=gesture;gesture=null;if(cancel)points=prior.points;draw();if(!cancel)void commit(prior.label);}
   for(const [i,handle]of handles.entries()){
    handle.addEventListener('pointerdown',event=>{if(event.button!==0)return;event.preventDefault();event.stopPropagation();handle.focus({preventScroll:true});gesture={points:[...points],pointer:event.pointerId,label:handle.getAttribute('aria-label')};handle.setPointerCapture(event.pointerId);});

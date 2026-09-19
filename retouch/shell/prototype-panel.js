@@ -1,22 +1,28 @@
 (function(root){
  'use strict';
- const I=RetouchInspector,V=RetouchPrototypeValues,S=RetouchPrototypeSpring,K=RetouchPrototypeKeys,host=root.RetouchPrototypeHost,panel=document.getElementById('panel'),body=document.getElementById('prototypePanel'),design=document.getElementById('designTab'),prototype=document.getElementById('prototypeTab');let active=false,busy=false,serial=0;
+ const I=RetouchInspector,V=RetouchPrototypeValues,S=RetouchPrototypeSpring,K=RetouchPrototypeKeys,host=root.RetouchPrototypeHost,panel=document.getElementById('panel'),body=document.getElementById('prototypePanel'),design=document.getElementById('designTab'),prototype=document.getElementById('prototypeTab');let active=false,busy=false,serial=0,selectionKey=null,opened=0;
  const triggers=[['click','On click'],['mouseenter','Mouse enter'],['mouseleave','Mouse leave'],['mousedown','Mouse down / Touch press'],['mouseup','Mouse up / Touch release'],['after-delay','After delay'],['keyboard','Keyboard']],actions=[['navigate','Navigate to'],['back','Back'],['scroll','Scroll to'],['open-overlay','Open overlay'],['swap-overlay','Swap overlay'],['close-overlay','Close overlay']];
- async function tab(next){if(busy)return;try{await host.prepare();active=next;panel.classList.toggle('prototype-inspector',next);body.hidden=!next;design.classList.toggle('active',!next);prototype.classList.toggle('active',next);design.setAttribute('aria-selected',String(!next));prototype.setAttribute('aria-selected',String(next));design.tabIndex=next?-1:0;prototype.tabIndex=next?0:-1;if(next)render();}catch(error){host.error(error.message);}}
+ async function tab(next){if(busy)return;try{await host.prepare();active=next;if(!next)root.RetouchPrototypeDetails.dismiss();panel.classList.toggle('prototype-inspector',next);body.hidden=!next;design.classList.toggle('active',!next);prototype.classList.toggle('active',next);design.setAttribute('aria-selected',String(!next));prototype.setAttribute('aria-selected',String(next));design.tabIndex=next?-1:0;prototype.tabIndex=next?0:-1;if(next)render();}catch(error){host.error(error.message);}}
  design.onclick=()=>tab(false);prototype.onclick=()=>tab(true);
  for(const button of [design,prototype]){button.addEventListener('pointerdown',e=>e.preventDefault());button.addEventListener('keydown',async e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const next=e.key==='End'||e.key==='ArrowRight';await tab(next);(next?prototype:design).focus();});}
- async function render(){if(!active||busy)return;const ticket=++serial,selection=host.selection();body.replaceChildren();
+ async function render(){if(!active||busy)return;const ticket=++serial,selection=host.selection();body.inert=true;root.RetouchPrototypeDetails.setBusy(true);
+  let items=structuredClone(selection?.prototypeInteractions||[]),pages=[];if(selection?.prototypeEditable)try{pages=await host.pages();}catch{}if(ticket!==serial||!active)return;
+  const key=selection?.id+'|'+JSON.stringify(selection?.context),detailState=key===selectionKey?root.RetouchPrototypeDetails.snapshot():null;if(key!==selectionKey){selectionKey=key;opened=0;}root.RetouchPrototypeDetails.reset();body.replaceChildren();body.inert=false;
   const section=I.section('Interactions');body.append(section);const status=I.note(section,'');status.setAttribute('role','status');
   if(!selection?.prototypeEditable){status.textContent=selection?.prototypeReason||'Select a layer to add an interaction.';return;}
   I.note(section,'Play interactions in Present mode. This source layer’s copies share these connections.');
-  let items=structuredClone(selection.prototypeInteractions||[]),pages=[];try{pages=await host.pages();}catch{}if(ticket!==serial||!active)return;
   const rows=document.createElement('div');section.append(rows);
-  async function save(next){if(busy)return;busy=true;body.inert=true;status.textContent='Saving…';try{await host.save(selection,next);status.textContent='Saved';}catch(error){status.textContent=error.message;return;}finally{busy=false;body.inert=false;}await render();}
+  async function save(next){if(busy)return;++serial;busy=true;body.inert=true;root.RetouchPrototypeDetails.setBusy(true);status.textContent='Saving…';try{await host.save(selection,next);status.textContent='Saved';}catch(error){status.textContent=error.message;return;}finally{busy=false;body.inert=false;root.RetouchPrototypeDetails.setBusy(false);}await render();}
   for(const [index,item]of items.entries()){
-   const card=document.createElement('fieldset');card.className='prototype-interaction';const legend=document.createElement('legend');legend.textContent=triggers.find(([value])=>value===item.trigger)[1]+' → '+actions.find(([value])=>value===item.action)[1];card.append(legend);rows.append(card);
+   const row=document.createElement('button');row.type='button';row.className='prototype-connection-row';row.dataset.index=String(index+1);row.setAttribute('aria-label','Edit interaction '+(index+1));
+   const title=document.createElement('span'),summary=document.createElement('span'),arrow=document.createElement('span');title.textContent=item.trigger==='keyboard'?K.label(item.shortcut):triggers.find(([value])=>value===item.trigger)[1];summary.textContent=actions.find(([value])=>value===item.action)[1]+(item.destination?' · '+item.destination:'');title.id='prototype-trigger-summary-'+index;summary.id='prototype-action-summary-'+index;row.setAttribute('aria-describedby',title.id+' '+summary.id);arrow.textContent='→';arrow.setAttribute('aria-hidden','true');row.append(title,summary,arrow);rows.append(row);
+   const card=document.createElement('fieldset');card.className='prototype-interaction';const legend=document.createElement('legend');legend.textContent=title.textContent+' → '+summary.textContent;card.append(legend);
+   const details=root.RetouchPrototypeDetails.create(row,card,()=>{opened=null;});row.onclick=()=>{opened=index;details.open(true);};
+
    const draft={...item};
    const modify=()=>{const next=items.map((value,i)=>i===index?draft:value);try{V.validate(next);}catch(error){status.textContent=error.message;return;}return save(next);};
-   I.select(card,'Trigger '+(index+1),triggers.filter(([value])=>value===item.trigger||value==='keyboard'||!items.some(i=>i.trigger===value)),item.trigger,value=>{draft.trigger=value;if(value==='keyboard')draft.shortcut=K.next(items.filter((_,i)=>i!==index));else delete draft.shortcut;if(value==='after-delay')draft.delay=800;else delete draft.delay;modify();});
+   const triggerControl=I.select(card,'Trigger '+(index+1),triggers.filter(([value])=>value===item.trigger||value==='keyboard'||!items.some(i=>i.trigger===value)),item.trigger,value=>{draft.trigger=value;if(value==='keyboard')draft.shortcut=K.next(items.filter((_,i)=>i!==index));else delete draft.shortcut;if(value==='after-delay')draft.delay=800;else delete draft.delay;modify();});
+   const triggerRow=triggerControl.parentElement;details.dialog.querySelector('header strong').replaceWith(triggerControl);triggerRow.remove();
    if(item.trigger==='keyboard')root.RetouchPrototypeKeyPanel.mount(card,{value:item.shortcut,index:index+1,change:value=>{draft.shortcut=value;return modify();}});
    if(item.trigger==='after-delay'){const delay=document.createElement('input');delay.type='number';delay.min='1';delay.max='10000';delay.step='1';delay.value=item.delay;I.field(card,'Delay (ms) '+(index+1),delay);delay.onchange=()=>{draft.delay=Number(delay.value);modify();};I.note(card,'Runs once while this layer is mounted in the active preview. Covered or hidden previews pause the timer.');}
    I.select(card,'Action '+(index+1),actions,item.action,value=>{const destination=draft.destination;draft.action=value;delete draft.preserveScroll;delete draft.destination;delete draft.overlay;delete draft.transition;if(!['back','close-overlay'].includes(value))draft.destination=value==='scroll'?'top':(V.route(destination)?destination:pages.find(page=>page.url!==host.route())?.url||'/');if(value==='open-overlay')draft.overlay=V.overlay();modify();});
@@ -48,11 +54,13 @@
      if(current.type!=='dissolve')I.select(card,'Direction '+(index+1),[['left','Left'],['right','Right'],['top','Top'],['bottom','Bottom']],current.direction,value=>{draft.transition.direction=value;modify();});
     }
    }
-   const remove=I.button('Remove',()=>save(items.filter((_,i)=>i!==index)));remove.setAttribute('aria-label','Remove interaction '+(index+1));card.append(remove);
+   const remove=I.button('Remove',()=>{opened=Math.max(0,index-1);return save(items.filter((_,i)=>i!==index));});remove.setAttribute('aria-label','Remove interaction '+(index+1));card.append(remove);
+   if(opened===index&&!document.body.classList.contains('presenting'))details.open();
    for(const label of card.querySelectorAll('.inspector-field > span'))label.textContent=label.textContent.replace(/ \d+$/,'').replace('Destination page','Destination').replace('Destination URL','URL').replace('Destination element ID','Element ID');
   }
   const nextTrigger=triggers.find(([value])=>value==='keyboard'||!items.some(i=>i.trigger===value))?.[0];
-  const add=I.button('Add interaction',()=>save([...items,{trigger:nextTrigger,...(nextTrigger==='keyboard'?{shortcut:K.next(items)}:{}),...(nextTrigger==='after-delay'?{delay:800}:{}),action:'navigate',destination:pages.find(page=>page.url!==host.route())?.url||'/'}]));add.disabled=items.length>=32||!nextTrigger;section.append(add);
+  const add=I.button('Add interaction',()=>{opened=items.length;return save([...items,{trigger:nextTrigger,...(nextTrigger==='keyboard'?{shortcut:K.next(items)}:{}),...(nextTrigger==='after-delay'?{delay:800}:{}),action:'navigate',destination:pages.find(page=>page.url!==host.route())?.url||'/'}]);});add.disabled=items.length>=32||!nextTrigger;add.textContent='+';add.setAttribute('aria-label','Add interaction');add.title='Add interaction';add.classList.add('prototype-add');section.querySelector('h3').append(add);
+  root.RetouchPrototypeDetails.place();root.RetouchPrototypeDetails.restore(detailState);
   if(!items.length)I.note(section,'Connect this layer to another page, go back, or scroll to an element.');
  }
  root.addEventListener('retouch:selection',()=>queueMicrotask(render));root.addEventListener('retouch:prototype',render);

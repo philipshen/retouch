@@ -25804,3 +25804,39 @@ interception remain unimplemented or unverified. Native form preservation and
 source-copy conflict rules are website-specific behavior. This is not full
 prototype/Figma/any-site parity. No desktop artifact was rebuilt or branch pushed;
 notarized Homebrew distribution remains incomplete.
+
+
+### Compact prototype list and floating interaction editor (2026-09-19)
+
+Prototype interactions now appear as compact rows in the right sidebar instead
+of an expanding stack of full forms. Each row summarizes its trigger and action
+with a destination, and the Interactions heading has an Add button. Selecting a
+row opens a single light floating details panel with the trigger selector in its
+header and a close control, following the layout in
+[Figma’s interaction details reference](https://help.figma.com/hc/en-us/articles/360040315773-Connect-your-prototype).
+The existing website-specific source, destination, overlay, animation, spring,
+curve, timer and keyboard controls remain available inside it.
+
+The panel anchors beside the interaction list and stays within the viewport,
+leaving the top toolbars and bottom tool dock accessible. It is mounted outside
+the responsive sidebar, so automatically collapsing that sidebar does not hide
+an editor already in use. Long forms scroll internally and keep their scroll
+position when source edits rebuild the controls. Only one details panel is open.
+Escape and Close return focus to the interaction row where it remains visible;
+embedded recorder/curve Escape cancellation takes precedence. Switching to Design
+or Present hides the details panel. Returning from Present restores the editing
+view, while selection changes discard stale details. Source saves disable both
+the sidebar and floating controls until completion.
+
+Validation: all 2,025 unit tests passed. The new details browser suite passed
+HTML, Liquid, compiled React and compiled Vue fixtures in Chromium and WebKit.
+The seven existing prototype browser suites passed in both engines. Chromium
+curve playback had intermittent overshoot assertion failures during concurrent
+runs; its isolated rerun and three further consecutive runs passed. That timing
+flakiness remains a test limitation. Desktop, phone and long-form screenshots
+were inspected, and JavaScript syntax and diff checks passed. The feature does
+not yet implement draggable details windows, connection arrows/graph editing,
+multiple actions in one interaction or all Figma state-management controls. It
+brings the inspector structure closer to the reference without establishing
+pixel-identical or full Figma parity. No desktop artifact was rebuilt;
+notarized Homebrew distribution and the broader any-site goal remain incomplete.
