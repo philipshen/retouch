@@ -15,10 +15,11 @@ async function capture({url,directory,width=1440,height=900,wait=1000,browserTyp
  const parent=fs.realpathSync(path.dirname(target));if(!fs.statSync(parent).isDirectory())throw Error('The output parent must be a directory.');
  let browser,staging;
  try{
-  browser=await (browserType||playwright().chromium).launch();const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:1,colorScheme:'light',serviceWorkers:'block',acceptDownloads:false}),page=await context.newPage();
+  browser=await (browserType||playwright().chromium).launch();const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:1,colorScheme:'light',serviceWorkers:'block',acceptDownloads:false}),page=await context.newPage();const stylesheets=require('./capture-stylesheets.cjs').collect(page);
   const response=await page.goto(address.href,{waitUntil:'load',timeout:30000});if(!response?.ok())throw Error('Page capture failed: HTTP '+(response?.status()||'unavailable')+'.');
-  await page.waitForTimeout(wait);await bounded(page.evaluate(()=>Promise.race([document.fonts.ready,new Promise(resolve=>setTimeout(resolve,3000))])));
+  await page.waitForTimeout(wait);await bounded(page.evaluate(()=>{void document.documentElement.offsetHeight;return Promise.race([document.fonts.ready,new Promise(resolve=>setTimeout(resolve,3000))]);}));
   const snapshot=await bounded(page.evaluate(require('./capture-document.cjs')));if(typeof snapshot.html!=='string')throw Error('The page did not return a captured document.');if(Buffer.byteLength(snapshot.html)>20*1024*1024)throw Error('The captured document exceeds 20 MiB.');
+  const recovered=await bounded(stylesheets.resolve(snapshot.fontFaces,context));snapshot.fontFaces=recovered.fontFaces;snapshot.warnings.push(...recovered.warnings);
   snapshot.html=require('./capture-sanitize.cjs').sanitize(snapshot.html);
   staging=fs.mkdtempSync(path.join(parent,'.retouch-capture-'));const saved=await require('./capture-assets.cjs').localize({html:snapshot.html,fontFaces:snapshot.fontFaces,baseURL:snapshot.url,directory:staging,context,page});snapshot.html=saved.html;
   const manifest={version:1,kind:'rendered-page-capture',sourceUrl:snapshot.url,title:snapshot.title,capturedAt:new Date().toISOString(),viewport:{width,height},layers:snapshot.layers,warnings:[...snapshot.warnings,...saved.warnings],assets:saved.assets,limitations:['Captured layout reflects one viewport and page state.','Application scripts and live interactions are not included.','Assets reported as remote still require access to the original site.','This project is an editable copy; changes do not update the original site.']};

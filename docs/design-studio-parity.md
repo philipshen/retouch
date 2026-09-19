@@ -25116,3 +25116,20 @@ captured project. It verifies ordinary/CSS/blob/SVG images, a real variable font
 unchanged heading geometry, repeated URL deduplication and missing-resource
 reporting. Cross-origin and programmatically created font definitions still need
 further work.
+
+### Cross-origin font stylesheet recovery (2026-09-19)
+
+Capture now retains the browser's actual stylesheet responses and recovers font
+faces when cross-origin CSSOM access is denied. A separate page parses those
+responses with network requests blocked. Redirect aliases and nested import
+paths use the final response URL; media/supports conditions and font descriptors
+are preserved. Readable adopted stylesheets are included as well. Resource
+limits produce explicit warnings rather than silent fallback claims.
+
+`retouch/test/e2e/capture-cross-origin-fonts.cjs` uses separate page and stylesheet
+origins, a cookie-dependent redirect, a nested import, non-UTF-8 stylesheet text,
+media/supports conditions and a unicode-range descriptor. It verifies that
+stylesheet recovery does not refetch CSS, then stops both source servers and
+checks local font loading and original text geometry. It also verifies reporting
+when a stylesheet exceeds the response-size limit. Runtime-created font faces
+without stylesheet definitions remain outside this path.

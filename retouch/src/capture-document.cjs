@@ -40,10 +40,10 @@ module.exports=function captureDocument(){
  const root=clone(document.documentElement);output.replaceChild(root,output.documentElement);const head=output.createElement('head'),charset=output.createElement('meta'),title=output.createElement('title');charset.setAttribute('charset','utf-8');title.textContent=document.title;head.append(charset,title);root.prepend(head);
  const style=output.createElement('style');style.textContent=rules.join('\n').replace(/</g,'\\3c ');head.append(style);
  const fontFaces=[],seen=new Set();
- function fonts(sheet){if(!sheet||sheet.disabled||seen.has(sheet)||sheet.media?.mediaText&&!matchMedia(sheet.media.mediaText).matches)return;seen.add(sheet);try{scan(sheet.cssRules,sheet.href||document.baseURI);}catch{warnings.add('Font definitions in a cross-origin stylesheet could not be read.');}}
+ function fonts(sheet){if(!sheet||sheet.disabled||seen.has(sheet)||sheet.media?.mediaText&&!matchMedia(sheet.media.mediaText).matches)return;seen.add(sheet);try{scan(sheet.cssRules,sheet.href||document.baseURI);}catch{if(sheet.href)fontFaces.push({sheet:sheet.href});else warnings.add('A font stylesheet had no readable source.');}}
  function scan(rules,base){for(const rule of rules){if(rule.type===CSSRule.FONT_FACE_RULE)fontFaces.push({css:rule.cssText,base});else if(rule.type===CSSRule.IMPORT_RULE)fonts(rule.styleSheet);else if(rule.cssRules){if(rule.type===CSSRule.MEDIA_RULE&&!matchMedia(rule.conditionText).matches)continue;if(rule.type===CSSRule.SUPPORTS_RULE&&!CSS.supports(rule.conditionText))continue;scan(rule.cssRules,base);}}}
  if(document.fonts.status==='loading')warnings.add('Some web fonts were still loading when this page was captured.');
- for(const sheet of document.styleSheets)fonts(sheet);
+ for(const sheet of [...document.styleSheets,...document.adoptedStyleSheets])fonts(sheet);
  if([...document.fonts].length&&!fontFaces.length)warnings.add('Web fonts without readable CSS definitions are not included.');
  return {html:'<!doctype html>\n'+output.documentElement.outerHTML+'\n',title:document.title,url:location.href,layers:count,fontFaces,warnings:[...warnings]};
 };

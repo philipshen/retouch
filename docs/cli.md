@@ -248,16 +248,22 @@ text/style editing and undo/redo operate on that copy. Original application
 scripts, event handlers, embedded documents and form submission are not retained.
 Capture does not reuse browser logins or modify the source site.
 
-Referenced images, CSS images and readable font definitions are saved under
+Referenced images, CSS images and recovered font definitions are saved under
 `capture-assets/` and rewritten to local paths. Temporary blob images are read
 before the capture browser closes. Repeated URLs download once, and identical
 content shares a file. Downloads are limited to 256 assets, 10 MiB per asset,
 100 MiB total and one minute. Missing, oversized or unsupported resources remain
 remote and are reported in `capture.json` and the command output.
 
+Font definitions also come from cross-origin stylesheet responses loaded by the
+capture browser. Redirects, nested imports and active media/supports conditions
+are preserved without refetching a potentially different stylesheet. Recovery
+is limited to 256 stylesheet responses, 2 MiB each and 20 MiB total. Unavailable
+responses are reported explicitly.
+
 Current limitations: layout is captured at one viewport; responsive behavior and
-application logic are not reconstructed. Cross-origin stylesheets whose font
-definitions cannot be read, runtime-created fonts, nested external SVG resources
+application logic are not reconstructed. Unavailable font stylesheet responses,
+runtime-created fonts, nested external SVG resources
 and shadow DOM contents are not fully portable.
 Cross-origin or otherwise unreadable canvases are reported as unavailable.
 The desktop app does not yet expose URL capture in its onboarding UI.
