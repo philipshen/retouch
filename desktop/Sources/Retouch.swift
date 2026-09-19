@@ -16,6 +16,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
     private var logWindow: NSWindow?
     private var logText: NSTextView?
     private var projectButton: NSButton!
+    private var websiteButton: NSButton!
     private var stopButton: NSButton!
     private var discoveryTimer: Timer?
     private var discoveryTask: URLSessionDataTask?
@@ -124,9 +125,9 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         discoveryID = UUID(); discoveryTimer?.invalidate(); discoveryTimer = nil
         discoveryTask?.cancel(); discoveryTask = nil
     }
-    private func startDiscovery() {
+    private func startDiscovery(timeout: TimeInterval = 90) {
         stopDiscovery(); outputLines = StartupLines(); candidateURLs = []
-        let id = discoveryID, deadline = Date().addingTimeInterval(90)
+        let id = discoveryID, deadline = Date().addingTimeInterval(timeout)
         var index = 0
         discoveryTimer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: true) { [weak self] _ in
             guard let self = self, self.discoveryID == id else { return }
@@ -157,6 +158,40 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
     }
     static func htmlLaunchArguments(_ folder: URL, cli: String? = nil) -> [String] {
         ["-l", "-c", "exec " + shellQuote(bundledLauncher) + " " + shellQuote(cli ?? bundledCLI) + " html " + shellQuote(folder.path) + " --port=0"]
+    }
+    static func captureURL(_ raw: String) -> URL? {
+        guard let url = URL(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
+              ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
+              let host = url.host, !host.isEmpty, url.user == nil, url.password == nil else { return nil }
+        return url
+    }
+    static func captureLaunchArguments(_ url: URL, folder: URL, width: Int, height: Int, cli: String? = nil) -> [String] {
+        ["-l", "-c", "exec " + shellQuote(bundledLauncher) + " " + shellQuote(cli ?? bundledCLI) + " capture " + shellQuote(url.absoluteString) + " --out " + shellQuote(folder.path) + " --width=" + String(width) + " --height=" + String(height) + " --open"]
+    }
+    @objc private func openWebsite() {
+        guard projectProcess == nil else { showLogs(); return }
+        let alert = NSAlert(); alert.messageText = "Open a website"
+        alert.informativeText = "Save an editable copy at the size you choose. Edits stay in your copy; site scripts and signed-in sessions are not included."
+        let urlInput = NSTextField(frame: NSRect(x: 0, y: 0, width: 440, height: 26))
+        urlInput.placeholderString = "https://example.com"; urlInput.setAccessibilityLabel("Website URL")
+        let width = NSTextField(string: "1440"), height = NSTextField(string: "900")
+        width.setAccessibilityLabel("Capture width"); height.setAccessibilityLabel("Capture height")
+        let dimensions = NSStackView(views: [NSTextField(labelWithString: "Width"), width, NSTextField(labelWithString: "Height"), height])
+        dimensions.spacing = 8
+        let controls = NSStackView(views: [urlInput, dimensions]); controls.orientation = .vertical; controls.alignment = .leading; controls.spacing = 12
+        alert.accessoryView = controls; alert.addButton(withTitle: "Choose save location…"); alert.addButton(withTitle: "Cancel")
+        alert.window.initialFirstResponder = urlInput
+        while alert.runModal() == .alertFirstButtonReturn {
+            guard let url = Self.captureURL(urlInput.stringValue), let w = Int(width.stringValue), let h = Int(height.stringValue), (240...7680).contains(w), (240...7680).contains(h) else {
+                alert.informativeText = "Enter an http or https URL without a username or password, and whole-number dimensions from 240 to 7680."; continue
+            }
+            let picker = NSSavePanel(); picker.title = "Save website copy"; picker.nameFieldStringValue = "Website copy"; picker.canCreateDirectories = true
+            picker.message = "Choose a new folder name for your editable website."
+            guard picker.runModal() == .OK, let folder = picker.url else { return }
+            guard !FileManager.default.fileExists(atPath: folder.path) else { alert.informativeText = "That location already exists. Choose a new folder name to preserve its contents."; continue }
+            startProject(folder: folder.deletingLastPathComponent(), arguments: Self.captureLaunchArguments(url, folder: folder, width: w, height: h), log: "Capturing website into " + folder.path, capturing: true)
+            return
+        }
     }
     static func prefersHTML(_ folder: URL) -> Bool {
         let fm = FileManager.default
@@ -258,11 +293,15 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         let command = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         let isHTML = mode.indexOfSelectedItem == 1
         guard isHTML || !command.isEmpty else { status.stringValue = "Enter a startup command to start the project."; return }
+        if !isHTML { UserDefaults.standard.set(command, forKey: key) }
+        startProject(folder: folder, arguments: isHTML ? Self.htmlLaunchArguments(folder) : Self.launchArguments(command), log: "Project: " + folder.path + "\n" + (isHTML ? "Mode: HTML files" : "Command: retouch -- " + command))
+    }
+    private func startProject(folder: URL, arguments: [String], log: String, capturing: Bool = false) {
         showLogs(); logText?.string = ""
-        appendLog("Project: " + folder.path + "\n" + (isHTML ? "Mode: HTML files" : "Command: retouch -- " + command) + "\n\n")
+        appendLog(log + "\n\n")
         let process = Process(), pipe = Pipe()
         var startupTail = "", installationFailure = false
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh"); process.arguments = isHTML ? Self.htmlLaunchArguments(folder) : Self.launchArguments(command)
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh"); process.arguments = arguments
         process.currentDirectoryURL = folder; process.standardOutput = pipe; process.standardError = pipe
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
@@ -285,6 +324,8 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
                 self.appendLog("\nProject exited (" + String(finished.terminationStatus) + ").\n")
                 if finished.terminationStatus == 78 && installationFailure {
                     self.status.stringValue = "Retouch installation needs repair. Reinstall Retouch; see Project logs for details."
+                } else if capturing && finished.terminationStatus != 0 {
+                    self.status.stringValue = finished.terminationStatus == 130 ? "Capture cancelled." : "Could not open the website copy. See Project logs for details."
                 } else {
                     self.status.stringValue = finished.terminationStatus == 127 ? "Startup executable not found. Check Project logs and ensure Node and your command are available." : "Project stopped. See Project logs for details."
                 }
@@ -303,14 +344,13 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
                     self.web.stopLoading(); self.showWelcome(stopped: true)
                 }
                 self.projectProcess = nil; self.projectPipe = nil
-                self.projectButton.isEnabled = true; self.stopButton.isEnabled = false
+                self.projectButton.isEnabled = true; self.websiteButton.isEnabled = true; self.stopButton.isEnabled = false
             }
         }
         do {
-            try process.run(); projectProcess = process; projectPipe = pipe; startDiscovery()
-            if !isHTML { UserDefaults.standard.set(command, forKey: key) }
-            projectButton.isEnabled = false; stopButton.isEnabled = true
-            status.stringValue = "Project starting · looking for its local editor URL…"
+            try process.run(); projectProcess = process; projectPipe = pipe; startDiscovery(timeout: capturing ? 240 : 90)
+            projectButton.isEnabled = false; websiteButton.isEnabled = false; stopButton.isEnabled = true
+            status.stringValue = capturing ? "Saving website copy · the editor will open when ready…" : "Project starting · looking for its local editor URL…"
         } catch {
             pipe.fileHandleForReading.readabilityHandler = nil
             appendLog("Could not start: " + error.localizedDescription + "\n")
@@ -350,16 +390,17 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         status.textColor = .secondaryLabelColor
         status.font = .systemFont(ofSize: 12)
         projectButton = NSButton(title: "Open project…", target: self, action: #selector(openProject))
+        websiteButton = NSButton(title: "Open website…", target: self, action: #selector(openWebsite))
         stopButton = NSButton(title: "Stop", target: self, action: #selector(stopProject)); stopButton.isEnabled = false
         let logsButton = NSButton(title: "Project logs", target: self, action: #selector(showLogs))
-        let bar = NSStackView(views: [projectButton!, stopButton!, logsButton, address, connectButton])
+        let bar = NSStackView(views: [projectButton!, websiteButton!, stopButton!, logsButton, address, connectButton])
         bar.spacing = 8
         for view in [bar, status!, web!] { view.translatesAutoresizingMaskIntoConstraints = false; root.addSubview(view) }
         NSLayoutConstraint.activate([
             bar.topAnchor.constraint(equalTo: root.topAnchor, constant: 10),
             bar.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 12),
             bar.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -12),
-            address.widthAnchor.constraint(greaterThanOrEqualToConstant: 300),
+            address.widthAnchor.constraint(greaterThanOrEqualToConstant: 200),
             status.topAnchor.constraint(equalTo: bar.bottomAnchor, constant: 7),
             status.leadingAnchor.constraint(equalTo: bar.leadingAnchor),
             status.trailingAnchor.constraint(equalTo: bar.trailingAnchor),
@@ -377,12 +418,12 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         web.loadHTMLString("""
         <!doctype html><html lang="en"><meta name="viewport" content="width=device-width"><meta name="color-scheme" content="light"><style>
         *{box-sizing:border-box}body{margin:0;background:#f5f5f5;color:#1e1e1e;font:13px/1.6 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}
-        main{max-width:800px;margin:0 auto;padding:clamp(28px,7vh,72px) 32px}header{margin-bottom:28px}.brand{font-size:12px;font-weight:600;color:#757575}h1{font-size:32px;line-height:1.2;letter-spacing:-1px;margin:12px 0}p{margin:8px 0;color:#757575}
-        .paths{display:grid;grid-template-columns:1fr 1fr;gap:16px}article{background:white;border:1px solid #e6e6e6;border-radius:12px;padding:24px;min-width:0}h2{font-size:14px;font-weight:600;margin:0 0 12px}strong{color:#1e1e1e;font-weight:600}code{display:block;margin-top:18px;background:#f5f5f5;border-radius:5px;padding:8px 12px;color:#1e1e1e;font:12px/1.6 "SF Mono",Menlo,monospace;overflow-wrap:anywhere}.note{margin-top:20px;font-size:12px}
+        main{max-width:1040px;margin:0 auto;padding:clamp(28px,7vh,72px) 32px}header{margin-bottom:28px}.brand{font-size:12px;font-weight:600;color:#757575}h1{font-size:32px;line-height:1.2;letter-spacing:-1px;margin:12px 0}p{margin:8px 0;color:#757575}
+        .paths{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}article{background:white;border:1px solid #e6e6e6;border-radius:12px;padding:18px;min-width:0}h2{font-size:14px;font-weight:600;margin:0 0 12px}strong{color:#1e1e1e;font-weight:600}code{display:block;margin-top:18px;background:#f5f5f5;border-radius:5px;padding:8px 12px;color:#1e1e1e;font:12px/1.6 "SF Mono",Menlo,monospace;overflow-wrap:anywhere}.note{margin-top:20px;font-size:12px}
         @media(max-width:600px){main{padding:24px}.paths{grid-template-columns:1fr}h1{font-size:28px}}
         </style><main><header><div class="brand">Retouch</div><h1>\(stopped ? "Project stopped" : "Open your design canvas")</h1><p>\(stopped ? "Saved edits remain in your project. Open a project to continue editing." : "Use your existing site as the starting point.")</p></header>
         <section class="paths" aria-label="Ways to open your site"><article><h2>Open a project</h2><p>Choose <strong>Open project…</strong> above and select your project folder.</p><p>Open HTML files directly, or enter the command you already use to start your site.</p><code>npm run dev</code></article>
-        <article><h2>Connect to an editor</h2><p>Already running Retouch? Paste its editor URL into the address field above, then choose <strong>Open editor</strong>.</p><p>Use the <strong>/rt</strong> URL shown in your terminal.</p></article></section>
+        <article><h2>Open a website</h2><p>Choose <strong>Open website…</strong> above. Enter a page address, choose its canvas size, and save an editable copy.</p><p>Your changes stay in the copy. Site scripts and signed-in sessions are not included.</p></article><article><h2>Connect to an editor</h2><p>Already running Retouch? Paste its editor URL into the address field above, then choose <strong>Open editor</strong>.</p><p>Use the <strong>/rt</strong> URL shown in your terminal.</p></article></section>
         <p class="note">Make, shell scripts, and other startup commands work too. Keep using your project's existing command.</p></main></html>
         """, baseURL: nil)
     }

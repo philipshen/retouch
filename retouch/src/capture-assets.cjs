@@ -4,7 +4,7 @@ const extensions={'text/css':'.css','image/png':'.png','image/jpeg':'.jpg','imag
 const svgResources=new Set(['image','feImage','use','linearGradient','radialGradient','pattern','textPath','filter','clipPath','mask']);
 const paintAttributes=new Set(['fill','stroke','clip-path','filter','mask','marker-start','marker-mid','marker-end','cursor']);
 async function bounded(promise,milliseconds){let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Asset download timed out.')),milliseconds);})]);}finally{clearTimeout(timer);}}
-async function localize({html,fontFaces=[],baseURL,directory,context,page}){
+async function localize({html,fontFaces=[],baseURL,directory,context,page,signal}){
  const tree=parse5.parse(html),warnings=new Set(),records=new Map(),unresolved=new Set(),deadline=Date.now()+60000;let downloaded=0,savedBytes=0;
  const absolute=(value,base)=>{if(!value||value.startsWith('#')||value.startsWith('data:'))return value;try{return new URL(value,base).href;}catch{return value;}};
  const head=tree.childNodes.find(node=>node.tagName==='html')?.childNodes.find(node=>node.tagName==='head');
@@ -24,6 +24,7 @@ async function localize({html,fontFaces=[],baseURL,directory,context,page}){
   return [...failures];
  }
  async function save(url,ancestors){
+  signal?.throwIfAborted();
   if(ancestors.has(url)){warnings.add('A cyclic SVG dependency remains remote.');return null;}
   if(records.has(url)){const record=records.get(url);return record.status==='saved'?record:null;}
   if(ancestors.size>=16){warnings.add('Some SVG dependencies remain remote because the nesting limit was reached.');return null;}
@@ -36,7 +37,7 @@ async function localize({html,fontFaces=[],baseURL,directory,context,page}){
     const loaded=await bounded(page.evaluate(async url=>{const response=await fetch(url,{signal:AbortSignal.timeout(10000)}),blob=await response.blob();if(blob.size>10*1024*1024)throw Error('Asset exceeds 10 MiB.');const bytes=new Uint8Array(await blob.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));return {type:blob.type,data:btoa(binary)};},url),Math.max(1,Math.min(10000,deadline-Date.now())));type=loaded.type;bytes=Buffer.from(loaded.data,'base64');downloaded+=bytes.length;
    }else{
     const cookies=await context.cookies(url),headers={referer:baseURL};if(cookies.length)headers.cookie=cookies.map(cookie=>cookie.name+'='+cookie.value).join('; ');
-    const response=await fetch(url,{headers,signal:AbortSignal.timeout(Math.max(1,Math.min(10000,deadline-Date.now())))});if(!response.ok){await response.body?.cancel();throw Error('HTTP '+response.status);}
+    const response=await fetch(url,{headers,signal:signal?AbortSignal.any([signal,AbortSignal.timeout(Math.max(1,Math.min(10000,deadline-Date.now())))]):AbortSignal.timeout(Math.max(1,Math.min(10000,deadline-Date.now())))});if(!response.ok){await response.body?.cancel();throw Error('HTTP '+response.status);}
     finalURL=response.url; charset=/charset\s*=\s*[\"']?([^;\s\"']+)/i.exec(response.headers.get('content-type')||'')?.[1]||'utf-8';type=response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();const chunks=[];let size=0;for await(const chunk of response.body){size+=chunk.length;downloaded+=chunk.length;if(size>10*1024*1024||downloaded>100*1024*1024)throw Error('Asset download limit exceeded.');chunks.push(chunk);}bytes=Buffer.concat(chunks);
    }
    let extension=extensions[type];if(!extension){const magic=bytes.subarray(0,4).toString('latin1');extension=({'wOFF':'.woff','wOF2':'.woff2','OTTO':'.otf','\x00\x01\x00\x00':'.ttf'})[magic];}if(!extension)throw Error('Unsupported asset type '+(type||'unknown'));
@@ -53,7 +54,7 @@ async function localize({html,fontFaces=[],baseURL,directory,context,page}){
    // Embedded dependencies keep SVG resources portable even when <use> resolves
    // relative URLs against the containing HTML document rather than the SVG.
    const name=crypto.createHash('sha256').update(bytes).digest('hex')+extension,relative='capture-assets/'+name;fs.mkdirSync(path.join(directory,'capture-assets'),{recursive:true});fs.writeFileSync(path.join(directory,relative),bytes);savedBytes+=bytes.length;Object.assign(record,{path:relative,mime:type||({'.woff':'font/woff','.woff2':'font/woff2','.otf':'font/otf','.ttf':'font/ttf'})[extension],bytes:bytes.length,status:'saved'});return record;
-  }catch(error){Object.assign(record,{status:'remote',reason:error.message});warnings.add('Some assets could not be saved and still depend on the original site.');return null;}
+  }catch(error){signal?.throwIfAborted();Object.assign(record,{status:'remote',reason:error.message});warnings.add('Some assets could not be saved and still depend on the original site.');return null;}
  }
  await localizeTree(tree,baseURL,false,new Set());
  return {html:parse5.serialize(tree),assets:[...records.values()],unresolvedReferences:[...unresolved],warnings:[...warnings]};

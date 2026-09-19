@@ -18,7 +18,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium';
    await page.setViewportSize(viewport);await page.setContent(html);
    assert.equal(await page.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(245, 245, 245)');
    assert.equal(await page.locator('article').first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
-   for(const name of [state==='stopped'?'Project stopped':'Open your design canvas','Open a project','Connect to an editor'])assert.equal(await page.getByRole('heading',{name,exact:true}).isVisible(),true);
+   for(const name of [state==='stopped'?'Project stopped':'Open your design canvas','Open a project','Open a website','Connect to an editor'])assert.equal(await page.getByRole('heading',{name,exact:true}).isVisible(),true);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight),true,'Welcome fits the available web view');
   }
   if(process.env.RT_E2E_WELCOME_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_WELCOME_SCREENSHOT});

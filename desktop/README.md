@@ -443,7 +443,14 @@ shell; the generated cask declares the Homebrew `node` formula dependency. A mis
 and logs. You can also start a project externally through
 `retouch -- <your usual command>`. Enter its local `/rt` URL in the app for an externally started project. The app checks the sidecar health endpoint before
 opening the editor. Cmd+L focuses the address and Cmd+R reloads the editor.
-It remembers the last successful URL. This version does not edit arbitrary remote sites.
+It remembers the last successful URL. **Open website…** now accepts an HTTP(S)
+page, canvas dimensions and a new save location. It captures an editable HTML
+copy and starts its local editor automatically; edits do not update the source
+website. Stop cancels capture or stops the editor while retaining a completed
+copy. Playwright is included in the locked CLI dependencies, but its Chromium
+binary is not yet bundled for fresh-machine use. The source flow has compiled
+and its CLI lifecycle and welcome template have automated coverage; native
+interaction with this rebuilt version remains unverified.
 
 ## Controlled native workflow verification (2026-09-11)
 

@@ -227,19 +227,22 @@ through editing, configuration restart, normal process restart and shutdown.
 ## Capture a URL into an editable project
 
 ```sh
-npm install --save-dev playwright
-npx playwright install chromium
-retouch capture https://example.com --out ./captured-page --width=1440 --height=900
-retouch html ./captured-page
+npx playwright@1.59.1 install chromium
+retouch capture https://example.com --out ./captured-page --width=1440 --height=900 --open
+# To reopen the saved copy later:
+# retouch html ./captured-page
 ```
 
 Capture uses a fresh browser session and waits for page load, web fonts (up to
 three seconds), and an optional `--wait=1000` delay in milliseconds. The output
 directory must not exist; its parent must exist. Width and height accept whole
 numbers from 240 to 7680. The command saves `index.html` and a `capture.json`
-record of the source URL, viewport, timestamp, asset results and known limitations. Playwright
-is resolved from the current project or the Retouch installation; it is an
-optional dependency for capture, not a requirement for editing local projects.
+record of the source URL, viewport, timestamp, asset results and known limitations.
+Playwright is included in the package. Capture requires its matching Chromium
+browser binary (`npx playwright install chromium` from the installed package).
+`--open` starts the local editor on an available port after capture; Stop or
+Ctrl-C closes it while preserving the saved copy. Cancelling an unfinished
+capture closes its browser and removes temporary output.
 
 This is a rendered page-state import, not recovery of the original application.
 JavaScript-rendered text, computed styling, generated before/after content, form
@@ -283,4 +286,7 @@ shadow roots are not fully portable. Browser-owned shadow internals are not
 exported. Standard form controls remain editable HTML controls, but native
 appearance can differ after computed styles are serialized.
 Cross-origin or otherwise unreadable canvases are reported as unavailable.
-The desktop app does not yet expose URL capture in its onboarding UI.
+The desktop source includes **Open website…** with URL, canvas dimensions and
+a save location, followed by automatic editor startup. The browser binary is
+not yet bundled for fresh-machine use; the rebuilt native flow and trusted
+distribution remain unverified.

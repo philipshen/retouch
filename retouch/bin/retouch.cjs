@@ -16,12 +16,14 @@ if (cmd === '--') {
   );
 } else if (cmd === 'capture') {
   const options=process.argv.slice(4),values={};let invalid;
-  for(let i=0;i<options.length;i++){const match=/^--(out|width|height|wait)(?:=(.*))?$/.exec(options[i]);if(!match||Object.hasOwn(values,match[1])){invalid='Unknown or duplicate capture option: '+options[i];break;}const value=match[2]??options[++i];if(value===undefined||value.startsWith('--')){invalid='Missing value for --'+match[1];break;}values[match[1]]=value;}
+  for(let i=0;i<options.length;i++){if(options[i]==='--open'&&!values.open){values.open=true;continue;}const match=/^--(out|width|height|wait)(?:=(.*))?$/.exec(options[i]);if(!match||Object.hasOwn(values,match[1])){invalid='Unknown or duplicate capture option: '+options[i];break;}const value=match[2]??options[++i];if(value===undefined||value.startsWith('--')){invalid='Missing value for --'+match[1];break;}values[match[1]]=value;}
   if(invalid){console.error('[retouch] '+invalid);process.exitCode=1;}
-  else require('../src/site-capture.cjs').capture({url:arg,directory:values.out,...Object.fromEntries(['width','height','wait'].filter(key=>Object.hasOwn(values,key)).map(key=>[key,Number(values[key])]))}).then(result=>{
+  else {const controller=new AbortController();let server;const stop=()=>{controller.abort();if(server){server.retouchIndex.close();server.closeAllConnections();server.close();}};process.once('SIGTERM',stop);process.once('SIGINT',stop);
+  require('../src/site-capture.cjs').capture({signal:controller.signal,url:arg,directory:values.out,...Object.fromEntries(['width','height','wait'].filter(key=>Object.hasOwn(values,key)).map(key=>[key,Number(values[key])]))}).then(result=>{
     console.log('Captured editable page: '+result.directory);console.log('Open with: retouch html '+JSON.stringify(result.directory));
     for(const message of [...result.limitations,...result.warnings])console.log('  '+message);
-  },error=>{console.error('[retouch] '+error.message);process.exitCode=1;});
+    controller.signal.throwIfAborted();if(values.open)server=require('../src/html-site.cjs').start({root:result.directory,port:0});
+  }).catch(error=>{console.error('[retouch] '+(controller.signal.aborted?'Capture cancelled.':error.message));process.exitCode=controller.signal.aborted?130:1;});}
 } else if (cmd === 'html') {
   try {
     const options=process.argv.slice(4),raw=options.find(v=>v.startsWith('--port='))?.slice(7) || (options.includes('--port')?options[options.indexOf('--port')+1]:undefined);
@@ -58,6 +60,7 @@ Usage:
   retouch capture <url> --out <new-directory> [--width=1440] [--height=900]
                               Capture a rendered page as an editable HTML copy.
                               Optional --wait=1000 delays capture in milliseconds.
+                              --open starts the editor when capture finishes.
   retouch doctor [app-dir]     Inspect local toolchain and integration limits.
 
   retouch shopify <theme-dir>   Mirror a Shopify Liquid theme. Serves an
