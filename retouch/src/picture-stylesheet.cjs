@@ -1,12 +1,13 @@
 'use strict';
 const postcss=require('postcss'),{transform:selector}=require('./picture-selectors.cjs');
 
-// Keep each declaration in its original rule and cascade position. Copying
-// computed styles would lose media queries, interaction states and inheritance.
+// Preserve declaration order and native nesting specificity before adapting
+// selectors. Computed-style snapshots would lose responsive and state rules.
 function transform(source){
  if(typeof source!=='string'||Buffer.byteLength(source)>2*1024*1024)throw Error('A stylesheet is too large to adapt for a picture.');
  const root=postcss.parse(source);let size=Buffer.byteLength(source);
  root.walkAtRules(rule=>{if(['scope','namespace'].includes(rule.name.toLowerCase()))throw Error('Scoped or namespaced stylesheets cannot yet be adapted for a picture.');});
+ require('./flatten-css-nesting.cjs').flatten(root);size=Buffer.byteLength(root.toString());
  root.walkRules(rule=>{
   for(let parent=rule.parent;parent;parent=parent.parent){
    if(parent.type==='atrule'&&/^(?:-\w+-)?keyframes$/i.test(parent.name))return;

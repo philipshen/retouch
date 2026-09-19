@@ -11,7 +11,7 @@ test('explicit wrapper selectors do not suppress adaptation of unrelated selecto
 });
 test('unsupported selector semantics refuse adaptation instead of silently breaking layout',()=>{
  for(const selector of [':has(img:nth-child(2 of .art))',':has(img + button)','& > img'])assert.throws(()=>selectors.transform(selector),/cannot yet|nested :has/);
- for(const css of ['@scope (.frame) { img {width:20px} }','@namespace svg "http://www.w3.org/2000/svg"; img {width:20px}','.frame { img {width:20px} }','img {'])assert.throws(()=>transform(css));
+ for(const css of ['@scope (.frame) { img {width:20px} }','@namespace svg "http://www.w3.org/2000/svg"; img {width:20px}','.frame { @unknown {img {width:20px}} }','img {'])assert.throws(()=>transform(css));
  assert.doesNotThrow(()=>selectors.transform('.first-of-type, [title="nth-child(2 of img)"]'));
 });
 test('selector expansion and stylesheet input sizes are bounded',()=>{

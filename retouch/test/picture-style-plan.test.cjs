@@ -65,3 +65,7 @@ test('reuse preserves preexisting generated files and stale creation paths refus
 test('distinct filenames sharing a stem produce distinct isolated stylesheets',t=>{
  const resolved=fixture(t,'<link rel="stylesheet" href="/a.css"><link rel="stylesheet" href="/a.other">',{'a.css':'main > img{width:50%}','a.other':'main > img{height:40px}'}),result=plan(resolved),copies=result.edits.filter(edit=>edit.before===null);assert.equal(copies.length,2);assert.notEqual(copies[0].file,copies[1].file);assert.equal(applyPlan(resolved.appRoot,result).ok,true);
 });
+
+test('repeating adaptation reuses an already flattened isolated graph without new copies',t=>{
+ const resolved=fixture(t,'<link rel="stylesheet" href="/a.css"><main><img></main>',{'a.css':'.frame, #unused { > img { width:50% } @media (max-width:600px) { > img {width:80%} } }'}),first=plan(resolved);assert.equal(applyPlan(resolved.appRoot,first).ok,true);const next=plan({...resolved,source:first.source});assert.equal(next.source,first.source);assert.equal(next.linksChanged,false);assert.equal(next.inlineChanged,false);assert.ok(next.edits.every(edit=>edit.before===edit.after));
+});

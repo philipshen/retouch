@@ -25448,3 +25448,34 @@ selector forms, CSP-specific compatibility and automatic cleanup after manual
 last-source removal remain open. The broad any-site/Figma parity objective and
 notarized desktop/Homebrew distribution remain incomplete. No desktop artifact
 was rebuilt or branch pushed.
+
+### Native CSS nesting during picture adaptation (2026-09-19)
+
+Supported native nested rules now expand before picture-selector adaptation.
+Explicit, implicit, repeated and functional nesting selectors use the complete
+parent selector list, retaining native specificity. Declaration runs stay in
+source order across nested rules and conditional groups; direct declarations in
+nested groups retain the parent's selector behavior, including pseudo-elements.
+Media, supports, container and layer groups retain their conditions/order, and
+keyframes and ordinary declaration literals remain intact. Starting-style groups
+are structurally supported but transition behavior is not independently verified.
+The expansion follows the [CSS Nesting working draft](https://www.w3.org/TR/css-nesting-1/)
+and is checked against native browser rendering rather than textual substitution
+alone.
+
+The dedicated Chromium/WebKit differential suite compares native nesting,
+expanded CSS and wrapped-image CSS at phone/desktop widths, with hover/focus,
+parent-list specificity, declarations after nested rules, pseudo-elements and
+media/container/layer/supports conditions. Both engines passed. The full editor
+flow passed with nested inline and integrity-verified external CSS, isolated
+imports, shared-page preservation, retained previews and exact file history.
+The existing 224-selector differential suite passed in both engines. Repeating
+adaptation reuses the expanded graph without creating another stylesheet fork.
+All 1,983 unit tests passed.
+
+Expansion is bounded before repeated parent substitution, with depth, rule-count
+and output-size limits. Sass selector concatenation and unsupported nested
+at-rules refuse; scope/namespace and relational selectors requiring nested
+`:has()` remain incomplete. Runtime CSSOM consumers and automatic rebasing of
+isolated copies onto later shared-CSS edits remain broader fidelity gaps. No
+desktop artifact was rebuilt or branch pushed.
