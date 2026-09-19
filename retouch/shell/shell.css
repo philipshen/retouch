@@ -1347,3 +1347,8 @@ html, body { overflow:clip; }
 .prototype-interaction legend{font-weight:600;padding:0 4px}
 .prototype-interaction input:not([type=checkbox]),.prototype-interaction select{min-width:0;max-width:100%}
 .prototype-interaction > .control-button{display:block;margin-top:8px}
+
+.prototype-overlay-surface{position:absolute;inset:0;overflow:hidden}
+.prototype-overlay-card{position:absolute;padding:0;border:0;overflow:hidden;background:#fff;box-shadow:0 12px 40px #0003}
+.prototype-overlay-frame{position:absolute;inset:0;border:0;display:block;transform-origin:top left;background:#fff}
+#closePrototypeOverlay[hidden]{display:none}

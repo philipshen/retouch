@@ -6,7 +6,7 @@
  function route(){try{const location=frame.contentWindow.location;return location.origin===root.location.origin?location.pathname+location.search+location.hash:null;}catch{return null;}}
  function update(){if(!state)return;try{title.textContent=frame.contentDocument?.title||route()||'Presentation';}catch{title.textContent='Presentation';}size.textContent=state.width+' × '+state.height;}
  function hook(){try{const w=frame.contentWindow;if(!frame.contentDocument||hooked.has(frame.contentDocument))return;hooked.add(frame.contentDocument);w.addEventListener('keydown',escape);}catch{}}
- function escape(event){if(!state||event.defaultPrevented||event.isComposing||event.key!=='Escape'||event.metaKey||event.ctrlKey||event.altKey||event.shiftKey)return;event.preventDefault();event.stopPropagation();void close();}
+ function escape(event){if(!state||event.defaultPrevented||event.isComposing||event.key!=='Escape'||event.metaKey||event.ctrlKey||event.altKey||event.shiftKey)return;event.preventDefault();event.stopPropagation();if(!root.RetouchPrototypeRuntime?.dismissOverlay())void close();}
  async function open(){
   if(state||pending)return;pending=true;button.disabled=true;
   try{
