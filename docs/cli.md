@@ -223,3 +223,33 @@ fails, the plugin closes its writer before failing startup.
 
 The installed Vite launch test checks that those false notices do not appear
 through editing, configuration restart, normal process restart and shutdown.
+
+## Capture a URL into an editable project
+
+```sh
+npm install --save-dev playwright
+npx playwright install chromium
+retouch capture https://example.com --out ./captured-page --width=1440 --height=900
+retouch html ./captured-page
+```
+
+Capture uses a fresh browser session and waits for page load, web fonts (up to
+three seconds), and an optional `--wait=1000` delay in milliseconds. The output
+directory must not exist; its parent must exist. Width and height accept whole
+numbers from 240 to 7680. The command saves `index.html` and a `capture.json`
+record of the source URL, viewport, timestamp and known limitations. Playwright
+is resolved from the current project or the Retouch installation; it is an
+optional dependency for capture, not a requirement for editing local projects.
+
+This is a rendered page-state import, not recovery of the original application.
+JavaScript-rendered text, computed styling, generated before/after content, form
+values and readable canvas pixels become literal editable HTML. Retouch's HTML
+text/style editing and undo/redo operate on that copy. Original application
+scripts, event handlers, embedded documents and form submission are not retained.
+Capture does not reuse browser logins or modify the source site.
+
+Current limitations: layout is captured at one viewport; responsive behavior and
+application logic are not reconstructed. Image URLs may still depend on the
+original site; downloadable fonts and shadow DOM contents are not included.
+Cross-origin or otherwise unreadable canvases are reported as unavailable.
+The desktop app does not yet expose URL capture in its onboarding UI.

@@ -25090,3 +25090,14 @@ close/reopen lifecycle. The existing comparison scroll suite continues to cover
 scaled wheel input, ancestor handoff and overscroll containment with linking off.
 Relative scroll position is a navigation aid, not semantic alignment of different
 responsive layouts or synchronized application state.
+
+### Initial URL capture path (2026-09-19)
+
+`retouch capture <url> --out <new-directory>` now connects a browser-rendered
+page state to the existing literal HTML authoring adapter. Browser tests cover
+JavaScript-created text, layout geometry, generated content, rasterized canvases,
+form values, text/style edits, exact undo/redo, the actual CLI, HTTP failure
+cleanup and destination preservation. This begins the remote-site authoring
+path; it does not establish arbitrary-site fidelity, original-source writeback,
+responsive reconstruction, offline asset portability, authenticated capture or
+desktop onboarding. See [capture usage and limits](cli.md#capture-a-url-into-an-editable-project).
