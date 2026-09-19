@@ -26101,3 +26101,42 @@ graph. Outgoing snapshots do not yet reproduce closed shadow roots, embedded fra
 video frames, tainted canvases, or all animation/external-resource states. Complex
 sites may therefore differ visually during motion. No desktop artifact was rebuilt
 or branch pushed. Full Figma parity and notarized Homebrew distribution remain open.
+
+### Preserving snapshot media and animation state (2026-09-20)
+
+Outgoing transition snapshots now keep canvas elements and paint their existing
+bitmap directly into the copy. This preserves canvas-specific selectors/layout
+and works with origin-tainted content without exporting or making that content
+readable. Decoded video frames are copied to canvases with their computed box and
+object-fit styles. The implementation uses the browser's
+[canvas image-source support](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage).
+
+CSS animations, CSS transitions and Web Animations effects are inspected at capture
+time. Animated properties take their current computed values, and motion is disabled
+in the copy. Pseudo-element motion is captured through subtree animation discovery
+and scoped frozen-style rules; open shadow roots use the same process. The original
+page is not paused or restyled.
+
+Canvas rendering requires the copy's document to permit scripting, so the snapshot
+iframe now uses allow-scripts alongside allow-same-origin. An inserted Content
+Security Policy explicitly denies scripts, embedded objects and child frames.
+Scripts, event attributes and embedded browsing contexts are still removed before
+insertion; the copy is inert. A browser test injects a script afterward and verifies
+that it cannot run. These changes do not grant pixel readback: the copied tainted
+canvas still rejects export.
+
+The new browser suite passed HTML, Liquid, compiled React and compiled Vue in
+Chromium and WebKit. It verifies canvas color and tag-specific dimensions, a decoded
+second video scene, frozen CSS/pseudo/WAAPI properties, zero restarted animations,
+script blocking, retained canvas taint and cleanup. A final HTML pass in both engines
+also compares the complete video image and letterboxing with the original. The
+existing seven-transition navigation suite passed both engines. The rendered media
+snapshot was inspected; syntax and diff checks passed. The 2 KB red/blue video
+fixture is generated locally, with its regeneration command documented alongside it.
+No source-operation changes required a unit-suite rerun.
+
+Closed shadow trees, nested frame imagery, browser-native media controls, protected
+video, all WebGL drawing-buffer modes, external-resource timing and every CSS/media
+selector interaction remain unverified or unsupported. This improves page snapshots;
+it does not implement Smart Animate. No desktop artifact was rebuilt or branch
+pushed. Full parity and notarized Homebrew distribution remain unfinished.
