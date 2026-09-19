@@ -25152,3 +25152,20 @@ undo/redo. Visual review still shows differences in native input border painting
 after computed styles become authored styles; pixel-perfect capture is not proven.
 Declarative closed roots and browser-owned shadow internals remain outside the
 exported tree; component behavior and encapsulation are not reconstructed.
+
+
+### Captured screen defaults and resize handle reachability (2026-09-19)
+
+HTML projects with a valid capture manifest open at the recorded viewport until
+the user saves another preview choice. Captured size remains available in the
+screen menu. Explicit workspace fit and custom preview dimensions survive
+reopening, and preview undo returns to the captured baseline. Only validated
+numeric dimensions enter the shell; malformed, oversized and symlinked manifests
+are ignored. This preserves a captured page state, not responsive reconstruction.
+
+Browser verification also exposed a preexisting resize failure: the floating
+toolbar covered the focused corner handle after growth. Focused/dragging screen
+handles now remain above the toolbar. The unchanged geometry/reachability/undo
+assertions pass in Chromium and WebKit. Capture tests in both engines verify
+initial geometry, saved-size precedence, workspace fit, editing and exact undo.
+All 1,935 unit tests passed. The latest desktop archive predates these changes.

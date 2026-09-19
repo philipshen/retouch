@@ -31,7 +31,7 @@ function start({root,port=9400,quiet=false}){
    res.end(req.method==='HEAD'?undefined:body);
   }catch(err){return fail(err.code==='ENOENT'?404:500,err.code==='ENOENT'?'not found':'could not serve file');}
  }
- server=require('./server.cjs').startServer({appRoot:root,port,adapter,serveSite,rendering:{reloadAfterWrite:true,revalidateStyles:true},quiet});
+ server=require('./server.cjs').startServer({appRoot:root,port,adapter,serveSite,rendering:{reloadAfterWrite:true,revalidateStyles:true,captureViewport:require('./capture-viewport.cjs').read(root)},quiet});
  return server;
 }
 module.exports={start};

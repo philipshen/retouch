@@ -241,7 +241,10 @@ record of the source URL, viewport, timestamp, asset results and known limitatio
 Playwright is included in the package. Capture requires its matching Chromium
 browser binary (`npx playwright install chromium` from the installed package).
 `--open` starts the local editor on an available port after capture; Stop or
-Ctrl-C closes it while preserving the saved copy. Cancelling an unfinished
+Ctrl-C closes it while preserving the saved copy. On first open, the editor
+uses the captured viewport. The Screen menu includes **Captured size** to return
+to that view; a saved preview choice, including **Fit workspace**, takes
+precedence when reopening the project. Cancelling an unfinished
 capture closes its browser and removes temporary output.
 
 This is a rendered page-state import, not recovery of the original application.

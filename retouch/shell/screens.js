@@ -28,6 +28,10 @@
     return constrain(next,axis,ratioBase||base,true);
   }
   function valid(value) { return Number.isInteger(value) && value >= 240 && value <= 7680; }
+  const capture=window.__RT_RENDERING?.captureViewport;
+  const capturedScreen=capture&&valid(capture.width)&&valid(capture.height)?{width:capture.width,height:capture.height}:null;
+  if(capturedScreen){const option=new Option('Captured size · '+capture.width+' × '+capture.height,capture.width+'x'+capture.height);preset.insertBefore(option,preset.options[1]);}
+
   function apply(next, options = {}) {
     if(fieldScrub&&options.persist!==false)finishScrub(true);
     if(options.persist!==false){
@@ -143,10 +147,11 @@
     const name=screen?screen.width+'x'+screen.height:'fluid';preset.value=[...preset.options].some(option=>option.value===name)?name:[...savedGroup.children].some(option=>option.value==='saved:'+name)?'saved:'+name:'custom';
   }, get() { return screen ? {...screen} : null; }, set(next, options) { if(next===null || next && valid(next.width) && valid(next.height))apply(next, options); }, restore() {
     try {
-      const saved = JSON.parse(localStorage.getItem(key));
+      const raw=localStorage.getItem(key),saved=raw===null?undefined:JSON.parse(raw);
       let anchor;try{anchor=JSON.parse(localStorage.getItem(key+'.aspectBase'));}catch{}
       if (saved && valid(saved.width) && valid(saved.height)) apply(saved,{history:false,ratio:anchor&&valid(anchor.width)&&valid(anchor.height)?anchor:saved});
-      else if(saved===null&&anchor&&valid(anchor.width)&&valid(anchor.height))ratioBase=copy(anchor);
-    } catch {}
+      else if(saved===null){if(anchor&&valid(anchor.width)&&valid(anchor.height))ratioBase=copy(anchor);}
+      else if(capturedScreen)apply(capturedScreen,{history:false});
+    } catch {if(capturedScreen)apply(capturedScreen,{history:false});}
   } };
 })();
