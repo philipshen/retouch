@@ -49,8 +49,9 @@
     const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=item.overlay.closeOutside;check.setAttribute('aria-label','Close when clicking outside '+(index+1));label.append(check,' Close when clicking outside');card.append(label);check.onchange=()=>{draft.overlay.closeOutside=check.checked;modify();};
    }else if(item.action==='swap-overlay')I.note(card,'Replace the current overlay, keeping its size, position and background.');
    if(V.transitions[item.action]){
-    const current=item.transition||{type:'instant'},names={'instant':'Instant','animate':'Animate','dissolve':'Dissolve','move-in':'Move in','move-out':'Move out','push':'Push','slide-in':'Slide in','slide-out':'Slide out'};
+    const current=item.transition||{type:'instant'},names={'instant':'Instant','smart-animate':'Smart animate','animate':'Animate','dissolve':'Dissolve','move-in':'Move in','move-out':'Move out','push':'Push','slide-in':'Slide in','slide-out':'Slide out'};
     I.select(card,'Animation '+(index+1),V.transitions[item.action].map(value=>[value,names[value]]),current.type,value=>{draft.transition=V.transition({type:value},item.action);modify();});
+    if(current.type==='smart-animate')I.note(card,'Matches layer names (or element IDs) within the same layer hierarchy. Ambiguous matches dissolve.');
     if(current.type!=='instant'){
      draft.transition={...current};
      const duration=document.createElement('input');duration.type='number';duration.min='1';duration.max='10000';duration.step='1';duration.value=current.duration;duration.readOnly=current.easing?.type==='spring';if(duration.readOnly)duration.title='Duration follows the spring settling time.';I.field(card,'Duration (ms) '+(index+1),duration);duration.onchange=()=>{draft.transition.duration=Number(duration.value);modify();};
@@ -58,7 +59,7 @@
      I.select(card,'Easing '+(index+1),[...V.easings.map(value=>[value,value.split('-').map(word=>word[0].toUpperCase()+word.slice(1)).join(' ')]),['custom','Custom Bézier'],...Object.keys(S.presets).map(name=>['spring-'+name,name[0].toUpperCase()+name.slice(1)+' spring']),['spring-custom','Custom spring']],typeof current.easing==='string'?current.easing:current.easing.type==='spring'?'spring-'+(springName||'custom'):'custom',value=>{draft.transition.easing=value==='custom'?{type:'cubic-bezier',values:[...(V.curves[current.easing]||current.easing.values||V.curves['ease-out'])]}:value.startsWith('spring-')?(value==='spring-custom'&&current.easing?.type==='spring'?current.easing:{type:'spring',...(S.presets[value.slice(7)]||S.presets.gentle)}):value;modify();});
      if(current.easing?.type==='cubic-bezier')root.RetouchPrototypeCurve.mount(card,{value:current.easing,index:index+1,duration:current.duration,change:value=>{draft.transition.easing=value;return modify();}});
      if(current.easing?.type==='spring')root.RetouchPrototypeSpringPanel.mount(card,{value:current.easing,index:index+1,change:value=>{draft.transition.easing=value;return modify();}});
-     if(!['dissolve','animate'].includes(current.type))I.select(card,'Direction '+(index+1),[['left','Left'],['right','Right'],['top','Top'],['bottom','Bottom']],current.direction,value=>{draft.transition.direction=value;modify();});
+     if(!['dissolve','animate','smart-animate'].includes(current.type))I.select(card,'Direction '+(index+1),[['left','Left'],['right','Right'],['top','Top'],['bottom','Bottom']],current.direction,value=>{draft.transition.direction=value;modify();});
     }
    }
    const remove=I.button('Remove',()=>{opened=Math.max(0,index-1);return save(items.filter((_,i)=>i!==index));});remove.setAttribute('aria-label','Remove interaction '+(index+1));card.append(remove);

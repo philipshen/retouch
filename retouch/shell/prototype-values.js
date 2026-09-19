@@ -5,12 +5,12 @@
  const attribute='data-rt-prototype',positions=['center','top-left','top-center','top-right','center-left','center-right','bottom-left','bottom-center','bottom-right'];
  const triggers=['click','mouseenter','mouseleave','mousedown','mouseup','after-delay','keyboard'];
  const transitions={
-  'navigate':['instant','dissolve','move-in','move-out','push','slide-in','slide-out'],
-  'back':['instant','dissolve','move-in','move-out','push','slide-in','slide-out'],
+  'navigate':['instant','smart-animate','dissolve','move-in','move-out','push','slide-in','slide-out'],
+  'back':['instant','smart-animate','dissolve','move-in','move-out','push','slide-in','slide-out'],
   'scroll':['instant','animate'],
   'open-overlay':['instant','dissolve','move-in','slide-in'],
   'close-overlay':['instant','dissolve','move-out','slide-out'],
-  'swap-overlay':['instant','dissolve','move-in','move-out','push','slide-in','slide-out']
+  'swap-overlay':['instant','smart-animate','dissolve','move-in','move-out','push','slide-in','slide-out']
  },easings=['linear','ease-in','ease-out','ease-in-out'];
  const curves={'linear':[0,0,1,1],'ease-in':[.42,0,1,1],'ease-out':[0,0,.58,1],'ease-in-out':[.42,0,.58,1]};
  function easing(value){
@@ -26,7 +26,7 @@
   const result={type:value.type,duration:value.duration??300,easing:easing(value.easing??'ease-out')};
   if(!Number.isInteger(result.duration)||result.duration<1||result.duration>10000)throw Error('Choose a duration from 1 to 10000 ms and a supported easing curve.');
   if(result.easing?.type==='spring')result.duration=S.curve(result.easing).duration;
-  if(!['dissolve','animate'].includes(value.type)){result.direction=value.direction??'right';if(!['left','right','top','bottom'].includes(result.direction))throw Error('Choose a transition direction.');}
+  if(!['dissolve','animate','smart-animate'].includes(value.type)){result.direction=value.direction??'right';if(!['left','right','top','bottom'].includes(result.direction))throw Error('Choose a transition direction.');}
   else if(value.direction!==undefined)throw Error('This animation does not have a direction.');
   return result;
  }

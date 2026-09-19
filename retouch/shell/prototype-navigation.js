@@ -30,7 +30,7 @@
  async function loaded(){const entry=current;if(!entry)return;const ready=await M.ready(frame,entry.controller.signal);if(!ready||current!==entry)return;
   try{frame.contentWindow.scrollTo({left:entry.scroll?.x||0,top:entry.scroll?.y||0,behavior:'instant'});}catch{}
   entry.status.hidden=true;frame.style.visibility=entry.visibility;const direction=entry.config.direction,vector=direction==='left'?[-stage.clientWidth,0]:direction==='top'?[0,-stage.clientHeight]:direction==='bottom'?[0,stage.clientHeight]:[stage.clientWidth,0];
-  entry.motion=M.play({old:entry.copy,next:frame,config:entry.config,vector});await entry.motion.finished;if(current===entry){clear();frame.focus({preventScroll:true});}
+  entry.motion=entry.config.type==='smart-animate'?root.RetouchPrototypeSmart.play({old:entry.copy,next:frame,config:entry.config}):M.play({old:entry.copy,next:frame,config:entry.config,vector});await entry.motion.finished;if(current===entry){clear();frame.focus({preventScroll:true});}
  }
  root.RetouchPrototypeNavigation={begin,loaded,clear,get busy(){return !!current;},get animations(){return current?.motion?.animations||[];}};
 })(window);

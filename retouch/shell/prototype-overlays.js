@@ -28,7 +28,7 @@
   const serial=entry.serial,controller=new AbortController();entry.controller=controller;
   const ready=await M.ready(frame,controller.signal);if(!ready||entry.serial!==serial||!stack.includes(entry))return;
   entry.pending=null;entry.frame=frame;entry.phase='animating';entry.status.hidden=true;entry.card.style.visibility='';frame.style.visibility='';if(!old)entry.backdrop.style.opacity='';title(entry);
-  entry.motion=M.play({old:old||null,next:old?frame:entry.card,backdrop:old?null:entry.backdrop,config:transition,vector:vector(entry,transition,!!old)});
+  entry.motion=old&&transition.type==='smart-animate'?root.RetouchPrototypeSmart.play({old,next:frame,config:transition}):M.play({old:old||null,next:old?frame:entry.card,backdrop:old?null:entry.backdrop,config:transition,vector:vector(entry,transition,!!old)});
   const ok=await entry.motion.finished;if(!ok||entry.serial!==serial||!stack.includes(entry))return;
   if(old)removeFrame(entry,old);entry.card.inert=false;entry.phase='idle';entry.card.removeAttribute('aria-busy');if(stack.at(-1)===entry)frame.focus({preventScroll:true});
  }

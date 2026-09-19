@@ -26140,3 +26140,43 @@ video, all WebGL drawing-buffer modes, external-resource timing and every CSS/me
 selector interaction remain unverified or unsupported. This improves page snapshots;
 it does not implement Smart Animate. No desktop artifact was rebuilt or branch
 pushed. Full parity and notarized Homebrew distribution remain unfinished.
+
+### Smart Animate for navigation and overlay swaps (2026-09-20)
+
+Navigate to, Back and Swap overlay now offer Smart animate with the shared duration,
+Bézier and spring controls. Open/Close overlay and Scroll to do not accept it, and
+it has no direction field. The interaction panel explains the matching convention.
+This follows Figma's distinction between
+[name/hierarchy matching and unmatched layers](https://help.figma.com/hc/en-us/articles/360039818874-Smart-animate-layers-between-frames).
+
+Matching uses explicit Retouch layer names, then element IDs, plus the hierarchy
+of source-connected elements and element type. Duplicate keys on either page are
+not guessed. The current HTML-layer engine interpolates dimensions, translation,
+solid background/text/border colors, opacity, corner radii, borders/padding,
+typography, and the element's own transform/rotate/scale. It measures endpoint
+layout with changed dimensions before movement, subtracting the nearest matched
+parent's displacement so nested children do not move twice. Both page surfaces
+morph while the incoming frame dissolves; unmatched content uses the dissolve.
+Source metadata remains untouched during playback. Animation effects are canceled
+and temporary inline priorities restored on completion, exit or overlay teardown.
+Reduced motion skips morphing. An inaccessible destination or animation setup
+failure falls back to a frame dissolve.
+
+Fresh validation: all 2,059 unit tests passed, including source round trips for all
+four adapters and action/direction validation. Smart Animate browser checks passed
+HTML, Liquid, compiled React and compiled Vue in Chromium and WebKit. They cover
+source authoring/undo, explicit names across different IDs, nested start/mid/end
+geometry, solid fill and corner interpolation, duplicate-key ambiguity, Back and
+exit cleanup. The eight-transition overlay suite, including Smart Animate swaps
+and reduced motion, also passed all four renderers in both engines. Follow-up HTML
+runs in both engines verify ID fallback, own rotation
+and opacity, and the final cleanup path. The existing navigation suite also passed
+both engines. The midpoint screenshot was inspected; syntax/diff checks passed.
+
+This is an initial Smart Animate engine, not full parity. Transformed ancestors,
+SVG shape matching, hierarchy changes, flex/grid constraints and stylesheet
+!important rules need more coverage or implementation. Gradient/image-fill
+interpolation, combined Smart Animate with Push/Move/Slide, counterpart highlighting
+and complete app-driven animation coexistence remain open. No desktop artifact was
+rebuilt or branch pushed. Full Figma parity and notarized Homebrew distribution
+remain unfinished.
