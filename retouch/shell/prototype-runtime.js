@@ -1,17 +1,17 @@
 (function(root){
  'use strict';
- const pendingActions=new Set(),V=root.RetouchPrototypeValues,K=root.RetouchPrototypeKeys,frame=document.getElementById('app'),contexts=new Map(),main={frame,release:null,pendingScroll:null},overlays=root.RetouchPrototypeOverlays;contexts.set(frame,main);let running=false,trail=[],held=null,clickBlock=null;
+ const pendingActions=new Set(),V=root.RetouchPrototypeValues,K=root.RetouchPrototypeKeys,frame=document.getElementById('app'),contexts=new Map(),main={frame,release:null,pendingScroll:null},overlays=root.RetouchPrototypeOverlays;contexts.set(frame,main);let loadSerial=0,running=false,trail=[],held=null,clickBlock=null;
  function consumeClick(event){if(!clickBlock)return false;const block=clickBlock;clickBlock=null;if(performance.now()>block.until||event.detail===0)return false;event.preventDefault();event.stopImmediatePropagation();return true;}
  document.addEventListener('pointerup',event=>{if(clickBlock&&event.isPrimary!==false)clickBlock.until=performance.now()+1000;},true);
  document.addEventListener('click',consumeClick,true);document.addEventListener('pointerdown',event=>{if(event.isPrimary!==false)clickBlock=null;},true);
  function current(target=frame){try{const w=target.contentWindow;if(w.location.origin!==location.origin)return null;return {url:w.location.pathname+w.location.search+w.location.hash,x:w.scrollX,y:w.scrollY};}catch{return null;}}
- function navigate(destination,scroll){main.release?.();main.release=null;const url=new URL(destination,location.href);main.pendingScroll={...scroll,url:url.href};frame.src=url.pathname+url.search+url.hash;}
+ function navigate(destination,scroll,transition){root.RetouchPrototypeNavigation.begin(transition,scroll);main.release?.();main.release=null;const url=new URL(destination,location.href);main.pendingScroll={...scroll,url:url.href};frame.src=url.pathname+url.search+url.hash;}
  function perform(item,context,opener){const before=current();if(!before)return;context.scrollMotion?.cancel();context.scrollMotion=null;
   if(item.action==='open-overlay'){overlays.open(item.destination,item.overlay,opener,item.transition);return;}
   if(item.action==='close-overlay'){overlays.close(true,item.transition);return;}
   if(item.action==='swap-overlay'&&overlays.swap(item.destination,opener,item.transition))return;
-  if(item.action==='navigate'||item.action==='swap-overlay'){if(!V.route(item.destination))return;trail.push(before);if(trail.length>100)trail.shift();overlays.clear();navigate(item.destination,item.preserveScroll?before:{x:0,y:0});}
-  else if(item.action==='back'){if(overlays.close())return;const previous=trail.pop();if(previous)navigate(previous.url,previous);}
+  if(item.action==='navigate'||item.action==='swap-overlay'){if(!V.route(item.destination))return;trail.push(before);if(trail.length>100)trail.shift();overlays.clear();navigate(item.destination,item.preserveScroll?before:{x:0,y:0},item.transition);}
+  else if(item.action==='back'){if(overlays.close())return;const previous=trail.pop();if(previous)navigate(previous.url,previous,item.transition);}
   else if(item.action==='scroll'){const d=context.frame.contentDocument,targets=[...d.querySelectorAll('[id]')].filter(el=>el.id===item.destination);if(targets.length!==1){root.RetouchPresentationHost.error('The scroll destination is missing or duplicated.');return;}try{context.scrollMotion=root.RetouchPrototypeScroll.play(targets[0],item.transition,item.scrollOffset);}catch(error){root.RetouchPresentationHost.error(error.message);}}
  }
  // WebKit can crash if touch-release navigation removes the dispatching iframe.
@@ -69,11 +69,11 @@
    };for(const type of ['wheel','pointerdown','keydown'])listen(type,cancelScroll);scrollJob=requestAnimationFrame(restoreScroll);
   }}
  }
- frame.addEventListener('load',()=>{if(running)overlays.clear();mount(main);});
+ frame.addEventListener('load',async()=>{const ticket=++loadSerial;if(running)overlays.clear();await root.RetouchPrototypeNavigation.loaded();if(ticket===loadSerial)mount(main);});
  root.RetouchPrototypeRuntime={
   start(){running=true;trail=[];main.pendingScroll=null;mount(main);},
-  stop(){held=null;clickBlock=null;overlays.clear();running=false;main.release?.();main.release=null;trail=[];main.pendingScroll=null;},
-  restart(){overlays.clear();main.release?.();main.release=null;trail=[];main.pendingScroll=null;},
+  stop(){++loadSerial;root.RetouchPrototypeNavigation.clear();held=null;clickBlock=null;overlays.clear();running=false;main.release?.();main.release=null;trail=[];main.pendingScroll=null;},
+  restart(){++loadSerial;root.RetouchPrototypeNavigation.clear();overlays.clear();main.release?.();main.release=null;trail=[];main.pendingScroll=null;},
   dismissOverlay:()=>overlays.close(),
   attachFrame(frame){const context={frame,release:null,pendingScroll:null};context.loaded=()=>mount(context);contexts.set(frame,context);frame.addEventListener('load',context.loaded);},
   detachFrame(frame){const context=contexts.get(frame);if(!context||context===main)return;context.release?.();frame.removeEventListener('load',context.loaded);contexts.delete(frame);},

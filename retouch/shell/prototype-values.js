@@ -5,6 +5,8 @@
  const attribute='data-rt-prototype',positions=['center','top-left','top-center','top-right','center-left','center-right','bottom-left','bottom-center','bottom-right'];
  const triggers=['click','mouseenter','mouseleave','mousedown','mouseup','after-delay','keyboard'];
  const transitions={
+  'navigate':['instant','dissolve','move-in','move-out','push','slide-in','slide-out'],
+  'back':['instant','dissolve','move-in','move-out','push','slide-in','slide-out'],
   'scroll':['instant','animate'],
   'open-overlay':['instant','dissolve','move-in','slide-in'],
   'close-overlay':['instant','dissolve','move-out','slide-out'],

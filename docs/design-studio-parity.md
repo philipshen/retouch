@@ -26066,3 +26066,38 @@ Cross-page connections, comparison canvases, dense handle placement, native touc
 and pen verification, rotated scroll containers, scroll-snap interaction and sites
 that override scrolling still need work. No desktop artifact was rebuilt or branch
 pushed. Full Figma parity and notarized Homebrew distribution remain unfinished.
+
+### Page-navigation transitions (2026-09-20)
+
+Navigate to and Back now expose the same timing controls as overlay transitions:
+Instant, Dissolve, Move in/out, Push, and Slide in/out, with direction, duration,
+preset/custom Bézier easing and physical springs. These settings use the existing
+source-backed interaction metadata and exact undo/redo across all four adapters.
+
+Presentation keeps a sandboxed, inert copy of the outgoing DOM above the main
+iframe while the destination loads. Scripts, event attributes, refresh metadata
+and embedded browsing contexts are omitted. Form properties, nested/root scroll,
+readable canvas pixels, open shadow trees and adopted stylesheets are copied.
+The real destination loads once in the existing main iframe. A loading indicator
+remains until mount readiness, then the two surfaces animate with the shared motion
+engine. Incoming prototype handlers and timers mount after the transition. Reduced
+motion skips the copy and animation. Back uses its configured transition and saved
+scroll position; exit/restart cancel motion and restore visibility, stacking,
+clipping and input state. Load serials prevent an older completion from remounting
+handlers after restart/exit.
+
+Validation: all 2,054 unit tests passed, including navigation-motion source
+round trips in HTML, Liquid, React and Vue. The browser suite passed all four
+renderers in Chromium and WebKit. It checks all seven transitions, midpoint pixel
+composition, timing/easing, source authoring/history, one destination request,
+preserved outgoing form/scroll/shadow/canvas state, no script replay, preserve-scroll
+before animation, Back, reduced motion, exit/restart during animation, and exit
+while a network response is held. Existing prototype, overlay-motion, scrolling,
+trigger and keyboard suites passed both browsers. The midpoint screenshot was
+inspected; syntax and diff checks passed.
+
+This is page-level transition playback, not Smart Animate or a cross-page authoring
+graph. Outgoing snapshots do not yet reproduce closed shadow roots, embedded frames,
+video frames, tainted canvases, or all animation/external-resource states. Complex
+sites may therefore differ visually during motion. No desktop artifact was rebuilt
+or branch pushed. Full Figma parity and notarized Homebrew distribution remain open.

@@ -102,6 +102,7 @@
     "test:e2e:prototype-triggers": "node test/e2e/prototype-triggers.cjs",
     "test:e2e:prototype-spring": "node test/e2e/prototype-spring.cjs",
     "test:e2e:prototype-curve": "node test/e2e/prototype-curve.cjs",
+    "test:e2e:prototype-navigation": "node test/e2e/prototype-navigation.cjs",
     "test:e2e:prototype-motion": "node test/e2e/prototype-motion.cjs",
     "test:e2e:prototype-overlays": "node test/e2e/prototype-overlays.cjs",
     "test:e2e:prototype": "node test/e2e/prototype.cjs",
