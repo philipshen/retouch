@@ -318,6 +318,7 @@ function hookFrame(d, w) {
   };
   // Selection: capture-phase click; prevent the app from reacting (OQ-E4).
   d.addEventListener('click', async (e) => {
+    if(window.RetouchPrototypePicker?.click(e))return;
     if (mode !== 'edit') return;
     if(inspectorTextCommit){
       e.preventDefault();e.stopPropagation();const serial=++inspectorSelectionSerial,target=captureInspectorSelectionTarget(pickLayer(e.target,e.clientX,e.clientY));
@@ -3865,15 +3866,25 @@ function moveHTMLLayer(info,target,width,g,action='move',opener,initial=null){
     onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
 
-async function refreshPrototype(info){
+async function refreshPrototype(info,anchor=false){
  const V=window.RetouchPrototypeValues;if(!V)return;
  const frames=[iframe,...document.querySelectorAll('#screenComparisons iframe')];
- for(const frame of frames){let d;try{d=frame.contentDocument;}catch{continue;}if(!d)continue;for(const el of matchingInDocument(d,info.id,info)){if(info.prototypeInteractions?.length)el.setAttribute(V.attribute,JSON.stringify(info.prototypeInteractions));else el.removeAttribute(V.attribute);}}
+ for(const frame of frames){let d;try{d=frame.contentDocument;}catch{continue;}if(!d)continue;for(const el of matchingInDocument(d,info.id,info)){if(info.prototypeInteractions?.length)el.setAttribute(V.attribute,JSON.stringify(info.prototypeInteractions));else el.removeAttribute(V.attribute);if(anchor&&Object.hasOwn(info,'prototypeAnchor')){if(info.prototypeAnchor===null)el.removeAttribute('id');else el.id=info.prototypeAnchor;}}}
  if(sel?.info.id===info.id){sel.info=info;renderPanel();}window.dispatchEvent(new Event('retouch:prototype'));
 }
 window.RetouchPrototypeHost={
  selection(){if(!sel?.info)return null;if(sel.multiple?.length>1)return {prototypeEditable:false,prototypeReason:'Select one source layer to edit its interactions.'};return sel.info;},
  route:currentPageRoute,error:message=>toast(message,'err'),
+ destinationLabel(id){const matches=[...doc().querySelectorAll('[id]')].filter(el=>el.id===id);if(matches.length>1)return 'Ambiguous destination';const el=matches[0];return el?(el.getAttribute('data-rt-name')||el.getAttribute('aria-label')||el.textContent?.trim().replace(/\s+/g,' ').slice(0,65)||el.localName):null;},
+ async pickScroll(info,index){
+  await this.prepare();if(mode!=='edit')setEditorMode('edit');
+  const target=await RetouchPrototypePicker.pick(iframe);if(!target)return;
+  const id=target.getAttribute('data-rt'),context=renderContext(target),response=await api('GET',resolveUrl(id,context));
+  if(!response?.ok||!target.isConnected||sel?.info.id!==info.id||sel.info.hash!==info.hash||panelTasks||sourceRequests||undoBusy)throw Error('The selection changed. Pick the destination again.');
+  if(!Object.hasOwn(response.element,'prototypeAnchor')||target.id!==(response.element.prototypeAnchor||''))throw Error('This layer’s ID is controlled by the site. Choose a source-authored destination.');
+  busyPanel(true);try{const result=await api('POST','/rt/__api/op',{type:'connectPrototypeScroll',id:info.id,fileHash:info.hash,context:info.context,index,targetId:id,targetHash:response.element.hash,targetContext:context});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not connect the destination.');if(result.undoId)editorHistory.record({type:'prototypeInteractions',id:info.id,context:info.context,targetId:id,targetContext:context,undoId:result.undoId});await refreshPrototype(result.target,true);await refreshPrototype(result.element);return result;}finally{busyPanel(false);}
+ },
+
  async pages(){const result=await api('GET','/rt/__api/pages');return result?.pages||[];},
  async prepare(){if(panelTasks||sourceRequests||undoBusy||stopDrawing)throw Error('Finish the current edit first.');await commitInlineEdit();},
  async save(info,interactions){
@@ -4140,7 +4151,7 @@ async function restoreHistory(direction,op) {
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='htmlGroupScale'){const resultInfo=await api('GET',resolveUrl(op.id));if(!resultInfo?.ok)throw Error('The scaled group no longer resolves.');try{await refreshHTMLGroupScale(resultInfo.element);}finally{await restoreLayerSelection([op.id]);if(sel)renderPanel();}return result;}
-    if(op.type==='prototypeInteractions'){const fresh=await api('GET',resolveUrl(op.id,op.context));if(!fresh?.ok)throw Error('Re-select the prototype layer to refresh it.');await refreshPrototype(fresh.element);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='prototypeInteractions'){if(op.targetId){const target=await api('GET',resolveUrl(op.targetId,op.targetContext));if(!target?.ok)throw Error('The prototype destination no longer resolves.');await refreshPrototype(target.element,true);}const fresh=await api('GET',resolveUrl(op.id,op.context));if(!fresh?.ok)throw Error('Re-select the prototype layer to refresh it.');await refreshPrototype(fresh.element);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentPropSelection'){await refreshComponentSelection(op.selectionIds);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='moveGroup'){const results=await Promise.all(op.childIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(r=>r?.ok))throw Error('The group contents no longer resolve.');try{await refreshGroupMove(results.map(r=>r.element),direction==='undo'?op.classesAfter:op.classesBefore);}finally{await restoreLayerSelection(op.selectionIds||[op.groupId]);if(sel)renderPanel();}return result;}
@@ -4195,6 +4206,7 @@ async function restoreHistory(direction,op) {
 
 /* ---------- chrome ---------- */
 function setEditorMode(next) {
+  window.RetouchPrototypePicker?.cancel();
   canvasPan.cancel();
   stopDrawing?.();
   mode = next;

@@ -251,7 +251,8 @@ function handle(req, res, ctx) {
       try {
         resolved.context = renderContext(op.context);
         if(ctx.adapter.name==='liquid'&&op.type?.endsWith('Selection')&&op.contexts&&typeof op.contexts==='object'&&!Array.isArray(op.contexts)){op.contexts=Object.fromEntries(Object.entries(op.contexts).map(([id,value])=>[id,renderContext(value)]));}
-        if(op.type==='setPrototypeInteractions'){result=applyPlan(ctx.appRoot,require('./prototype-interactions.cjs').plan(resolved,op,ctx.adapter));}
+        if(op.type==='connectPrototypeScroll'){const target=ctx.index.resolve(op.targetId);result=applyPlan(ctx.appRoot,require('./prototype-connect.cjs').plan(resolved,target,op,ctx.adapter));}
+        else if(op.type==='setPrototypeInteractions'){result=applyPlan(ctx.appRoot,require('./prototype-interactions.cjs').plan(resolved,op,ctx.adapter));}
         else if(['applyVariable','resetVariable','detachVariable','removeVariable','applyVariableSelection','resetVariableSelection','detachVariableSelection','removeVariableSelection'].includes(op.type)){
           const reactVariables=ctx.adapter.name==='react',liquidVariables=ctx.adapter.name==='liquid';
           if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactVariables&&!liquidVariables)return json(res,409,{ok:false,reason:'Collection bindings are not available for this renderer yet.'});
@@ -308,6 +309,7 @@ function handle(req, res, ctx) {
         delete result.edits; delete result.createdFile; delete result.createdHash;
         const fresh = ctx.index.resolve(op.id);
         if (fresh) { fresh.context = resolved.context; result.element = require('./component-usage.cjs').describe(ctx.index,fresh); }
+        if(op.type==='connectPrototypeScroll'){const target=ctx.index.resolve(op.targetId);if(target){target.context=renderContext(op.targetContext);result.target=require('./component-usage.cjs').describe(ctx.index,target);}}
       }
       return json(res, result.ok ? 200 : 409, {...result,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});
       } catch (err) {

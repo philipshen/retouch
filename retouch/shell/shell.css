@@ -1401,3 +1401,7 @@ html, body { overflow:clip; }
 .prototype-details>header.dragging{cursor:grabbing}
 .prototype-details>header:focus-visible{outline:2px solid var(--accent,#0d99ff);outline-offset:-2px}
 .prototype-details>header>select,.prototype-details>header>button{cursor:default;touch-action:auto}
+.prototype-target-picker{position:fixed;inset:auto auto 80px 16px;margin:0;width:300px;max-width:calc(100vw - 32px);max-height:calc(100vh - 180px);box-sizing:border-box;overflow:auto;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel,#fff);color:var(--ink);box-shadow:0 8px 32px #0002;font:11px Inter,system-ui,sans-serif}
+.prototype-target-picker>button{float:right}.prototype-target-picker>input{display:block;width:100%;box-sizing:border-box;margin-top:12px;padding:8px;border:1px solid var(--line);border-radius:4px}
+.prototype-target-picker p{color:var(--muted);line-height:1.5}.prototype-target-option{display:block;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:8px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.prototype-target-option:hover,.prototype-target-option:focus-visible{background:var(--hover,#e5f4ff)}
+.prototype-target-outline{position:fixed;pointer-events:none;z-index:10000;border:2px solid var(--accent,#0d99ff);box-sizing:border-box}

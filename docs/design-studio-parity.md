@@ -25900,3 +25900,41 @@ overlay isolation and reload persistence. Existing prototype, overlay and
 movable-details suites passed in both engines. The rendered controls were
 inspected; syntax and diff checks passed. No desktop artifact was rebuilt or
 branch pushed. Full Figma parity and notarized Homebrew distribution remain open.
+
+### Visual scroll destination picking (2026-09-20)
+
+Scroll to now has a destination control displaying the target layer's name.
+Choose it, then click a layer on the page or search the destination list; exact
+name matches come first, and keyboard Enter chooses the first result. Hovering
+or focusing a result outlines its rendered target. The existing source selection
+is retained. Escape, Cancel, page navigation, selection changes and entering
+Present leave picking without a source edit. The details panel keeps its placement
+when picking finishes, including when asynchronous panel refreshes overlap.
+
+A destination without an authored ID receives a random stable anchor. The anchor
+and connection are saved atomically, with one exact source Undo/Redo across one
+or multiple files. Existing literal IDs are preserved. Source hashes are checked
+for both layers, and source identity is verified after edits. Live preview metadata
+is patched without reloading the document, and persisted editor history refreshes
+both ends of the connection after Undo/Redo. Generated IDs are tucked into an
+Element ID disclosure instead of being the main destination label.
+
+The picker excludes repeated rendered source layers and duplicate live IDs;
+computed/runtime-controlled IDs are refused rather than overwritten. It currently
+operates on source-connected, rendered layers in the main canvas. Shadow-root
+selection, per-instance anchors for repeated components, clipping-aware outline
+geometry and full visual connection-graph authoring remain incomplete. Generated
+anchors remain in source when a connection is subsequently changed or removed,
+since other links may now reference them; undoing their creation removes them.
+
+Validation: all 2,041 unit tests passed. New source tests cover atomic one-file and
+cross-file connections across all four adapters, exact undo/redo, stable source
+identity, stale-write refusal, anchor reuse and computed-ID refusal. The browser
+picker suite passed HTML, Liquid, compiled React and compiled Vue in Chromium and
+WebKit, covering canvas/search selection, generated/existing anchors, retained
+preview/input state, panel placement, duplicate-ID refusal, cancellation and
+reload-persistent undo. Existing prototype, animated-scroll and movable-details
+browser suites passed in both engines. The picker screenshot was inspected;
+syntax and diff checks passed. Browser cross-file component rendering remains
+unverified by this fixture. No desktop artifact was rebuilt or branch pushed;
+full Figma parity and notarized Homebrew distribution remain open.
