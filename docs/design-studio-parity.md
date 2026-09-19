@@ -21,7 +21,7 @@ changing those files. The original checkout may continue to evolve independently
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A searchable page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Explicit variable-axis editing, declared-file range/default inspection and bounded axis sliders have HTML/React/local Liquid browser coverage. Full font browsing, actual glyph-font resolution, live Shopify font verification, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | React can extract a source subtree into an explicitly reusable same-file component, preserve call-site keys/module references, select and duplicate linked instances, and Undo/Redo through the UI. Chromium/WebKit checks verify unchanged rendering and exact source restoration. Stable JavaScript parent-local values become explicit props, with browser-verified callback/state behavior. Typed captures, scoped JSX styles and other context-dependent expressions still need extraction support. React instance text/number/boolean props have source-backed controls and Undo/Redo, including omitted values, literal defaults, finite typed choices and searchable property lists. Local imported TypeScript contracts resolve through aliases, wildcard barrels, nested namespace re-exports and project path mappings with dependency revision guards. A searchable project component browser groups source aliases, shows authored/on-page counts, selects mounted instances and views off-page definitions. It also discovers direct module-level function/arrow exports and marked definitions without authored usages, exposing declared property types/defaults. Existing React/Liquid inspection and detach remain; complete export/class/wrapper discovery, insertion, cross-file creation, variants, computed-default/expression/enum prop authoring, shared libraries and live Shopify proof remain incomplete. |
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Reusable text styles support responsive links, inherited-scope display, local override/reset, project-wide updates and shared undo in HTML, React and local Liquid. Validated JSON library import/export preserves style identity. HTML, React and local Liquid color styles link text/background/border/SVG paint with scoped overrides and project updates; palettes support sRGB and Display P3. HTML effect styles link shadows and layer/backdrop filters with project updates, overrides and undo. Subsequent checkpoints below add React/Liquid effect links and typed variable collections, aliases and modes across HTML, React, local Liquid and Vue, plus Vue reusable styles. Searchable property-level variable selection now has resolved values and bounded previews. Shared remote library workflows and complete per-property parity remain. |
-| Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | Present mode hides editor chrome, retains the live page and comparison documents, freezes/fits its viewport, and restores editor zoom/pan/mode. Native page navigation, restart and Escape are supported. The Prototype tab authors click, mouse-enter/leave, mouse/touch press/release and after-delay connections with Navigate to, Back and Scroll to actions, retained in HTML/React/Liquid/Vue source. Open/Swap/Close overlay actions support nested page overlays, nine positions, viewport sizing, backdrop color/opacity and optional outside-click dismissal. Overlay animations support dissolve, move, push and slide with duration, preset/custom Bézier easing, physical springs and direction controls. Visual connection handles, page navigation animations, Smart Animate, conditions and flow management remain. |
+| Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | Present mode hides editor chrome, retains the live page and comparison documents, freezes/fits its viewport, and restores editor zoom/pan/mode. Native page navigation, restart and Escape are supported. The Prototype tab authors click, mouse-enter/leave, mouse/touch press/release, after-delay and keyboard connections with Navigate to, Back and Scroll to actions, retained in HTML/React/Liquid/Vue source. Open/Swap/Close overlay actions support nested page overlays, nine positions, viewport sizing, backdrop color/opacity and optional outside-click dismissal. Overlay animations support dissolve, move, push and slide with duration, preset/custom Bézier easing, physical springs and direction controls. Visual connection handles, page navigation animations, Smart Animate, conditions and flow management remain. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG/JPEG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Completed source and lock history now survives editor-tab reload within a running server session. Source Undo/Redo now recovers across normal server restarts; crash recovery, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. Vite 8 React now has an explicit development plugin; installed-package startup, TSX text editing, hot-update state retention, process shutdown/restart and persisted exact undo pass in Chromium/WebKit (see docs/cli.md). Vue now has a Vite compiler adapter with source-backed responsive CSS, native structure and grouping, link editing, and rich text that retains live values and authored bindings. HTML has responsive CSS, structural edits and batch selection operations. URL capture now provides an editable local snapshot with downloaded images and readable font assets. Arbitrary-site fidelity, responsive reconstruction, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
@@ -25762,4 +25762,45 @@ shortcut authoring, video triggers, multiple actions per trigger, visual
 connections and full flow/conditional behavior remain incomplete. Page
 navigation animation, Smart Animate and the broader arbitrary-site/design
 parity goal also remain open. No desktop artifact was rebuilt or branch pushed;
+notarized Homebrew distribution remains incomplete.
+
+
+### Keyboard prototype shortcuts (2026-09-19)
+
+The Prototype inspector now authors Keyboard triggers with a key selector,
+Ctrl/Alt/Shift/Meta modifiers and a shortcut-recording control. Recording applies
+one source edit; Escape cancels recording. A source layer can have multiple
+distinct shortcuts alongside its other triggers, with a bound of 32 interactions
+per layer. Duplicate combinations on one layer are rejected without writing.
+The shared schema and source planner preserve exact undo/redo for HTML, React,
+Liquid and Vue. The metadata read bound now accommodates the maximum permitted
+interaction collection and URL lengths.
+
+Playback matches physical KeyboardEvent.code values and exact modifier states.
+Repeated keydown and IME composition events do not trigger actions. Shortcuts
+only run in the active presentation document or top overlay. Native inputs,
+textareas, selects, contenteditable regions and textbox roles keep normal typing.
+A focused hotspot or ancestor takes precedence. Otherwise, identical bindings
+on repeated source copies execute once; conflicting destinations require the
+user to focus the intended hotspot. An authored Escape action runs before the
+presentation/overlay Escape fallback. Dynamic content is searched at keydown.
+
+Validation: all 2,025 unit tests passed. Shortcut grammar, physical-key matching,
+modifier matching, duplicate checks, interaction bounds and source-adapter round
+trips/history are covered. Browser authoring/playback passed in Chromium and
+WebKit for HTML, actual Liquid and compiled delayed React/Vue: recording,
+multiple shortcuts, exact undo/redo, recording cancellation, duplicate rejection,
+native input/contenteditable typing, unmatched native keys, overlay scope,
+authored Escape, navigation/Back, repeated source copies, focus disambiguation
+and reload persistence. Existing navigation and press/release/timer browser
+regressions passed in both engines. The light shortcut inspector screenshot was
+inspected; syntax and whitespace checks passed.
+
+This implements the keyboard portion of Figma’s
+[keyboard/gamepad trigger model](https://help.figma.com/hc/en-us/articles/360040035834-Prototype-triggers).
+Gamepad input, layout-aware keycap names, arbitrary multi-key chords beyond
+modifiers plus one key, while-held state reversal and browser/OS-reserved shortcut
+interception remain unimplemented or unverified. Native form preservation and
+source-copy conflict rules are website-specific behavior. This is not full
+prototype/Figma/any-site parity. No desktop artifact was rebuilt or branch pushed;
 notarized Homebrew distribution remains incomplete.

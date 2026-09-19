@@ -1,6 +1,6 @@
 (function(root){
  'use strict';
- const pendingActions=new Set(),V=root.RetouchPrototypeValues,frame=document.getElementById('app'),contexts=new Map(),main={frame,release:null,pendingScroll:null},overlays=root.RetouchPrototypeOverlays;contexts.set(frame,main);let running=false,trail=[],held=null,clickBlock=null;
+ const pendingActions=new Set(),V=root.RetouchPrototypeValues,K=root.RetouchPrototypeKeys,frame=document.getElementById('app'),contexts=new Map(),main={frame,release:null,pendingScroll:null},overlays=root.RetouchPrototypeOverlays;contexts.set(frame,main);let running=false,trail=[],held=null,clickBlock=null;
  function consumeClick(event){if(!clickBlock)return false;const block=clickBlock;clickBlock=null;if(performance.now()>block.until||event.detail===0)return false;event.preventDefault();event.stopImmediatePropagation();return true;}
  document.addEventListener('pointerup',event=>{if(clickBlock&&event.isPrimary!==false)clickBlock.until=performance.now()+1000;},true);
  document.addEventListener('click',consumeClick,true);document.addEventListener('pointerdown',event=>{if(event.isPrimary!==false)clickBlock=null;},true);
@@ -45,7 +45,17 @@
   listen('visibilitychange',()=>timers.pause());const visibility=()=>timers.pause();document.addEventListener('visibilitychange',visibility);listeners.push(()=>document.removeEventListener('visibilitychange',visibility));
   listen('pointercancel',event=>{if(held?.id===event.pointerId){held=null;if(clickBlock)clickBlock.until=performance.now()+1000;}});listen('pointerdown',event=>handle(event,'mousedown'));listen('pointerup',event=>handle(event,'mouseup'));
   listen('click',event=>handle(event,'click'));listen('mouseover',event=>handle(event,'mouseenter'));listen('mouseout',event=>handle(event,'mouseleave'));
-  listen('keydown',event=>{if(!['Enter',' '].includes(event.key)||event.repeat||!changed.has(event.target))return;handle(event,'click');});
+  function shortcut(event){
+   if(!active()||event.isComposing||event.repeat)return false;
+   const editable='input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]';
+   if(event.composedPath().some(node=>node?.matches?.(editable)))return false;
+   const available=el=>el.isConnected&&!el.closest('[inert]')&&el.getClientRects().length>0&&d.defaultView.getComputedStyle(el).visibility==='visible';
+   const matches=el=>interactions(el).find(item=>item.trigger==='keyboard'&&K.matches(item.shortcut,event));let match=null;
+   for(let el=event.target?.nodeType===1?event.target:event.target?.parentElement;el;el=el.parentElement){const item=el.hasAttribute(V.attribute)&&available(el)&&matches(el);if(item){match={el,item};break;}}
+   if(!match){const choices=[...d.querySelectorAll('['+V.attribute+']')].filter(available).flatMap(el=>{const item=matches(el);return item?[{el,item}]:[];});if(!choices.length)return false;const actions=new Set(choices.map(choice=>JSON.stringify(choice.item)));if(actions.size>1){event.preventDefault();event.stopImmediatePropagation();root.RetouchPresentationHost.error('This shortcut has multiple destinations. Focus the intended hotspot to choose one.');return true;}match=choices[0];}
+   event.preventDefault();event.stopImmediatePropagation();perform(match.item,context,match.el);return true;
+  }
+  listen('keydown',event=>{if(shortcut(event))return;if(!['Enter',' '].includes(event.key)||event.repeat||!changed.has(event.target))return;handle(event,'click');});
   const style=d.createElement('style');style.textContent='['+V.attribute+']{cursor:pointer}';d.head?.append(style);
   const observer=new MutationObserver(decorate);observer.observe(d.body,{childList:true,subtree:true,attributes:true,attributeFilter:[V.attribute]});decorate();
   if(context!==main){d.defaultView.addEventListener('keydown',overlayEscape);listeners.push(()=>d.defaultView?.removeEventListener('keydown',overlayEscape));}
