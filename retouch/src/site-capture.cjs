@@ -11,7 +11,7 @@ async function capture({url,directory,width=1440,height=900,wait=1000,browserTyp
  const parent=fs.realpathSync(path.dirname(target));if(!fs.statSync(parent).isDirectory())throw Error('The output parent must be a directory.');
  let browser,staging;const cancel=()=>{browser?.close().catch(()=>{});};signal?.throwIfAborted();signal?.addEventListener('abort',cancel,{once:true});
  try{
-  browser=await (browserType||require('playwright').chromium).launch();signal?.throwIfAborted();const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:1,colorScheme:'light',serviceWorkers:'block',acceptDownloads:false}),page=await context.newPage();const stylesheets=require('./capture-stylesheets.cjs').collect(page);
+  browser=await (browserType||require('playwright').chromium).launch(browserType?{}:require('./capture-browser.cjs').launchOptions());signal?.throwIfAborted();const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:1,colorScheme:'light',serviceWorkers:'block',acceptDownloads:false}),page=await context.newPage();const stylesheets=require('./capture-stylesheets.cjs').collect(page);
   const shadowKey='__retouchCapture'+crypto.randomUUID().replaceAll('-','');await page.addInitScript(require('./capture-shadow-roots.cjs'),shadowKey);
   const response=await page.goto(address.href,{waitUntil:'load',timeout:30000});if(!response?.ok())throw Error('Page capture failed: HTTP '+(response?.status()||'unavailable')+'.');
   await page.waitForTimeout(wait);await bounded(page.evaluate(()=>{void document.documentElement.offsetHeight;return Promise.race([document.fonts.ready,new Promise(resolve=>setTimeout(resolve,3000))]);}));

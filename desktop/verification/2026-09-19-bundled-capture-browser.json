@@ -1,0 +1,42 @@
+{
+  "date": "2026-09-19",
+  "artifact": "/Users/philipshen/Developer/retouch-worktrees/desktop-capture-browser-5e3e0d58/Retouch-0.1.0-mac.zip",
+  "sha256": "70f48647027fb6628872b805eb7d25350e82b5e85cc07d8ab92298f6941632fd",
+  "sourceCommit": "5e3e0d587cd34c7c67b97c7b327a5698cab4f5c3",
+  "sourceTreeDirty": true,
+  "sourceFilesVerifiedAgainstWorktree": 301,
+  "captureBrowser": {
+    "sha256": "facdd571225797cb844c6a9a55ca0035b152004c913976e3c26438b99c851222",
+    "playwrightVersion": "1.59.1",
+    "revision": "1217"
+  },
+  "buildRuntime": "Node 25.2.1; Node 26.8.2 installer extraction timed out, cleaned up, then retried after exit",
+  "signing": "Developer ID Application: Philip Shen (2HN3MWMRX2); strict outer, nested browser and native addon signatures passed",
+  "packagedCapture": {
+    "runtime": "Node 26.8.2 arm64",
+    "browserCache": "/tmp/retouch-no-browser-cache (absent)",
+    "passed": [
+      "capture to saved HTML",
+      "automatic editor health",
+      "editor stop retains saved copy",
+      "cancel page navigation closes browser",
+      "cancel asset download removes staging",
+      "duplicate --open rejected"
+    ]
+  },
+  "packageTamperChecks": "Relocation, changed browser data, extra browser file, changed manifest, removed executable permission, missing browser directory, existing source and runtime checks passed",
+  "unitTests": {
+    "retouch": 1934,
+    "desktop": 33
+  },
+  "gatekeeper": {
+    "exitCode": 3,
+    "result": "rejected: Unnotarized Developer ID"
+  },
+  "unverified": [
+    "Retouch native UI launch for this artifact",
+    "Intel execution (binary architecture and signature verified only)",
+    "notarization and trusted public distribution",
+    "new cask install and upgrade"
+  ]
+}

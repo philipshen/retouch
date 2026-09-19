@@ -18,8 +18,13 @@ function verify(app){
  if(hash(path.join(app,'Contents/Info.plist'))!==manifest.infoPlistSha256)throw Error('Packaged Info.plist mismatch');
  const architectures=execFileSync('lipo',['-archs',path.join(app,'Contents/MacOS/Retouch')],{encoding:'utf8'}).trim().split(/\s+/).sort();
  if(JSON.stringify(architectures)!==JSON.stringify(['arm64','x86_64']))throw Error('Expected a universal arm64/x86_64 executable');
+ const captureBrowser=manifest.captureBrowser?require('./capture-browser.cjs').verify({cli:cliRoot,root:path.join(resources,'capture-browser'),receipt:manifest.captureBrowser}):null;
+ if(captureBrowser){
+  function verifyAddons(directory){for(const entry of fs.readdirSync(directory,{withFileTypes:true})){const file=path.join(directory,entry.name);if(entry.isDirectory())verifyAddons(file);else if(entry.isFile()&&entry.name.endsWith('.node'))execFileSync('codesign',['--verify','--strict',file],{stdio:'pipe'});}}
+  verifyAddons(path.join(cliRoot,'node_modules'));
+ }
  execFileSync('codesign',['--verify','--strict',app],{stdio:'pipe'});
- return {sourceCommit:manifest.sourceCommit,sourceTreeDirty:manifest.sourceTreeDirty,sourceFiles:seen.size,architectures,signature:'strict verification passed; trust and notarization are separate checks'};
+ return {captureBrowser,sourceCommit:manifest.sourceCommit,sourceTreeDirty:manifest.sourceTreeDirty,sourceFiles:seen.size,architectures,signature:'strict verification passed; trust and notarization are separate checks'};
 }
 if(require.main===module){try{if(!process.argv[2])throw Error('Usage: node desktop/scripts/verify-package.cjs <Retouch.app>');console.log(JSON.stringify(verify(path.resolve(process.argv[2])),null,2));}catch(error){console.error(error.message);process.exitCode=1;}}
 module.exports={verify};

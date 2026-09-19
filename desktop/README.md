@@ -447,8 +447,10 @@ It remembers the last successful URL. **Open website…** now accepts an HTTP(S)
 page, canvas dimensions and a new save location. It captures an editable HTML
 copy and starts its local editor automatically; edits do not update the source
 website. Stop cancels capture or stops the editor while retaining a completed
-copy. Playwright is included in the locked CLI dependencies, but its Chromium
-binary is not yet bundled for fresh-machine use. The source flow has compiled
+copy. Playwright is included in the locked CLI dependencies. The desktop build
+now downloads its matching Chromium headless shell for Apple Silicon and Intel,
+signs the native browser files, and includes both alongside the app. Capture
+selects the bundled executable for the running Node architecture. The source flow has compiled
 and its CLI lifecycle and welcome template have automated coverage; native
 interaction with this rebuilt version remains unverified.
 
@@ -1050,3 +1052,33 @@ builds. AppKit logs reported old window-state restoration with a null identifier
 and class; this has not been established as the cause. The test process was
 stopped and its exit verified. Native editing remains unverified; no launch loop,
 quarantine removal or security-setting change was performed.
+
+
+### Bundled capture browser
+
+`desktop/scripts/capture-browser.cjs` installs browser revision 1217 from the
+locked Playwright 1.59.1 package into isolated temporary directories. The app
+retains the browser resources and license files for both Mac architectures.
+Browser binaries and dynamic libraries are signed before the outer app; the
+headless executable receives the JIT entitlement used for JavaScript execution.
+See [Apple's JIT entitlement documentation](https://developer.apple.com/documentation/BundleResources/Entitlements/com.apple.security.cs.allow-jit).
+
+The browser manifest records every file's content hash, mode and native-code
+classification. The package verifier checks that complete inventory, executable
+architectures, runtime version and individual native signatures. This is
+packaging evidence; notarization and native UI launch remain separate gates.
+The build does not launch the desktop app by default.
+
+Build-runtime observation (2026-09-19): the locked Playwright downloader stalled
+after writing the first extracted file under Node 26.8.2, and the bounded build
+exited after five minutes. The same archive extracted under Node 25.2.1. The builder now refuses that specific incompatible version pair before the
+download. Use Node 25.2.1 for this package-build verification; this is distinct from the
+capture runtime, whose CLI lifecycle tests passed under Node 26.8.2.
+
+The 2026-09-19 Developer ID package passed the complete browser inventory and
+signature checks, relocation/tamper checks, and the packaged CLI capture/open/
+stop/cancel lifecycle with an absent browser cache. All 301 packaged source
+files matched the worktree snapshot. See
+[`verification/2026-09-19-bundled-capture-browser.json`](verification/2026-09-19-bundled-capture-browser.json).
+Gatekeeper still rejected the app as Unnotarized Developer ID; the native UI
+was not launched. Intel execution and a new cask install/upgrade remain unverified.

@@ -16,5 +16,13 @@ try{
  const runtimeBackup=path.join(temporary,'runtime-backup');fs.renameSync(runtime,runtimeBackup);assert.throws(()=>verify(app),/ENOENT/);fs.renameSync(runtimeBackup,runtime);
  const plist=path.join(app,'Contents/Info.plist'),plistBytes=fs.readFileSync(plist);fs.appendFileSync(plist,'\n');assert.throws(()=>verify(app),/Info.plist mismatch/);fs.writeFileSync(plist,plistBytes);
  const link=path.join(resources,'retouch/shell/linked.js');fs.symlinkSync(first,link);assert.throws(()=>verify(app),/source symlink/);fs.rmSync(link);
+ if(manifest.captureBrowser){
+  const browserRoot=path.join(resources,'capture-browser'),browserManifest=path.join(browserRoot,'manifest.json'),browserBytes=fs.readFileSync(browserManifest),browser=JSON.parse(browserBytes),resource=path.join(browserRoot,browser.files.find(entry=>entry.path.endsWith('/ABOUT')).path),bytes=fs.readFileSync(resource);
+  fs.appendFileSync(resource,'changed');assert.throws(()=>verify(app),/browser resource inventory mismatch/);fs.writeFileSync(resource,bytes);
+  fs.writeFileSync(path.join(browserRoot,'unexpected'),'extra');assert.throws(()=>verify(app),/browser resource inventory mismatch/);fs.rmSync(path.join(browserRoot,'unexpected'));
+  fs.writeFileSync(browserManifest,JSON.stringify({...browser,playwrightVersion:'invalid'}));assert.throws(()=>verify(app),/browser manifest mismatch/);fs.writeFileSync(browserManifest,browserBytes);
+  const executable=path.join(browserRoot,browser.executables.arm64),mode=fs.statSync(executable).mode;fs.chmodSync(executable,0o644);assert.throws(()=>verify(app),/browser resource inventory mismatch/);fs.chmodSync(executable,mode);
+  const backup=path.join(temporary,'browser-backup');fs.renameSync(browserRoot,backup);assert.throws(()=>verify(app),/ENOENT/);fs.renameSync(backup,browserRoot);
+ }
  verify(app);verify(original);console.log('PASS valid and relocated package, altered source and runtime, missing runtime directory, omitted/duplicate/path-traversal entries, unlisted source, plist mutation, source symlink, restored signature and unchanged original');
 }finally{fs.rmSync(temporary,{recursive:true,force:true});}

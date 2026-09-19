@@ -35,6 +35,18 @@ try {
   fs.rmSync(cli, {recursive:true,force:true});
   fs.cpSync(staging, cli, {recursive:true,verbatimSymlinks:true});
 } finally { fs.rmSync(staging, {recursive:true,force:true}); }
+const identity = process.env.RETOUCH_SIGN_IDENTITY;
+const captureBrowser = require('./capture-browser.cjs').install({cli,root:path.join(resources,'capture-browser'),identity});
+// Playwright's optional macOS filesystem watcher contains a native Node addon.
+// Sign addons as nested code before sealing the outer app for distribution.
+function signAddons(directory) {
+  for(const entry of fs.readdirSync(directory,{withFileTypes:true})) {
+    const file=path.join(directory,entry.name);
+    if(entry.isDirectory())signAddons(file);
+    else if(entry.isFile()&&entry.name.endsWith('.node'))run('codesign',['--force','--sign',identity||'-',...(identity?['--options','runtime','--timestamp']:[]),file],{stdio:'inherit'});
+  }
+}
+signAddons(path.join(cli,'node_modules'));
 const binaries = [];
 for (const arch of ['arm64', 'x86_64']) {
   const binary = path.join(out, 'Retouch-' + arch);
@@ -62,8 +74,7 @@ try {
   sourceCommit=run('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim();
   sourceTreeDirty=!!run('git',['status','--porcelain','--','desktop','retouch'],{cwd:path.dirname(root),encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim();
 } catch { /* Source archives need not be Git checkouts. File hashes remain authoritative. */ }
-fs.writeFileSync(path.join(resources,'build-manifest.json'),JSON.stringify({schemaVersion:1,sourceCommit,sourceTreeDirty,infoPlistSha256:digest(path.join(app,'Contents/Info.plist')),nativeSourceSha256:digest(path.join(root,'Sources/Retouch.swift')),buildScriptSha256:digest(__filename),verifierScriptSha256:digest(path.join(__dirname,'verify-package.cjs')),files},null,2)+'\n');
-const identity = process.env.RETOUCH_SIGN_IDENTITY;
+fs.writeFileSync(path.join(resources,'build-manifest.json'),JSON.stringify({schemaVersion:1,captureBrowser,sourceCommit,sourceTreeDirty,infoPlistSha256:digest(path.join(app,'Contents/Info.plist')),nativeSourceSha256:digest(path.join(root,'Sources/Retouch.swift')),buildScriptSha256:digest(__filename),verifierScriptSha256:digest(path.join(__dirname,'verify-package.cjs')),files},null,2)+'\n');
 run('codesign', ['--force', '--sign', identity || '-', ...(identity ? ['--options', 'runtime', '--timestamp'] : []), app], {stdio:'inherit'});
 const nativeTests = process.env.RETOUCH_RUN_NATIVE_TESTS === '1';
 if (nativeTests) run(executable, ['--self-test', '--launch-bundled'], {stdio:'inherit'});

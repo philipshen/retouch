@@ -287,6 +287,6 @@ exported. Standard form controls remain editable HTML controls, but native
 appearance can differ after computed styles are serialized.
 Cross-origin or otherwise unreadable canvases are reported as unavailable.
 The desktop source includes **Open website…** with URL, canvas dimensions and
-a save location, followed by automatic editor startup. The browser binary is
-not yet bundled for fresh-machine use; the rebuilt native flow and trusted
-distribution remain unverified.
+a save location, followed by automatic editor startup. Desktop builds bundle
+matching Apple Silicon and Intel capture browsers. Native UI operation and
+trusted distribution still require separate verification.

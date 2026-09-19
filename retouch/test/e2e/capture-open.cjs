@@ -6,7 +6,7 @@ async function until(check){const end=Date.now()+30000;while(Date.now()<end){if(
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-capture-open-'));let pending=false,closed=false,assetPending=false,assetClosed=false,assetRequests=0;const children=[];
  const origin=http.createServer((req,res)=>{if(req.url==='/asset.svg'){if(++assetRequests===2){assetPending=true;req.on('close',()=>assetClosed=true);return;}res.setHeader('content-type','image/svg+xml');res.end('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="red"/></svg>');return;}if(req.url==='/assets'){res.setHeader('content-type','text/html');res.end('<img src="/asset.svg">');return;}if(req.url==='/slow'){pending=true;req.on('close',()=>closed=true);return;}res.setHeader('content-type','text/html');res.end('<!doctype html><h1>Editable website</h1>');});origin.listen(0,'127.0.0.1');await once(origin,'listening');
- const cli=path.resolve(__dirname,'../../bin/retouch.cjs'),url='http://127.0.0.1:'+origin.address().port;
+ const cli=process.env.RT_CAPTURE_CLI||path.resolve(__dirname,'../../bin/retouch.cjs'),url='http://127.0.0.1:'+origin.address().port;
  function run(route,directory,extra=[]){const child=spawn(process.execPath,[cli,'capture',url+route,'--out',directory,'--wait=0','--open',...extra],{cwd:fixture,stdio:['ignore','pipe','pipe']});children.push(child);const state={child,output:'',done:once(child,'exit')};child.stdout.on('data',data=>state.output+=data);child.stderr.on('data',data=>state.output+=data);return state;}
  try{
   const saved=path.join(root,"Website's copy"),active=run('/',saved);let editor;
