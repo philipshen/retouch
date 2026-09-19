@@ -101,4 +101,4 @@ function plan(resolved,op){
   return finish(resolved,out);
  }catch(error){return refuse(error.message);}
 }
-module.exports={describe,plan,planSource,planCandidates};
+module.exports={describe,plan,planSource,planCandidates,inspect,imageURL};

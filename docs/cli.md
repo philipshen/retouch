@@ -261,6 +261,10 @@ exists. Removing the last image candidate restores the plain-image controls.
 Open **Candidate options** to add or remove candidates, or change their image
 width or pixel density. Each source must use one resolution type with unique
 values. An emptied source remains available in the new-candidate source picker.
+Open **Artwork by screen** to create a picture source for a different image at
+a chosen screen range, move sources earlier/later, or remove them. The first
+matching source wins. A plain image is wrapped in a picture with display contents;
+an unchanged generated wrapper is removed again with its last source.
 Open **Source settings** to change a picture source’s screen range (all, up to,
 from, or between widths), a custom media condition, image format, or display
 sizes. These settings apply to every candidate in that source. Display sizes

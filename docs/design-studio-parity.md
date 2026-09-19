@@ -25294,3 +25294,31 @@ state. Existing HTML editor and candidate-set browser suites passed in both
 engines. All 1,951 unit tests passed. Creating/removing picture sources and
 cross-adapter responsive-source authoring remain unfinished. The packaged desktop
 app predates these changes.
+
+
+### Picture source creation and ordering (2026-09-19)
+
+Artwork by screen now creates native picture/source markup from plain or
+responsive HTML images, adds artwork to existing pictures, changes source
+priority and removes sources. New sources are inserted first and accept screen
+range presets or a custom media condition. Generated wrappers use display
+contents, and generated source elements explicitly use display none so flex
+layouts do not gain an empty item and gap. Removing the last source unwraps only
+an unchanged generated picture; authored or customized wrappers remain intact.
+
+Structural edits map every surviving source node by its original source offset
+and verify parsed parents/counts. Source-ID remapping and retired-ID cleanup
+allow in-place reconciliation across all preview screens, preserving unrelated
+input nodes, values and document identity. Layer locks follow surviving nodes;
+locked images or source elements refuse structural changes. Undo/redo restores
+exact markup, source order and the selected image. The inspector retains its
+artwork-control scroll position across identity changes.
+
+Chromium and WebKit verified creation, priority changes, removal/unwrapping,
+implicit body containers, post-wrap candidate editing, existing-picture input
+identity/locks, flex geometry, comparison source selection and exact history.
+The plain-image onboarding and candidate-set regression suites passed in both
+engines. All 1,955 unit tests passed. Creating a picture changes DOM ancestry:
+selector-dependent styling (for example parent > img) may change and is not yet
+rewritten. Arbitrary-site layout equivalence and cross-adapter authoring remain
+incomplete. The packaged desktop app predates these changes.
