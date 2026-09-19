@@ -1,0 +1,12 @@
+(function(root){
+ 'use strict';
+ const I=root.RetouchInspector,K=root.RetouchPrototypeKeys,V=root.RetouchPrototypeValues;
+ function choose(items){return new Promise(resolve=>{
+  const dialog=document.createElement('dialog'),title=document.createElement('h3'),extra=document.createElement('div'),status=document.createElement('p');dialog.className='prototype-trigger-picker';dialog.setAttribute('aria-label','Choose connection trigger');title.textContent='Choose a trigger';dialog.append(title);I.note(dialog,'On click already has an interaction. Choose a trigger for the new connection.');
+  const choices=[['mouseenter','Mouse enter'],['mouseleave','Mouse leave'],['mousedown','Mouse down / Touch press'],['mouseup','Mouse up / Touch release'],['after-delay','After delay'],['keyboard','Keyboard']].filter(([trigger])=>trigger==='keyboard'||!items.some(item=>item.trigger===trigger));let draft={trigger:choices[0][0]},done=false;
+  const finish=value=>{if(done)return;done=true;root.removeEventListener('retouch:selection',cancel);dialog.close();dialog.remove();resolve(value);},cancel=()=>finish(null);
+  function fields(){extra.replaceChildren();if(draft.trigger==='after-delay'){draft.delay??=800;const input=document.createElement('input');input.type='number';input.min='1';input.max='10000';input.value=draft.delay;I.field(extra,'Connection delay (ms)',input);input.oninput=()=>{draft.delay=Number(input.value);};}if(draft.trigger==='keyboard'){draft.shortcut??=K.next(items);root.RetouchPrototypeKeyPanel.mount(extra,{value:draft.shortcut,index:'for new connection',change:shortcut=>{if(K.signature(shortcut)===K.signature(draft.shortcut))return;draft.shortcut=shortcut;fields();}});}}
+  I.select(dialog,'New connection trigger',choices,draft.trigger,trigger=>{if(trigger===draft.trigger)return;draft={trigger};fields();});dialog.append(extra,status);status.setAttribute('role','status');fields();const footer=document.createElement('footer');footer.append(I.button('Cancel',cancel),I.button('Connect',()=>{try{V.validate([...items,{...draft,action:'scroll',destination:'pending'}]);finish(draft);}catch(error){status.textContent=error.message;}}));dialog.append(footer);dialog.addEventListener('cancel',event=>{event.preventDefault();cancel();});root.addEventListener('retouch:selection',cancel);document.body.append(dialog);dialog.showModal();
+ });}
+ root.RetouchPrototypeTriggerPicker={choose};
+})(window);

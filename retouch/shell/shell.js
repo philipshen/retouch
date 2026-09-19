@@ -3878,17 +3878,17 @@ window.RetouchPrototypeHost={
  route:currentPageRoute,error:message=>toast(message,'err'),
  destinationLabel(id){const matches=[...doc().querySelectorAll('[id]')].filter(el=>el.id===id);if(matches.length>1)return 'Ambiguous destination';const el=matches[0];return el?(el.getAttribute('data-rt-name')||el.getAttribute('aria-label')||el.textContent?.trim().replace(/\s+/g,' ').slice(0,65)||el.localName):null;},
  scrollTarget(target){if(!target?.isConnected||target.ownerDocument!==doc()||!target.getClientRects().length||layerLocks.locked(target))return false;const id=target.getAttribute('data-rt');return !!id&&[...doc().querySelectorAll('[data-rt]')].filter(el=>el.getAttribute('data-rt')===id).length===1&&(!target.id||[...doc().querySelectorAll('[id]')].filter(el=>el.id===target.id).length===1);},
- async pickScroll(info,index){
+ async pickScroll(info,index,creation){
   await this.prepare();if(mode!=='edit')setEditorMode('edit');
-  const target=await RetouchPrototypePicker.pick(iframe);if(target)return this.connectScroll(info,index,target);
+  const target=await RetouchPrototypePicker.pick(iframe);if(target)return this.connectScroll(info,index,target,creation);
  },
- async connectScroll(info,index,target){
+ async connectScroll(info,index,target,creation){
   await this.prepare();
   if(!this.scrollTarget(target))throw Error('Choose one uniquely rendered, unlocked destination layer.');
   const id=target.getAttribute('data-rt'),context=renderContext(target),response=await api('GET',resolveUrl(id,context));
   if(!response?.ok||!this.scrollTarget(target)||sel?.info.id!==info.id||sel.info.hash!==info.hash||panelTasks||sourceRequests||undoBusy)throw Error('The selection changed. Pick the destination again.');
   if(!Object.hasOwn(response.element,'prototypeAnchor')||target.id!==(response.element.prototypeAnchor||''))throw Error('This layer’s ID is controlled by the site. Choose a source-authored destination.');
-  busyPanel(true);try{const result=await api('POST','/rt/__api/op',{type:'connectPrototypeScroll',id:info.id,fileHash:info.hash,context:info.context,index,targetId:id,targetHash:response.element.hash,targetContext:context});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not connect the destination.');if(result.undoId)editorHistory.record({type:'prototypeInteractions',id:info.id,context:info.context,targetId:id,targetContext:context,undoId:result.undoId});await refreshPrototype(result.target,true);await refreshPrototype(result.element);return result;}finally{busyPanel(false);}
+  busyPanel(true);try{const result=await api('POST','/rt/__api/op',{type:'connectPrototypeScroll',id:info.id,fileHash:info.hash,context:info.context,index,targetId:id,targetHash:response.element.hash,targetContext:context,...(creation?{creation}:{})});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not connect the destination.');if(result.undoId)editorHistory.record({type:'prototypeInteractions',id:info.id,context:info.context,targetId:id,targetContext:context,undoId:result.undoId});await refreshPrototype(result.target,true);await refreshPrototype(result.element);return result;}finally{busyPanel(false);}
  },
 
  async pages(){const result=await api('GET','/rt/__api/pages');return result?.pages||[];},

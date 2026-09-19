@@ -26006,3 +26006,35 @@ Creating new interactions by dragging, cross-page endpoint editing, automatic
 edge scrolling, dense endpoint layout and native touch/pen verification remain
 open. No desktop artifact was rebuilt or branch pushed. Full Figma parity and
 notarized Homebrew distribution remain unfinished.
+
+
+### Creating scroll connections by dragging (2026-09-20)
+
+The selected source now has a blue plus handle in Prototype mode. Dragging it to
+an eligible layer creates a Scroll to interaction; clicking or pressing Enter
+opens the destination picker. If On click is unused it is assigned automatically.
+Otherwise a light trigger dialog requires an explicit choice, preserving the
+existing click action. Keyboard recording and validated delay fields are available;
+Escape cancels recording separately from canceling the connection draft.
+
+Creation appends an interaction and adds a destination anchor in one atomic source
+operation. Validation rejects duplicate triggers, invalid settings, stale hashes,
+replacement indices and more than 32 interactions before writing. Existing target
+IDs are reused. Canceling the drag or trigger dialog leaves both sources untouched.
+The handle disappears at capacity. One undo removes a newly created interaction
+and its generated anchor together, including across source files.
+
+Fresh validation: all 2,050 unit tests passed. The creation browser suite passed
+HTML, Liquid, compiled React and compiled Vue in Chromium and WebKit, covering
+cancel, explicit keyboard/delay triggers, existing-action preservation, retained
+preview document/input, keyboard destination picking and exact undo/redo. Existing
+connection, reconnect, picker, details and prototype suites passed both engines.
+A follow-up Escape-and-record check exposed WebKit losing recorder focus on pointer
+interaction; explicitly focusing on pointerdown fixes that path. The shared keyboard
+suite and creation matrix were rerun after that fix. Drag and centered trigger-dialog
+screenshots were inspected.
+
+This creates same-page Scroll to connections only. Cross-page/frame graph editing,
+automatic edge scrolling, dense handle placement and native touch/pen verification
+remain open. No desktop artifact was rebuilt or branch pushed. Full Figma parity
+and notarized Homebrew distribution remain unfinished.
