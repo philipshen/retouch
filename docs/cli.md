@@ -255,6 +255,10 @@ selection can continue offline; missing candidates are reported in the manifest.
 In the HTML editor, select an image and use **Image candidate** to choose its
 fallback or a responsive source. Apply a URL, browse project images, or upload
 a replacement; each edit preserves the other candidates and sizing conditions.
+Open **Source settings** to change a picture source’s screen range (all, up to,
+from, or between widths), a custom media condition, image format, or display
+sizes. These settings apply to every candidate in that source. Display sizes
+guide width-based image selection; use image framing to resize the layer.
 Undo restores the exact source, and comparison previews update in place.
 Stylesheet responses are reused for cross-origin CSS and imports. The captured
 DOM remains fixed: scripts, client-side route changes and conditional rendering

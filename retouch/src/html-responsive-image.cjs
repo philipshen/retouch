@@ -16,6 +16,31 @@ function inspect(resolved){
  return {picture:!!picture,sources,candidates,nodes:[image,...nodes]};
 }
 function describe(resolved){try{const state=inspect(resolved);if(!state)return null;const {nodes,...descriptor}=state;return descriptor;}catch(error){return {reason:error.message,candidates:[]};}}
+function finish(resolved,out){
+ const after=out.toString(),html=require('./adapters/html.cjs'),beforeElements=html.collect(resolved.source,resolved.relPath).elements,nextElements=html.collect(after,resolved.relPath).elements;
+ if(beforeElements.length!==nextElements.length||beforeElements.some((element,index)=>element.id!==nextElements[index].id||element.tag!==nextElements[index].tag))return {ok:false,refused:true,reason:'The image edit changes document structure.'};
+ return {ok:true,hash:html.contentHash(after),edits:after===resolved.source?[]:[{file:resolved.file,before:resolved.source,after}]};
+}
+function planSource(resolved,op){
+ const refuse=reason=>({ok:false,refused:true,reason});
+ try{
+  if(!op.fileHash||op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the image.');
+  const state=inspect(resolved);
+  if(!Number.isInteger(op.sourceIndex)||!state?.sources.some(source=>source.index===op.sourceIndex))return refuse('Choose an available responsive image source.');
+  if(!op.changes||typeof op.changes!=='object'||Array.isArray(op.changes)||!Object.keys(op.changes).length)return refuse('Choose source settings to change.');
+  const node=state.nodes[op.sourceIndex+1],out=new MagicString(resolved.source),location=node.sourceCodeLocation;
+  for(const [name,value]of Object.entries(op.changes)){
+   if(!['media','sizes','type'].includes(name)||op.sourceIndex===-1&&name!=='sizes')return refuse('This setting does not belong to the selected image source.');
+   if(value!==null&&(typeof value!=='string'||value.length>4096||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value)))return refuse('Use source settings of at most 4,096 characters without control characters.');
+   if(value===attr(node,name))continue;
+   const token=location.attrs?.[name];
+   if(value===null){if(token)out.remove(token.startOffset,token.endOffset);continue;}
+   const replacement=name+'="'+value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'"';
+   if(token)out.overwrite(token.startOffset,token.endOffset,replacement);else out.appendLeft(location.startTag.startOffset+1+node.tagName.length,' '+replacement);
+  }
+  return finish(resolved,out);
+ }catch(error){return refuse(error.message);}
+}
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason});
  try{
@@ -27,9 +52,7 @@ function plan(resolved,op){
   const node=state.nodes[candidate.sourceIndex+1],old=attr(node,candidate.attribute)||'',value=candidate.attribute==='src'?op.src:old.slice(0,candidate.start)+op.src+old.slice(candidate.end),location=node.sourceCodeLocation,token=location.attrs?.[candidate.attribute];
   const escaped=value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'),replacement=candidate.attribute+'="'+escaped+'"',out=new MagicString(resolved.source);
   if(token)out.overwrite(token.startOffset,token.endOffset,replacement);else out.appendLeft(location.startTag.startOffset+1+node.tagName.length,' '+replacement);
-  const after=out.toString(),html=require('./adapters/html.cjs'),beforeElements=html.collect(resolved.source,resolved.relPath).elements,nextElements=html.collect(after,resolved.relPath).elements;
-  if(beforeElements.length!==nextElements.length||beforeElements.some((element,index)=>element.id!==nextElements[index].id||element.tag!==nextElements[index].tag))return refuse('The image edit changes document structure.');
-  return {ok:true,hash:html.contentHash(after),edits:after===resolved.source?[]:[{file:resolved.file,before:resolved.source,after}]};
+  return finish(resolved,out);
  }catch(error){return refuse(error.message);}
 }
-module.exports={describe,plan};
+module.exports={describe,plan,planSource};

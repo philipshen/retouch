@@ -15,3 +15,21 @@ test('responsive image editing rejects stale, ambiguous and unsafe targets',()=>
 test('responsive images without src can acquire a fallback without changing their candidate list',()=>{
  const source='<img srcset="data:image/png;base64,AAAA 1x, high.png 2x">',resolved=resolve(source),result=html.planOp(resolved,{type:'setResponsiveImage',candidate:'fallback',src:'/fallback.png',fileHash:resolved.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits[0].after,'<img src="/fallback.png" srcset="data:image/png;base64,AAAA 1x, high.png 2x">');
 });
+
+test('responsive source settings change only the chosen source atomically',()=>{
+ const resolved=resolve(),op={type:'setResponsiveImageSource',sourceIndex:1,fileHash:resolved.hash,changes:{media:'(min-width: 400px) and (max-width: 900px)',sizes:'(max-width: 500px) 100vw, 50vw',type:'image/webp'}};
+ const result=html.planOp(resolved,op);assert.equal(result.ok,true,result.reason);
+ const after=result.edits[0].after,parsed=resolve(after),info=html.describe(parsed).responsiveImage;
+ assert.deepEqual(info.sources[2],{index:1,src:null,srcset:'phone.webp 1x, phone2.webp 2x',media:op.changes.media,sizes:op.changes.sizes,type:'image/webp'});
+ assert.deepEqual(info.sources.slice(0,2),html.describe(resolved).responsiveImage.sources.slice(0,2));
+ assert.ok(after.includes('<p>Keep</p>'));assert.ok(after.includes('<!--keep-->'));
+ assert.deepEqual(html.planOp(parsed,{...op,fileHash:parsed.hash}).edits,[],'unchanged settings preserve bytes');
+ const removed=html.planOp(parsed,{...op,fileHash:parsed.hash,changes:{media:null,sizes:null,type:null}});assert.equal(removed.ok,true,removed.reason);assert.equal(html.describe(resolve(removed.edits[0].after)).responsiveImage.sources[2].media,null);
+ const fallback=html.planOp(resolved,{...op,sourceIndex:-1,changes:{sizes:'50vw'}});assert.equal(fallback.edits[0].after,original.replace('sizes="100vw"','sizes="50vw"'));
+});
+test('responsive source settings reject stale, foreign and ambiguous edits and escape literal attributes',()=>{
+ const resolved=resolve(),op={type:'setResponsiveImageSource',sourceIndex:0,fileHash:resolved.hash,changes:{media:'(max-width: 900px)'}};
+ for(const changes of [{fileHash:'old'},{fileHash:null},{sourceIndex:'0'},{sourceIndex:-2},{sourceIndex:2},{changes:{}},{changes:[]},{changes:{src:'other.png'}},{changes:{onload:'bad'}},{sourceIndex:-1},{changes:{media:42}},{changes:{media:'x'.repeat(4097)}},{changes:{media:'\u0000'}}])assert.equal(html.planOp(resolved,{...op,...changes}).ok,false,JSON.stringify(changes));
+ for(const source of [original.replace('type="image/webp"','media="duplicate" type="image/webp"'),original.replace('</picture>','<img src="extra.png"></picture>')]){const r=resolve(source);assert.equal(html.planOp(r,{...op,fileHash:r.hash}).ok,false);}
+ const injected='screen" onload="x<&',result=html.planOp(resolved,{...op,changes:{media:injected}});assert.equal(result.ok,true,result.reason);const node=resolve(result.edits[0].after).element.node.parentNode.childNodes[0];assert.equal(node.attrs.find(a=>a.name==='media').value,injected);assert.equal(node.attrs.some(a=>a.name==='onload'),false);
+});

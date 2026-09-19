@@ -1312,3 +1312,8 @@ html, body { overflow:clip; }
 .variable-mode-menu > button { display:block; width:100%; margin:0; text-align:left; background:transparent; padding:8px; }
 .variable-mode-menu > button:hover:not(:disabled),.variable-mode-menu > button:focus-visible { background:var(--accent); color:white; outline:0; }
 .variable-mode-menu > button:disabled { opacity:.4; cursor:default; }
+
+.responsive-image-source { padding: 0 12px 12px; }
+.responsive-image-source [hidden] { display: none; }
+
+.imgthumb[hidden] { display: none; }

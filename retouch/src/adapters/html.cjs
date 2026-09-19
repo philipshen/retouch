@@ -63,6 +63,7 @@ function planOp(resolved,op){
  if(['convertSVGToPath','convertSVGToArrow'].includes(op.type))return require('../svg-convert.cjs').plan(resolved,op);
  if(op.type==='setSVGTransforms')return require('../svg-transform.cjs').planSelection(resolved,op,'html');
   if(op.type==='setSVGTransform')return require('../svg-transform.cjs').plan(resolved,op,'html');
+ if(op.type==='setResponsiveImageSource')return require('../html-responsive-image.cjs').planSource(resolved,op);
  if(op.type==='setResponsiveImage')return require('../html-responsive-image.cjs').plan(resolved,op);
  if(op.type==='setSVGGradient')return require('../html-svg-gradient.cjs').plan(resolved,op);
  if(op.type==='setSVGGeometry')return require('../svg-geometry.cjs').plan(resolved,op);
@@ -115,4 +116,4 @@ function planOp(resolved,op){
 }
 module.exports={name:'html',matches:file=>/\.html?$/i.test(file),collect,stamp,contentHash:hash,describe,planOp,
  applyOp:(resolved,op)=>require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),planOp(resolved,op)),
- capabilities:{classAttr:'class',ops:[...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setChildren','setTag','setSrc','setResponsiveImage',...structure.types]}};
+ capabilities:{classAttr:'class',ops:[...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setChildren','setTag','setSrc','setResponsiveImage','setResponsiveImageSource',...structure.types]}};

@@ -25229,3 +25229,26 @@ All 1,942 unit tests passed. Chromium and WebKit browser coverage exercises
 candidate selection, fallback edits, project-image browsing, upload, responsive
 preview selection, retained form state and exact undo/redo. The packaged desktop
 archive predates this change; broader Figma parity remains unfinished.
+
+
+### Responsive image source settings (2026-09-19)
+
+The HTML image inspector now edits each existing picture source’s media, type
+and sizes attributes, and the img fallback’s sizes. Screen range controls offer
+all widths, upper/lower bounds and inclusive between-width ranges; custom media
+conditions remain available. Only changed attributes enter one source transaction,
+with revision checks, attribute escaping and ambiguous-source refusal. Unrelated
+sources, candidate descriptors and author formatting remain intact. Native browser
+source order and format support determine which matching candidate renders.
+
+The inspector retains the candidate being edited through source changes and
+history restores, shows that candidate’s thumbnail and keeps source controls open
+after saving. Main/comparison previews reconcile in place, preserving document
+identity and unsaved form values. Exact undo/redo includes attribute removal.
+
+Chromium and WebKit verified ranges, custom orientation conditions, format
+fallback, width-based sizes selection, invalid range refusal, candidate retention,
+img-only sources without a fallback, comparison updates and exact history. The
+existing candidate browse/upload suites passed in both engines. All 1,946 unit
+tests passed. Adding/removing sources and editing candidate descriptors remain
+unimplemented. The packaged desktop archive predates these changes.

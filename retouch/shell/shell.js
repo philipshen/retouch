@@ -3082,25 +3082,35 @@ async function refreshResponsiveImage(info) {
 function responsiveImageControls(sec,info) {
   const descriptor=info.responsiveImage;
   if(descriptor.reason){const message=document.createElement('p');message.className='refused';message.textContent=descriptor.reason;sec.append(message);return;}
-  const target=matchingEls(info.id)[0],preview=document.createElement('img');preview.className='imgthumb';preview.alt='Selected responsive image';preview.src=target?.currentSrc||target?.src||'';sec.append(preview);
+  const target=matchingEls(info.id)[0],preview=document.createElement('img');preview.className='imgthumb';preview.alt='Selected image candidate';sec.append(preview);
   const choices=document.createElement('select');for(const candidate of descriptor.candidates)choices.add(new Option(candidate.label,candidate.key));
   const active=descriptor.candidates.filter(candidate=>candidate.attribute==='srcset').find(candidate=>{try{return new URL(candidate.url,target.ownerDocument.baseURI).href===target.currentSrc&&(!candidate.media||target.ownerDocument.defaultView.matchMedia(candidate.media).matches);}catch{return false;}});
-  choices.value=active?.key||'fallback';RetouchInspector.field(sec,'Image candidate',choices);
-  const input=document.createElement('input');input.type='text';const update=()=>{input.value=descriptor.candidates.find(candidate=>candidate.key===choices.value)?.url||'';};choices.onchange=update;update();RetouchInspector.field(sec,'Candidate image path',input);
+  choices.value=descriptor.candidates.some(candidate=>candidate.key===info._responsiveCandidate)?info._responsiveCandidate:active?.key||'fallback';RetouchInspector.field(sec,'Image candidate',choices);
+  const input=document.createElement('input');input.type='text';const update=()=>{input.value=descriptor.candidates.find(candidate=>candidate.key===choices.value)?.url||'';preview.hidden=!input.value;if(!input.value){preview.removeAttribute('src');return;}try{preview.src=new URL(input.value,target.ownerDocument.baseURI).href;}catch{preview.removeAttribute('src');}};const sourceControls=document.createElement('div');
+  const selectCandidate=()=>{info._responsiveCandidate=choices.value;choices.title=choices.selectedOptions[0]?.textContent||'';update();const source=descriptor.sources.find(source=>source.index===descriptor.candidates.find(candidate=>candidate.key===choices.value)?.sourceIndex);sourceControls.replaceChildren(RetouchResponsiveImageSource.mount(source,changes=>saveSource(changes,source.index,choices.value),{open:!!info._responsiveSourceOpen,onToggle:open=>{info._responsiveSourceOpen=open;}}));};choices.onchange=selectCandidate;selectCandidate();RetouchInspector.field(sec,'Candidate image path',input);
   const note=document.createElement('p');note.className='hint';note.textContent='Replace this candidate only. Screen conditions, resolution and sizing stay the same.';sec.append(note);
   async function apply(src,key=choices.value,hash=info.hash){
     if(sel?.info!==info||info.hash!==hash)throw Error('The selected image changed. Re-select it before replacing a candidate.');
     busyPanel(true);try{
       const result=await api('POST','/rt/__api/op',{type:'setResponsiveImage',id:info.id,candidate:key,src,fileHash:hash,context:info.context});
       if(!result?.ok)throw Error(result?.reason||result?.error||'Image candidate could not be saved.');
-      if(result.undoId)editorHistory.record({type:'setResponsiveImage',id:info.id,undoId:result.undoId,context:info.context});
+      if(result.undoId)editorHistory.record({type:'setResponsiveImage',id:info.id,candidate:key,undoId:result.undoId,context:info.context});
       Object.assign(info,result.element||{hash:result.hash});await refreshResponsiveImage(info);if(sel?.info===info)renderPanel();toast('Saved','ok');
+    }finally{busyPanel(false);}
+  }
+  async function saveSource(changes,sourceIndex,key){
+    if(sel?.info!==info)throw Error('Re-select the image before changing its source settings.');
+    busyPanel(true);try{
+      const result=await api('POST','/rt/__api/op',{type:'setResponsiveImageSource',id:info.id,sourceIndex,changes,fileHash:info.hash,context:info.context});
+      if(!result?.ok)throw Error(result?.reason||result?.error||'Source settings could not be saved.');
+      if(result.undoId)editorHistory.record({type:'setResponsiveImageSource',id:info.id,candidate:key,undoId:result.undoId,context:info.context});
+      Object.assign(info,result.element||{hash:result.hash});await refreshResponsiveImage(info);if(sel?.info===info)renderPanel();toast('Source settings saved','ok');
     }finally{busyPanel(false);}
   }
   sec.append(RetouchInspector.button('Apply candidate image',()=>apply(input.value.trim()).catch(error=>toast(error.message,'err'))));
   sec.append(RetouchInspector.button('Browse candidate images',event=>{const key=choices.value,hash=info.hash;event.currentTarget.focus({preventScroll:true});projectImageBrowser(info)(src=>apply(src,key,hash));}));
   const file=document.createElement('input');file.type='file';file.accept='image/*';file.hidden=true;file.setAttribute('aria-label','Upload candidate image');const upload=imageFillUpload(info),button=RetouchInspector.button('Upload candidate image…',()=>file.click());
-  file.onchange=async()=>{const image=file.files[0],key=choices.value,hash=info.hash;if(!image)return;button.disabled=true;try{await apply(await upload(image),key,hash);}catch(error){toast(error.message,'err');}finally{button.disabled=false;file.value='';}};sec.append(button,file);
+  file.onchange=async()=>{const image=file.files[0],key=choices.value,hash=info.hash;if(!image)return;button.disabled=true;try{await apply(await upload(image),key,hash);}catch(error){toast(error.message,'err');}finally{button.disabled=false;file.value='';}};sec.append(button,file,sourceControls);
 }
 function imageSection(info) {
   const sec = document.createElement('div');
@@ -4078,6 +4088,7 @@ async function restoreHistory(direction,op) {
     if(op.type==='setLiquidClassesSelection'){const results=await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(item=>item?.ok&&item.element.classSourceLiteral))throw Error('The literal class selection no longer resolves.');await refreshLiteralLiquidClasses(results.map(item=>item.element),direction==='undo'?op.classesAfter:op.classesBefore);await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='collectionSelection'){await reloadFrame();await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     const fresh = await api('GET', resolveUrl(op.id, op.context));
+    if(fresh?.ok&&['setResponsiveImage','setResponsiveImageSource'].includes(op.type)){fresh.element._responsiveCandidate=op.candidate;fresh.element._responsiveSourceOpen=op.type==='setResponsiveImageSource';}
     if (fresh?.ok) { sel = { hostId: op.id, instanceId: null, scope: 'host', info: fresh.element }; renderPanel(); }
     else clearSelection();
     if (fresh?.ok) {
@@ -4102,7 +4113,7 @@ async function restoreHistory(direction,op) {
         }
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
       },{classSource:['setClasses','setClassesSelection'].includes(op.type),verifyText:op.type==='setText'&&!info.textSource,imageSource:op.type==='setSrc',svgGeometry:['setSVGGeometry','setSVGTransform','setSVGTransforms'].includes(op.type)});
-      if(op.type==='setResponsiveImage'){await refreshResponsiveImage(info);renderPanel();}
+      if(['setResponsiveImage','setResponsiveImageSource'].includes(op.type)){await refreshResponsiveImage(info);renderPanel();}
       else if(op.type==='setImageFill'){await refreshLiquidImageFill(info);renderPanel();}
       else if(op.type==='setText'&&info.kind==='host'&&!info.textSource&&window.__RT_RENDERING?.reloadAfterWrite){
         await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info)});
