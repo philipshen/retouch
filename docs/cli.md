@@ -249,6 +249,9 @@ capture closes its browser and removes temporary output.
 
 `--responsive` preserves loaded author stylesheets and inline CSS, including
 media queries, fluid dimensions, flex/grid layouts and generated content.
+It also keeps `srcset`, `sizes`, native lazy loading and `<picture>` source
+conditions. Image candidates are saved locally so width and pixel-density
+selection can continue offline; missing candidates are reported in the manifest.
 Stylesheet responses are reused for cross-origin CSS and imports. The captured
 DOM remains fixed: scripts, client-side route changes and conditional rendering
 are not reconstructed. Shadow components and canvases retain captured styling.

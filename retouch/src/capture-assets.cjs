@@ -19,13 +19,14 @@ async function localize({html,fontFaces=[],styleSheets=[],stylesheetCache=[],bas
   const track=value=>{const url=absolute(value,base);if(/^(https?:|blob:)/.test(url))urls.add(url);return url;};
   function visit(node){
    for(const attr of node.attrs||[]){if(attr.name==='style'||node.namespaceURI==='http://www.w3.org/2000/svg'&&paintAttributes.has(attr.name)){attr.value=rewrite(attr.value,track);references.push({node:attr,key:'value',css:true});}
+    else if(attr.name==='srcset'&&['img','source'].includes(node.tagName)){attr.value=require('./capture-srcset.cjs').rewrite(attr.value,track);references.push({node:attr,key:'value',srcset:true});}
     else if(attr.name==='src'&&node.tagName==='img'||attr.name==='href'&&svgResources.has(node.tagName)){attr.value=track(attr.value);references.push({node:attr,key:'value'});}}
    if(node.tagName==='style')for(const child of node.childNodes||[])if(child.nodeName==='#text'){child.value=rewrite(child.value,track);references.push({node:child,key:'value',css:true});}
    for(const child of node.childNodes||[])visit(child);
   }
   visit(root);const replacements=new Map();
   for(const url of urls){const address=new URL(url),fragment=address.hash;address.hash='';const asset=await save(address.href,ancestors);if(asset)replacements.set(url,(insideAsset?'data:'+asset.mime+';base64,'+fs.readFileSync(path.join(directory,asset.path)).toString('base64'):'./capture-assets/'+path.basename(asset.path))+fragment);else{failures.add(url);unresolved.add(url);}}
-  for(const reference of references)reference.node[reference.key]=reference.css?rewrite(reference.node[reference.key],url=>replacements.get(url)||url):replacements.get(reference.node[reference.key])||reference.node[reference.key];
+  for(const reference of references)reference.node[reference.key]=reference.css?rewrite(reference.node[reference.key],url=>replacements.get(url)||url):reference.srcset?require('./capture-srcset.cjs').rewrite(reference.node[reference.key],url=>replacements.get(url)||url):replacements.get(reference.node[reference.key])||reference.node[reference.key];
   return [...failures];
  }
  async function save(url,ancestors){

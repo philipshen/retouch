@@ -25190,3 +25190,25 @@ sides of a breakpoint), with fluid sizes, flex reflow, media attributes,
 redirects/imports, local image dependencies, source edits and exact undo.
 The existing capture regression suites remain passing. Full app behavior,
 responsive shadow components and universal capture fidelity remain unfinished.
+
+
+### Responsive image capture (2026-09-19)
+
+Responsive capture retains image/source srcset candidates, width and density
+descriptors, sizes, picture media/type conditions, fallback sources and native
+lazy loading. Keeping lazy loading preserves the browser's sizes=auto behavior.
+Every candidate URL resolves against the document base and enters the bounded
+asset-localization path, including candidates not selected during capture.
+Computed-style captures still retain only their selected image. Image-source
+replacement keeps the HTML adapter's existing picture/srcset guard.
+
+The tokenizer follows the HTML image-candidate algorithm rather than splitting
+on commas, so comma-containing URLs and data images survive. Invalid descriptors
+and unsafe schemes are omitted during sanitization. Reference:
+[HTML image candidate parsing](https://html.spec.whatwg.org/multipage/images.html#parsing-a-srcset-attribute).
+
+Chromium and WebKit verified identical selected candidates and rendered pixels
+at phone/desktop widths and 1x/2x density after the original server stopped,
+including sizes=auto, data images, comma URLs and a document base URL. Existing
+responsive CSS, asset and SVG capture suites passed in both engines. All 1,939
+unit tests passed. The packaged desktop archive predates this change.
