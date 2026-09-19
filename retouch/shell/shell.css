@@ -1372,3 +1372,6 @@ html, body { overflow:clip; }
 .curve-preview>span{display:block;width:12px;height:12px;position:relative;top:2px;background:var(--accent);border-radius:50%}
 .prototype-curve>button{margin:0 6px 0 0}
 .curve-help{font-size:10px;margin-bottom:0}
+.prototype-spring>svg{height:150px;cursor:grab;outline:none}
+.prototype-spring>svg:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.prototype-spring>svg:active{cursor:grabbing}

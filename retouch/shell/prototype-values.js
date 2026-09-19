@@ -1,5 +1,6 @@
 (function(root){
  'use strict';
+ const S=typeof module==='object'&&module.exports?require('./prototype-spring.js'):root.RetouchPrototypeSpring;
  const attribute='data-rt-prototype',positions=['center','top-left','top-center','top-right','center-left','center-right','bottom-left','bottom-center','bottom-right'];
  const transitions={
   'open-overlay':['instant','dissolve','move-in','slide-in'],
@@ -9,15 +10,17 @@
  const curves={'linear':[0,0,1,1],'ease-in':[.42,0,1,1],'ease-out':[0,0,.58,1],'ease-in-out':[.42,0,.58,1]};
  function easing(value){
   if(easings.includes(value))return value;
+  if(value?.type==='spring'){const checked=S.validate(value);S.curve(checked);return checked;}
   if(!value||typeof value!=='object'||Array.isArray(value)||value.type!=='cubic-bezier'||Object.keys(value).some(key=>!['type','values'].includes(key))||!Array.isArray(value.values)||value.values.length!==4||value.values.some(n=>!Number.isFinite(n)||Math.abs(n)>10000)||[value.values[0],value.values[2]].some(n=>n<0||n>1))throw Error('Use four finite Bézier coordinates, with X values between 0 and 1 and Y values between -10000 and 10000.');
   return {type:'cubic-bezier',values:[...value.values]};
  }
- function easingCss(value){const checked=easing(value);return typeof checked==='string'?checked:'cubic-bezier('+checked.values.join(', ')+')';}
+ function easingCss(value){const checked=easing(value);return typeof checked==='string'?checked:checked.type==='spring'?S.curve(checked).css:'cubic-bezier('+checked.values.join(', ')+')';}
  function transition(value,action){
   if(!transitions[action]||!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['type','duration','easing','direction'].includes(key))||!transitions[action].includes(value.type))throw Error('Choose a supported transition for this action.');
   if(value.type==='instant')return {type:'instant'};
   const result={type:value.type,duration:value.duration??300,easing:easing(value.easing??'ease-out')};
   if(!Number.isInteger(result.duration)||result.duration<1||result.duration>10000)throw Error('Choose a duration from 1 to 10000 ms and a supported easing curve.');
+  if(result.easing?.type==='spring')result.duration=S.curve(result.easing).duration;
   if(value.type!=='dissolve'){result.direction=value.direction??'right';if(!['left','right','top','bottom'].includes(result.direction))throw Error('Choose a transition direction.');}
   else if(value.direction!==undefined)throw Error('Dissolve does not have a direction.');
   return result;
