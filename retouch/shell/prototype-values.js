@@ -2,6 +2,7 @@
  'use strict';
  const S=typeof module==='object'&&module.exports?require('./prototype-spring.js'):root.RetouchPrototypeSpring;
  const attribute='data-rt-prototype',positions=['center','top-left','top-center','top-right','center-left','center-right','bottom-left','bottom-center','bottom-right'];
+ const triggers=['click','mouseenter','mouseleave','mousedown','mouseup','after-delay'];
  const transitions={
   'open-overlay':['instant','dissolve','move-in','slide-in'],
   'close-overlay':['instant','dissolve','move-out','slide-out'],
@@ -34,18 +35,19 @@
  }
  function route(value){if(typeof value!=='string'||value.length>2048||!value.startsWith('/')||value.startsWith('//')||/[\u0000-\u0020\u007f\\]/.test(value))return false;try{const url=new URL(value,'http://retouch.local');return url.origin==='http://retouch.local'&&!/^\/rt(?:\/|$)/.test(decodeURIComponent(url.pathname));}catch{return false;}}
  function validate(value){
-  if(!Array.isArray(value)||value.length>3)throw Error('Use at most one interaction per trigger.');
+  if(!Array.isArray(value)||value.length>triggers.length)throw Error('Use at most one interaction per trigger.');
   const used=new Set();return value.map(item=>{
-   if(!item||typeof item!=='object'||Array.isArray(item)||Object.keys(item).some(key=>!['trigger','action','destination','preserveScroll','overlay','transition'].includes(key))||!['click','mouseenter','mouseleave'].includes(item.trigger)||used.has(item.trigger))throw Error('Choose distinct supported interaction triggers.');used.add(item.trigger);
+   if(!item||typeof item!=='object'||Array.isArray(item)||Object.keys(item).some(key=>!['trigger','action','destination','preserveScroll','overlay','transition','delay'].includes(key))||!triggers.includes(item.trigger)||used.has(item.trigger))throw Error('Choose distinct supported interaction triggers.');used.add(item.trigger);
+   if(item.trigger==='after-delay'&&(!Number.isInteger(item.delay)||item.delay<1||item.delay>10000)||item.trigger!=='after-delay'&&item.delay!==undefined)throw Error('After delay needs a whole duration from 1 to 10000 ms. Other triggers do not have a delay.');
    if(!['navigate','back','scroll','open-overlay','swap-overlay','close-overlay'].includes(item.action))throw Error('Choose a supported navigation or overlay action.');
    if(['navigate','open-overlay','swap-overlay'].includes(item.action)&&!route(item.destination))throw Error('Choose a project page URL beginning with /.');
    if(item.action==='scroll'&&(typeof item.destination!=='string'||!item.destination||item.destination.length>256||/[\u0000-\u0020\u007f]/.test(item.destination)))throw Error('Choose the destination element ID without #.');
    if(['back','close-overlay'].includes(item.action)&&item.destination!==undefined)throw Error('This action does not have a destination.');
    if(item.preserveScroll!==undefined&&(item.action!=='navigate'||typeof item.preserveScroll!=='boolean'))throw Error('Scroll preservation is available for navigation only.');
    if(item.overlay!==undefined&&item.action!=='open-overlay')throw Error('Overlay settings belong to Open overlay. Swap overlay keeps the current settings.');
-   return {trigger:item.trigger,action:item.action,...(!['back','close-overlay'].includes(item.action)?{destination:item.destination}:{}),...(item.action==='navigate'?{preserveScroll:!!item.preserveScroll}:{}),...(item.action==='open-overlay'?{overlay:overlay(item.overlay)}:{}),...(item.transition!==undefined?{transition:transition(item.transition,item.action)}:{})};
+   return {trigger:item.trigger,action:item.action,...(item.trigger==='after-delay'?{delay:item.delay}:{}),...(!['back','close-overlay'].includes(item.action)?{destination:item.destination}:{}),...(item.action==='navigate'?{preserveScroll:!!item.preserveScroll}:{}),...(item.action==='open-overlay'?{overlay:overlay(item.overlay)}:{}),...(item.transition!==undefined?{transition:transition(item.transition,item.action)}:{})};
   });
  }
  function parse(value){if(value===null)return [];if(typeof value!=='string'||value.length>16384)throw Error('Invalid prototype interactions.');return validate(JSON.parse(value));}
- const api={attribute,positions,transitions,easings,curves,easing,easingCss,transition,overlay,route,validate,parse};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPrototypeValues=api;
+ const api={attribute,positions,triggers,transitions,easings,curves,easing,easingCss,transition,overlay,route,validate,parse};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPrototypeValues=api;
 })(typeof window==='object'?window:globalThis);

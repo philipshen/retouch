@@ -1,7 +1,7 @@
 (function(root){
  'use strict';
  const I=RetouchInspector,V=RetouchPrototypeValues,S=RetouchPrototypeSpring,host=root.RetouchPrototypeHost,panel=document.getElementById('panel'),body=document.getElementById('prototypePanel'),design=document.getElementById('designTab'),prototype=document.getElementById('prototypeTab');let active=false,busy=false,serial=0;
- const triggers=[['click','On click'],['mouseenter','Mouse enter'],['mouseleave','Mouse leave']],actions=[['navigate','Navigate to'],['back','Back'],['scroll','Scroll to'],['open-overlay','Open overlay'],['swap-overlay','Swap overlay'],['close-overlay','Close overlay']];
+ const triggers=[['click','On click'],['mouseenter','Mouse enter'],['mouseleave','Mouse leave'],['mousedown','Mouse down / Touch press'],['mouseup','Mouse up / Touch release'],['after-delay','After delay']],actions=[['navigate','Navigate to'],['back','Back'],['scroll','Scroll to'],['open-overlay','Open overlay'],['swap-overlay','Swap overlay'],['close-overlay','Close overlay']];
  async function tab(next){if(busy)return;try{await host.prepare();active=next;panel.classList.toggle('prototype-inspector',next);body.hidden=!next;design.classList.toggle('active',!next);prototype.classList.toggle('active',next);design.setAttribute('aria-selected',String(!next));prototype.setAttribute('aria-selected',String(next));design.tabIndex=next?-1:0;prototype.tabIndex=next?0:-1;if(next)render();}catch(error){host.error(error.message);}}
  design.onclick=()=>tab(false);prototype.onclick=()=>tab(true);
  for(const button of [design,prototype]){button.addEventListener('pointerdown',e=>e.preventDefault());button.addEventListener('keydown',async e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const next=e.key==='End'||e.key==='ArrowRight';await tab(next);(next?prototype:design).focus();});}
@@ -16,7 +16,8 @@
    const card=document.createElement('fieldset');card.className='prototype-interaction';const legend=document.createElement('legend');legend.textContent=triggers.find(([value])=>value===item.trigger)[1]+' → '+actions.find(([value])=>value===item.action)[1];card.append(legend);rows.append(card);
    const draft={...item};
    const modify=()=>{const next=items.map((value,i)=>i===index?draft:value);try{V.validate(next);}catch(error){status.textContent=error.message;return;}return save(next);};
-   I.select(card,'Trigger '+(index+1),triggers.filter(([value])=>value===item.trigger||!items.some(i=>i.trigger===value)),item.trigger,value=>{draft.trigger=value;modify();});
+   I.select(card,'Trigger '+(index+1),triggers.filter(([value])=>value===item.trigger||!items.some(i=>i.trigger===value)),item.trigger,value=>{draft.trigger=value;if(value==='after-delay')draft.delay=800;else delete draft.delay;modify();});
+   if(item.trigger==='after-delay'){const delay=document.createElement('input');delay.type='number';delay.min='1';delay.max='10000';delay.step='1';delay.value=item.delay;I.field(card,'Delay (ms) '+(index+1),delay);delay.onchange=()=>{draft.delay=Number(delay.value);modify();};I.note(card,'Runs once while this layer is mounted in the active preview. Covered or hidden previews pause the timer.');}
    I.select(card,'Action '+(index+1),actions,item.action,value=>{const destination=draft.destination;draft.action=value;delete draft.preserveScroll;delete draft.destination;delete draft.overlay;delete draft.transition;if(!['back','close-overlay'].includes(value))draft.destination=value==='scroll'?'top':(V.route(destination)?destination:pages.find(page=>page.url!==host.route())?.url||'/');if(value==='open-overlay')draft.overlay=V.overlay();modify();});
    if(['navigate','open-overlay','swap-overlay'].includes(item.action)){
     if(pages.length)I.select(card,'Destination page '+(index+1),[['','Custom URL'],...pages.map(page=>[page.url,page.path||page.url])],pages.some(page=>page.url===item.destination)?item.destination:'',value=>{if(value){draft.destination=value;modify();}});
@@ -49,7 +50,8 @@
    const remove=I.button('Remove',()=>save(items.filter((_,i)=>i!==index)));remove.setAttribute('aria-label','Remove interaction '+(index+1));card.append(remove);
    for(const label of card.querySelectorAll('.inspector-field > span'))label.textContent=label.textContent.replace(/ \d+$/,'').replace('Destination page','Destination').replace('Destination URL','URL').replace('Destination element ID','Element ID');
   }
-  const add=I.button('Add interaction',()=>save([...items,{trigger:triggers.find(([value])=>!items.some(i=>i.trigger===value))[0],action:'navigate',destination:pages.find(page=>page.url!==host.route())?.url||'/'}]));add.disabled=items.length===3;section.append(add);
+  const nextTrigger=triggers.find(([value])=>!items.some(i=>i.trigger===value))?.[0];
+  const add=I.button('Add interaction',()=>save([...items,{trigger:nextTrigger,...(nextTrigger==='after-delay'?{delay:800}:{}),action:'navigate',destination:pages.find(page=>page.url!==host.route())?.url||'/'}]));add.disabled=!nextTrigger;section.append(add);
   if(!items.length)I.note(section,'Connect this layer to another page, go back, or scroll to an element.');
  }
  root.addEventListener('retouch:selection',()=>queueMicrotask(render));root.addEventListener('retouch:prototype',render);
