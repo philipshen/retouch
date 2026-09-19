@@ -1352,3 +1352,7 @@ html, body { overflow:clip; }
 .prototype-overlay-card{position:absolute;padding:0;border:0;overflow:hidden;background:#fff;box-shadow:0 12px 40px #0003}
 .prototype-overlay-frame{position:absolute;inset:0;border:0;display:block;transform-origin:top left;background:#fff}
 #closePrototypeOverlay[hidden]{display:none}
+
+.prototype-overlay-backdrop{position:absolute;inset:0}
+.prototype-overlay-loading{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 14px;border-radius:6px;background:var(--panel);color:var(--ink);pointer-events:none}
+.prototype-overlay-loading[hidden]{display:none}

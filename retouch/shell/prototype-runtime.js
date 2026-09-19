@@ -4,9 +4,9 @@
  function current(target=frame){try{const w=target.contentWindow;if(w.location.origin!==location.origin)return null;return {url:w.location.pathname+w.location.search+w.location.hash,x:w.scrollX,y:w.scrollY};}catch{return null;}}
  function navigate(destination,scroll){const url=new URL(destination,location.href);main.pendingScroll={...scroll,url:url.href};frame.src=url.pathname+url.search+url.hash;}
  function perform(item,context,opener){const before=current();if(!before)return;
-  if(item.action==='open-overlay'){overlays.open(item.destination,item.overlay,opener);return;}
-  if(item.action==='close-overlay'){overlays.close();return;}
-  if(item.action==='swap-overlay'&&overlays.swap(item.destination,opener))return;
+  if(item.action==='open-overlay'){overlays.open(item.destination,item.overlay,opener,item.transition);return;}
+  if(item.action==='close-overlay'){overlays.close(true,item.transition);return;}
+  if(item.action==='swap-overlay'&&overlays.swap(item.destination,opener,item.transition))return;
   if(item.action==='navigate'||item.action==='swap-overlay'){if(!V.route(item.destination))return;trail.push(before);if(trail.length>100)trail.shift();overlays.clear();navigate(item.destination,item.preserveScroll?before:{x:0,y:0});}
   else if(item.action==='back'){if(overlays.close())return;const previous=trail.pop();if(previous)navigate(previous.url,previous);}
   else if(item.action==='scroll'){const d=context.frame.contentDocument,targets=[...d.querySelectorAll('[id]')].filter(el=>el.id===item.destination);if(targets.length!==1){root.RetouchPresentationHost.error('The scroll destination is missing or duplicated.');return;}targets[0].scrollIntoView({behavior:'instant',block:'start'});}

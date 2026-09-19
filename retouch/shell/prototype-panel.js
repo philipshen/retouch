@@ -17,7 +17,7 @@
    const draft={...item};
    const modify=()=>{const next=items.map((value,i)=>i===index?draft:value);try{V.validate(next);}catch(error){status.textContent=error.message;return;}save(next);};
    I.select(card,'Trigger '+(index+1),triggers.filter(([value])=>value===item.trigger||!items.some(i=>i.trigger===value)),item.trigger,value=>{draft.trigger=value;modify();});
-   I.select(card,'Action '+(index+1),actions,item.action,value=>{const destination=draft.destination;draft.action=value;delete draft.preserveScroll;delete draft.destination;delete draft.overlay;if(!['back','close-overlay'].includes(value))draft.destination=value==='scroll'?'top':(V.route(destination)?destination:pages.find(page=>page.url!==host.route())?.url||'/');if(value==='open-overlay')draft.overlay=V.overlay();modify();});
+   I.select(card,'Action '+(index+1),actions,item.action,value=>{const destination=draft.destination;draft.action=value;delete draft.preserveScroll;delete draft.destination;delete draft.overlay;delete draft.transition;if(!['back','close-overlay'].includes(value))draft.destination=value==='scroll'?'top':(V.route(destination)?destination:pages.find(page=>page.url!==host.route())?.url||'/');if(value==='open-overlay')draft.overlay=V.overlay();modify();});
    if(['navigate','open-overlay','swap-overlay'].includes(item.action)){
     if(pages.length)I.select(card,'Destination page '+(index+1),[['','Custom URL'],...pages.map(page=>[page.url,page.path||page.url])],pages.some(page=>page.url===item.destination)?item.destination:'',value=>{if(value){draft.destination=value;modify();}});
     const input=document.createElement('input');input.value=item.destination;input.placeholder='/page';input.maxLength=2048;I.field(card,'Destination URL '+(index+1),input);input.addEventListener('change',()=>{draft.destination=input.value;modify();});
@@ -33,6 +33,16 @@
     const opacity=document.createElement('input');opacity.type='number';opacity.min='0';opacity.max='100';opacity.value=String(Math.round(parseInt(item.overlay.background.slice(7),16)/255*100));I.field(card,'Background opacity (%) '+(index+1),opacity);opacity.onchange=()=>{const value=Number(opacity.value);if(!opacity.value||!Number.isFinite(value)||value<0||value>100){status.textContent='Choose a background opacity from 0% to 100%.';return;}draft.overlay.background=item.overlay.background.slice(0,7)+Math.round(value*255/100).toString(16).padStart(2,'0');modify();};
     const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=item.overlay.closeOutside;check.setAttribute('aria-label','Close when clicking outside '+(index+1));label.append(check,' Close when clicking outside');card.append(label);check.onchange=()=>{draft.overlay.closeOutside=check.checked;modify();};
    }else if(item.action==='swap-overlay')I.note(card,'Replace the current overlay, keeping its size, position and background.');
+   if(V.transitions[item.action]){
+    const current=item.transition||{type:'instant'},names={'instant':'Instant','dissolve':'Dissolve','move-in':'Move in','move-out':'Move out','push':'Push','slide-in':'Slide in','slide-out':'Slide out'};
+    I.select(card,'Animation '+(index+1),V.transitions[item.action].map(value=>[value,names[value]]),current.type,value=>{draft.transition=V.transition({type:value},item.action);modify();});
+    if(current.type!=='instant'){
+     draft.transition={...current};
+     const duration=document.createElement('input');duration.type='number';duration.min='1';duration.max='10000';duration.step='1';duration.value=current.duration;I.field(card,'Duration (ms) '+(index+1),duration);duration.onchange=()=>{draft.transition.duration=Number(duration.value);modify();};
+     I.select(card,'Easing '+(index+1),V.easings.map(value=>[value,value.split('-').map(word=>word[0].toUpperCase()+word.slice(1)).join(' ')]),current.easing,value=>{draft.transition.easing=value;modify();});
+     if(current.type!=='dissolve')I.select(card,'Direction '+(index+1),[['left','Left'],['right','Right'],['top','Top'],['bottom','Bottom']],current.direction,value=>{draft.transition.direction=value;modify();});
+    }
+   }
    const remove=I.button('Remove',()=>save(items.filter((_,i)=>i!==index)));remove.setAttribute('aria-label','Remove interaction '+(index+1));card.append(remove);
    for(const label of card.querySelectorAll('.inspector-field > span'))label.textContent=label.textContent.replace(/ \d+$/,'').replace('Destination page','Destination').replace('Destination URL','URL').replace('Destination element ID','Element ID');
   }
