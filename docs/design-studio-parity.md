@@ -25133,3 +25133,22 @@ stylesheet recovery does not refetch CSS, then stops both source servers and
 checks local font loading and original text geometry. It also verifies reporting
 when a stylesheet exceeds the response-size limit. Runtime-created font faces
 without stylesheet definitions remain outside this path.
+
+### Web-component capture (2026-09-19)
+
+Capture now flattens the rendered composed tree of open and script-created
+closed shadow roots, including nested components and slot assignment/fallback.
+An early attachment hook retains closed roots while leaving the page's
+`shadowRoot` visibility and requested mode unchanged. Captured shadow-local IDs,
+labels, ARIA references and SVG paint references are remapped into unique document
+IDs. Unassigned light DOM and inactive slot fallback content are omitted.
+
+`retouch/test/e2e/capture-shadow-dom.cjs` checks both browsers against component
+fixtures with open/closed/nested roots, adopted stylesheets, slotted headings,
+input values, scoped SVG gradients and labels. It checks element geometry within
+0.05 CSS pixels (CSSOM serialization can shift a 1/64-pixel layout unit), produces
+screenshots for visual comparison, and exercises local text editing with exact
+undo/redo. Visual review still shows differences in native input border painting
+after computed styles become authored styles; pixel-perfect capture is not proven.
+Declarative closed roots and browser-owned shadow internals remain outside the
+exported tree; component behavior and encapsulation are not reconstructed.

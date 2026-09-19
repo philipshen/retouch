@@ -261,9 +261,17 @@ are preserved without refetching a potentially different stylesheet. Recovery
 is limited to 256 stylesheet responses, 2 MiB each and 20 MiB total. Unavailable
 responses are reported explicitly.
 
+Web-component capture flattens open and script-created closed shadow roots,
+including nested components and assigned/fallback slots, into editable HTML.
+Shadow-local IDs and references are remapped to avoid collisions in the copy.
+Adopted stylesheets contribute computed appearance and font definitions. The
+original component scripts and encapsulation are not retained.
+
 Current limitations: layout is captured at one viewport; responsive behavior and
 application logic are not reconstructed. Unavailable font stylesheet responses,
-runtime-created fonts, nested external SVG resources
-and shadow DOM contents are not fully portable.
+runtime-created fonts, nested external SVG resources and declarative closed
+shadow roots are not fully portable. Browser-owned shadow internals are not
+exported. Standard form controls remain editable HTML controls, but native
+appearance can differ after computed styles are serialized.
 Cross-origin or otherwise unreadable canvases are reported as unavailable.
 The desktop app does not yet expose URL capture in its onboarding UI.
