@@ -11,7 +11,7 @@ function inspect(resolved){
  if([image,...nodes].some(node=>!eligible.has(node.sourceCodeLocation?.startOffset)))throw Error('Responsive image attributes are duplicated or ambiguous.');
  const sources=[image,...nodes].map((node,index)=>({index:index-1,src:attr(node,'src'),srcset:attr(node,'srcset'),sizes:attr(node,'sizes'),media:attr(node,'media'),type:attr(node,'type')}));
  const candidates=[{key:'fallback',url:attr(image,'src')||'',label:'Fallback image',sourceIndex:-1,attribute:'src'}];
- for(const source of sources)for(const [index,candidate]of parse(source.srcset||'',{locations:true}).entries())candidates.push({key:source.index+':'+index,url:candidate.url,label:(source.index<0?'Image':'Source '+(source.index+1)+(source.media?' · '+source.media:''))+' · '+(candidate.descriptors.join(' ')||'1x')+(source.type?' · '+source.type:''),sourceIndex:source.index,attribute:'srcset',start:candidate.start,end:candidate.end,media:source.media});
+ for(const source of sources)for(const [index,candidate]of parse(source.srcset||'',{locations:true}).entries())candidates.push({key:source.index+':'+index,url:candidate.url,label:(source.index<0?'Image':'Source '+(source.index+1)+(source.media?' · '+source.media:''))+' · '+(candidate.descriptors.join(' ')||'1x')+(source.type?' · '+source.type:''),sourceIndex:source.index,attribute:'srcset',descriptors:candidate.descriptors,start:candidate.start,end:candidate.end,media:source.media});
  if(candidates.length>256)throw Error('This image has too many responsive candidates to edit.');
  return {picture:!!picture,sources,candidates,nodes:[image,...nodes]};
 }
@@ -41,13 +41,58 @@ function planSource(resolved,op){
   return finish(resolved,out);
  }catch(error){return refuse(error.message);}
 }
+function imageURL(value){
+ if(typeof value!=='string'||!value||/[\x00-\x20\x7f]/.test(value)||value.endsWith(','))throw Error('Use an image URL with spaces and trailing commas percent-encoded.');
+ if(!['http:','https:'].includes(new URL(value,'https://retouch.local/').protocol))throw Error('Unsupported image URL scheme.');
+ return value;
+}
+function resolution(descriptors){const value=descriptors.find(value=>/[wx]$/.test(value))||'1x';return {unit:value.slice(-1),value:Number(value.slice(0,-1))};}
+function candidateSet(candidates){
+ const seen=new Set(),units=new Set();
+ for(const candidate of candidates){const value=resolution(candidate.descriptors),key=value.unit+value.value;units.add(value.unit);if(seen.has(key))throw Error('Each candidate in a source needs a different width or pixel density.');seen.add(key);}
+ if(units.size>1)throw Error('Use widths for every candidate in this source, or pixel densities for every candidate.');
+}
+function planCandidates(resolved,op){
+ const refuse=reason=>({ok:false,refused:true,reason});
+ try{
+  if(!op.fileHash||op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the image.');
+  const state=inspect(resolved),source=state?.sources.find(source=>source.index===op.sourceIndex);
+  if(!Number.isInteger(op.sourceIndex)||!source)return refuse('Choose an available responsive image source.');
+  const old=source.srcset||'',candidates=parse(old,{locations:true}),selected=state.candidates.find(candidate=>candidate.key===op.candidate&&candidate.attribute==='srcset'&&candidate.sourceIndex===op.sourceIndex),index=selected?candidates.findIndex(candidate=>candidate.start===selected.start):-1;
+  if(!['add','remove','descriptor'].includes(op.action)||op.action!=='add'&&index<0)return refuse('Choose an available responsive image candidate.');
+  let value;
+  if(op.action==='remove'){
+   const candidate=candidates[index];let start=candidate.start,end=candidate.candidateEnd;
+   if(old[end]===',')end++;else{let previous=start-1;while(previous>=0&&/[ \t\n\r\f]/.test(old[previous]))previous--;if(old[previous]===',')start=previous;}
+   value=old.slice(0,start)+old.slice(end);
+  }else{
+   if(typeof op.descriptor!=='string'||op.descriptor.length>64||!/^(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?[wx]$/.test(op.descriptor))return refuse('Enter an image width in pixels or a pixel density.');
+   const parsed=parse('candidate '+op.descriptor),numeric=resolution([op.descriptor]);
+   if(parsed.length!==1||numeric.unit==='w'&&!Number.isSafeInteger(numeric.value))return refuse('Image widths must be positive whole pixels; pixel densities must be finite and nonnegative.');
+   if(op.action==='add'){
+    if(state.candidates.length>=256)return refuse('This image has too many responsive candidates to edit.');
+    const src=imageURL(op.src),separator=old&&!/,[ \t\n\r\f]*$/.test(old)?', ':old?' ':'';
+    value=old+separator+src+' '+op.descriptor;
+   }else{
+    const candidate=candidates[index],current=resolution(candidate.descriptors);
+    if(current.unit===numeric.unit&&current.value===numeric.value)return {ok:true,hash:resolved.hash,edits:[]};
+    const tail=old.slice(candidate.end,candidate.candidateEnd),leading=/^[ \t\n\r\f]*/.exec(tail)[0]||' ',trailing=candidate.descriptors.length?/[ \t\n\r\f]*$/.exec(tail)[0]:'',height=numeric.unit==='w'?candidate.descriptors.find(value=>value.endsWith('h')):null;
+    value=old.slice(0,candidate.end)+leading+op.descriptor+(height?' '+height:'')+trailing+old.slice(candidate.candidateEnd);
+   }
+  }
+  const next=parse(value);candidateSet(next);
+  if(next.length!==candidates.length+(op.action==='add'?1:op.action==='remove'?-1:0))return refuse('The candidate edit changes another image URL.');
+  const node=state.nodes[op.sourceIndex+1],location=node.sourceCodeLocation,token=location.attrs?.srcset,out=new MagicString(resolved.source),replacement='srcset="'+value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'"';
+  if(token)out.overwrite(token.startOffset,token.endOffset,replacement);else out.appendLeft(location.startTag.startOffset+1+node.tagName.length,' '+replacement);
+  return finish(resolved,out);
+ }catch(error){return refuse(error.message);}
+}
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason});
  try{
   if(!op.fileHash||op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the image.');
   const state=inspect(resolved),candidate=state?.candidates.find(candidate=>candidate.key===op.candidate);if(!candidate)return refuse('Choose an available image candidate.');
-  if(typeof op.src!=='string'||!op.src||/[\x00-\x20\x7f]/.test(op.src)||op.src.endsWith(','))return refuse('Use an image URL with spaces and trailing commas percent-encoded.');
-  if(!['http:','https:'].includes(new URL(op.src,'https://retouch.local/').protocol))return refuse('Unsupported image URL scheme.');
+  imageURL(op.src);
   if(candidate.url===op.src)return {ok:true,hash:resolved.hash,edits:[]};
   const node=state.nodes[candidate.sourceIndex+1],old=attr(node,candidate.attribute)||'',value=candidate.attribute==='src'?op.src:old.slice(0,candidate.start)+op.src+old.slice(candidate.end),location=node.sourceCodeLocation,token=location.attrs?.[candidate.attribute];
   const escaped=value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'),replacement=candidate.attribute+'="'+escaped+'"',out=new MagicString(resolved.source);
@@ -55,4 +100,4 @@ function plan(resolved,op){
   return finish(resolved,out);
  }catch(error){return refuse(error.message);}
 }
-module.exports={describe,plan,planSource};
+module.exports={describe,plan,planSource,planCandidates};

@@ -1317,3 +1317,7 @@ html, body { overflow:clip; }
 .responsive-image-source [hidden] { display: none; }
 
 .imgthumb[hidden] { display: none; }
+
+.responsive-image-candidates { padding: 0 12px 12px; }
+.responsive-image-candidates [hidden] { display: none; }
+.responsive-image-candidates h4 { margin: 16px 0 8px; font-size: 11px; font-weight: 600; }

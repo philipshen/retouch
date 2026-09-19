@@ -9,12 +9,13 @@ function parse(input,{locations=false}={}){
   while(index<input.length&&(space(input[index])||input[index]===','))index++;
   if(index>=input.length)break;
   const start=index;while(index<input.length&&!space(input[index]))index++;
-  let url=input.slice(start,index),descriptors=[];
-  if(url.endsWith(','))url=url.replace(/,+$/,'');
+  let url=input.slice(start,index),descriptors=[],candidateEnd=index;
+  if(url.endsWith(',')){url=url.replace(/,+$/,'');candidateEnd=start+url.length;}
   else{
    let token='',parens=false;
    while(index<input.length){const char=input[index++];if(parens){token+=char;if(char===')')parens=false;continue;}
-    if(char==='('){token+=char;parens=true;}else if(char===','){if(token)descriptors.push(token);token='';break;}else if(space(char)){if(token)descriptors.push(token);token='';}else token+=char;
+    if(char==='('){token+=char;parens=true;}else if(char===','){if(token)descriptors.push(token);token='';candidateEnd=index-1;break;}else if(space(char)){if(token)descriptors.push(token);token='';}else token+=char;
+    candidateEnd=index;
    }
    if(token)descriptors.push(token);
   }
@@ -26,7 +27,7 @@ function parse(input,{locations=false}={}){
    else if(/^\d+h$/.test(descriptor)&&number>0&&Number.isFinite(number)&&!height&&!density)height=true;
    else valid=false;
   }
-  if(valid&&(!height||width))candidates.push({url,descriptors,...(locations?{start,end:start+url.length}:{})});
+  if(valid&&(!height||width))candidates.push({url,descriptors,...(locations?{start,end:start+url.length,candidateEnd}:{})});
  }
  return candidates;
 }

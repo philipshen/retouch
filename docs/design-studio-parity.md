@@ -25252,3 +25252,24 @@ img-only sources without a fallback, comparison updates and exact history. The
 existing candidate browse/upload suites passed in both engines. All 1,946 unit
 tests passed. Adding/removing sources and editing candidate descriptors remain
 unimplemented. The packaged desktop archive predates these changes.
+
+
+### Responsive candidate set authoring (2026-09-19)
+
+Candidate options now add and remove entries in existing image/picture sources
+and edit width or density descriptors. An empty source stays available as an
+add destination, and an img without srcset can acquire its own candidate set
+inside an existing picture. Duplicate resolutions and mixed width/density sets
+are refused. Edits preserve other source rules, unrelated URLs and descriptor
+spacing; snapshot history restores the exact source and candidate selection.
+The shared tokenizer now exposes source spans for descriptor changes/removal,
+including data images and comma-containing URLs. Previously invalid unrelated
+candidates are retained rather than silently deleted.
+
+Chromium/WebKit checks cover add, descriptor edits, refused duplicates/mixed
+sets, last-candidate fallback, empty-source recovery, adding img candidates,
+main/comparison synchronization, document/form retention and exact undo/redo.
+Responsive capture and source-settings browser regressions passed in both
+engines; all 1,950 unit tests passed. Creating/removing picture source elements
+and initiating responsive sets on plain images remain unfinished. The packaged
+desktop app predates this work.

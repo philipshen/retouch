@@ -255,6 +255,9 @@ selection can continue offline; missing candidates are reported in the manifest.
 In the HTML editor, select an image and use **Image candidate** to choose its
 fallback or a responsive source. Apply a URL, browse project images, or upload
 a replacement; each edit preserves the other candidates and sizing conditions.
+Open **Candidate options** to add or remove candidates, or change their image
+width or pixel density. Each source must use one resolution type with unique
+values. An emptied source remains available in the new-candidate source picker.
 Open **Source settings** to change a picture source’s screen range (all, up to,
 from, or between widths), a custom media condition, image format, or display
 sizes. These settings apply to every candidate in that source. Display sizes
