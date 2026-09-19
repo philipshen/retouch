@@ -1338,3 +1338,12 @@ html, body { overflow:clip; }
 .presenting #toolbar,.presenting #screenToolbar,.presenting #layersPanel,.presenting #panel,.presenting #screenComparisons,.presenting .design-tool-dock,.presenting #overlayLayer,.presenting .screen-resize-handle,.presenting .canvas-ruler,.presenting .canvas-guides { display:none !important; }
 .presenting #frameWrap { overflow:hidden; }
 @media(max-width:600px){#presentationBar{gap:6px;flex-wrap:wrap}#presentationBar .hint,#presentationTitle{display:none}#presentationSize{flex:1}#presentationBar button{padding:7px 6px;font-size:11px}}
+
+.design-panel-tabs [role=tab]{border:0;background:transparent;font:inherit;color:var(--muted);padding:6px 8px;cursor:pointer;border-radius:5px}
+.design-panel-tabs [role=tab].active{color:var(--ink);background:var(--control);font-weight:600}
+.prototype-inspector #panelBody,.prototype-inspector #panelEmpty{display:none!important}
+#prototypePanel{padding:0 12px 20px}#prototypePanel[hidden]{display:none}
+.prototype-interaction{min-width:0;border:1px solid var(--line);border-radius:6px;padding:8px;margin:12px 0}
+.prototype-interaction legend{font-weight:600;padding:0 4px}
+.prototype-interaction input:not([type=checkbox]),.prototype-interaction select{min-width:0;max-width:100%}
+.prototype-interaction > .control-button{display:block;margin-top:8px}

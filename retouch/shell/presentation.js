@@ -15,18 +15,18 @@
    if(!viewport?.width||!viewport.height){host.restore(previous);throw Error('The preview is not ready yet.');}
    state={...viewport,previous,start,opener:button};root.document.body.classList.add('presenting');bar.hidden=false;button.setAttribute('aria-pressed','true');
    for(const node of document.querySelectorAll('#toolbar,#screenToolbar,#layersPanel,#panel,#screenComparisons,.design-tool-dock')){node.dataset.presentationInert=String(node.inert);node.inert=true;}
-   root.RetouchActions?.closeContext();hook();update();await settled();if(state){root.RetouchZoom.fitPresentation();exit.focus({preventScroll:true});}
+   root.RetouchActions?.closeContext();root.RetouchPrototypeRuntime?.start();hook();update();await settled();if(state){root.RetouchZoom.fitPresentation();exit.focus({preventScroll:true});}
   }catch(error){host.error(error.message);}finally{pending=false;button.disabled=false;}
  }
  async function close(){
   if(!state||pending)return;pending=true;const before=state;state=null;
   try{
-   document.body.classList.remove('presenting');bar.hidden=true;button.setAttribute('aria-pressed','false');
+   root.RetouchPrototypeRuntime?.stop();document.body.classList.remove('presenting');bar.hidden=true;button.setAttribute('aria-pressed','false');
    for(const node of document.querySelectorAll('[data-presentation-inert]')){node.inert=node.dataset.presentationInert==='true';delete node.dataset.presentationInert;}
    await settled();root.RetouchZoom.endPresentation();host.restore(before.previous);before.opener.focus({preventScroll:true});
   }finally{pending=false;}
  }
- button.addEventListener('pointerdown',event=>event.preventDefault());button.addEventListener('click',open);exit.addEventListener('click',()=>void close());fit.addEventListener('click',()=>root.RetouchZoom.fitPresentation());restart.addEventListener('click',()=>{if(state)frame.src=state.start;});
+ button.addEventListener('pointerdown',event=>event.preventDefault());button.addEventListener('click',open);exit.addEventListener('click',()=>void close());fit.addEventListener('click',()=>root.RetouchZoom.fitPresentation());restart.addEventListener('click',()=>{if(state){root.RetouchPrototypeRuntime?.restart();frame.src=state.start;}});
  frame.addEventListener('load',()=>{hook();update();});root.addEventListener('retouch:route',update);root.addEventListener('keydown',escape);hook();
  root.RetouchPresentation={open,close,get active(){return !!state;}};
 })(window);

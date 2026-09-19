@@ -29,6 +29,7 @@ function usage(index,id) {
 }
 function describe(index,resolved) {
   const info=index.adapter.describe(resolved);
+  Object.assign(info,require('./prototype-interactions.cjs').describe(resolved,index.adapter));
   if(info.kind==='instance')Object.assign(info,usage(index,info.id));
   if(info.components)info.components=info.components.filter(c=>!usage(index,c.id)?.inlineComponent);
   return info;

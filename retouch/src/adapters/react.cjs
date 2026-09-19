@@ -83,6 +83,6 @@ module.exports = {
   assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets' },
   capabilities: {
     classAttr: 'className',
-    ops: ['scaleGroup','frameSelection','groupSelection','removeFrame','reparentElement','reparentSelection','duplicateSelection','deleteSelection','moveSelection',...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertElement','renameElement', 'insertSVG', 'setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'setClasses', 'setClassesSelection', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types],
+    ops: ['setPrototypeInteractions','scaleGroup','frameSelection','groupSelection','removeFrame','reparentElement','reparentSelection','duplicateSelection','deleteSelection','moveSelection',...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertElement','renameElement', 'insertSVG', 'setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'setClasses', 'setClassesSelection', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types],
   },
 };

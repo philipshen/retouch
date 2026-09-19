@@ -3865,6 +3865,22 @@ function moveHTMLLayer(info,target,width,g,action='move',opener,initial=null){
     onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
 
+async function refreshPrototype(info){
+ const V=window.RetouchPrototypeValues;if(!V)return;
+ const frames=[iframe,...document.querySelectorAll('#screenComparisons iframe')];
+ for(const frame of frames){let d;try{d=frame.contentDocument;}catch{continue;}if(!d)continue;for(const el of matchingInDocument(d,info.id,info)){if(info.prototypeInteractions?.length)el.setAttribute(V.attribute,JSON.stringify(info.prototypeInteractions));else el.removeAttribute(V.attribute);}}
+ if(sel?.info.id===info.id){sel.info=info;renderPanel();}window.dispatchEvent(new Event('retouch:prototype'));
+}
+window.RetouchPrototypeHost={
+ selection(){if(!sel?.info)return null;if(sel.multiple?.length>1)return {prototypeEditable:false,prototypeReason:'Select one source layer to edit its interactions.'};return sel.info;},
+ route:currentPageRoute,error:message=>toast(message,'err'),
+ async pages(){const result=await api('GET','/rt/__api/pages');return result?.pages||[];},
+ async prepare(){if(panelTasks||sourceRequests||undoBusy||stopDrawing)throw Error('Finish the current edit first.');await commitInlineEdit();},
+ async save(info,interactions){
+  if(sel?.info.id!==info.id||sel.info.hash!==info.hash||editing||panelTasks||sourceRequests||undoBusy||stopDrawing||historyRecoveryRequired)throw Error('The selection changed. Re-select the layer.');
+  busyPanel(true);try{const result=await api('POST','/rt/__api/op',{type:'setPrototypeInteractions',id:info.id,fileHash:info.hash,context:info.context,interactions});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save the interaction.');if(result.undoId)editorHistory.record({type:'prototypeInteractions',id:info.id,context:info.context,undoId:result.undoId});await refreshPrototype(result.element);return result;}finally{busyPanel(false);}
+ }
+};
 window.RetouchVariableModePreview=async request=>{const result=await api('POST','/rt/__api/variables/resolve',request);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not preview variable modes.');return result;};
 window.RetouchVariableLibraryRequest=async operation=>{
  if(!operation){const result=await api('GET','/rt/__api/variables');if(!result?.ok)throw Error(result?.reason||result?.error||'Could not load variable collections.');return result;}
@@ -4124,6 +4140,7 @@ async function restoreHistory(direction,op) {
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='htmlGroupScale'){const resultInfo=await api('GET',resolveUrl(op.id));if(!resultInfo?.ok)throw Error('The scaled group no longer resolves.');try{await refreshHTMLGroupScale(resultInfo.element);}finally{await restoreLayerSelection([op.id]);if(sel)renderPanel();}return result;}
+    if(op.type==='prototypeInteractions'){const fresh=await api('GET',resolveUrl(op.id,op.context));if(!fresh?.ok)throw Error('Re-select the prototype layer to refresh it.');await refreshPrototype(fresh.element);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentPropSelection'){await refreshComponentSelection(op.selectionIds);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='moveGroup'){const results=await Promise.all(op.childIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(r=>r?.ok))throw Error('The group contents no longer resolve.');try{await refreshGroupMove(results.map(r=>r.element),direction==='undo'?op.classesAfter:op.classesBefore);}finally{await restoreLayerSelection(op.selectionIds||[op.groupId]);if(sel)renderPanel();}return result;}

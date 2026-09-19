@@ -54,7 +54,8 @@
   </div>
   <aside id="screenComparisons" aria-label="Screen comparisons" hidden></aside>
   <div id="panel" role="complementary" aria-label="Inspector panel">
-    <div class="design-panel-tabs"><span class="active">Design</span><span class="panel-caption">Properties</span></div>
+    <div class="design-panel-tabs" role="tablist" aria-label="Inspector mode"><button id="designTab" class="active" role="tab" aria-selected="true" aria-controls="panelBody">Design</button><button id="prototypeTab" role="tab" aria-selected="false" aria-controls="prototypePanel" tabindex="-1">Prototype</button></div>
+    <div id="prototypePanel" role="tabpanel" aria-labelledby="prototypeTab" hidden></div>
     <div id="panelEmpty">Click an element to select it.<br>
       Clicking text edits it in place (Enter or Escape saves).<br><br>
       <span class="hint">Hold Alt / Option and hover to measure padding and spacing.<br><br>Blue outline = element. Purple outline = component instance.
@@ -163,6 +164,9 @@
 <script src="/rt/__assets/canvas-settings.js"></script>
 <script src="/rt/__assets/rulers.js"></script>
 <script src="/rt/__assets/guides.js"></script>
+<script src="/rt/__assets/prototype-values.js"></script>
+<script src="/rt/__assets/prototype-panel.js"></script>
+<script src="/rt/__assets/prototype-runtime.js"></script>
 <script src="/rt/__assets/presentation.js"></script>
 </body>
 </html>
