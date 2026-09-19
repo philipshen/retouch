@@ -41,17 +41,37 @@
     return current;
   }
   function scriptSignature(node) { return Array.from(node.querySelectorAll('script'), el => el.outerHTML).join('\n'); }
-  async function revalidateStyles(d, revision) {
-    for (const link of [...d.querySelectorAll('link[rel]')].filter(link=>link.rel.toLowerCase().split(/\s+/).includes('stylesheet'))) {
-      const url = new URL(link.href, d.location.href);
+  const linkedStyles=new WeakMap();
+  const styleLinks=d=>[...d.querySelectorAll('link[rel]')].filter(link=>{const rel=link.rel.toLowerCase().split(/\s+/);return link.hasAttribute('href')&&(rel.includes('stylesheet')||rel.includes('preload')&&link.getAttribute('as')?.toLowerCase()==='style');});
+  function stylesheetPlans(d,fresh){
+    const source=styleLinks(fresh),plans=[];
+    for(const link of styleLinks(d)){
+      const id=link.getAttribute('data-rt');if(!id)continue;
+      const matches=source.filter(node=>node.getAttribute('data-rt')===id);if(matches.length!==1)throw Error('The stylesheet link no longer resolves uniquely.');
+      const prior=linkedStyles.get(link);if(!prior||link.getAttribute('href')!==prior.href||link.getAttribute('integrity')!==prior.integrity)throw Error('A runtime stylesheet link changed. Reload the preview to apply saved styles.');
+      plans.push({link,href:matches[0].getAttribute('href'),integrity:matches[0].getAttribute('integrity'),prior});
+    }
+    return plans;
+  }
+  async function revalidateStyles(d, revision, plans=null) {
+    for (const plan of plans||styleLinks(d).filter(link=>link.rel.toLowerCase().split(/\s+/).includes('stylesheet')).map(link=>({link,href:link.getAttribute('href'),integrity:link.getAttribute('integrity')}))) {
+      const {link,href,integrity,prior}=plan;
+      if(!link.isConnected)throw Error('The stylesheet link was removed during refresh.');
+      if(prior&&![prior.href,href].includes(link.getAttribute('href'))||prior&&![prior.integrity,integrity].includes(link.getAttribute('integrity')))throw Error('A runtime stylesheet link changed during refresh.');
+      const url = new URL(href, d.baseURI);
       if (url.origin !== d.location.origin) continue;
       url.searchParams.set('__rt_revision', revision);
-      if(link.disabled){link.href=url.href;continue;}
+      const previous=linkedStyles.get(link),owned=prior||previous&&previous.href===link.getAttribute('href')&&previous.integrity===link.getAttribute('integrity');
+      if(link.disabled){if(integrity===null)link.removeAttribute('integrity');else link.setAttribute('integrity',integrity);link.href=url.href;if(owned)linkedStyles.set(link,{href:link.getAttribute('href'),integrity});continue;}
       await new Promise((resolve, reject) => {
         const next = link.cloneNode();next.disabled=link.disabled;
-        const timer = setTimeout(() => { next.remove(); reject(new Error('Stylesheet refresh timed out')); }, 8000);
-        next.onload = () => { clearTimeout(timer); link.remove(); resolve(); };
-        next.onerror = () => { clearTimeout(timer); next.remove(); reject(new Error('Stylesheet refresh failed')); };
+        if(integrity===null)next.removeAttribute('integrity');else next.setAttribute('integrity',integrity);
+        const cleanup=()=>{clearTimeout(timer);next.removeEventListener('load',loaded);next.removeEventListener('error',failed);};
+        const fail=message=>{cleanup();next.remove();reject(new Error(message));};
+        const loaded=()=>{if(next.getAttribute('href')!==url.href||next.getAttribute('integrity')!==integrity){fail('A runtime stylesheet link changed during refresh.');return;}cleanup();link.remove();if(owned)linkedStyles.set(next,{href:url.href,integrity});resolve();};
+        const failed=()=>fail('Stylesheet refresh failed');
+        const timer=setTimeout(()=>fail('Stylesheet refresh timed out'),8000);
+        next.addEventListener('load',loaded);next.addEventListener('error',failed);
         next.href = url.href; link.after(next);
       });
     }
@@ -77,12 +97,13 @@
           const fresh = new root.DOMParser().parseFromString(html, 'text/html');
           const source = select(fresh), live = select(d);
           if (source.length && source.length === live.length && source.every(matches)) {
-            const stylePlans=authorStyles?await inlineStylePlans(d,fresh,true):[];
+            if(revalidate){const state=inlineStyles.get(d);if(state)await state.ready;}
+            const stylePlans=authorStyles?await inlineStylePlans(d,fresh,true):[],linkPlans=revalidate?stylesheetPlans(d,fresh):null;
             if (!unchanged()) throw new Error('Preview navigated while synchronizing the saved edit');
             if (source.some((node, i) => scriptSignature(node) !== scriptSignature(live[i]))) throw new Error('Saved source changes scripts; live preview cannot safely reconcile this edit');
             source.forEach((node, i) => reconcile(live[i], node));
             await applyInlineStyles(stylePlans);
-            if (revalidate) await revalidateStyles(d, Date.now().toString(36));
+            if (revalidate) await revalidateStyles(d, Date.now().toString(36),linkPlans);
             if (!unchanged()) throw new Error('Preview navigated while synchronizing the saved edit');
             d.dispatchEvent(new frame.contentWindow.CustomEvent('retouch:render', { detail: { source: 'server' } }));
             return { ok: true, method: 'server' };
@@ -159,6 +180,7 @@
       const fresh=new root.DOMParser().parseFromString(await response.text(),'text/html');
       const captured=new Map();const entries=selector=>[...fresh.querySelectorAll(selector)].map(source=>{if(captured.has(source))return captured.get(source);const text=source.textContent,attrs=styleAttributes(source),rules=parsedStyleRules(text),matches=live.filter(item=>item.head===!!source.closest('head')&&item.text===text&&item.attrs===attrs&&rules!==null&&item.rules===rules);const entry=matches.length===1?{...matches[0],serverText:text}:{node:null,text,serverText:text,attrs,rules};captured.set(source,entry);return entry;});
       state.entries=entries('head style');state.authorEntries=entries('style:not([data-rt-css])');
+      const links=styleLinks(d);for(const source of styleLinks(fresh)){const id=source.getAttribute('data-rt'),matches=links.filter(link=>id&&link.getAttribute('data-rt')===id&&link.getAttribute('href')===source.getAttribute('href')&&link.getAttribute('integrity')===source.getAttribute('integrity'));if(matches.length===1)linkedStyles.set(matches[0],{href:source.getAttribute('href'),integrity:source.getAttribute('integrity')});}
     }catch(error){state.error=error;}finally{clearTimeout(timer);}})();
   }
   root.document?.addEventListener('load',event=>{if(root.__RT_RENDERING?.reloadAfterWrite&&event.target?.tagName==='IFRAME')try{captureInlineStyles(event.target.contentDocument);}catch{}},true);

@@ -25409,3 +25409,42 @@ independently of selector matches. The full editor test includes a second,
 untouched image and verifies both images' type/filter styles through retained
 comparison previews and exact multi-file undo/redo. Both engines passed; all
 1,970 unit tests passed. No desktop artifact was rebuilt or branch pushed.
+
+### Isolated picture stylesheets and integrity preservation (2026-09-19)
+
+Picture CSS adaptation now creates page-specific copies of changed linked
+stylesheets and their importing ancestors. The dependency closure handles cycles;
+imports and stylesheet/preload links point to deterministic adjacent copies, so
+relative asset URLs retain their meaning. Original shared CSS and references on
+other pages remain byte-identical. Unchanged dependencies are still checked for
+staleness. Existing generated files are reused only when their bytes match;
+collisions, changed read snapshots and newly occupied creation paths refuse the
+transaction. Undo deletes only files created by that operation and restores the
+original HTML links; redo recreates exact files and links.
+
+Local integrity metadata is verified against the original bytes using the
+strongest supported algorithm before any update. Matching SHA-256/384/512 digests
+are recalculated for the final copied CSS, including rewritten imports, while
+alternate digests, options, unknown tokens and whitespace are preserved. A weak
+hash match cannot override a stronger mismatch. This follows the strongest-hash
+selection in the [W3C Subresource Integrity specification](https://www.w3.org/TR/sri/).
+The previous blanket refusal for integrity-verified local stylesheets is removed.
+
+Preview synchronization updates owned link URLs and integrity values together,
+including preloads and disabled sheets. It refuses links changed by runtime code.
+Refresh listeners now remove themselves after completion; leaving a listener
+attached could incorrectly adopt a subsequent runtime load as source-owned.
+The browser regression waits for that subsequent load before checking refusal.
+
+Chromium and WebKit passed the full editor flow with integrity/preload checks,
+enabling a formerly disabled verified sheet, an independently loaded shared page,
+head/body inline imports, comparison geometry, retained form/document state and
+exact generated-file history. Existing picture-source and Liquid class-scope
+regressions passed in both engines. All 1,978 unit tests passed.
+
+Adapted copies are a fork of the shared stylesheets: later edits to the original
+shared CSS do not automatically rebase those copies. Remote CSS, unsupported
+selector forms, CSP-specific compatibility and automatic cleanup after manual
+last-source removal remain open. The broad any-site/Figma parity objective and
+notarized desktop/Homebrew distribution remain incomplete. No desktop artifact
+was rebuilt or branch pushed.
