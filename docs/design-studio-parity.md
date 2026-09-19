@@ -26180,3 +26180,43 @@ interpolation, combined Smart Animate with Push/Move/Slide, counterpart highligh
 and complete app-driven animation coexistence remain open. No desktop artifact was
 rebuilt or branch pushed. Full Figma parity and notarized Homebrew distribution
 remain unfinished.
+
+### Smart Animate through important author styles (2026-09-20)
+
+Smart Animate now works through author stylesheet and inline !important rules.
+Those declarations normally
+[outrank animation values](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/important).
+Each changed layer uses an isolated measurement element in a hidden shadow root
+for browser interpolation. On each animation frame, only changed properties are
+sampled and temporarily applied to the real layer with author-important priority.
+The same path handles initial/end layout measurements and shared Bézier/spring
+curves. Unchanged matching layers are left alone, and identical repeated samples
+avoid redundant style writes. The measurement elements do not participate in site
+layout or receive pointer/keyboard input.
+
+Temporary declarations track their original value, priority and last applied value.
+If the app writes a different inline value during playback, that property is no
+longer overwritten or restored by Retouch. Completion and cancellation restore
+still-owned properties, retain independent app writes, remove empty style attributes
+where appropriate, and remove the measurement hosts and animation loop. Original
+style text is restored exactly when no concurrent edits remain. Site transitions
+are suppressed while sampling to avoid lagging behind the prototype timeline.
+Overlay controllers expose their own animation list so diagnostics can observe
+motion across measurement shadow roots as well as iframe surfaces.
+
+The important-style browser variant passed HTML, Liquid, compiled React and compiled
+Vue in Chromium and WebKit. Checks cover initial/mid/final nested geometry, fill,
+radius, rotation/opacity, stylesheet-important translate/size/paint, exact original
+inline-style restoration, concurrent inline color/custom-property edits, source
+history, Back and cancellation cleanup. The Vue fixture now serves unscoped SFC
+style blocks instead of putting styles inside its template. Normal Smart Animate
+and navigation regressions passed both browsers; the eight-transition overlay suite
+passed all four renderers in both browsers. Final HTML important-style checks passed
+after the unchanged-layer/write optimization. Syntax and diff checks passed; source
+operation semantics are unchanged, so no unit-suite rerun was needed.
+
+This does not override user-origin important accessibility styles. Flex/grid size
+constraints, transformed ancestor matching, app stylesheet updates during playback,
+restoring interrupted site-native transitions, and large-scene performance remain
+open. No desktop artifact was rebuilt or branch pushed. Full Figma parity and
+notarized Homebrew distribution remain unfinished.

@@ -46,5 +46,5 @@
   entry.pending=newFrame(entry,destination,frame=>reveal(entry,frame,transition,old));entry.pending.style.visibility='hidden';return true;
  }
  closeButton.addEventListener('click',()=>close());new ResizeObserver(()=>stack.forEach(layout)).observe(stage);
- root.RetouchPrototypeOverlays={open,swap,close,clear,get topFrame(){return stack.at(-1)?.frame||null;},get count(){return stack.length;},get phase(){return stack.at(-1)?.phase||'idle';}};
+ root.RetouchPrototypeOverlays={open,swap,close,clear,get topFrame(){return stack.at(-1)?.frame||null;},get count(){return stack.length;},get phase(){return stack.at(-1)?.phase||'idle';},get animations(){return stack.at(-1)?.motion?.animations||[];}};
 })(window);

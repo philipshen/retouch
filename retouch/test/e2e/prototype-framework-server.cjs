@@ -16,7 +16,8 @@ module.exports=function({root,renderer,fixture}){
      const compiler=require('@vue/compiler-sfc'),parsed=compiler.parse(stamped),compiled=compiler.compileScript(parsed.descriptor,{id:'prototype-fixture',inlineTemplate:true});return {contents:compiled.content,loader:'js',resolveDir:root};
     });}}]});res.setHeader('content-type','application/javascript');res.end(result.outputFiles[0].text);return;
    }
-   res.setHeader('content-type','text/html');res.end('<!doctype html><title>'+(next?'Next':'Start')+'</title><style>body{padding:24px;font:16px system-ui}#card{position:sticky;top:0;padding:24px;background:#eef3ff}#bottom{margin-top:1500px}.long-page{height:2400px}</style><div id="site"></div><script src="/prototype-bundle.js'+'?page='+pageName+'"></script>');
+   const styles=renderer==='vue'?require('@vue/compiler-sfc').parse(fs.readFileSync(file,'utf8')).descriptor.styles.filter(style=>!style.scoped).map(style=>'<style>'+style.content+'</style>').join(''):'';
+   res.setHeader('content-type','text/html');res.end('<!doctype html><title>'+(next?'Next':'Start')+'</title><style>body{padding:24px;font:16px system-ui}#card{position:sticky;top:0;padding:24px;background:#eef3ff}#bottom{margin-top:1500px}.long-page{height:2400px}</style>'+styles+'<div id="site"></div><script src="/prototype-bundle.js'+'?page='+pageName+'"></script>');
   }catch(error){res.statusCode=500;res.end(error.message);}
  }});
 };
