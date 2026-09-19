@@ -1328,3 +1328,13 @@ html, body { overflow:clip; }
 .picture-source-row { display:flex;align-items:center;gap:4px;margin:6px 0; }
 .picture-source-row > span { min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px; }
 .picture-source-row > button { padding:3px 7px; }
+
+#presentationBar { display:flex;align-items:center;gap:12px;min-height:48px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line); }
+#presentationBar[hidden] { display:none; }
+#presentationBar button { border:0;border-radius:5px;background:var(--control);color:var(--ink);padding:7px 10px;font:inherit;cursor:pointer; }
+#presentationBar button:hover { background:var(--hover); }
+#presentationTitle { flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600; }
+#presentationSize { color:var(--muted);font-variant-numeric:tabular-nums; }
+.presenting #toolbar,.presenting #screenToolbar,.presenting #layersPanel,.presenting #panel,.presenting #screenComparisons,.presenting .design-tool-dock,.presenting #overlayLayer,.presenting .screen-resize-handle,.presenting .canvas-ruler,.presenting .canvas-guides { display:none !important; }
+.presenting #frameWrap { overflow:hidden; }
+@media(max-width:600px){#presentationBar{gap:6px;flex-wrap:wrap}#presentationBar .hint,#presentationTitle{display:none}#presentationSize{flex:1}#presentationBar button{padding:7px 6px;font-size:11px}}

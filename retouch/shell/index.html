@@ -20,6 +20,7 @@
   <button id="toggleLayers" class="workspace-icon" aria-label="Toggle Layers panel" aria-controls="layersPanel" aria-expanded="true" title="Toggle Layers panel"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14v12H3z M7 4v12"/></svg></button>
   <button id="toggleInspector" class="workspace-icon" aria-label="Toggle Inspector panel" aria-controls="panel" aria-expanded="true" title="Toggle Inspector panel"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14v12H3z M13 4v12"/></svg></button>
   <button id="quickActions" aria-keyshortcuts="Control+k Meta+k" title="Search actions (Cmd/Ctrl+K)">Actions</button>
+  <button id="presentBtn" aria-label="Present" title="Present this page">▷ Present</button>
   <span id="status"></span>
 </div>
 <div id="screenToolbar" aria-label="Screen preview">
@@ -42,6 +43,7 @@
   <button id="compareScreens" aria-pressed="false">Compare screens</button>
   <span id="screenHint">Preview size · choose style scope in the inspector</span>
 </div>
+<div id="presentationBar" role="toolbar" aria-label="Presentation controls" hidden><button id="exitPresentation">← Back to editor</button><span id="presentationTitle">Presentation</span><span id="presentationSize"></span><button id="fitPresentation">Fit preview</button><button id="restartPresentation" title="Reload the page where this presentation started">Restart presentation</button><span class="hint">Esc to return</span></div>
 <div id="main">
   <aside id="layersPanel" aria-label="Layers panel"></aside>
   <div id="frameWrap">
@@ -161,5 +163,6 @@
 <script src="/rt/__assets/canvas-settings.js"></script>
 <script src="/rt/__assets/rulers.js"></script>
 <script src="/rt/__assets/guides.js"></script>
+<script src="/rt/__assets/presentation.js"></script>
 </body>
 </html>

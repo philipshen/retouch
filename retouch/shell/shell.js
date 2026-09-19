@@ -4177,16 +4177,22 @@ async function restoreHistory(direction,op) {
 }
 
 /* ---------- chrome ---------- */
-modeBtn.onclick = () => {
+function setEditorMode(next) {
   canvasPan.cancel();
   stopDrawing?.();
-  mode = mode === 'edit' ? 'interact' : 'edit';
+  mode = next;
   modeBtn.textContent = mode === 'edit' ? 'Edit mode' : 'Interact mode';
   modeBtn.classList.toggle('mode-edit', mode === 'edit');
   const textEdit=document.getElementById('textInlineEdit');
   if(textEdit)textEdit.disabled=mode!=='edit'||!!editing;
   if (mode === 'interact') { hoverEl = null; }
-};
+}
+modeBtn.onclick=()=>{if(!window.RetouchPresentation?.active)setEditorMode(mode==='edit'?'interact':'edit');};
+window.RetouchPresentationHost={async prepare(){
+  if(panelTasks||sourceRequests||undoBusy||stopDrawing||selectionMarquee||preparingShapeDrag||document.querySelector('dialog[open]'))throw Error('Finish the current edit before presenting.');
+  await commitInlineEdit();if(editing||panelTasks||sourceRequests||undoBusy)throw Error('Wait for the current edit before presenting.');
+  const previous=mode;cancelOpacityEntry();setArmedCanvasTool(null);measuring=false;setEditorMode('interact');return previous;
+},restore(previous){setEditorMode(historyRecoveryRequired?'interact':previous);},error(message){toast(message,'err');}};
 for(const button of [undoBtn,redoBtn])button.addEventListener('pointerdown',event=>{if(editing)event.preventDefault();});
 undoBtn.onclick = () => undo();
 redoBtn.onclick = () => redo();
@@ -4194,6 +4200,7 @@ routeInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') navigatePage(routeInput.value || '/');
 });
 window.addEventListener('keydown', (e) => {
+  if(window.RetouchPresentation?.active)return;
   if(e.key==='Escape'){vectorEntrySerial++;if(pendingVectorEntry){pendingVectorEntry=null;e.preventDefault();return;}}
   if(groupNudgeShortcut(e)||vectorNudgeShortcut(e)||flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||(e.key==='Enter'&&e.target.closest?.('[role=treeitem][aria-selected="true"]')&&layerNavigationShortcut(e))||canvasLayerShortcut(e))return;
   if (document.querySelector('dialog[open]')) return;
@@ -4311,7 +4318,7 @@ function layerNavigationShortcut(e){
   const direction=e.key==='Enter'?(e.shiftKey?'parent':'child'):(e.shiftKey?'previous':'next');void layers.navigate(direction).catch(error=>toast(error.message,'err'));return true;
 }
 function sourceHistoryShortcut(e,canvas=false){
-  if(e.defaultPrevented||e.isComposing||e.altKey||!(e.metaKey||e.ctrlKey)||canvas&&mode!=='edit'||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;
+  if(window.RetouchPresentation?.active||e.defaultPrevented||e.isComposing||e.altKey||!(e.metaKey||e.ctrlKey)||canvas&&mode!=='edit'||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;
   const key=e.key.toLowerCase();if(key!=='z'&&(key!=='y'||e.shiftKey))return false;
   e.preventDefault();e.stopPropagation();if(key==='y'||e.shiftKey)redo();else undo();return true;
 }

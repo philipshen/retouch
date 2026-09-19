@@ -4,7 +4,7 @@
   const zoomInput=document.getElementById('canvasZoom'),fitButton=document.getElementById('fitScreen');
   const maxScale=64;
   const endPadding=96; // Screen pixels, independent of zoom.
-  let scale=1,width=0,height=0,gestureBase=null,positioned=false,screen=null,viewRevision=0;
+  let scale=1,width=0,height=0,gestureBase=null,positioned=false,screen=null,viewRevision=0,presentation=null;
   const hooked=new WeakSet();
   for(const event of ['retouch:before-zoom','retouch:screen'])window.addEventListener(event,()=>viewRevision++);
   function layout(){
@@ -88,7 +88,17 @@
     rect=bounds();
     return {ok:true,clipped:rect.left<0||rect.top<0||rect.left+rect.width>w.innerWidth||rect.top+rect.height>w.innerHeight};
   }
-  window.RetouchZoom={toSelection};
+  window.RetouchZoom={toSelection,beginPresentation(){
+    if(presentation||!width||!height)return;
+    presentation={width,height,scale,left:canvas.scrollLeft,top:canvas.scrollTop};
+    return {width,height};
+  },fitPresentation(){
+    if(!presentation)return;
+    width=presentation.width;height=presentation.height;scale=Math.max(.01,Math.min((canvas.clientWidth-48)/width,(canvas.clientHeight-48)/height,1));layout();canvas.scrollLeft=0;canvas.scrollTop=endPadding-24;
+  },endPresentation(){
+    if(!presentation)return;
+    const before=presentation;presentation=null;scale=before.scale;measure();canvas.scrollLeft=before.left;canvas.scrollTop=before.top;
+  }};
   function scrollPage(e,inFrame){
     if(!e.deltaY || e.shiftKey || Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
     const w=frame.contentWindow,d=frame.contentDocument,root=d?.scrollingElement;
@@ -115,14 +125,15 @@
   function hooks(target,inFrame){
     function point(e){const r=frame.getBoundingClientRect();return inFrame?{x:r.left+e.clientX*scale,y:r.top+e.clientY*scale}:{x:e.clientX,y:e.clientY};}
     target.addEventListener('wheel',e=>{
+      if(presentation)return;
       if(!e.ctrlKey){scrollPage(e,inFrame);return;}
       e.preventDefault();e.stopPropagation();if(gestureBase!==null)return;
       const p=point(e),delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?height:1);
       change(scale*Math.exp(-delta*.005),p.x,p.y);
     },{capture:true,passive:false});
-    target.addEventListener('gesturestart',e=>{e.preventDefault();e.stopPropagation();gestureBase=scale;},{capture:true,passive:false});
-    target.addEventListener('gesturechange',e=>{e.preventDefault();e.stopPropagation();const p=point(e);if(gestureBase!==null)change(gestureBase*e.scale,p.x,p.y);},{capture:true,passive:false});
-    target.addEventListener('gestureend',e=>{e.preventDefault();e.stopPropagation();gestureBase=null;},{capture:true,passive:false});
+    target.addEventListener('gesturestart',e=>{if(presentation)return;e.preventDefault();e.stopPropagation();gestureBase=scale;},{capture:true,passive:false});
+    target.addEventListener('gesturechange',e=>{if(presentation)return;e.preventDefault();e.stopPropagation();const p=point(e);if(gestureBase!==null)change(gestureBase*e.scale,p.x,p.y);},{capture:true,passive:false});
+    target.addEventListener('gestureend',e=>{if(presentation)return;e.preventDefault();e.stopPropagation();gestureBase=null;},{capture:true,passive:false});
   }
   hooks(canvas,false);
   frame.addEventListener('load',()=>{
@@ -131,9 +142,9 @@
     hooked.add(d);hooks(d,true);
   });
   function measure(){
-    width=screen?screen.width:canvas.clientWidth;
-    height=screen?screen.height:canvas.clientHeight;
-    if(!screen&&scale<.25)scale=.25;
+    width=presentation?presentation.width:screen?screen.width:canvas.clientWidth;
+    height=presentation?presentation.height:screen?screen.height:canvas.clientHeight;
+    if(!screen&&!presentation&&scale<.25)scale=.25;
     layout();
     window.dispatchEvent(new CustomEvent('retouch:viewport',{detail:{width,height,fixed:!!screen}}));
   }
@@ -141,6 +152,6 @@
     screen=e.detail;measure();
     if(!e.preservePan)canvas.scrollLeft=0;
   });
-  new ResizeObserver(measure).observe(canvas);
+  new ResizeObserver(()=>{measure();if(presentation)window.RetouchZoom.fitPresentation();}).observe(canvas);
   window.RetouchScreens?.restore();
 })();

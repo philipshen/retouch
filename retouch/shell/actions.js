@@ -93,6 +93,7 @@
   current.addEventListener('close',()=>{observer.disconnect();current.remove();if(dialog===current)dialog=null;});current.showModal();render();input.focus();
  }
  function shortcut(event){
+  if(window.RetouchPresentation?.active)return false;
   if(event.defaultPrevented||event.isComposing||event.target.isContentEditable||event.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="menu"]')||document.querySelector('dialog[open]'))return false;
   const key=event.key.toLowerCase(),mac=/Mac|iPhone|iPad/.test(navigator.platform);
   if((key==='g'||event.code==='KeyG')&&(mac?event.metaKey&&!event.ctrlKey:event.ctrlKey&&!event.metaKey)&&!(event.altKey&&event.shiftKey)){const id=event.altKey?'layer-frameSelection':event.shiftKey?'layer-removeFrame':'layer-groupSelection',row=commands().find(row=>row.id===id);if(!enabled(row))return false;event.preventDefault();event.stopPropagation();if(!event.repeat)run(id);return true;}
