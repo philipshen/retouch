@@ -30,7 +30,7 @@ test('skips template and non-CSS content and Retouch-owned styles',t=>{
  const source='<template><link rel="stylesheet" href="https://example.com/a.css"></template><style type="text/plain">not css</style><style data-rt-css="x">img{width:20px}</style><img>',resolved=fixture(t,source),result=plan(resolved);assert.equal(result.source,source);assert.equal(result.linked,0);assert.equal(result.inlineChanged,false);
 });
 test('missing, remote, integrity-bound, malformed and unsupported styles refuse planning without writes',t=>{
- for(const source of ['<link rel="stylesheet" href="missing.css">','<base href="https://example.com/"><link rel="stylesheet" href="a.css">','<style>@import "https://example.com/a.css";</style>','<link rel="stylesheet" integrity="sha256-x" href="/a.css">','<style>img:nth-of-type(2){color:red}</style>','<style>img{','<style>@import bad;</style>','<style>@charset "latin1";</style>']){
+ for(const source of ['<link rel="stylesheet" href="missing.css">','<base href="https://example.com/"><link rel="stylesheet" href="a.css">','<style>@import "https://example.com/a.css";</style>','<link rel="stylesheet" integrity="sha256-x" href="/a.css">','<style>.frame:has(img + button){color:red}</style>','<style>img{','<style>@import bad;</style>','<style>@charset "latin1";</style>']){
   const resolved=fixture(t,source,{'a.css':'img{color:red}'});assert.throws(()=>plan(resolved));assert.equal(fs.readFileSync(resolved.file,'utf8'),source);assert.equal(fs.readFileSync(path.join(resolved.appRoot,'a.css'),'utf8'),'img{color:red}');
  }
 });

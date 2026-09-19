@@ -25383,3 +25383,29 @@ inert compatibility selectors in place; undo of picture creation restores the
 original CSS. Full selector coverage, automatic compatibility-rule cleanup,
 cross-adapter source authoring and native notarized distribution remain open.
 No desktop artifact was rebuilt or branch pushed.
+
+### Type-based and filtered picture positions (2026-09-19)
+
+Picture adaptation now handles first/last/only/nth-of-type selectors, including
+implicit subjects such as `.art:first-of-type` and bare `:first-of-type`.
+Generated pictures count as the original images; authored picture counts exclude
+generated wrappers, while other element types retain their native type counts.
+The replacement predicates retain the original selector specificity, including
+only-of-type's combined first/last condition.
+
+Filtered nth-child/nth-last-child positions now transform their selector lists
+and include a generated wrapper only when its image would match the original
+filter. Formulas, comments, selector-list specificity and repeated-transform
+idempotence are preserved. Cases that would require nested `:has()` still refuse
+before source mutation; this includes some filtered positions inside relational
+selectors. CSS nesting, scoped/namespaced stylesheets and the prior remote/SRI
+limitations remain open.
+
+The differential suite now covers 224 selectors, mixed authored/generated
+pictures, single/multiple wraps, two viewport widths and hover/focus states in
+Chromium and WebKit. It uses decoded images to isolate CSS behavior: Chromium's
+intrinsic sizing of a missing-source image can change when placed in a picture,
+independently of selector matches. The full editor test includes a second,
+untouched image and verifies both images' type/filter styles through retained
+comparison previews and exact multi-file undo/redo. Both engines passed; all
+1,970 unit tests passed. No desktop artifact was rebuilt or branch pushed.
