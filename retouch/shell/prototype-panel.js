@@ -11,11 +11,11 @@
   I.note(section,'Play interactions in Present mode. This source layer’s copies share these connections.');
   let items=structuredClone(selection.prototypeInteractions||[]),pages=[];try{pages=await host.pages();}catch{}if(ticket!==serial||!active)return;
   const rows=document.createElement('div');section.append(rows);
-  async function save(next){if(busy)return;busy=true;body.inert=true;status.textContent='Saving…';try{await host.save(selection,next);status.textContent='Saved';}catch(error){status.textContent=error.message;return;}finally{busy=false;body.inert=false;}render();}
+  async function save(next){if(busy)return;busy=true;body.inert=true;status.textContent='Saving…';try{await host.save(selection,next);status.textContent='Saved';}catch(error){status.textContent=error.message;return;}finally{busy=false;body.inert=false;}await render();}
   for(const [index,item]of items.entries()){
    const card=document.createElement('fieldset');card.className='prototype-interaction';const legend=document.createElement('legend');legend.textContent=triggers.find(([value])=>value===item.trigger)[1]+' → '+actions.find(([value])=>value===item.action)[1];card.append(legend);rows.append(card);
    const draft={...item};
-   const modify=()=>{const next=items.map((value,i)=>i===index?draft:value);try{V.validate(next);}catch(error){status.textContent=error.message;return;}save(next);};
+   const modify=()=>{const next=items.map((value,i)=>i===index?draft:value);try{V.validate(next);}catch(error){status.textContent=error.message;return;}return save(next);};
    I.select(card,'Trigger '+(index+1),triggers.filter(([value])=>value===item.trigger||!items.some(i=>i.trigger===value)),item.trigger,value=>{draft.trigger=value;modify();});
    I.select(card,'Action '+(index+1),actions,item.action,value=>{const destination=draft.destination;draft.action=value;delete draft.preserveScroll;delete draft.destination;delete draft.overlay;delete draft.transition;if(!['back','close-overlay'].includes(value))draft.destination=value==='scroll'?'top':(V.route(destination)?destination:pages.find(page=>page.url!==host.route())?.url||'/');if(value==='open-overlay')draft.overlay=V.overlay();modify();});
    if(['navigate','open-overlay','swap-overlay'].includes(item.action)){
@@ -39,7 +39,8 @@
     if(current.type!=='instant'){
      draft.transition={...current};
      const duration=document.createElement('input');duration.type='number';duration.min='1';duration.max='10000';duration.step='1';duration.value=current.duration;I.field(card,'Duration (ms) '+(index+1),duration);duration.onchange=()=>{draft.transition.duration=Number(duration.value);modify();};
-     I.select(card,'Easing '+(index+1),V.easings.map(value=>[value,value.split('-').map(word=>word[0].toUpperCase()+word.slice(1)).join(' ')]),current.easing,value=>{draft.transition.easing=value;modify();});
+     I.select(card,'Easing '+(index+1),[...V.easings.map(value=>[value,value.split('-').map(word=>word[0].toUpperCase()+word.slice(1)).join(' ')]),['custom','Custom Bézier']],typeof current.easing==='string'?current.easing:'custom',value=>{draft.transition.easing=value==='custom'?{type:'cubic-bezier',values:[...(V.curves[current.easing]||current.easing.values)]}:value;modify();});
+     if(typeof current.easing==='object')root.RetouchPrototypeCurve.mount(card,{value:current.easing,index:index+1,duration:current.duration,change:value=>{draft.transition.easing=value;return modify();}});
      if(current.type!=='dissolve')I.select(card,'Direction '+(index+1),[['left','Left'],['right','Right'],['top','Top'],['bottom','Bottom']],current.direction,value=>{draft.transition.direction=value;modify();});
     }
    }

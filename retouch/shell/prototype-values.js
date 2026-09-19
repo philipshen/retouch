@@ -6,11 +6,18 @@
   'close-overlay':['instant','dissolve','move-out','slide-out'],
   'swap-overlay':['instant','dissolve','move-in','move-out','push','slide-in','slide-out']
  },easings=['linear','ease-in','ease-out','ease-in-out'];
+ const curves={'linear':[0,0,1,1],'ease-in':[.42,0,1,1],'ease-out':[0,0,.58,1],'ease-in-out':[.42,0,.58,1]};
+ function easing(value){
+  if(easings.includes(value))return value;
+  if(!value||typeof value!=='object'||Array.isArray(value)||value.type!=='cubic-bezier'||Object.keys(value).some(key=>!['type','values'].includes(key))||!Array.isArray(value.values)||value.values.length!==4||value.values.some(n=>!Number.isFinite(n)||Math.abs(n)>10000)||[value.values[0],value.values[2]].some(n=>n<0||n>1))throw Error('Use four finite Bézier coordinates, with X values between 0 and 1 and Y values between -10000 and 10000.');
+  return {type:'cubic-bezier',values:[...value.values]};
+ }
+ function easingCss(value){const checked=easing(value);return typeof checked==='string'?checked:'cubic-bezier('+checked.values.join(', ')+')';}
  function transition(value,action){
   if(!transitions[action]||!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['type','duration','easing','direction'].includes(key))||!transitions[action].includes(value.type))throw Error('Choose a supported transition for this action.');
   if(value.type==='instant')return {type:'instant'};
-  const result={type:value.type,duration:value.duration??300,easing:value.easing??'ease-out'};
-  if(!Number.isInteger(result.duration)||result.duration<1||result.duration>10000||!easings.includes(result.easing))throw Error('Choose a duration from 1 to 10000 ms and a supported easing curve.');
+  const result={type:value.type,duration:value.duration??300,easing:easing(value.easing??'ease-out')};
+  if(!Number.isInteger(result.duration)||result.duration<1||result.duration>10000)throw Error('Choose a duration from 1 to 10000 ms and a supported easing curve.');
   if(value.type!=='dissolve'){result.direction=value.direction??'right';if(!['left','right','top','bottom'].includes(result.direction))throw Error('Choose a transition direction.');}
   else if(value.direction!==undefined)throw Error('Dissolve does not have a direction.');
   return result;
@@ -37,5 +44,5 @@
   });
  }
  function parse(value){if(value===null)return [];if(typeof value!=='string'||value.length>16384)throw Error('Invalid prototype interactions.');return validate(JSON.parse(value));}
- const api={attribute,positions,transitions,easings,transition,overlay,route,validate,parse};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPrototypeValues=api;
+ const api={attribute,positions,transitions,easings,curves,easing,easingCss,transition,overlay,route,validate,parse};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPrototypeValues=api;
 })(typeof window==='object'?window:globalThis);

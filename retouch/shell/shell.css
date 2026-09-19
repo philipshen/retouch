@@ -1356,3 +1356,19 @@ html, body { overflow:clip; }
 .prototype-overlay-backdrop{position:absolute;inset:0}
 .prototype-overlay-loading{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 14px;border-radius:6px;background:var(--panel);color:var(--ink);pointer-events:none}
 .prototype-overlay-loading[hidden]{display:none}
+.prototype-curve{margin:8px 0;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--panel,#fff)}
+.prototype-curve>svg{display:block;width:100%;height:180px;touch-action:none;overflow:visible}
+.curve-grid{fill:none;stroke:var(--line);stroke-dasharray:3 3}
+.curve-tangent{fill:none;stroke:#8a8a8a;stroke-width:1}
+.curve-path{fill:none;stroke:var(--accent);stroke-width:2}
+.curve-handle{fill:#fff;stroke:var(--accent);stroke-width:2;cursor:grab;outline:none}
+.curve-handle:focus{stroke-width:4}
+.curve-handle:active{cursor:grabbing}
+.curve-coordinates{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px}
+.curve-coordinates .inspector-field{min-width:0;gap:5px;margin:2px 0}
+.curve-coordinates .inspector-field>span{flex:0 0 22px}
+.curve-coordinates input{width:100%;min-width:0}
+.curve-preview{height:16px;margin:12px 8px;background:var(--hover);border-radius:8px}
+.curve-preview>span{display:block;width:12px;height:12px;position:relative;top:2px;background:var(--accent);border-radius:50%}
+.prototype-curve>button{margin:0 6px 0 0}
+.curve-help{font-size:10px;margin-bottom:0}

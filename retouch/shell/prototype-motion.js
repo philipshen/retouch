@@ -19,7 +19,7 @@
   const save=el=>{if(!el||styles.some(row=>row.el===el))return;styles.push({el,z:el.style.zIndex});};
   const plan=frames(config,vector),duration=reduced()||config.type==='instant'?0:config.duration;
   if(old&&next){save(old);save(next);old.style.zIndex=plan.oldAbove?'2':'1';next.style.zIndex=plan.oldAbove?'1':'2';}
-  const add=(el,keyframes)=>{if(el&&duration)animations.push(el.animate(keyframes,{duration,easing:config.easing,fill:'both'}));};
+  const add=(el,keyframes)=>{if(el&&duration)animations.push(el.animate(keyframes,{duration,easing:root.RetouchPrototypeValues.easingCss(config.easing),fill:'both'}));};
   if(closing)add(old,config.type==='dissolve'?[{opacity:1},{opacity:0}]:config.type==='slide-out'?[plan.old[0],{...plan.old[1],opacity:0}]:plan.old);else{add(old,plan.old);add(next,!old&&config.type==='slide-in'?[{...plan.next[0],opacity:0},plan.next[1]]:plan.next);}
   if(backdrop)add(backdrop,[{opacity:closing?1:0},{opacity:closing?0:1}]);
   const cleanup=()=>{animations.forEach(animation=>animation.cancel());for(const row of styles)row.el.style.zIndex=row.z;};
