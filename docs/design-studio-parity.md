@@ -26220,3 +26220,24 @@ constraints, transformed ancestor matching, app stylesheet updates during playba
 restoring interrupted site-native transitions, and large-scene performance remain
 open. No desktop artifact was rebuilt or branch pushed. Full Figma parity and
 notarized Homebrew distribution remain unfinished.
+
+### Smart Animate inside 2D transformed ancestors
+
+Movement now converts measured viewport displacement through the inverse ancestor
+linear matrix before creating local translate keyframes. Nested matched layers
+still subtract their matched parent's displacement. Ancestor CSS transforms,
+individual planar rotation/scale, skew, reflections, and zoom are included;
+translation and transform origins remain covered by measured endpoint geometry.
+Perspective, non-planar transforms, and singular matrices remain excluded from
+matching and dissolve instead.
+
+Validation: the dedicated transformed-ancestor browser suite passed Chromium and
+WebKit. It checks both documents at start, midpoint, and end against independently
+rendered geometry, nested movement, exact inline-style restoration, helper cleanup,
+and rejection of perspective/3D/zero-scale ancestors. Existing HTML Smart Animate
+important-style authoring/history, Back, cancellation and concurrent app updates
+also passed both engines. Syntax and diff checks passed. No source-operation
+changes or full unit-suite rerun. Renderer-specific transformed hierarchies,
+changing ancestor transforms during playback, flex/grid constraints, and large
+scenes need further verification. No desktop rebuild or push in this increment;
+full parity and notarized Homebrew distribution remain unfinished.

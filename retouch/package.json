@@ -104,6 +104,7 @@
     "test:e2e:prototype-curve": "node test/e2e/prototype-curve.cjs",
     "test:e2e:prototype-snapshot": "node test/e2e/prototype-snapshot.cjs",
     "test:e2e:prototype-smart-important": "RT_SMART_IMPORTANT=1 node test/e2e/prototype-smart.cjs",
+    "test:e2e:prototype-smart-transforms": "node test/e2e/prototype-smart-transforms.cjs",
     "test:e2e:prototype-smart": "node test/e2e/prototype-smart.cjs",
     "test:e2e:prototype-navigation": "node test/e2e/prototype-navigation.cjs",
     "test:e2e:prototype-motion": "node test/e2e/prototype-motion.cjs",
