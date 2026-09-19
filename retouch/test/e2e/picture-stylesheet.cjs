@@ -1,0 +1,28 @@
+'use strict';
+const path=require('node:path'),assert=require('node:assert/strict');
+const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE');
+const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
+const {transform}=require('../../src/picture-stylesheet.cjs'),selectors=require('../../src/picture-selectors.cjs');
+const html='<main id="main"><section class="frame" id="first"><img class="art" id="a"><button id="b">Tail</button><img class="art last" id="c"></section><section class="frame" id="middle"><input id="d"><img class="art" id="e"><button id="f">Tail</button></section><section class="frame" id="only"><img class="art" id="g"></section><picture id="authored"><source id="source"><img id="h"></picture><aside id="aside"><b id="bold">Keep</b><button id="end">End</button></aside></main>';
+const css='body{margin:0}.frame{display:flex;gap:11px;align-items:center}.frame > *{box-sizing:border-box;width:90px;height:50px}.frame > img{width:120px;height:60px}.frame > img + button{margin-left:13px;color:rgb(120,0,0)}.frame > img ~ img{margin-left:9px}img:first-child{border:3px solid green}img:last-child{padding:2px}img:only-child{width:140px}.frame:has(> img){background:rgb(240,240,240)}picture{border:20px solid red}*{--inherited:kept}img:hover{opacity:.5}.frame:focus-within > img{opacity:.7}.art{height:65px}@layer low{.frame > img{width:50px}}@media(max-width:600px){.frame > img{width:70px}.art{height:45px}}';
+(async()=>{
+ const browser=await browserType.launch();
+ try{
+  const page=await browser.newPage({viewport:{width:1000,height:800}}),matrix=new Set(['.frame:has(> img)', '.frame:has(> img:first-child)', 'img:not(:first-child)', 'img:is(:last-child,:first-child)', '.frame > :is(img, button)', '.frame > :not(input)', ':is(.frame > img)', ':where(.frame > img)', 'img:not(.frame > img)', 'picture > img', 'main > *', 'main > .frame + picture', 'img + :is(button, img)', 'img:not(.last) + button']);
+  const subjects=['img','*','.art',':is(img,button)',':not(input)'];
+  for(const subject of subjects){matrix.add(subject);for(const position of [':first-child',':last-child',':only-child',':nth-child(2)',':nth-last-child(2)',':nth-child(2n+1)']){matrix.add(subject+position);matrix.add('.frame > '+subject+position);}for(const combinator of [' > ',' + ',' ~ ',' ']){matrix.add('.frame'+combinator+subject);matrix.add(subject+combinator+'button');matrix.add('.frame > '+subject+combinator+'*');}}
+  const pairs=[...matrix].map(selector=>{const adapted=selectors.transform(selector);return [selector,adapted,require('postcss-selector-parser')().astSync(adapted).nodes.map(node=>node.toString())];});
+  const snapshot=()=>page.evaluate(()=>[...document.querySelectorAll('[id]')].map(node=>{const r=node.getBoundingClientRect(),s=getComputedStyle(node);return [node.id,r.x,r.y,r.width,r.height,s.color,s.backgroundColor,s.opacity,s.borderTopWidth,s.paddingTop,s.getPropertyValue('--inherited')];}));
+  for(const wrapping of ['all','a','e','g'])for(const width of [1000,390])for(const state of ['normal','hover','focus']){
+   await page.setViewportSize({width,height:800});await page.setContent('<style>'+css+'</style>'+html);
+   if(state==='hover')await page.locator('#a').hover();else if(state==='focus')await page.locator('#d').focus();else await page.mouse.move(width-1,799);
+   const matches=await page.evaluate(pairs=>pairs.map(([selector])=>[...document.querySelectorAll(selector)].map(node=>node.id||node.tagName)),pairs),before=await snapshot();
+   await page.evaluate(({adapted,wrapping})=>{for(const image of document.querySelectorAll(wrapping==='all'?'.frame > img':'#'+wrapping)){const picture=document.createElement('picture');picture.setAttribute('data-rt-picture','');picture.style.display='contents';image.before(picture);const source=document.createElement('source');source.style.display='none';picture.append(source,image);}document.querySelector('style').textContent=adapted;},{adapted:transform(css),wrapping});
+   if(state==='hover')await page.locator('#a').hover();
+   const actual=await page.evaluate(pairs=>pairs.map(([selector,adapted,parts])=>{if(!parts.every(part=>CSS.supports('selector('+part+')')))throw Error('Invalid selector for '+selector+': '+adapted);return [...document.querySelectorAll(adapted)].map(node=>node.id||node.tagName);}),pairs);
+   for(let i=0;i<pairs.length;i++)assert.deepEqual(actual[i],matches[i],pairs[i][0]+' at '+width+' '+state+' wrapping '+wrapping+'\n'+pairs[i][1]);
+   assert.deepEqual(await snapshot(),before,'Cascade and geometry at '+width+' '+state+' wrapping '+wrapping);
+  }
+  console.log('PICTURE SELECTOR MATCHES ('+pairs.length+'), CASCADE, FLEX GEOMETRY, MEDIA, LAYERS, HOVER AND FOCUS PASS',engine);
+ }finally{await browser.close();}
+})().catch(error=>{console.error(error);process.exitCode=1;});

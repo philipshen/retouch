@@ -25322,3 +25322,28 @@ engines. All 1,955 unit tests passed. Creating a picture changes DOM ancestry:
 selector-dependent styling (for example parent > img) may change and is not yet
 rewritten. Arbitrary-site layout equivalence and cross-adapter authoring remain
 incomplete. The packaged desktop app predates these changes.
+
+### Picture stylesheet adaptation groundwork (2026-09-19)
+
+Added isolated selector and stylesheet transformers for generated picture
+wrappers. They preserve direct-child and sibling relationships, simple child
+positions, supported functional selector lists and the original declaration
+order. Wrapper/exclusion filters use zero-specificity `:where()` selectors;
+media queries, layers, supports blocks, keyframes and declaration text stay in
+place. Explicit wrapper rules are retained, and repeated transformation is
+idempotent. Parser dependencies are pinned in the package and lockfile.
+
+This is not wired into picture authoring yet. Type-based/filtered sibling
+positions, CSS nesting, scoped/namespaced styles and rewrites that require nested
+`:has()` reject transformation rather than silently emitting broken selectors.
+Selector expansion, input size and output size are bounded. The next integration
+must discover inline/local linked/imported CSS, apply all edits in the HTML
+transaction, refresh owned preview styles without replacing documents, and
+restore exact stylesheet bytes on undo. Remote/runtime-owned styles and wrapper
+cleanup still need explicit handling. The existing editor's parent-dependent
+CSS limitation remains until that integration is complete.
+
+The new browser suite checks 138 selectors against their pre-wrap matches, both
+single and multiple wrappers, two viewport sizes, hover/focus states, original
+cascade ordering, layers and flex geometry. Chromium and WebKit passed. All
+1,959 unit tests passed. No desktop artifact was rebuilt or branch pushed.
