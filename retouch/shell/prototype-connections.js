@@ -1,0 +1,39 @@
+(function(root){
+ 'use strict';
+ const NS='http://www.w3.org/2000/svg',host=root.RetouchPrototypeHost,frame=document.getElementById('app'),wrap=document.getElementById('frameWrap'),layer=document.createElement('div'),svg=document.createElementNS(NS,'svg'),links=new Map();let job=null,documentRef=null,observer=null,targets=new Map();
+ layer.className='prototype-connections';layer.hidden=true;svg.setAttribute('aria-label','Prototype connections');layer.append(svg);document.body.append(layer);
+ const make=(tag,attrs={})=>{const el=document.createElementNS(NS,tag);for(const [name,value]of Object.entries(attrs))el.setAttribute(name,value);return el;};
+ function scan(d){targets=new Map();for(const el of d.querySelectorAll('[id]')){const list=targets.get(el.id)||[];list.push(el);targets.set(el.id,list);}}
+ function observe(d){if(d===documentRef)return;observer?.disconnect();documentRef=d;scan(d);observer=new MutationObserver(()=>scan(d));observer.observe(d.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['id']});}
+ const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+ function box(el,frameBox,view){
+  const r=el.getBoundingClientRect(),sx=frameBox.width/frame.clientWidth,sy=frameBox.height/frame.clientHeight,convert=r=>({left:frameBox.left+r.left*sx,top:frameBox.top+r.top*sy,right:frameBox.left+r.right*sx,bottom:frameBox.top+r.bottom*sy});
+  const rect=convert(r),clip={left:Math.max(view.left,frameBox.left),right:Math.min(view.right,frameBox.right),top:Math.max(view.top,frameBox.top),bottom:Math.min(view.bottom,frameBox.bottom)};
+  for(let p=el.parentElement;p&&p!==el.ownerDocument.documentElement;p=p.parentElement){const css=p.ownerDocument.defaultView.getComputedStyle(p),r=convert(p.getBoundingClientRect());if(css.overflowX!=='visible'){clip.left=Math.max(clip.left,r.left);clip.right=Math.min(clip.right,r.right);}if(css.overflowY!=='visible'){clip.top=Math.max(clip.top,r.top);clip.bottom=Math.min(clip.bottom,r.bottom);}}
+  if(clip.left>clip.right||clip.top>clip.bottom)return null;
+  return {rect,clip,visible:!!r.width&&!!r.height&&el.ownerDocument.defaultView.getComputedStyle(el).visibility!=='hidden'};
+ }
+ function point(bounds,x,y){const clipped=x<bounds.clip.left||x>bounds.clip.right||y<bounds.clip.top||y>bounds.clip.bottom;return {x:clamp(x,bounds.clip.left+4,bounds.clip.right-4),y:clamp(y,bounds.clip.top+4,bounds.clip.bottom-4),clipped};}
+ function geometry(a,b,view,lane=0){
+  const ac={x:(a.rect.left+a.rect.right)/2,y:(a.rect.top+a.rect.bottom)/2},bc={x:(b.rect.left+b.rect.right)/2,y:(b.rect.top+b.rect.bottom)/2},vertical=b.rect.top>a.rect.bottom+16||b.rect.bottom<a.rect.top-16,forward=vertical?bc.y>=ac.y:bc.x>=ac.x;
+  const start=point(a,vertical?ac.x:forward?a.rect.right:a.rect.left,vertical?forward?a.rect.bottom:a.rect.top:ac.y),end=point(b,vertical?bc.x:forward?b.rect.left:b.rect.right,vertical?forward?b.rect.top:b.rect.bottom:bc.y),distance=Math.max(30,Math.min(180,(vertical?Math.abs(end.y-start.y):Math.abs(end.x-start.x))*.5)),sign=forward?1:-1;
+  const p={x:start.x-view.left,y:start.y-view.top},q={x:end.x-view.left,y:end.y-view.top},c1={x:p.x+(vertical?0:distance*sign),y:p.y+(vertical?distance*sign:0)},c2={x:q.x-(vertical?0:distance*sign),y:q.y-(vertical?distance*sign:0)};
+  c1.x+=vertical?lane:0;c2.x+=vertical?lane:0;c1.y+=vertical?0:lane;c2.y+=vertical?0:lane;
+  return {path:`M${p.x},${p.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${q.x},${q.y}`,start:p,end:q,angle:vertical?(forward?90:-90):(forward?0:180),clipped:start.clipped||end.clipped,mid:{x:(p.x+3*c1.x+3*c2.x+q.x)/8,y:(p.y+3*c1.y+3*c2.y+q.y)/8}};
+ }
+ function create(index){const group=make('g',{'class':'prototype-connection','role':'button','tabindex':'0'}),hit=make('path',{'class':'connection-hit'}),line=make('path',{'class':'connection-line'}),start=make('circle',{r:4}),arrow=make('path',{d:'M-7,-4 L0,0 L-7,4','class':'connection-arrow'}),badge=make('g',{'class':'connection-badge'}),circle=make('circle',{r:10}),text=make('text',{'text-anchor':'middle','dominant-baseline':'central'});text.textContent=index+1;badge.append(circle,text);group.append(hit,line,start,arrow,badge);svg.append(group);
+  const open=event=>{event.preventDefault();event.stopPropagation();root.RetouchPrototypePanel.show(index);};group.addEventListener('click',open);group.addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key))open(event);});return {group,hit,line,start,arrow,badge};
+ }
+ function draw(){
+  if(!root.RetouchPrototypePanel?.active||document.body.classList.contains('presenting')||document.querySelector('.prototype-target-picker')){layer.hidden=true;return;}
+  const info=host.selection(),source=host.rendered(),d=frame.contentDocument;if(!info?.prototypeEditable||!source||!d){layer.hidden=true;return;}observe(d);
+  const view=wrap.getBoundingClientRect(),frameBox=frame.getBoundingClientRect();if(view.width<=0||view.height<=0||frameBox.width<=0){layer.hidden=true;return;}const a=box(source,frameBox,view);if(!a?.visible){layer.hidden=true;return;}
+  Object.assign(layer.style,{left:view.left+'px',top:view.top+'px',width:view.width+'px',height:view.height+'px'});svg.setAttribute('viewBox',`0 0 ${view.width} ${view.height}`);const present=new Set();
+  for(const [index,item]of (info.prototypeInteractions||[]).entries()){if(item.action!=='scroll')continue;const found=targets.get(item.destination);if(found?.length!==1)continue;const b=box(found[0],frameBox,view);if(!b?.visible)continue;const g=geometry(a,b,view,index*30);if(!Number.isFinite(g.mid.x+g.mid.y))continue;present.add(index);let link=links.get(index);if(!link){link=create(index);links.set(index,link);}const label='Edit scroll connection '+(index+1)+' to '+(found[0].getAttribute('data-rt-name')||found[0].getAttribute('aria-label')||found[0].textContent?.trim().replace(/\s+/g,' ').slice(0,65)||item.destination)+(g.clipped?' (outside visible area)':''),signature=JSON.stringify([g,label,view.width,view.height]);if(link.signature===signature)continue;link.signature=signature;link.group.setAttribute('aria-label',label);link.group.classList.toggle('clipped',g.clipped);link.hit.setAttribute('d',g.path);link.line.setAttribute('d',g.path);link.start.setAttribute('cx',g.start.x);link.start.setAttribute('cy',g.start.y);link.arrow.setAttribute('transform',`translate(${g.end.x},${g.end.y}) rotate(${g.angle})`);link.badge.setAttribute('transform',`translate(${clamp(g.mid.x,12,view.width-12)},${clamp(g.mid.y,12,view.height-12)})`);
+  }
+  for(const [index,link]of links)if(!present.has(index)){link.group.remove();links.delete(index);}layer.hidden=!present.size;
+ }
+ function tick(){job=null;draw();if(root.RetouchPrototypePanel?.active&&!document.body.classList.contains('presenting'))job=requestAnimationFrame(tick);}
+ function wake(){if(job===null)job=requestAnimationFrame(tick);}
+ for(const type of ['retouch:prototype-tab','retouch:selection','retouch:prototype'])root.addEventListener(type,wake);new MutationObserver(wake).observe(document.body,{attributes:true,attributeFilter:['class']});frame.addEventListener('load',()=>{observer?.disconnect();observer=null;documentRef=null;targets.clear();wake();});
+})(window);

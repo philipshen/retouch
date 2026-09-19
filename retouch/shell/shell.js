@@ -3873,6 +3873,7 @@ async function refreshPrototype(info,anchor=false){
  if(sel?.info.id===info.id){sel.info=info;renderPanel();}window.dispatchEvent(new Event('retouch:prototype'));
 }
 window.RetouchPrototypeHost={
+ rendered(){if(!sel?.info)return null;const el=renderedSelection?.id===sel?.info?.id?renderedSelection.element:null;return el?.isConnected&&el.ownerDocument===doc()?el:matchingEls(sel?.info?.id)[0]||null;},
  selection(){if(!sel?.info)return null;if(sel.multiple?.length>1)return {prototypeEditable:false,prototypeReason:'Select one source layer to edit its interactions.'};return sel.info;},
  route:currentPageRoute,error:message=>toast(message,'err'),
  destinationLabel(id){const matches=[...doc().querySelectorAll('[id]')].filter(el=>el.id===id);if(matches.length>1)return 'Ambiguous destination';const el=matches[0];return el?(el.getAttribute('data-rt-name')||el.getAttribute('aria-label')||el.textContent?.trim().replace(/\s+/g,' ').slice(0,65)||el.localName):null;},
