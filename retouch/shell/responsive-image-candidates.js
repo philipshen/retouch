@@ -2,10 +2,11 @@
  'use strict';
  const I=typeof module==='object'&&module.exports?require('./inspector.js'):root.RetouchInspector;
  function measure(candidate){const token=candidate.descriptors?.find(value=>/[wx]$/.test(value))||'1x';return {unit:token.slice(-1),value:Number(token.slice(0,-1))};}
- function suggestion(descriptor,sourceIndex){const entries=descriptor.candidates.filter(candidate=>candidate.attribute==='srcset'&&candidate.sourceIndex===sourceIndex).map(measure),unit=entries[0]?.unit||'x',maximum=Math.max(0,...entries.filter(entry=>entry.unit===unit).map(entry=>entry.value));return {unit,value:unit==='w'?maximum*2||640:maximum+1};}
+ function suggestion(descriptor,sourceIndex){const entries=descriptor.candidates.filter(candidate=>candidate.attribute==='srcset'&&candidate.sourceIndex===sourceIndex).map(measure),unit=entries[0]?.unit||'x',maximum=Math.max(0,...entries.filter(entry=>entry.unit===unit).map(entry=>entry.value));return {unit,value:unit==='w'?maximum*2||640:!entries.length&&descriptor.plain&&descriptor.sources.find(source=>source.index===sourceIndex)?.src?2:maximum+1};}
  function mount(descriptor,candidate,onSave,{open=false,onToggle=()=>{}}={}){
-  const details=document.createElement('details'),summary=document.createElement('summary');details.className='advanced';details.open=open;details.ontoggle=()=>{if(details.isConnected)onToggle(details.open);};summary.textContent='Candidate options';details.append(summary);
+  const details=document.createElement('details'),summary=document.createElement('summary');details.className='advanced';details.open=open;details.ontoggle=()=>{if(details.isConnected)onToggle(details.open);};summary.textContent=descriptor.plain?'Responsive images':'Candidate options';details.append(summary);
   const box=document.createElement('div');box.className='responsive-image-candidates';details.append(box);
+  if(descriptor.plain)I.note(box,'Keep this image as the fallback and add versions for higher pixel densities or different display sizes.');
   const error=I.note(box,'','refused');error.hidden=true;error.setAttribute('role','alert');
   const run=async(button,change)=>{error.hidden=true;button.disabled=true;try{await onSave(change);}catch(reason){error.textContent=reason.message;error.hidden=false;}finally{button.disabled=false;}};
   function resolution(prefix,initial){

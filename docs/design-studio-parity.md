@@ -25273,3 +25273,24 @@ Responsive capture and source-settings browser regressions passed in both
 engines; all 1,950 unit tests passed. Creating/removing picture source elements
 and initiating responsive sets on plain images remain unfinished. The packaged
 desktop app predates this work.
+
+
+### Responsive onboarding for plain images (2026-09-19)
+
+Ordinary HTML images expose Responsive images alongside their existing crop,
+source-path, asset browser and upload controls. The first candidate adds srcset
+without wrapping the image or changing its identity, fallback, sizes or layout.
+Density defaults to 2x when a fallback exists, or 1x on an empty image; width
+candidates are also available. Removing the last img candidate removes its empty
+srcset attribute and returns the inspector to the plain-image controls. Existing
+picture source elements remain available when their candidate list is emptied.
+
+Main/comparison previews update in place through the plain/responsive transition
+and exact undo/redo. Plain-image thumbnails use the restored source immediately;
+images without a source have no thumbnail or crop action. Chromium and WebKit
+verified onboarding at device pixel ratio 2, width candidates, last removal,
+empty images, exact history, comparison rendering and retained document/form
+state. Existing HTML editor and candidate-set browser suites passed in both
+engines. All 1,951 unit tests passed. Creating/removing picture sources and
+cross-adapter responsive-source authoring remain unfinished. The packaged desktop
+app predates these changes.

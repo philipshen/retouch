@@ -4,7 +4,7 @@ const attr=(node,name)=>node.attrs?.find(item=>item.name===name)?.value??null;
 function inspect(resolved){
  const image=resolved.element.node;if(image.tagName!=='img')return null;
  const picture=image.parentNode?.tagName==='picture'?image.parentNode:null;
- if(!picture&&attr(image,'srcset')===null)return null;
+ const plain=!picture&&attr(image,'srcset')===null;
  if(picture&&picture.childNodes.filter(node=>node.tagName==='img').length!==1)throw Error('Choose a picture with one image fallback.');
  const eligible=new Set((resolved.elements||require('./adapters/html.cjs').collect(resolved.source,resolved.relPath).elements).map(element=>element.location.startOffset));
  const nodes=picture?picture.childNodes.slice(0,picture.childNodes.indexOf(image)).filter(node=>node.tagName==='source'):[];
@@ -13,7 +13,7 @@ function inspect(resolved){
  const candidates=[{key:'fallback',url:attr(image,'src')||'',label:'Fallback image',sourceIndex:-1,attribute:'src'}];
  for(const source of sources)for(const [index,candidate]of parse(source.srcset||'',{locations:true}).entries())candidates.push({key:source.index+':'+index,url:candidate.url,label:(source.index<0?'Image':'Source '+(source.index+1)+(source.media?' · '+source.media:''))+' · '+(candidate.descriptors.join(' ')||'1x')+(source.type?' · '+source.type:''),sourceIndex:source.index,attribute:'srcset',descriptors:candidate.descriptors,start:candidate.start,end:candidate.end,media:source.media});
  if(candidates.length>256)throw Error('This image has too many responsive candidates to edit.');
- return {picture:!!picture,sources,candidates,nodes:[image,...nodes]};
+ return {plain,picture:!!picture,sources,candidates,nodes:[image,...nodes]};
 }
 function describe(resolved){try{const state=inspect(resolved);if(!state)return null;const {nodes,...descriptor}=state;return descriptor;}catch(error){return {reason:error.message,candidates:[]};}}
 function finish(resolved,out){
@@ -83,7 +83,8 @@ function planCandidates(resolved,op){
   const next=parse(value);candidateSet(next);
   if(next.length!==candidates.length+(op.action==='add'?1:op.action==='remove'?-1:0))return refuse('The candidate edit changes another image URL.');
   const node=state.nodes[op.sourceIndex+1],location=node.sourceCodeLocation,token=location.attrs?.srcset,out=new MagicString(resolved.source),replacement='srcset="'+value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'"';
-  if(token)out.overwrite(token.startOffset,token.endOffset,replacement);else out.appendLeft(location.startTag.startOffset+1+node.tagName.length,' '+replacement);
+  if(op.action==='remove'&&node.tagName==='img'&&!value.trim()&&token)out.remove(token.startOffset,token.endOffset);
+  else if(token)out.overwrite(token.startOffset,token.endOffset,replacement);else out.appendLeft(location.startTag.startOffset+1+node.tagName.length,' '+replacement);
   return finish(resolved,out);
  }catch(error){return refuse(error.message);}
 }

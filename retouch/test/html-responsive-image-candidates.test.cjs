@@ -31,3 +31,13 @@ test('candidate validation refuses ambiguous resolutions, stale revisions, forei
 test('srcset source spans stop before delimiters for bare URLs, whitespace and data images',()=>{
  for(const value of ['a.svg, b.svg 2x','a,b.svg 1x, data:image/png;base64,AAAA 2x','a.svg\t1x \n, b.svg 2x','a.svg'])for(const candidate of parse(value,{locations:true})){assert.equal(value.slice(candidate.start,candidate.end),candidate.url);assert.deepEqual(parse(value.slice(candidate.start,candidate.candidateEnd)),[{url:candidate.url,descriptors:candidate.descriptors}]);}
 });
+
+test('plain images can enter and leave responsive mode without changing fallback, sizing or element identity',()=>{
+ for(const source of ['<html><body><img src="fallback.svg" alt="Keep" width="320" sizes="50vw"><p>Keep</p></body></html>','<img alt="Empty" width="320">']){
+  const before=resolve(source),info=html.describe(before);assert.equal(info.canSetSrc,true);assert.equal(info.responsiveImage.plain,true);
+  const added=edit(source,{sourceIndex:-1,action:'add',src:'high.svg',descriptor:'2x'});assert.equal(added.ok,true,added.reason);assert.equal(added.edits[0].before,source);assert.equal(added.edits[0].after,source.replace('<img','<img srcset="high.svg 2x"'));
+  const next=resolve(added.edits[0].after),descriptor=html.describe(next);assert.equal(next.element.id,before.element.id);assert.equal(descriptor.canSetSrc,false);assert.equal(descriptor.responsiveImage.plain,false);assert.equal(descriptor.src,info.src);
+  const removed=edit(added.edits[0].after,{sourceIndex:-1,action:'remove',candidate:'-1:0'});assert.equal(removed.ok,true,removed.reason);const restored=html.describe(resolve(removed.edits[0].after));assert.equal(restored.canSetSrc,true);assert.equal(restored.responsiveImage.plain,true);assert.equal(restored.responsiveImage.sources[0].srcset,null);assert.equal(restored.src,info.src);
+  assert.equal(edit(source,{sourceIndex:-1,action:'add',src:'wide.svg',descriptor:'640w'}).ok,true);assert.equal(edit(source,{sourceIndex:0,action:'add',src:'wide.svg',descriptor:'640w'}).ok,false,'plain images have no picture sources');
+ }
+});

@@ -3079,6 +3079,19 @@ async function refreshResponsiveImage(info) {
   await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select,matches});
   const previews=await window.RetouchComparisons?.syncImage({select,matches});if(previews?.failures.length)toast('Image saved. Retry the failed comparison previews.','err');
 }
+async function saveResponsiveImageCandidates(info,change,before){
+  if(sel?.info!==info)throw Error('Re-select the image before editing its candidates.');
+  if(panelTasks||sourceRequests||undoBusy)throw Error('Wait for the current edit to finish.');
+  busyPanel(true);try{
+    const result=await api('POST','/rt/__api/op',{type:'setResponsiveImageCandidates',id:info.id,...change,fileHash:info.hash,context:info.context});
+    if(!result?.ok)throw Error(result?.reason||result?.error||'Image candidates could not be saved.');
+    const candidates=(result.element?.responsiveImage?.candidates||[]).filter(candidate=>candidate.attribute==='srcset'&&candidate.sourceIndex===change.sourceIndex);
+    const after=change.action==='add'?candidates.at(-1)?.key||'fallback':change.action==='remove'?candidates[Math.min(Number(change.candidate.split(':')[1]),candidates.length-1)]?.key||'fallback':before;
+    if(result.undoId)editorHistory.record({type:'setResponsiveImageCandidates',id:info.id,candidateBefore:before,candidateAfter:after,undoId:result.undoId,context:info.context});
+    Object.assign(info,result.element||{hash:result.hash});info._responsiveCandidate=after;await refreshResponsiveImage(info);if(sel?.info===info)renderPanel();toast('Image candidates saved','ok');
+  }finally{busyPanel(false);}
+}
+
 function responsiveImageControls(sec,info) {
   const descriptor=info.responsiveImage;
   if(descriptor.reason){const message=document.createElement('p');message.className='refused';message.textContent=descriptor.reason;sec.append(message);return;}
@@ -3087,7 +3100,7 @@ function responsiveImageControls(sec,info) {
   const active=descriptor.candidates.filter(candidate=>candidate.attribute==='srcset').find(candidate=>{try{return new URL(candidate.url,target.ownerDocument.baseURI).href===target.currentSrc&&(!candidate.media||target.ownerDocument.defaultView.matchMedia(candidate.media).matches);}catch{return false;}});
   choices.value=descriptor.candidates.some(candidate=>candidate.key===info._responsiveCandidate)?info._responsiveCandidate:active?.key||'fallback';RetouchInspector.field(sec,'Image candidate',choices);
   const input=document.createElement('input');input.type='text';const update=()=>{input.value=descriptor.candidates.find(candidate=>candidate.key===choices.value)?.url||'';preview.hidden=!input.value;if(!input.value){preview.removeAttribute('src');return;}try{preview.src=new URL(input.value,target.ownerDocument.baseURI).href;}catch{preview.removeAttribute('src');}};const sourceControls=document.createElement('div');
-  const selectCandidate=()=>{info._responsiveCandidate=choices.value;choices.title=choices.selectedOptions[0]?.textContent||'';update();const candidate=descriptor.candidates.find(candidate=>candidate.key===choices.value),source=descriptor.sources.find(source=>source.index===candidate.sourceIndex);sourceControls.replaceChildren(RetouchResponsiveImageCandidates.mount(descriptor,candidate,saveCandidates,{open:!!info._responsiveCandidateOptionsOpen,onToggle:open=>{info._responsiveCandidateOptionsOpen=open;}}),RetouchResponsiveImageSource.mount(source,changes=>saveSource(changes,source.index,choices.value),{open:!!info._responsiveSourceOpen,onToggle:open=>{info._responsiveSourceOpen=open;}}));};choices.onchange=selectCandidate;selectCandidate();RetouchInspector.field(sec,'Candidate image path',input);
+  const selectCandidate=()=>{info._responsiveCandidate=choices.value;choices.title=choices.selectedOptions[0]?.textContent||'';update();const candidate=descriptor.candidates.find(candidate=>candidate.key===choices.value),source=descriptor.sources.find(source=>source.index===candidate.sourceIndex);sourceControls.replaceChildren(RetouchResponsiveImageCandidates.mount(descriptor,candidate,change=>saveResponsiveImageCandidates(info,change,choices.value),{open:!!info._responsiveCandidateOptionsOpen,onToggle:open=>{info._responsiveCandidateOptionsOpen=open;}}),RetouchResponsiveImageSource.mount(source,changes=>saveSource(changes,source.index,choices.value),{open:!!info._responsiveSourceOpen,onToggle:open=>{info._responsiveSourceOpen=open;}}));};choices.onchange=selectCandidate;selectCandidate();RetouchInspector.field(sec,'Candidate image path',input);
   const note=document.createElement('p');note.className='hint';note.textContent='Replace this candidate only. Screen conditions, resolution and sizing stay the same.';sec.append(note);
   async function apply(src,key=choices.value,hash=info.hash){
     if(sel?.info!==info||info.hash!==hash)throw Error('The selected image changed. Re-select it before replacing a candidate.');
@@ -3107,18 +3120,6 @@ function responsiveImageControls(sec,info) {
       Object.assign(info,result.element||{hash:result.hash});await refreshResponsiveImage(info);if(sel?.info===info)renderPanel();toast('Source settings saved','ok');
     }finally{busyPanel(false);}
   }
-  async function saveCandidates(change){
-    if(sel?.info!==info)throw Error('Re-select the image before editing its candidates.');
-    if(panelTasks||sourceRequests||undoBusy)throw Error('Wait for the current edit to finish.');
-    const before=choices.value;busyPanel(true);try{
-      const result=await api('POST','/rt/__api/op',{type:'setResponsiveImageCandidates',id:info.id,...change,fileHash:info.hash,context:info.context});
-      if(!result?.ok)throw Error(result?.reason||result?.error||'Image candidates could not be saved.');
-      const candidates=(result.element?.responsiveImage?.candidates||[]).filter(candidate=>candidate.attribute==='srcset'&&candidate.sourceIndex===change.sourceIndex);
-      const after=change.action==='add'?candidates.at(-1)?.key||'fallback':change.action==='remove'?candidates[Math.min(Number(change.candidate.split(':')[1]),candidates.length-1)]?.key||'fallback':before;
-      if(result.undoId)editorHistory.record({type:'setResponsiveImageCandidates',id:info.id,candidateBefore:before,candidateAfter:after,undoId:result.undoId,context:info.context});
-      Object.assign(info,result.element||{hash:result.hash});info._responsiveCandidate=after;await refreshResponsiveImage(info);if(sel?.info===info)renderPanel();toast('Image candidates saved','ok');
-    }finally{busyPanel(false);}
-  }
   sec.append(RetouchInspector.button('Apply candidate image',()=>apply(input.value.trim()).catch(error=>toast(error.message,'err'))));
   sec.append(RetouchInspector.button('Browse candidate images',event=>{const key=choices.value,hash=info.hash;event.currentTarget.focus({preventScroll:true});projectImageBrowser(info)(src=>apply(src,key,hash));}));
   const file=document.createElement('input');file.type='file';file.accept='image/*';file.hidden=true;file.setAttribute('aria-label','Upload candidate image');const upload=imageFillUpload(info),button=RetouchInspector.button('Upload candidate image…',()=>file.click());
@@ -3130,7 +3131,7 @@ function imageSection(info) {
   const h = document.createElement('h3');
   h.textContent = 'Image';
   sec.appendChild(h);
-  if(info.responsiveImage?.candidates?.length||info.responsiveImage?.reason){responsiveImageControls(sec,info);return sec;}
+  if((!info.responsiveImage?.plain&&info.responsiveImage?.candidates?.length)||info.responsiveImage?.reason){responsiveImageControls(sec,info);return sec;}
   if (info.srcDynamic || info.canSetSrc === false) {
     const p = document.createElement('p');
     p.className = 'refused';
@@ -3141,10 +3142,12 @@ function imageSection(info) {
   const img = document.createElement('img');
   img.className = 'imgthumb';
   const target = matchingEls(info.id)[0];
-  img.src = target?.currentSrc || target?.src || info.src;
+  let thumbnail=target?.currentSrc||target?.src||info.src;
+  if(info.responsiveImage?.plain){thumbnail=null;try{if(info.src)thumbnail=new URL(info.src,target?.ownerDocument.baseURI||iframe.src).href;}catch{}}
+  if(thumbnail)img.src=thumbnail;else img.hidden=true;
   img.alt = 'Selected image';
   sec.appendChild(img);
-  if(target?.tagName==='IMG')sec.append(RetouchInspector.button('Crop image',()=>{stopDrawing?.();const hash=info.hash,source=target.currentSrc;RetouchImageCrop.open({target,current:()=>sel?.info===info&&info.hash===hash&&target.currentSrc===source&&!panelTasks&&!sourceRequests&&!undoBusy,onError:message=>toast(message,'err'),onApply:async blob=>{const response=await fetch('/rt/__api/upload?name=cropped-image.svg',{method:'POST',headers:{'x-retouch-token':TOKEN},body:blob}),result=await response.json();if(!result.ok)throw Error(result.reason||result.error||'Crop upload failed.');if(sel?.info!==info||info.hash!==hash||target.currentSrc!==source)throw Error('The selected image changed before the crop was saved.');await setSrc(result.src,false,info);if(info.src!==result.src)throw Error('The cropped image could not be applied.');}});}));
+  if(target?.tagName==='IMG'&&thumbnail)sec.append(RetouchInspector.button('Crop image',()=>{stopDrawing?.();const hash=info.hash,source=target.currentSrc;RetouchImageCrop.open({target,current:()=>sel?.info===info&&info.hash===hash&&target.currentSrc===source&&!panelTasks&&!sourceRequests&&!undoBusy,onError:message=>toast(message,'err'),onApply:async blob=>{const response=await fetch('/rt/__api/upload?name=cropped-image.svg',{method:'POST',headers:{'x-retouch-token':TOKEN},body:blob}),result=await response.json();if(!result.ok)throw Error(result.reason||result.error||'Crop upload failed.');if(sel?.info!==info||info.hash!==hash||target.currentSrc!==source)throw Error('The selected image changed before the crop was saved.');await setSrc(result.src,false,info);if(info.src!==result.src)throw Error('The cropped image could not be applied.');}});}));
   const pathEl = document.createElement('div');
   pathEl.className = 'filepath';
   pathEl.textContent = info.src;
@@ -3165,6 +3168,7 @@ function imageSection(info) {
   fileIn.onchange=async()=>{const file=fileIn.files[0];if(!file)return;pick.disabled=true;try{const src=await upload(file);await setSrc(src,false,info);}catch(error){toast(error.message,'err');}finally{pick.disabled=false;fileIn.value='';}};
   sec.appendChild(pick);
   sec.appendChild(fileIn);
+  if(info.responsiveImage?.plain)sec.append(RetouchResponsiveImageCandidates.mount(info.responsiveImage,info.responsiveImage.candidates[0],change=>saveResponsiveImageCandidates(info,change,'fallback'),{open:!!info._responsiveCandidateOptionsOpen,onToggle:open=>{info._responsiveCandidateOptionsOpen=open;}}));
   return sec;
 }
 

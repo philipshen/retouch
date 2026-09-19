@@ -255,6 +255,9 @@ selection can continue offline; missing candidates are reported in the manifest.
 In the HTML editor, select an image and use **Image candidate** to choose its
 fallback or a responsive source. Apply a URL, browse project images, or upload
 a replacement; each edit preserves the other candidates and sizing conditions.
+For an ordinary image, open **Responsive images** to add its first candidate.
+The original source stays as the fallback; density starts at 2× when a fallback
+exists. Removing the last image candidate restores the plain-image controls.
 Open **Candidate options** to add or remove candidates, or change their image
 width or pixel density. Each source must use one resolution type with unique
 values. An emptied source remains available in the new-candidate source picker.
