@@ -3,7 +3,7 @@
 // URLs and ordinary image URLs can contain commas.
 // https://html.spec.whatwg.org/multipage/images.html#parsing-a-srcset-attribute
 const space=char=>/[\t\n\f\r ]/.test(char||'');
-function parse(input){
+function parse(input,{locations=false}={}){
  const candidates=[];let index=0;
  while(index<input.length){
   while(index<input.length&&(space(input[index])||input[index]===','))index++;
@@ -26,7 +26,7 @@ function parse(input){
    else if(/^\d+h$/.test(descriptor)&&number>0&&Number.isFinite(number)&&!height&&!density)height=true;
    else valid=false;
   }
-  if(valid&&(!height||width))candidates.push({url,descriptors});
+  if(valid&&(!height||width))candidates.push({url,descriptors,...(locations?{start,end:start+url.length}:{})});
  }
  return candidates;
 }

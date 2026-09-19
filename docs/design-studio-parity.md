@@ -25212,3 +25212,20 @@ at phone/desktop widths and 1x/2x density after the original server stopped,
 including sizes=auto, data images, comma URLs and a document base URL. Existing
 responsive CSS, asset and SVG capture suites passed in both engines. All 1,939
 unit tests passed. The packaged desktop archive predates this change.
+
+
+### Responsive image candidate editing (2026-09-19)
+
+The HTML inspector exposes the fallback and valid srcset candidates for img
+and picture elements. URL entry, project-image browsing and uploads replace
+one candidate while preserving descriptors, sizes, media/type conditions and
+other candidates. Source hashes reject stale edits; ambiguous picture structure
+and duplicated attributes are refused. Existing plain-image guards remain.
+Main and comparison previews reconcile the affected image/picture in place,
+retaining document identity and unsaved form values. Snapshot undo/redo restores
+exact source bytes. Uploaded assets remain available for reuse after undo.
+
+All 1,942 unit tests passed. Chromium and WebKit browser coverage exercises
+candidate selection, fallback edits, project-image browsing, upload, responsive
+preview selection, retained form state and exact undo/redo. The packaged desktop
+archive predates this change; broader Figma parity remains unfinished.

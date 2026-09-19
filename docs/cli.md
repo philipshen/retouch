@@ -252,6 +252,10 @@ media queries, fluid dimensions, flex/grid layouts and generated content.
 It also keeps `srcset`, `sizes`, native lazy loading and `<picture>` source
 conditions. Image candidates are saved locally so width and pixel-density
 selection can continue offline; missing candidates are reported in the manifest.
+In the HTML editor, select an image and use **Image candidate** to choose its
+fallback or a responsive source. Apply a URL, browse project images, or upload
+a replacement; each edit preserves the other candidates and sizing conditions.
+Undo restores the exact source, and comparison previews update in place.
 Stylesheet responses are reused for cross-origin CSS and imports. The captured
 DOM remains fixed: scripts, client-side route changes and conditional rendering
 are not reconstructed. Shadow components and canvases retain captured styling.

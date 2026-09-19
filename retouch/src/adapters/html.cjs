@@ -49,7 +49,7 @@ function describe(resolved){
   ...require('../link-source.cjs').describe(resolved,'html'),
   canRename:true,layerName:attr(el,'data-rt-name')||'',text:canText?el.node.childNodes.map(n=>n.value).join(''):null,textDynamic:!canText&&!rich,mixedText:!!rich&&!canText,canSetChildren:!!rich,richText:rich,
   textReason:canText?null:'This HTML region contains nested markup, comments, or an implicit closing tag.',
-  src:attr(el,'src'),srcDynamic:false,canSetSrc:canSrc,srcReason:canSrc?null:'Select a plain image without responsive sources.',
+  responsiveImage:require('../html-responsive-image.cjs').describe(resolved),src:attr(el,'src'),srcDynamic:false,canSetSrc:canSrc,srcReason:canSrc?null:'Select a plain image without responsive sources.',
   canSetTag:!!el.location.endTag&&textTags.has(el.tag),context:resolved.context||null};
 }
 function planOp(resolved,op){
@@ -63,6 +63,7 @@ function planOp(resolved,op){
  if(['convertSVGToPath','convertSVGToArrow'].includes(op.type))return require('../svg-convert.cjs').plan(resolved,op);
  if(op.type==='setSVGTransforms')return require('../svg-transform.cjs').planSelection(resolved,op,'html');
   if(op.type==='setSVGTransform')return require('../svg-transform.cjs').plan(resolved,op,'html');
+ if(op.type==='setResponsiveImage')return require('../html-responsive-image.cjs').plan(resolved,op);
  if(op.type==='setSVGGradient')return require('../html-svg-gradient.cjs').plan(resolved,op);
  if(op.type==='setSVGGeometry')return require('../svg-geometry.cjs').plan(resolved,op);
  if(op.type==='reparentElement')return require('../html-reparent.cjs').plan(resolved,op);
@@ -114,4 +115,4 @@ function planOp(resolved,op){
 }
 module.exports={name:'html',matches:file=>/\.html?$/i.test(file),collect,stamp,contentHash:hash,describe,planOp,
  applyOp:(resolved,op)=>require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),planOp(resolved,op)),
- capabilities:{classAttr:'class',ops:[...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setChildren','setTag','setSrc',...structure.types]}};
+ capabilities:{classAttr:'class',ops:[...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setChildren','setTag','setSrc','setResponsiveImage',...structure.types]}};
