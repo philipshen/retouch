@@ -6,13 +6,13 @@
  document.addEventListener('click',consumeClick,true);document.addEventListener('pointerdown',event=>{if(event.isPrimary!==false)clickBlock=null;},true);
  function current(target=frame){try{const w=target.contentWindow;if(w.location.origin!==location.origin)return null;return {url:w.location.pathname+w.location.search+w.location.hash,x:w.scrollX,y:w.scrollY};}catch{return null;}}
  function navigate(destination,scroll){main.release?.();main.release=null;const url=new URL(destination,location.href);main.pendingScroll={...scroll,url:url.href};frame.src=url.pathname+url.search+url.hash;}
- function perform(item,context,opener){const before=current();if(!before)return;
+ function perform(item,context,opener){const before=current();if(!before)return;context.scrollMotion?.cancel();context.scrollMotion=null;
   if(item.action==='open-overlay'){overlays.open(item.destination,item.overlay,opener,item.transition);return;}
   if(item.action==='close-overlay'){overlays.close(true,item.transition);return;}
   if(item.action==='swap-overlay'&&overlays.swap(item.destination,opener,item.transition))return;
   if(item.action==='navigate'||item.action==='swap-overlay'){if(!V.route(item.destination))return;trail.push(before);if(trail.length>100)trail.shift();overlays.clear();navigate(item.destination,item.preserveScroll?before:{x:0,y:0});}
   else if(item.action==='back'){if(overlays.close())return;const previous=trail.pop();if(previous)navigate(previous.url,previous);}
-  else if(item.action==='scroll'){const d=context.frame.contentDocument,targets=[...d.querySelectorAll('[id]')].filter(el=>el.id===item.destination);if(targets.length!==1){root.RetouchPresentationHost.error('The scroll destination is missing or duplicated.');return;}targets[0].scrollIntoView({behavior:'instant',block:'start'});}
+  else if(item.action==='scroll'){const d=context.frame.contentDocument,targets=[...d.querySelectorAll('[id]')].filter(el=>el.id===item.destination);if(targets.length!==1){root.RetouchPresentationHost.error('The scroll destination is missing or duplicated.');return;}try{context.scrollMotion=root.RetouchPrototypeScroll.play(targets[0],item.transition,item.scrollOffset);}catch(error){root.RetouchPresentationHost.error(error.message);}}
  }
  // WebKit can crash if touch-release navigation removes the dispatching iframe.
  // Defer until input dispatch finishes and cancel work when its context closes.
@@ -59,7 +59,7 @@
   const style=d.createElement('style');style.textContent='['+V.attribute+']{cursor:pointer}';d.head?.append(style);
   const observer=new MutationObserver(decorate);observer.observe(d.body,{childList:true,subtree:true,attributes:true,attributeFilter:[V.attribute]});decorate();
   if(context!==main){d.defaultView.addEventListener('keydown',overlayEscape);listeners.push(()=>d.defaultView?.removeEventListener('keydown',overlayEscape));}
-  context.release=()=>{for(const job of pendingActions)if(job.context===context){cancelAnimationFrame(job.id);pendingActions.delete(job);}if(held?.frame===frame)held=null;timers.dispose();if(timerJob!==null)cancelAnimationFrame(timerJob);timerJob=null;cancelScroll();observer.disconnect();listeners.forEach(fn=>fn());style.remove();for(const [el,before]of changed)restore(el,before);};
+  context.release=()=>{context.scrollMotion?.cancel();context.scrollMotion=null;for(const job of pendingActions)if(job.context===context){cancelAnimationFrame(job.id);pendingActions.delete(job);}if(held?.frame===frame)held=null;timers.dispose();if(timerJob!==null)cancelAnimationFrame(timerJob);timerJob=null;cancelScroll();observer.disconnect();listeners.forEach(fn=>fn());style.remove();for(const [el,before]of changed)restore(el,before);};
   const pagehide=()=>context.release?.();d.defaultView.addEventListener('pagehide',pagehide);listeners.push(()=>d.defaultView?.removeEventListener('pagehide',pagehide));
   if(context.pendingScroll){const scroll=context.pendingScroll;context.pendingScroll=null;if(d.URL===scroll.url){
    // Client-rendered destinations may mount after iframe load. Wait for enough

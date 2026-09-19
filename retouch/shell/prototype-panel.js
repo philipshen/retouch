@@ -25,13 +25,15 @@
    const triggerRow=triggerControl.parentElement;details.dialog.querySelector('header strong').replaceWith(triggerControl);triggerRow.remove();
    if(item.trigger==='keyboard')root.RetouchPrototypeKeyPanel.mount(card,{value:item.shortcut,index:index+1,change:value=>{draft.shortcut=value;return modify();}});
    if(item.trigger==='after-delay'){const delay=document.createElement('input');delay.type='number';delay.min='1';delay.max='10000';delay.step='1';delay.value=item.delay;I.field(card,'Delay (ms) '+(index+1),delay);delay.onchange=()=>{draft.delay=Number(delay.value);modify();};I.note(card,'Runs once while this layer is mounted in the active preview. Covered or hidden previews pause the timer.');}
-   I.select(card,'Action '+(index+1),actions,item.action,value=>{const destination=draft.destination;draft.action=value;delete draft.preserveScroll;delete draft.destination;delete draft.overlay;delete draft.transition;if(!['back','close-overlay'].includes(value))draft.destination=value==='scroll'?'top':(V.route(destination)?destination:pages.find(page=>page.url!==host.route())?.url||'/');if(value==='open-overlay')draft.overlay=V.overlay();modify();});
+   I.select(card,'Action '+(index+1),actions,item.action,value=>{const destination=draft.destination;draft.action=value;delete draft.preserveScroll;delete draft.destination;delete draft.overlay;delete draft.transition;delete draft.scrollOffset;if(!['back','close-overlay'].includes(value))draft.destination=value==='scroll'?'top':(V.route(destination)?destination:pages.find(page=>page.url!==host.route())?.url||'/');if(value==='open-overlay')draft.overlay=V.overlay();modify();});
    if(['navigate','open-overlay','swap-overlay'].includes(item.action)){
     if(pages.length)I.select(card,'Destination page '+(index+1),[['','Custom URL'],...pages.map(page=>[page.url,page.path||page.url])],pages.some(page=>page.url===item.destination)?item.destination:'',value=>{if(value){draft.destination=value;modify();}});
     const input=document.createElement('input');input.value=item.destination;input.placeholder='/page';input.maxLength=2048;I.field(card,'Destination URL '+(index+1),input);input.addEventListener('change',()=>{draft.destination=input.value;modify();});
     if(item.action==='navigate'){const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=!!item.preserveScroll;check.setAttribute('aria-label','Preserve scroll position '+(index+1));label.append(check,' Preserve scroll position');card.append(label);check.onchange=()=>{draft.preserveScroll=check.checked;modify();};}
    }else if(item.action==='scroll'){
     const input=document.createElement('input');input.value=item.destination;input.maxLength=256;I.field(card,'Destination element ID '+(index+1),input);input.addEventListener('change',()=>{draft.destination=input.value.replace(/^#/,'');modify();});
+    for(const axis of ['x','y']){const offset=document.createElement('input');offset.type='number';offset.min='-100000';offset.max='100000';offset.step='any';offset.value=item.scrollOffset?.[axis]||0;I.field(card,'Scroll offset '+axis.toUpperCase()+' '+(index+1),offset);offset.onchange=()=>{draft.scrollOffset={x:0,y:0,...item.scrollOffset,[axis]:offset.value===''?NaN:Number(offset.value)};modify();};}
+    I.note(card,'Offsets adjust the final scroll position in pixels. Negative values leave space before the destination.');
    }else I.note(card,item.action==='close-overlay'?'Dismiss the current overlay.':'Return to the previous page or dismiss the current overlay.');
    if(item.action==='open-overlay'){
     draft.overlay={...item.overlay};
@@ -42,7 +44,7 @@
     const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=item.overlay.closeOutside;check.setAttribute('aria-label','Close when clicking outside '+(index+1));label.append(check,' Close when clicking outside');card.append(label);check.onchange=()=>{draft.overlay.closeOutside=check.checked;modify();};
    }else if(item.action==='swap-overlay')I.note(card,'Replace the current overlay, keeping its size, position and background.');
    if(V.transitions[item.action]){
-    const current=item.transition||{type:'instant'},names={'instant':'Instant','dissolve':'Dissolve','move-in':'Move in','move-out':'Move out','push':'Push','slide-in':'Slide in','slide-out':'Slide out'};
+    const current=item.transition||{type:'instant'},names={'instant':'Instant','animate':'Animate','dissolve':'Dissolve','move-in':'Move in','move-out':'Move out','push':'Push','slide-in':'Slide in','slide-out':'Slide out'};
     I.select(card,'Animation '+(index+1),V.transitions[item.action].map(value=>[value,names[value]]),current.type,value=>{draft.transition=V.transition({type:value},item.action);modify();});
     if(current.type!=='instant'){
      draft.transition={...current};
@@ -51,7 +53,7 @@
      I.select(card,'Easing '+(index+1),[...V.easings.map(value=>[value,value.split('-').map(word=>word[0].toUpperCase()+word.slice(1)).join(' ')]),['custom','Custom Bézier'],...Object.keys(S.presets).map(name=>['spring-'+name,name[0].toUpperCase()+name.slice(1)+' spring']),['spring-custom','Custom spring']],typeof current.easing==='string'?current.easing:current.easing.type==='spring'?'spring-'+(springName||'custom'):'custom',value=>{draft.transition.easing=value==='custom'?{type:'cubic-bezier',values:[...(V.curves[current.easing]||current.easing.values||V.curves['ease-out'])]}:value.startsWith('spring-')?(value==='spring-custom'&&current.easing?.type==='spring'?current.easing:{type:'spring',...(S.presets[value.slice(7)]||S.presets.gentle)}):value;modify();});
      if(current.easing?.type==='cubic-bezier')root.RetouchPrototypeCurve.mount(card,{value:current.easing,index:index+1,duration:current.duration,change:value=>{draft.transition.easing=value;return modify();}});
      if(current.easing?.type==='spring')root.RetouchPrototypeSpringPanel.mount(card,{value:current.easing,index:index+1,change:value=>{draft.transition.easing=value;return modify();}});
-     if(current.type!=='dissolve')I.select(card,'Direction '+(index+1),[['left','Left'],['right','Right'],['top','Top'],['bottom','Bottom']],current.direction,value=>{draft.transition.direction=value;modify();});
+     if(!['dissolve','animate'].includes(current.type))I.select(card,'Direction '+(index+1),[['left','Left'],['right','Right'],['top','Top'],['bottom','Bottom']],current.direction,value=>{draft.transition.direction=value;modify();});
     }
    }
    const remove=I.button('Remove',()=>{opened=Math.max(0,index-1);return save(items.filter((_,i)=>i!==index));});remove.setAttribute('aria-label','Remove interaction '+(index+1));card.append(remove);

@@ -5,6 +5,7 @@
  const attribute='data-rt-prototype',positions=['center','top-left','top-center','top-right','center-left','center-right','bottom-left','bottom-center','bottom-right'];
  const triggers=['click','mouseenter','mouseleave','mousedown','mouseup','after-delay','keyboard'];
  const transitions={
+  'scroll':['instant','animate'],
   'open-overlay':['instant','dissolve','move-in','slide-in'],
   'close-overlay':['instant','dissolve','move-out','slide-out'],
   'swap-overlay':['instant','dissolve','move-in','move-out','push','slide-in','slide-out']
@@ -23,8 +24,8 @@
   const result={type:value.type,duration:value.duration??300,easing:easing(value.easing??'ease-out')};
   if(!Number.isInteger(result.duration)||result.duration<1||result.duration>10000)throw Error('Choose a duration from 1 to 10000 ms and a supported easing curve.');
   if(result.easing?.type==='spring')result.duration=S.curve(result.easing).duration;
-  if(value.type!=='dissolve'){result.direction=value.direction??'right';if(!['left','right','top','bottom'].includes(result.direction))throw Error('Choose a transition direction.');}
-  else if(value.direction!==undefined)throw Error('Dissolve does not have a direction.');
+  if(!['dissolve','animate'].includes(value.type)){result.direction=value.direction??'right';if(!['left','right','top','bottom'].includes(result.direction))throw Error('Choose a transition direction.');}
+  else if(value.direction!==undefined)throw Error('This animation does not have a direction.');
   return result;
  }
  function overlay(value={}){
@@ -38,7 +39,7 @@
  function validate(value){
   if(!Array.isArray(value)||value.length>32)throw Error('Use at most 32 interactions per source layer.');
   const used=new Set();return value.map(item=>{
-   if(!item||typeof item!=='object'||Array.isArray(item)||Object.keys(item).some(key=>!['trigger','action','destination','preserveScroll','overlay','transition','delay','shortcut'].includes(key))||!triggers.includes(item.trigger))throw Error('Choose distinct supported interaction triggers.');const key=item.trigger==='keyboard'?'keyboard:'+K.signature(item.shortcut):item.trigger;if(used.has(key))throw Error('Use each trigger or keyboard shortcut only once per layer.');used.add(key);
+   if(!item||typeof item!=='object'||Array.isArray(item)||Object.keys(item).some(key=>!['trigger','action','destination','preserveScroll','overlay','transition','delay','shortcut','scrollOffset'].includes(key))||!triggers.includes(item.trigger))throw Error('Choose distinct supported interaction triggers.');const key=item.trigger==='keyboard'?'keyboard:'+K.signature(item.shortcut):item.trigger;if(used.has(key))throw Error('Use each trigger or keyboard shortcut only once per layer.');used.add(key);
    if(item.trigger!=='keyboard'&&item.shortcut!==undefined)throw Error('Shortcuts belong to keyboard triggers.');
    if(item.trigger==='after-delay'&&(!Number.isInteger(item.delay)||item.delay<1||item.delay>10000)||item.trigger!=='after-delay'&&item.delay!==undefined)throw Error('After delay needs a whole duration from 1 to 10000 ms. Other triggers do not have a delay.');
    if(!['navigate','back','scroll','open-overlay','swap-overlay','close-overlay'].includes(item.action))throw Error('Choose a supported navigation or overlay action.');
@@ -47,7 +48,8 @@
    if(['back','close-overlay'].includes(item.action)&&item.destination!==undefined)throw Error('This action does not have a destination.');
    if(item.preserveScroll!==undefined&&(item.action!=='navigate'||typeof item.preserveScroll!=='boolean'))throw Error('Scroll preservation is available for navigation only.');
    if(item.overlay!==undefined&&item.action!=='open-overlay')throw Error('Overlay settings belong to Open overlay. Swap overlay keeps the current settings.');
-   return {trigger:item.trigger,action:item.action,...(item.trigger==='keyboard'?{shortcut:K.validate(item.shortcut)}:{}),...(item.trigger==='after-delay'?{delay:item.delay}:{}),...(!['back','close-overlay'].includes(item.action)?{destination:item.destination}:{}),...(item.action==='navigate'?{preserveScroll:!!item.preserveScroll}:{}),...(item.action==='open-overlay'?{overlay:overlay(item.overlay)}:{}),...(item.transition!==undefined?{transition:transition(item.transition,item.action)}:{})};
+   if(item.scrollOffset!==undefined&&(item.action!=='scroll'||!item.scrollOffset||typeof item.scrollOffset!=='object'||Array.isArray(item.scrollOffset)||Object.keys(item.scrollOffset).some(key=>!['x','y'].includes(key))||!['x','y'].every(key=>Number.isFinite(item.scrollOffset[key])&&Math.abs(item.scrollOffset[key])<=100000)))throw Error('Scroll offsets must be finite X and Y values between -100000 and 100000.');
+   return {trigger:item.trigger,action:item.action,...(item.trigger==='keyboard'?{shortcut:K.validate(item.shortcut)}:{}),...(item.trigger==='after-delay'?{delay:item.delay}:{}),...(!['back','close-overlay'].includes(item.action)?{destination:item.destination}:{}),...(item.action==='navigate'?{preserveScroll:!!item.preserveScroll}:{}),...(item.action==='open-overlay'?{overlay:overlay(item.overlay)}:{}),...(item.scrollOffset!==undefined?{scrollOffset:{...item.scrollOffset}}:{}),...(item.transition!==undefined?{transition:transition(item.transition,item.action)}:{})};
   });
  }
  function parse(value){if(value===null)return [];if(typeof value!=='string'||value.length>131072)throw Error('Invalid prototype interactions.');return validate(JSON.parse(value));}
