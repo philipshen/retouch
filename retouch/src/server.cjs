@@ -223,7 +223,7 @@ function handle(req, res, ctx) {
 
   if (p === '/rt/__api/op' && req.method === 'POST') {
     requireToken(req, ctx.token);
-    return readBody(req, (body) => {
+    return readBody(req, async (body) => {
       try {
       let op;
       try {
@@ -309,7 +309,7 @@ function handle(req, res, ctx) {
             if(!style)return json(res,409,{ok:false,reason:'That text style no longer exists.'});
           }
           result=applyPlan(ctx.appRoot,op.type.endsWith('Selection')?require('./text-style-selection.cjs').plan(resolved,op,style,ctx.adapter):(ctx.adapter.name==='svelte'?require('./svelte-linked-styles.cjs').create('text',ctx.adapter):ctx.adapter.name==='vue'?require('./vue-text-styles.cjs').create(ctx.adapter):require(reactStyles?'./jsx-text-styles.cjs':liquidStyles?'./liquid-text-styles.cjs':'./html-text-styles.cjs')).plan(resolved,op,style));
-        } else result = applyPlan(ctx.appRoot, ctx.adapter.planOp(resolved, op));
+        } else result = applyPlan(ctx.appRoot, await ctx.adapter.planOp(resolved, op));
       } catch (err) {
         return json(res, err.statusCode || 500, { ok: false, error: err.message });
       }

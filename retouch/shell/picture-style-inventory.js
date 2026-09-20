@@ -22,5 +22,6 @@
   for(const sheet of doc.styleSheets)if(!sheet.ownerNode||!nodes.includes(sheet.ownerNode))issues.push('A stylesheet has no mapped document owner.');
   return {sheets,issues};
  }
- const api={collect};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPictureStyleInventory=api;
+ async function snapshot(doc){const inventory=collect(doc);return {...inventory,sheets:await Promise.all(inventory.sheets.map(async({kind,id,text})=>{const bytes=new TextEncoder().encode(text),digest=await globalThis.crypto.subtle.digest('SHA-256',bytes);return {kind,id,hash:[...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('')};}))};}
+ const api={collect,snapshot};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPictureStyleInventory=api;
 })(typeof globalThis==='object'?globalThis:this);

@@ -46,10 +46,10 @@ async function validate(server,{root,documents}){
   if(!document||!Array.isArray(document.issues)||!Array.isArray(document.sheets)||document.sheets.length>256)throw Error('The preview stylesheet inventory is invalid.');
   if(document.issues.length)throw Error(String(document.issues[0]));
   const seen=new Set();for(const sheet of document.sheets){
-   if(!sheet||!['vite','managed'].includes(sheet.kind)||typeof sheet.id!=='string'||sheet.id.length>4096||typeof sheet.text!=='string')throw Error('The preview stylesheet entry is invalid.');
-   size+=Buffer.byteLength(sheet.text);if(size>20*1024*1024)throw Error('The preview stylesheet inventory is too large.');
+   if(!sheet||!['vite','managed'].includes(sheet.kind)||typeof sheet.id!=='string'||sheet.id.length>4096||(typeof sheet.text!=='string'&&!/^[a-f0-9]{64}$/.test(sheet.hash||'')))throw Error('The preview stylesheet entry is invalid.');
+   size+=Buffer.byteLength(sheet.text||'');if(size>20*1024*1024)throw Error('The preview stylesheet inventory is too large.');
    const key=sheet.kind+'|'+sheet.id;if(seen.has(key))throw Error('A preview stylesheet has duplicate source owners.');seen.add(key);
-   if(!expected.has(key)||expected.get(key)!==sheet.text)throw Error('A preview stylesheet differs from its current Vite source. Wait for styles to settle.');
+   if(!expected.has(key)||(sheet.hash?crypto.createHash('sha256').update(expected.get(key)).digest('hex')!==sheet.hash:expected.get(key)!==sheet.text))throw Error('A preview stylesheet differs from its current Vite source. Wait for styles to settle.');
   }
  }
  return inventory;

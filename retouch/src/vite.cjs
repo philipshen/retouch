@@ -42,7 +42,8 @@ function retouch(options={}){
      client.send({type:'custom',event:'retouch:svelte-snapshot',data:{file:data.file,request:data.request,...require('./svelte-hmr.cjs').payload(snapshot,svelteSequences.get(file)||0,svelteEpoch)}});
     };channel.on('retouch:svelte-sync',svelteSyncHandler);
    }
-   const adapter={...sourceAdapter,assets:config.publicDir?{...sourceAdapter.assets,directory:path.relative(config.root,config.publicDir),urlPrefix:config.base}:undefined};
+   const editorAdapter=sourceAdapter.name==='svelte'?require('./vite-picture-adapter.cjs').create(sourceAdapter,server,config.root):sourceAdapter;
+   const adapter={...editorAdapter,assets:config.publicDir?{...sourceAdapter.assets,directory:path.relative(config.root,config.publicDir),urlPrefix:config.base}:undefined};
    sidecar=require('./server.cjs').startServer({appRoot:config.root,port:0,adapter,rendering:{reloadOnServerRestart:true},quiet:true});
    if(!sidecar.listening)await once(sidecar,'listening');
    if(process.env.RETOUCH_SESSION_URL){try{await require('./session-client.cjs').notifyConnected(config.root);}catch(error){await closeSidecar();throw error;}}

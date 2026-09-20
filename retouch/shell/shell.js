@@ -3207,7 +3207,9 @@ function pictureSourceControls(info){
     const image=matchingEls(info.id)[0],picture=image?.parentElement,source=picture?.tagName==='PICTURE'?[...picture.children].slice(0,[...picture.children].indexOf(image)).filter(node=>node.tagName==='SOURCE')[change.sourceIndex]:null;
     if(layerLocks.locked(image)||source&&layerLocks.locked(source))throw Error('Unlock the image or source before changing its structure.');
     busyPanel(true);try{
-      const result=await api('POST','/rt/__api/op',{type:'setPictureSources',id:info.id,...change,fileHash:info.hash});
+      const pictureStyles=info.pictureStylesRequired?await Promise.all([iframe,...(window.RetouchComparisons?.exportFrames()||[])].map(frame=>RetouchPictureStyleInventory.snapshot(frame.contentDocument))):undefined;
+      const payload={type:'setPictureSources',id:info.id,...change,fileHash:info.hash,pictureStyles};if(JSON.stringify(payload).length>900000)throw Error('The preview stylesheet inventory is too large.');
+      const result=await api('POST','/rt/__api/op',payload);
       if(!result?.ok)throw Error(result?.reason||result?.error||'Picture sources could not be saved.');if(!result.undoId)return;
       const deletedLocks=layerLocks.removeSourceIds(result.removedSourceIds||[]),candidate=result.sourceIndex===null?'fallback':result.sourceIndex+':0';
       editorHistory.record({type:'setPictureSources',id:info.id,imageBeforeId:info.id,imageAfterId:result.imageId,candidateBefore:info._responsiveCandidate||'fallback',candidateAfter:candidate,scope:result.scope,authorStyles:result.authorStyles,revalidateStyles:result.revalidateStyles,sourceIdMap:result.sourceIdMap,removedSourceIds:result.removedSourceIds,createdSourceIds:result.createdSourceIds,deletedLocks,undoId:result.undoId});
