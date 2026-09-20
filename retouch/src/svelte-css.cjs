@@ -60,8 +60,9 @@ function replaceModel(text, relative, model) {
 function strip(text, relative) {
   return replaceModel(text, relative, empty());
 }
-function inspect(resolved) {
-  const state = documentState(resolved.source, resolved.relPath), owners = new Map();
+function ownership(state) {
+  if (state.owners) return state.owners;
+  const owners = new Map();
   // Inventory every template owner, including components and unmapped spread hosts.
   function visit(node) {
     if (!node || typeof node !== 'object') return;
@@ -79,7 +80,13 @@ function inspect(resolved) {
     }
   }
   visit(state.parsed.ast.fragment);
-  for (const id of Object.keys(state.model.layers)) if (owners.get(id) !== 1 || !state.parsed.elements.some(e => value(attribute(e.node, 'data-rt-style')[0]) === id)) throw Error('A Svelte responsive style has an ambiguous or missing source owner.');
+  const mapped = new Set(state.parsed.elements.map(e => value(attribute(e.node, 'data-rt-style')[0])));
+  for (const id of Object.keys(state.model.layers)) if (owners.get(id) !== 1 || !mapped.has(id)) throw Error('A Svelte responsive style has an ambiguous or missing source owner.');
+  state.owners = owners;
+  return owners;
+}
+function inspect(resolved, state = documentState(resolved.source, resolved.relPath)) {
+  const owners = ownership(state);
   const node = resolved.element.node, inline = attribute(node, 'style');
   if (inline.length > 1 || inline.some(a => !source.literal(a)) || node.attributes.some(a => a.type === 'StyleDirective' || a.type === 'SpreadAttribute')) throw Error('This layer computes its inline styles.');
   let id = value(attribute(node, 'data-rt-style')[0]);
@@ -110,7 +117,7 @@ function plan(resolved, op) {
     return { ok: true, hash: source.contentHash(after), edits: [{ file: resolved.file, before: resolved.source, after }] };
   } catch (error) { return { ok: false, refused: true, reason: error.message }; }
 }
-function planSelection(resolved, op) {
+function planSelection(resolved, op, adapter) {
   const refuse = reason => ({ ok: false, refused: true, reason });
   if (op.fileHash !== resolved.hash) return refuse('The file changed. Re-select the layers.');
   if (!Number.isInteger(op.width) || op.width < 0 || op.width > 7680) return refuse('Choose a supported screen width.');
@@ -129,6 +136,32 @@ function planSelection(resolved, op) {
     if (result.edits.length) text = result.edits[0].after;
   }
   const hash = source.contentHash(text);
-  return { ok: true, hash, edits: text === resolved.source ? [] : [{ file: resolved.file, before: resolved.source, after: text }] };
+  const elements = source.collect(text, resolved.relPath).elements;
+  const selection = adapter ? op.ids.map(id => adapter.describe({ ...resolved, source: text, hash, elements, element: elements.find(e => e.id === id) })) : undefined;
+  return { ok: true, hash, ...(selection ? { selection } : {}), edits: text === resolved.source ? [] : [{ file: resolved.file, before: resolved.source, after: text }] };
 }
-module.exports = { documentState, replaceModel, strip, inspect, plan, planSelection, stylesheet };
+const identity = relative => source.contentHash(relative + '|svelte-css').slice(0, 10);
+const selector = relative => `[data-rt-svelte-css="${identity(relative)}"]`;
+const revision = model => source.contentHash(JSON.stringify(model));
+function describe(resolved) {
+  try {
+    const state = inspect(resolved), rules = state.model.layers[state.id] || {};
+    return { cssAuthoring: true, cssRules: rules,
+      cssRuleTexts: Object.fromEntries(Object.entries(rules).map(([width, values]) => [width, css.rule(state.id, Number(width), values)])),
+      cssRendering: { attribute: 'data-rt-revision', hash: resolved.hash, selector: selector(resolved.relPath), property: '--retouch-css-revision', value: revision(state.model) } };
+  } catch (error) { return { cssAuthoring: true, cssReason: error.message, cssRules: {} }; }
+}
+function runtimeSnapshot(text, relative) {
+  const state = documentState(text, relative), ids = {};
+  for (const element of state.parsed.elements) {
+    try { ids[element.id] = inspect({ source: text, relPath: relative, element }, state).id; } catch { /* Leave computed or ambiguous identities untouched. */ }
+  }
+  // A managed model must have valid owners before its compiled CSS is replaced.
+  const supported = new Set(Object.values(ids));
+  if (Object.keys(state.model.layers).some(id => !supported.has(id))) throw Error('A managed Svelte stylesheet has an unsupported source owner.');
+  return { state, ids, css: { id: identity(relative), text: stylesheet(state.model) + '\n' + selector(relative) + '{--retouch-css-revision:' + revision(state.model) + ';}' } };
+}
+function removeManaged(out, state) {
+  if (state.range) out.remove(state.model.created ? state.style.start : state.range.start, state.model.created ? state.style.end : state.range.end);
+}
+module.exports = { documentState, replaceModel, strip, inspect, plan, planSelection, stylesheet, describe, runtimeSnapshot, removeManaged };

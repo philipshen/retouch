@@ -117,7 +117,7 @@
   async function syncCSS({frame,id,rules,texts,rendering,entries=[{id,rules,texts,rendering}],fetcher=root.fetch.bind(root)}) {
     if(!Array.isArray(entries)||!entries.length||entries.length>100||new Set(entries.map(item=>item.id)).size!==entries.length)throw Error('Choose distinct styled layers.');
     if(entries.some(entry=>entry.rendering)){
-      if(entries.some(entry=>!entry.rendering||entry.rendering.attribute!=='data-rt-revision'||!/^\[data-rt-vue-css="[a-f0-9]{10}"\]$/.test(entry.rendering.selector)||entry.rendering.property!=='--retouch-css-revision'||![entry.rendering.hash,entry.rendering.value].every(value=>/^[a-f0-9]{40}$/.test(value))))throw Error('The compiled style revision is invalid.');
+      if(entries.some(entry=>!entry.rendering||entry.rendering.attribute!=='data-rt-revision'||!/^\[data-rt-(?:vue|svelte)-css="[a-f0-9]{10}"\]$/.test(entry.rendering.selector)||entry.rendering.property!=='--retouch-css-revision'||![entry.rendering.hash,entry.rendering.value].every(value=>/^[a-f0-9]{40}$/.test(value))))throw Error('The compiled style revision is invalid.');
       const document=frame.contentDocument,href=frame.contentWindow.location.href;
       const sheetMatches=rendering=>[...document.styleSheets].some(sheet=>{try{if(sheet.disabled||sheet.media?.mediaText&&!frame.contentWindow.matchMedia(sheet.media.mediaText).matches)return false;return [...sheet.cssRules].some(rule=>rule.selectorText===rendering.selector&&rule.style?.getPropertyValue(rendering.property).trim()===rendering.value);}catch{return false;}});
       for(let attempt=0,stable=0;attempt<160;attempt++){

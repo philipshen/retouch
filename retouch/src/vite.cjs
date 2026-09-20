@@ -74,7 +74,7 @@ function retouch(options={}){
    let file;try{file=fs.realpathSync(ctx.file);}catch{return;}const before=svelteSnapshots.get(file);if(!before)return;
    const relative=path.relative(config.root,file).split(path.sep).join('/');let next;try{next=require('./svelte-source.cjs').textSnapshot(await ctx.read(),relative);}catch{return;}
    svelteSnapshots.set(file,next);if(before.signature!==next.signature)return;if(before.revision===next.revision)return [];
-   this.environment.hot.send({type:'custom',event:'retouch:svelte-source',data:{file:relative,revision:next.revision,texts:next.texts}});return [];
+   this.environment.hot.send({type:'custom',event:'retouch:svelte-source',data:{file:relative,revision:next.revision,texts:next.texts,styleIds:next.styling?.ids||{},css:next.styling?.css||null}});return [];
   }},
   async handleHotUpdate(ctx){
    if(config?.command!=='serve'||sourceAdapter?.name!=='vue'||!sourceAdapter.matches(ctx.file)||ctx.file.split(path.sep).includes('node_modules'))return;

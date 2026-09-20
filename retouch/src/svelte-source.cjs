@@ -31,15 +31,30 @@ function collect(source,relPath){
 function textSnapshot(source,relPath){
  const {elements,ast}=collect(source,relPath),out=new MagicString(source),texts={};
  for(const element of elements){const range=textRange(element,source);if(!range||range.text.trim()!==range.text||/[\r\n\t]| {2}/.test(range.text))continue;texts[element.id]=range.text;if(range.start===range.end)out.appendLeft(range.start,'__RT_TEXT__');else out.overwrite(range.start,range.end,'__RT_TEXT__');}
- return {elements,ast,texts,signature:out.toString(),revision:contentHash(source)};
+ let styling = null;
+ try {
+  const css = require('./svelte-css.cjs'); styling = css.runtimeSnapshot(source,relPath); css.removeManaged(out,styling.state);
+  for(const element of elements)if(Object.hasOwn(styling.ids,element.id)){
+   const marker=element.attributes.find(a=>a.name==='data-rt-style');
+   if(marker&&source.slice(marker.start-1,marker.end)===' data-rt-style="'+marker.value+'"')out.remove(marker.start-1,marker.end);
+  }
+ }catch{/* Unsupported authored CSS still uses ordinary Svelte compilation. */}
+ return {elements,ast,texts,styling,signature:out.toString(),revision:contentHash(source)};
 }
 function stamp(source,file,root,{runtime=false}={}){
  const relative=root?path.relative(root,file).split(path.sep).join('/'):file,snapshot=textSnapshot(source,relative),{elements,ast}=snapshot;if(!elements.length)return null;
  const out=new MagicString(source),revision=contentHash(source);let binding='__retouch_source_'+contentHash(relative).slice(0,10);while(source.includes(binding))binding+='_';
  for(const element of elements)for(const [name,value]of [['data-rt',element.id],['data-rt-revision',revision]]){const old=element.attributes.find(a=>a.name===name),token=name==='data-rt-revision'&&runtime?name+'={$'+binding+'.revision}':name+'="'+value+'"';if(old)out.overwrite(old.start,old.end,token);else out.appendLeft(element.start+1+element.tag.length,' '+token);}
  if(runtime){
+  if(snapshot.styling){
+   require('./svelte-css.cjs').removeManaged(out,snapshot.styling.state);
+   for(const element of elements)if(Object.hasOwn(snapshot.styling.ids,element.id)){
+    const old=element.attributes.find(a=>a.name==='data-rt-style'),token='data-rt-style={$'+binding+'.styleIds['+JSON.stringify(element.id)+']}';
+    if(old)out.overwrite(old.start,old.end,token);else out.appendLeft(element.start+1+element.tag.length,' '+token);
+   }
+  }
   for(const element of elements)if(Object.hasOwn(snapshot.texts,element.id)){const range=textRange(element,source),expression='{$'+binding+'.texts['+JSON.stringify(element.id)+']}';if(range.start===range.end)out.appendLeft(range.start,expression);else out.overwrite(range.start,range.end,expression);}
-  const script='\nimport {sourceState as '+binding+'_create} from "virtual:retouch-svelte-source";\nconst '+binding+' = '+binding+'_create('+JSON.stringify(relative)+','+JSON.stringify({revision,texts:snapshot.texts}).replace(/</g,'\\u003c')+');\n';
+  const script='\nimport {sourceState as '+binding+'_create} from "virtual:retouch-svelte-source";\nconst '+binding+' = '+binding+'_create('+JSON.stringify(relative)+','+JSON.stringify({revision,texts:snapshot.texts,styleIds:snapshot.styling?.ids||{},css:snapshot.styling?.css||null}).replace(/</g,'\\u003c')+');\n';
   if(ast.module)out.appendLeft(ast.module.content.start,script);else out.prepend('<script module>'+script+'</script>\n');
  }
  return {code:out.toString(),map:out.generateMap({hires:true,source:file,includeContent:true})};

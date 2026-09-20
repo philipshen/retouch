@@ -79,3 +79,26 @@ test('Svelte CSS refuses preprocessor blocks whose compilation cannot be proven'
   const result = styles.plan(r, { fileHash: r.hash, width: 0, changes: { color: '#112233' } });
   assert.equal(result.ok, false); assert.match(result.reason, /local CSS/);
 });
+test('Svelte runtime CSS snapshots retain the exact text signature through first write, reset and undo', () => {
+  for (const original of ['<script>let count=0;</script><h1>Hello</h1>', '<h1>Hello</h1><style>h1{color:red}</style>']) {
+    const after = edit(original, { color: '#112233' }, 768), beforeSnapshot = source.textSnapshot(original, 'App.svelte'), afterSnapshot = source.textSnapshot(after, 'App.svelte');
+    assert.equal(beforeSnapshot.signature, afterSnapshot.signature);
+    assert.deepEqual(beforeSnapshot.styling.ids, afterSnapshot.styling.ids);
+    assert.match(afterSnapshot.styling.css.text, /min-width: 768px/);
+    const stamped = source.stamp(after, '/tmp/App.svelte', '/tmp', { runtime: true });
+    assert.doesNotMatch(stamped.code, /retouch-responsive:/);
+    assert.match(stamped.code, /data-rt-style=\{/);
+    compiler.compile(stamped.code, { filename: 'App.svelte', generate: 'client' });
+    assert.notEqual(source.textSnapshot(after.replace('Hello', 'Hello <b>child</b>'), 'App.svelte').signature, afterSnapshot.signature);
+    if (original.includes('<style>')) assert.notEqual(source.textSnapshot(after.replace('color:red', 'color:blue'), 'App.svelte').signature, afterSnapshot.signature);
+  }
+});
+test('Svelte adapter exposes responsive CSS and fresh descriptions for every styled selection member', () => {
+  const adapter = require('../src/adapters/svelte.cjs'), r = resolve('<h1>Hello</h1><p>Other</p>'), ids = r.elements.map(e => e.id);
+  assert.equal(adapter.describe(r).cssAuthoring, true);
+  assert.match(adapter.describe(r).cssRendering.selector, /^\[data-rt-svelte-css=/);
+  const result = adapter.planOp(r, { type: 'setCSSSelection', ids, fileHash: r.hash, width: 0, changes: { color: '#112233' } });
+  assert.equal(result.ok, true, result.reason);
+  assert.deepEqual(result.selection.map(e => e.id), ids);
+  for (const info of result.selection) { assert.equal(info.hash, result.hash); assert.equal(info.cssRules[0].color, '#112233'); }
+});

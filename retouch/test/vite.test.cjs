@@ -79,3 +79,14 @@ test('Svelte Vite text-only updates use compiler-bound stores and leave script c
  const messages=[],context={environment:{config:{consumer:'client'},hot:{send:message=>messages.push(message)}}},updated=source.replace('Hello','New text'),ctx={file,read:async()=>updated};assert.deepEqual(await plugin.hotUpdate.handler.call(context,ctx),[]);assert.equal(messages.length,1);assert.equal(messages[0].event,'retouch:svelte-source');assert.ok(Object.values(messages[0].data.texts).includes('New text'));assert.deepEqual(await plugin.hotUpdate.handler.call(context,ctx),[]);assert.equal(messages.length,1);assert.equal(await plugin.hotUpdate.handler.call(context,{file,read:async()=>updated.replace('n=0','n=1')}),undefined);assert.equal(messages.length,1);
  assert.throws(()=>retouch({adapter:'svelte'}).configResolved(config),/Svelte editing needs/);assert.throws(()=>retouch().configResolved({...config,plugins:[{name:'vite-plugin-svelte'},{name:'vite:vue'}]}),/mixed-framework/);plugin.configResolved({...config,command:'build'});assert.equal(plugin.transform.call({},source,file),null);assert.equal(await plugin.load('\0retouch-svelte-source'),null);
 });
+
+test('Svelte Vite styles and exact first-write undo use CSS HMR while authored styles use framework HMR',async t=>{
+ const {root,config}=fixture(t),file=path.join(root,'App.svelte'),original='<h1>Hello</h1><style>h1{color:red}</style>',plugin=retouch(),adapter=require('../src/adapters/svelte.cjs');
+ fs.writeFileSync(file,original);plugin.configResolved({...config,plugins:[{name:'vite-plugin-svelte'}]});plugin.transform.call({warn:message=>assert.fail(message)},original,file);
+ const elements=adapter.collect(original,'App.svelte').elements,r={file,relPath:'App.svelte',source:original,elements,element:elements[0],hash:adapter.contentHash(original)};
+ const result=adapter.planOp(r,{type:'setCSS',fileHash:r.hash,width:768,changes:{color:'#112233'}});assert.equal(result.ok,true,result.reason);
+ const messages=[],context={environment:{config:{consumer:'client'},hot:{send:message=>messages.push(message)}}},update=source=>plugin.hotUpdate.handler.call(context,{file,read:async()=>source});
+ assert.deepEqual(await update(result.edits[0].after),[]);assert.equal(messages.length,1);assert.match(messages[0].data.css.text,/min-width: 768px/);assert.equal(messages[0].data.styleIds[elements[0].id],elements[0].id);
+ assert.deepEqual(await update(original),[]);assert.equal(messages.length,2);assert.doesNotMatch(messages[1].data.css.text,/min-width/);assert.equal(messages[1].data.revision,r.hash);
+ assert.equal(await update(original.replace('color:red','color:blue')),undefined);assert.equal(messages.length,2);
+});

@@ -2,8 +2,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { capture, restore, reconcile, sync } = require('../shell/render-sync.js');
-test('compiled CSS waits for both template and enabled stylesheet revisions without fetching or mutating', async () => {
-  const rendering={attribute:'data-rt-revision',hash:'a'.repeat(40),selector:'[data-rt-vue-css="1234567890"]',property:'--retouch-css-revision',value:'b'.repeat(40)};
+for(const renderer of ['vue','svelte'])test(renderer+' compiled CSS waits for both template and enabled stylesheet revisions without fetching or mutating', async () => {
+  const rendering={attribute:'data-rt-revision',hash:'a'.repeat(40),selector:'[data-rt-'+renderer+'-css="1234567890"]',property:'--retouch-css-revision',value:'b'.repeat(40)};
   let actualHash='old',actualCSS='old';
   const element={getAttribute:name=>name==='data-rt'?'1234567890':actualHash};
   const sheet={disabled:true,cssRules:[{selectorText:rendering.selector,style:{getPropertyValue:()=>actualCSS}}]};

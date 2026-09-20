@@ -211,17 +211,24 @@ This initial integration maps native source layers through conditional branches,
 loops, snippets, and slots. Literal text, layer names, literal link destinations,
 and literal image sources write back to `.svelte` files with exact source undo.
 Expressions, raw HTML, text bindings, marker-conflicting spreads, and responsive
-image bindings remain protected. Responsive CSS, rich text, structural editing,
-and component-property controls for Svelte are not implemented yet.
+image bindings remain protected. Layout, appearance, and typography controls write
+responsive CSS into the component's existing stylesheet (or create one when
+absent). Single and multiple selections support base styles, minimum-width
+overrides, screen-scope reset, and exact undo/redo. Computed inline styles,
+important inline conflicts, ambiguous style identities, and non-CSS preprocessors
+are refused. Rich text, structural editing, linked style libraries, and
+component-property controls for Svelte are not implemented yet.
 
-Simple literal text updates use development-only Svelte store bindings so the
-component stays mounted, including through undo/redo and conditional remounts.
+Simple literal text and managed style updates use development-only Svelte store
+bindings and an independent stylesheet so the component stays mounted, including
+through undo/redo. New conditional instances read the current text and styles.
 The inline editor temporarily edits cloned child nodes and restores Svelte's
-original nodes before the source update. Script, structure, attribute, and
-whitespace-sensitive text changes use ordinary Svelte HMR; their local state
-retention is not guaranteed. Production builds omit the source markers and text
-runtime. SvelteKit SSR/hydration, custom preprocessing, and other Svelte compiler
-versions remain unverified.
+original nodes before the source update. Script, structure, authored CSS, other
+attributes, and whitespace-sensitive text changes use ordinary Svelte HMR; their
+local state retention is not guaranteed. Production builds retain the saved
+styles and their literal ownership attributes, while omitting development source
+markers and the live-update runtime. SvelteKit SSR/hydration, custom preprocessing,
+and other Svelte compiler versions remain unverified.
 
 Verified with Vite 8.3.0, Svelte 5.57.1, and `@sveltejs/vite-plugin-svelte` 7.3.0.
 
