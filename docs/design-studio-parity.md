@@ -26540,3 +26540,27 @@ regression passed Chromium. Syntax and diff checks passed. No new renderer or
 source semantics were introduced, so the full unit suite was not rerun. Layer
 bounds/effect limitations from the prior checkpoint remain. No desktop rebuild or
 push; full Figma parity and notarized Homebrew distribution remain unfinished.
+
+
+### SVG reference fidelity in selected-layer export
+
+A decoded-pixel regression reproduced a blank transparent export for a selected
+SVG use element: isolation hid the unselected symbol definition it referenced.
+Selection isolation now preserves non-painting SVG definition subtrees. References
+to ordinary painted shapes receive private copies in defs before the original
+siblings are hidden. Copied IDs and internal fragment references are rewritten;
+nested uses, xlink references and percent-encoded fragment IDs retain their targets.
+The reference copies are confined to the disposable rendering document, with a
+10,000-node expansion cap. The browser-side isolation code now lives in
+screen-export-selection.cjs so this logic can be maintained independently.
+
+Chromium and WebKit editor captures passed exact decoded pixels and dimensions
+for selected symbols, standalone shapes, nested uses and a referenced group with
+its own gradient and an external mask. The original live SVG markup and source
+file stayed unchanged. Existing selected-layer/export-action checks passed both
+browsers; viewport/full-page/comparison PNG regression passed Chromium. Eight
+focused export unit tests, syntax and diff checks passed. No full unit-suite rerun.
+External SVG documents, all SVG filter/marker combinations and complete inherited
+compositing parity remain unverified; inherited snapshot and effect-bounds limits
+still apply. No desktop rebuild or push. Full Figma parity and notarized Homebrew
+distribution remain unfinished.

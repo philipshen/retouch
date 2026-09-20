@@ -26,16 +26,7 @@ async function render(body,{browserType,signal}={}){
   if(failed.size)throw Error('Some screen resources could not be loaded. No image was exported.');signal?.throwIfAborted();
   let clip;if(body.area==='page'){const height=await page.evaluate(()=>{scrollTo({left:0,top:0,behavior:'instant'});return Math.max(innerHeight,document.documentElement.scrollHeight,document.documentElement.offsetHeight,document.body.scrollHeight,document.body.offsetHeight);});if(!Number.isFinite(height)||height*body.scale>32768||Math.ceil(body.width*body.scale)*Math.ceil(height*body.scale)>64*1024*1024)throw Error('The full page exceeds the 64-megapixel or 32,768-pixel height limit. Try 1× or export the visible viewport.');clip={x:0,y:0,width:body.width,height};}
   if(body.area==='selection'){
-   clip=await page.evaluate(ids=>{
-    const selected=ids.map(id=>document.querySelector('[data-capture-node="'+id+'"]'));if(selected.some(el=>!el))throw Error('A selected layer is unavailable in the snapshot.');
-    const boxes=selected.map(el=>el.getBoundingClientRect()).filter(box=>box.width>0&&box.height>0);if(!boxes.length)throw Error('The selected layers have no visible bounds.');
-    const left=Math.floor(Math.min(...boxes.map(b=>b.left))+scrollX),top=Math.floor(Math.min(...boxes.map(b=>b.top))+scrollY),right=Math.ceil(Math.max(...boxes.map(b=>b.right))+scrollX),bottom=Math.ceil(Math.max(...boxes.map(b=>b.bottom))+scrollY);
-    if(left<0||top<0)throw Error('The selected layers extend outside the page. Move them inside the page before exporting.');
-    const hidden=[];for(const el of document.querySelectorAll('[data-capture-node]'))if(!selected.some(node=>node===el||node.contains(el))){el.style.setProperty('visibility','hidden','important');hidden.push('[data-capture-node="'+el.getAttribute('data-capture-node')+'"]');}
-    const style=document.createElement('style');style.textContent=hidden.map(selector=>selector+'::before,'+selector+'::after').join(',')+'{visibility:hidden!important}';document.head.append(style);
-    for(const el of [document.documentElement,document.body])if(!selected.includes(el)&&!selected.some(node=>node.contains(el))){el.style.setProperty('background','transparent','important');}
-    return {x:left,y:top,width:right-left,height:bottom-top};
-   },body.selectionIds);
+   clip=await page.evaluate(require('./screen-export-selection.cjs'),body.selectionIds);
    if(Math.min(clip.width,clip.height)*body.scale<1||Math.max(clip.width,clip.height)*body.scale>32768||Math.ceil(clip.width*body.scale)*Math.ceil(clip.height*body.scale)>64*1024*1024)throw Error('Selected layers exceed the export dimension or 64-megapixel limit. Try a smaller scale.');
   }
   return await page.screenshot({type:body.format||'png',omitBackground:body.transparent===true,...(body.format==='jpeg'?{quality:body.quality??90}:{}),timeout:15000,...(clip?{fullPage:true,clip}:{})});
