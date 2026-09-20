@@ -1470,3 +1470,7 @@ html, body { overflow:clip; }
 .component-property-paste dl { display:grid; grid-template-columns:minmax(70px, 1fr) minmax(0, 2fr); gap:6px 12px; margin:10px 0 0; }
 .component-property-paste dt { color:var(--muted, #777); overflow-wrap:anywhere; }
 .component-property-paste dd { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.component-property-paste .paste-property-choices { display:flex; flex-wrap:wrap; gap:8px 14px; padding:10px; border:1px solid var(--border, #e5e5e5); border-radius:6px; margin:12px 0; }
+.component-property-paste .paste-property-choices label { display:inline-flex; flex-direction:row; align-items:center; gap:6px; margin:0; }
+.component-property-paste .paste-property-choices input { width:auto; margin:0; }
+.component-property-paste .paste-property-excluded { opacity:.45; text-decoration:line-through; }

@@ -27503,3 +27503,29 @@ styles, geometry, Figma's clipboard format or executable bindings. Multi-target
 source transactions remain limited to one source file. Cross-application/native
 clipboard operation and equivalent workflows in other adapters remain unverified.
 No native rebuild, launch or push was performed; the full goal remains incomplete.
+
+### 2026-09-20 — Choose properties before pasting
+
+The component paste preview now lets users choose property names once for all
+selected targets. Compatible properties start checked; incompatible properties
+remain unavailable. Select all and Clear selection provide quick bulk choices.
+The live summary counts only checked values and targets, excluded preview rows are
+visually marked, and Paste is disabled when nothing compatible is selected. The
+selection controls are disabled during the source transaction.
+
+Only chosen properties reach the existing atomic paste planner. Users can copy a
+component's numeric setting while retaining another instance's label, optional
+text and other values. Cancelling discards the choice draft; reopening begins with
+all compatible copied properties selected.
+
+All six clipboard/planner unit tests passed. Chromium and WebKit passed clear/all
+selection, disabled empty paste, keyboard checkbox activation, an accurate two-
+instance summary, numeric-only source changes with untouched labels and optional
+text, exact single-step Undo/Redo and retained main/tablet document and input state.
+The existing full property-paste/default/reset workflows remain in the browser
+suite and passed as well. The final preview layout was visually inspected.
+
+This improves the existing React component-property clipboard; it does not add
+layer-style copying, cross-framework parity, or cross-file multi-selection.
+No native build, launch or push was performed. Full design parity and trusted
+Homebrew distribution remain incomplete.
