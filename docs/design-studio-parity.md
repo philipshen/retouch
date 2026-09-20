@@ -26640,3 +26640,23 @@ export tests, syntax and diff checks passed. No full unit-suite rerun or desktop
 rebuild. Assets are still loaded independently per layer, and existing snapshot
 fidelity/export bounds limitations remain. No push; full Figma parity and notarized
 Homebrew distribution remain unfinished.
+
+
+### Desktop export candidate refresh — 2026-09-20
+
+Built a fresh universal Developer ID signed app from clean f7b44dfa, with bundled
+Chromium headless revision 1217 for arm64/x64 and the locked fflate dependency.
+All 340 packaged source entries and native inputs match the source checkpoint.
+The actual packaged renderer passed selected PNG alpha/dimensions, fractional
+viewport export, separate ZIP pixels/dimensions, JPEG signature and prelaunch
+cancellation with an absent user browser cache. The packaged capture CLI passed
+open/health/stop/cancel behavior. An isolated package-byte-preserving runtime copy
+passed 2,071 unit tests, and post-test integrity verification passed. Added a
+repeatable packaged-export verification script and a detailed receipt under
+desktop/verification/2026-09-20-layer-export.json.
+
+A local cask recipe was generated next to the new archive and passed Ruby syntax
+validation. Gatekeeper assessment returned exit 3, Unnotarized Developer ID; no
+native app launch, cask installation or security override was attempted. Native
+UI, Intel execution, notarization, public distribution and upgrades remain
+unverified. No push; full Figma parity and trusted Homebrew delivery are unfinished.

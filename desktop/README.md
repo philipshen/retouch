@@ -1,5 +1,33 @@
 # Retouch for macOS
 
+## Latest local signed candidate — 2026-09-20
+
+The universal app now packages the editor through `f7b44dfa`, including screen,
+full-page and selected-layer PNG/JPEG export, transparent/custom-scale output,
+separate-layer ZIP export and isolated batch browser reuse. All 340 packaged source
+entries and native build inputs match that clean source checkpoint.
+
+Artifact: `/Users/philipshen/Developer/retouch-worktrees/desktop-export-f7b44dfa/Retouch-0.1.0-mac.zip`
+
+SHA-256: `5e514e2b7c5979a274ce7d831e54c51d240c5b33fbbc3c305064373308950cf9`
+
+Developer ID and nested signatures passed. The packaged exporter and capture CLI
+passed with an absent user browser cache, and an integrity-checked test copy passed
+all 2,071 unit tests. A local `retouch-studio.rb` cask beside the archive passed Ruby
+syntax validation; it has not been installed. Gatekeeper rejects this artifact as
+**Unnotarized Developer ID**. Native UI launch, Intel execution, notarization,
+public cask distribution and upgrade remain unverified. No native launch occurred.
+
+See the [verification receipt](verification/2026-09-20-layer-export.json).
+The packaged export check can be repeated without launching the native app:
+
+```sh
+PLAYWRIGHT_BROWSERS_PATH=/tmp/retouch-empty-browser-cache \
+  node desktop/scripts/test-export-runtime.cjs /path/to/Retouch.app \
+  /path/to/fixture-with-pngjs /path/to/source-checkout
+```
+
+
 ## Latest inspector candidate (2026-09-17, 53438725)
 
 The universal Developer ID signed archive now includes percentage tracking

@@ -1,0 +1,15 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+if(process.argv.length!==5)throw Error('Usage: node desktop/scripts/test-export-runtime.cjs <Retouch.app> <decoder-fixture> <checkout>');
+const [app,fixture,checkout]=process.argv.slice(2),cli=path.join(app,'Contents/Resources/retouch'),resources=path.dirname(cli),hash=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+(async()=>{require('./verify-package.cjs').verify(app);const before=JSON.parse(fs.readFileSync(path.join(resources,'build-manifest.json')));for(const entry of before.files)assert.equal(hash(path.join(checkout,'retouch',entry.path)),entry.sha256,entry.path);const options=require(path.join(cli,'src/capture-browser.cjs')).launchOptions();assert.ok(options.executablePath.startsWith(path.join(resources,'capture-browser')+path.sep));const {render}=require(path.join(cli,'src/screen-export.cjs')),{unzipSync}=require(path.join(cli,'node_modules/fflate')),PNG=require(require.resolve('pngjs',{paths:[fixture]})).PNG;
+ const body={html:'<body data-capture-node="0" style="margin:0"><div data-capture-node="1" style="visibility:visible;width:40px;height:30px;background:rgba(255,0,0,.5)"></div><div data-capture-node="2" style="visibility:visible;width:50px;height:20px;background:blue"></div></body>',width:390,height:844,scale:2,baseURL:'http://example.test/',fontFaces:[],scroll:[],rootScroll:{x:0,y:0},area:'selection',selectionIds:['1','2'],selectionNames:['Card','Card'],transparent:true};
+ const png=PNG.sync.read(await render({...body,selectionIds:['1']}));assert.equal(png.width,80);assert.equal(png.height,60);assert.deepEqual([...png.data.subarray(0,4)],[255,0,0,128]);
+ const viewport=PNG.sync.read(await render({...body,area:'viewport',scale:0.5}));assert.equal(viewport.width,195);assert.equal(viewport.height,422);
+ const zip=unzipSync(await render({...body,separate:true}));assert.deepEqual(Object.keys(zip),['01-Card@2x.png','02-Card@2x.png']);const second=PNG.sync.read(Buffer.from(zip['02-Card@2x.png']));assert.equal(second.width,100);assert.equal(second.height,40);assert.deepEqual([...second.data.subarray(0,4)],[0,0,255,255]);
+ const jpeg=await render({...body,selectionIds:['2'],format:'jpeg',quality:85,transparent:false});assert.deepEqual([...jpeg.subarray(0,3)],[255,216,255]);
+ const controller=new AbortController();controller.abort();await assert.rejects(render(body,{signal:controller.signal}),/abort/i);
+ for(const entry of before.files)assert.equal(hash(path.join(cli,entry.path)),entry.sha256,entry.path);
+ require('./verify-package.cjs').verify(app);
+ console.log(JSON.stringify({sourceCommit:before.sourceCommit,sourceTreeDirty:before.sourceTreeDirty,sourceFilesMatched:before.files.length,captureBrowser:options.executablePath,passed:['selected PNG dimensions and alpha','fractional viewport export','separate ZIP dimensions and pixels','JPEG signature','cancellation before launch','unchanged packaged source']},null,2));
+})().catch(error=>{console.error(error);process.exitCode=1;});

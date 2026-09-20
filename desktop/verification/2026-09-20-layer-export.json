@@ -1,0 +1,84 @@
+{
+  "date": "2026-09-20",
+  "artifact": "/Users/philipshen/Developer/retouch-worktrees/desktop-export-f7b44dfa/Retouch-0.1.0-mac.zip",
+  "sha256": "5e514e2b7c5979a274ce7d831e54c51d240c5b33fbbc3c305064373308950cf9",
+  "sourceCommit": "f7b44dfaf2cc5efca8d1bac608ec1cea0a04bf8c",
+  "sourceTreeDirty": false,
+  "sourceFilesVerifiedAgainstWorktree": 340,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signing": "Developer ID Application: Philip Shen (2HN3MWMRX2); hardened runtime; strict outer and nested signatures passed",
+  "captureBrowser": {
+    "sha256": "f72b6267207c47d71e529ddf99fbc227a1029a4a3bbc01ae6a1b27c63f6da960",
+    "playwrightVersion": "1.59.1",
+    "revision": "1217"
+  },
+  "packagedExport": {
+    "sourceCommit": "f7b44dfaf2cc5efca8d1bac608ec1cea0a04bf8c",
+    "sourceTreeDirty": false,
+    "sourceFilesMatched": 340,
+    "captureBrowser": "/Users/philipshen/Developer/retouch-worktrees/desktop-export-f7b44dfa/Retouch.app/Contents/Resources/capture-browser/arm64/chrome-headless-shell",
+    "passed": [
+      "selected PNG dimensions and alpha",
+      "fractional viewport export",
+      "separate ZIP dimensions and pixels",
+      "JPEG signature",
+      "cancellation before launch",
+      "unchanged packaged source"
+    ]
+  },
+  "packagedCapture": "capture/open/health/stop/cancel/duplicate flag checks passed with absent user browser cache",
+  "testRuntimeIntegrity": {
+    "package": {
+      "captureBrowser": {
+        "playwrightVersion": "1.59.1",
+        "revision": "1217",
+        "architectures": [
+          "arm64",
+          "x64"
+        ],
+        "files": 34
+      },
+      "sourceCommit": "f7b44dfaf2cc5efca8d1bac608ec1cea0a04bf8c",
+      "sourceTreeDirty": false,
+      "sourceFiles": 340,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "runtime": {
+      "packagedFiles": 2323,
+      "packagedSymlinks": 6,
+      "addedDependencyRoots": [
+        "node_modules/.bin/liquid",
+        "node_modules/.bin/liquidjs",
+        "node_modules/@vue/reactivity",
+        "node_modules/@vue/runtime-core",
+        "node_modules/@vue/runtime-dom",
+        "node_modules/@vue/server-renderer",
+        "node_modules/commander",
+        "node_modules/csstype",
+        "node_modules/liquidjs",
+        "node_modules/vue"
+      ],
+      "integrity": "Packaged bytes, modes, symlink targets and inventories match"
+    }
+  },
+  "unitTests": 2071,
+  "localCask": "/Users/philipshen/Developer/retouch-worktrees/desktop-export-f7b44dfa/retouch-studio.rb",
+  "localCaskValidation": "Ruby syntax passed; installation not attempted",
+  "gatekeeper": {
+    "exitCode": 3,
+    "result": "Unnotarized Developer ID"
+  },
+  "unverified": [
+    "native UI launch for this artifact",
+    "Intel runtime execution",
+    "notarization and public distribution",
+    "new cask install and upgrade"
+  ]
+}
