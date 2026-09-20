@@ -26423,3 +26423,24 @@ virtualized or not-yet-loaded application content, expand nested scroll panels,
 or supply the remaining arbitrary-layer/PDF/JPEG export features. No desktop
 rebuild or push; full Figma parity and notarized Homebrew distribution remain
 unfinished.
+
+### JPEG screen export
+
+Export screen now supports PNG and JPEG for both viewport and full-page images.
+JPEG exposes a whole-number quality control from 1 to 100, defaults to 90, and
+uses an opaque background. PNG remains the default and does not receive a quality
+parameter. The download extension, server MIME type and success text follow the
+selected format. Changing format clears stale feedback and hides JPEG-only controls.
+The Actions search also recognizes JPEG/JPG keywords.
+
+Chromium and WebKit passed JPEG signature/MIME validation, 1×/2× dimensions,
+full-page bottom pixels, opaque background/color decoding, and lower file size at
+lower quality on a deterministic canvas fixture. Invalid quality is rejected
+before sending a request. Switching back to PNG produced an actual PNG download.
+Existing viewport/full-page/comparison PNG tests passed both engines. All 24 focused
+export/server tests passed, including format/quality validation, authentication,
+concurrency, cancellation and unchanged source semantics. The light JPEG dialog
+screenshot was inspected; syntax and diff checks passed. No full unit-suite rerun.
+The inherited frozen-snapshot/resource limitations still apply. Arbitrary-layer,
+PDF, transparent background and batch export remain incomplete. No desktop rebuild
+or push; full Figma parity and notarized Homebrew distribution remain unfinished.
