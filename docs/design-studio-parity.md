@@ -28666,3 +28666,19 @@ endpoint parity remain unverified or unsupported. See
 [the stroke audit](stroke-parity.md#alignment-rendering-foundation).
 No desktop rebuild or native launch was performed. Full Figma parity,
 arbitrary-site authoring and trusted public macOS distribution remain incomplete.
+
+### 2026-09-20 — retained SVG stroke source foundation
+
+Added `src/svg-stroke-source.cjs`: canonical HTML/JSX/Liquid retained originals,
+source-geometry/transform snapshot validation, atomic alignment regeneration,
+source identity mapping, altered-output refusal, exact restore and history.
+This is an internal planner; adapter/server registration and UI are not enabled.
+Style fidelity proof, generated-child/ancestor mutation guards, original edits,
+duplication/export and general topology remain open; see `stroke-parity.md`.
+
+Fresh evidence: 2,449 unit tests and 4,104 Chromium/WebKit pixel checks across
+HTML, esbuild-compiled React SSR and LiquidJS output. Pixel cases change alignment
+and verify exact original-source restoration. React output produces no invalid
+attribute warnings. Logs: `/tmp/retouch-stroke-source-full-final.log` and
+`/tmp/retouch-stroke-source-{html,react,liquid}-{chromium,webkit}-final.log`.
+Desktop artifact remains older than this source. Full goal remains incomplete.

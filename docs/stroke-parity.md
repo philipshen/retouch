@@ -72,3 +72,33 @@ assertions for rectangles, circles/arcs, rounded curves, evenodd/nonzero holes,
 nonuniform/rotated transforms and two viewBox scales. Pixel checks use literal
 opaque colors in a standalone SVG; they do not establish behavior in arbitrary
 authored stylesheets. See the main ledger for log paths.
+
+## Retained source transaction foundation — 2026-09-20
+
+`retouch/src/svg-stroke-source.cjs` now plans canonical retained-stroke source
+for HTML, JSX and Liquid. The original primitive/path remains verbatim under a
+hidden original group; a versioned model and generated fill/stroke follow it.
+Creation checks the resolved snapshot against source geometry and transform.
+Changing alignment regenerates the visible result atomically. Restore removes
+the representation and returns the original authored bytes. This restore
+operation deliberately means restore original, not flatten the aligned result.
+
+The planner preserves original and surrounding source identities and ancestry,
+refuses stale hashes, dynamic geometry, duplicate/unaccounted attributes,
+metadata/animation children and externally altered generated markup. Existing
+source transactions provide stale-file protection and exact undo/redo. The
+planner is **not registered with adapters or the server**: browser style proof,
+mutation guards (including multi-selection and ancestor operations), inspector
+routing, paint/geometry editing, duplication and export integration remain open.
+It requires a caller-provided resolved paint snapshot. It does not establish
+correctness under arbitrary author styles or dynamic/inherited paint changes.
+
+Validation: 2,449 unit tests passed, including 12 new source/history tests across
+all three formats. Chromium and WebKit each passed 684 pixel checks per format
+(4,104 total) after creating a retained group and changing its alignment. React
+output is compiled with esbuild and rendered through React; Liquid output is
+rendered through LiquidJS. React warnings and incorrect mask attribute spelling
+fail verification. Each case also checks exact original-source restoration.
+Logs: `/tmp/retouch-stroke-source-full-final.log` and
+`/tmp/retouch-stroke-source-{html,react,liquid}-{chromium,webkit}-final.log`.
+No desktop package was rebuilt for this checkpoint.
