@@ -52,7 +52,7 @@ function transformStyles(parsed){
 }
 // Adapt the authored CSS in one component. This is not a proof that styles
 // imported by JavaScript, ancestors or the host document have been adapted.
-function plan(resolved,{source:text=resolved.source}={}){
+function plan(resolved,{source:text=resolved.source,resolveImport}={}){
  const state=css.documentState(text,resolved.relPath),out=new MagicString(text);
  if(!state.style)return {source:text,changed:false};
  const ranges=state.range?[{start:state.style.content.start,end:state.range.start},{start:state.range.end,end:state.style.content.end}]:[{start:state.style.content.start,end:state.style.content.end}];
@@ -60,7 +60,7 @@ function plan(resolved,{source:text=resolved.source}={}){
  for(const range of ranges){
   const before=text.slice(range.start,range.end);if(!before.trim())continue;
   const parsed=postcss.parse(before);
-  parsed.walkAtRules(rule=>{if(rule.name.toLowerCase()==='import')throw Error('Imported CSS must be adapted before creating a Svelte picture wrapper.');});
+  parsed.walkAtRules(rule=>{if(rule.name.toLowerCase()==='import'){if(!resolveImport)throw Error('Imported CSS must be adapted before creating a Svelte picture wrapper.');resolveImport(rule.params);}});
   const after=transformStyles(parsed);if(after!==before){out.overwrite(range.start,range.end,after);changed=true;}
  }
  const after=out.toString(),next=source.collect(after,resolved.relPath).elements;

@@ -1,13 +1,17 @@
 'use strict';
-const fs=require('node:fs'),assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 exports.run=async({page,app,phone,file,original,state})=>{
- const geometry=frame=>frame.locator('#art img, #art span').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect(),c=getComputedStyle(el);return [r.x,r.y,r.width,r.height,c.marginLeft,c.opacity];}));
+ const geometry=frame=>frame.locator('#art img, #art span').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect(),c=getComputedStyle(el);return [r.x,r.y,r.width,r.height,c.marginLeft,c.opacity,c.borderTopLeftRadius,c.paddingRight];}));
  const before=await Promise.all([app,phone].map(geometry));
  const wrapped=original.replace('<img id="art-image"','<picture data-rt-picture="" style="display:contents"><source media="(max-width:600px)" srcset="/small.svg 1x"/><img id="art-image"').replace('alt="Art"/>','alt="Art"/></picture>');
- const after=require('../../src/svelte-picture-styles.cjs').plan({source:original,relPath:'App.svelte',file},{source:wrapped}).source;fs.writeFileSync(file,after);
- for(const frame of [app,phone])await frame.locator('#art > picture > img').waitFor();
- await page.waitForFunction(()=>{const frames=[document.querySelector('#app'),document.querySelector('iframe[title="Phone comparison preview"]')];return frames.every(frame=>{const d=frame.contentDocument,img=d?.querySelector('#art img');return img&&img.complete&&img.naturalWidth&&d.defaultView.getComputedStyle(img).width===(d.defaultView.innerWidth<=600?'20px':'40px');});});
- assert.deepEqual(await Promise.all([app,phone].map(geometry)),before);await state();await page.screenshot({path:'/tmp/retouch-svelte-picture-style-'+(process.env.RT_E2E_BROWSER||'chromium')+'.png'});
- fs.writeFileSync(file,original);for(const frame of [app,phone])await frame.locator('#art > img').waitFor();await state();assert.deepEqual(await Promise.all([app,phone].map(geometry)),before);
- console.log('SVELTE SCOPED PICTURE CSS, RESPONSIVE GEOMETRY, SIBLING STYLES AND RETAINED STATE PASS');
+ const root=fs.realpathSync(path.dirname(file)),actualFile=fs.realpathSync(file),plan=require('../../src/svelte-picture-style-plan.cjs').plan({appRoot:root,source:original,relPath:'App.svelte',file:actualFile},{source:wrapped,files:['art.css']});
+ const {SourceHistory}=require('../../src/history.cjs'),adapter=require('../../src/adapters/svelte.cjs'),history=new SourceHistory(),saved=history.commit(root,{ok:true,edits:plan.edits});assert.equal(saved.ok,true,saved.reason);
+ async function settled(wrapped){
+  for(const frame of [app,phone])await frame.locator(wrapped?'#art > picture > img':'#art > img').waitFor();
+  await page.waitForFunction(expected=>{const frames=[document.querySelector('#app'),document.querySelector('iframe[title="Phone comparison preview"]')];return frames.every((frame,index)=>{const d=frame.contentDocument,img=d?.querySelector('#art img');if(!img?.complete||!img.naturalWidth)return false;const actual=[...d.querySelectorAll('#art img,#art span')].map(el=>{const r=el.getBoundingClientRect(),c=d.defaultView.getComputedStyle(el);return [r.x,r.y,r.width,r.height,c.marginLeft,c.opacity,c.borderTopLeftRadius,c.paddingRight];});return JSON.stringify(actual)===JSON.stringify(expected[index]);});},before);
+  assert.deepEqual(await Promise.all([app,phone].map(geometry)),before);await state();
+ }
+ await settled(true);await page.screenshot({path:'/tmp/retouch-svelte-picture-style-'+(process.env.RT_E2E_BROWSER||'chromium')+'.png'});
+ for(const [direction,wrapped] of [['undo',false],['redo',true],['undo',false]]){const result=history.apply(root,direction,saved.undoId,adapter);assert.equal(result.ok,true,result.reason);await settled(wrapped);for(const edit of plan.edits)assert.equal(fs.readFileSync(edit.file,'utf8'),wrapped?edit.after:edit.before);}
+ console.log('SVELTE PICTURE CSS IMPORT GRAPH, RESPONSIVE GEOMETRY, EXACT MULTI-FILE HISTORY AND RETAINED STATE PASS');
 };
