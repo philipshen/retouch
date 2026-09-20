@@ -1,6 +1,38 @@
 # Retouch for macOS
 
-## Latest local signed candidate — Svelte components, 2026-09-20
+## Latest local signed candidate — component authoring, 2026-09-20
+
+The universal Developer ID signed app packages clean commit `9d15ca05`, including
+Svelte component insertion, swapping, ordering, reparenting, independent detachment,
+shared-default editing with retained rune state, and structural comparison recovery.
+All 394 source entries and four native build inputs match that checkpoint.
+
+Artifact: `/Users/philipshen/Developer/retouch-worktrees/desktop-authoring-9d15ca05/Retouch-0.1.0-mac.zip`
+
+SHA-256: `892c09475a6c809f984b253d70ff0110f6b686b40b27c17e4733ab227649d2ca`
+
+The extracted ZIP runtime passed 2,385 unit tests, combined Svelte authoring
+workflows in Chromium and WebKit, and React component creation/recovery workflows
+in both browsers. The WebKit React test uses DOM events for offscreen creation
+controls; its pointer and keyboard behavior is still unverified. All 33 desktop
+tests, package tamper checks and bundled PNG/JPEG/ZIP export checks passed.
+Final verification confirmed 4,819 packaged files and seven symlinks unchanged.
+
+Homebrew 7.0.1 installed the checksum-bound local cask into an isolated app
+directory. The installed manifest and signatures matched the archive, and
+quarantine remained intact. The test app and tap were removed and original
+formula, cask, tap, trust and developer-mode inventories were restored.
+Uninstall unexpectedly autoremoved pre-existing `git 2.55.0`; that exact version
+was restored before the final inventory check. For isolated cask verification,
+set `HOMEBREW_NO_AUTOREMOVE=1` as well as `HOMEBREW_NO_AUTO_UPDATE=1` and
+`HOMEBREW_NO_INSTALL_CLEANUP=1` on install and uninstall commands.
+
+Gatekeeper reports **Unnotarized Developer ID**. No native launch occurred.
+Notarization still needs the existing notarytool Keychain profile name. Native UI
+launch, Intel execution, trusted public distribution and cask upgrade remain
+unverified. See the [verification receipt](verification/2026-09-20-component-authoring-developer-id.json).
+
+## Previous signed candidate — Svelte components, 2026-09-20
 
 The universal Developer ID signed app packages clean commit `3f362281`, including
 Svelte component selection, conditional instance grouping, shared property edits,
