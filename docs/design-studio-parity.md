@@ -28318,3 +28318,29 @@ unit tests passed. Logs: /tmp/retouch-shadow-scroll-{chromium,webkit}.log,
 embedded browsing contexts remain unverified. This change does not establish
 full visual parity; desktop artifacts were not rebuilt or launched. Full Figma
 parity, arbitrary-site authoring and trusted public distribution remain open.
+
+### Comparison scrolling through embedded pages checkpoint
+
+Wheel and keyboard input in comparison previews now targets same-origin iframe
+content, including nested frames and same-origin URLs inside srcdoc documents.
+Hit testing accounts for iframe borders, padding and axis-aligned scaling. Pixel
+deltas map into the child viewport; line/page input uses that document's metrics.
+Unconsumed deltas pass through the frame hierarchy with scale correction, while
+nested and root overscroll containment stops propagation. Existing shadow-root
+and SVG handling remains in the path. Traversal is bounded to 20 frame levels.
+
+Known cross-origin URLs and opaque sandboxes are skipped before document access.
+The WebKit test initially caused a sandbox access error by polling contentDocument;
+waiting for the frame load event instead removed that harness probe. Final tests
+completed with no page errors. Redirect-based origin changes, rotated/skewed frames,
+closed shadow roots and cross-origin embedded scrolling remain unverified.
+
+Chromium and WebKit passed real scaled wheel input on both axes, embedded nested
+scrolling, keyboard page/Home/End behavior, inner/root containment, scaled parent
+handoff and nested URL loads under srcdoc. The same runs passed comparison-panel
+resize/cancel, reorder/undo, persistence, retained state and unchanged source.
+All 2,409 unit tests passed. Final logs are
+/tmp/retouch-embed-scroll-controls-{chromium,webkit}-final.log and
+/tmp/retouch-embed-scroll-full-final.log. Desktop artifacts were not rebuilt.
+Full Figma parity, arbitrary-site authoring and trusted public macOS distribution
+remain incomplete.

@@ -80,7 +80,9 @@
     // The root's visible overflow can be supplied by the body, including in
     // quirks-mode pages where scrollingElement itself is the body.
     const overflow=axis=>html['overflow'+axis]==='visible'?(body?.['overflow'+axis]||'visible'):html['overflow'+axis];
+    const beforeX=w.scrollX,beforeY=w.scrollY;
     w.scrollBy({left:/hidden|clip/.test(overflow('X'))?0:dx,top:/hidden|clip/.test(overflow('Y'))?0:dy,behavior:'instant'});
+    return [/contain|none/.test(html.overscrollBehaviorX)?0:dx-(w.scrollX-beforeX),/contain|none/.test(html.overscrollBehaviorY)?0:dy-(w.scrollY-beforeY)];
   }
   const scrollParent=node=>node.assignedSlot||node.parentElement||node.getRootNode()?.host;
   function scrollTarget(d,x,y){
@@ -89,6 +91,31 @@
     // and keyboard input reaches the same nested scroller as native input.
     const seen=new Set();while(node?.shadowRoot&&!seen.has(node)){seen.add(node);const next=node.shadowRoot.elementFromPoint?.(x,y);if(!next||next===node)break;node=next;}
     return node;
+  }
+  function scrollContext(w,x,y){
+    const origin=w.location.origin;
+    let context={w,node:scrollTarget(w.document,x,y),scaleX:1,scaleY:1,parent:null};
+    for(let depth=0;depth<20&&context.node?.localName==='iframe';depth++){
+      const node=context.node;
+      try{
+        if(node.hasAttribute('sandbox')&&!node.sandbox.contains('allow-same-origin'))break;
+        if(!node.hasAttribute('srcdoc')){const url=new URL(node.getAttribute('src')||'about:blank',node.baseURI);if(url.href!=='about:blank'&&url.origin!==origin)break;}
+        const child=node.contentDocument;if(!child?.body||!child.defaultView)break;
+        const bounds=node.getBoundingClientRect(),css=context.w.getComputedStyle(node),sx=bounds.width/node.offsetWidth,sy=bounds.height/node.offsetHeight;
+        if(!Number.isFinite(sx)||!Number.isFinite(sy)||sx<=0||sy<=0)break;
+        const childX=(x-bounds.left)/sx-node.clientLeft-(parseFloat(css.paddingLeft)||0),childY=(y-bounds.top)/sy-node.clientTop-(parseFloat(css.paddingTop)||0);
+        if(childX<0||childY<0||childX>=child.defaultView.innerWidth||childY>=child.defaultView.innerHeight)break;
+        x=childX;y=childY;context={w:child.defaultView,node:scrollTarget(child,x,y),scaleX:context.scaleX*sx,scaleY:context.scaleY*sy,parent:context,sx,sy};
+      }catch{break;}
+    }
+    return context;
+  }
+  function scrollContexts(context,dx,dy){
+    while(context&&(dx||dy)){
+      [dx,dy]=scrollFrom(context.w,context.node,dx,dy);
+      if(context.parent){dx*=context.sx;dy*=context.sy;}
+      context=context.parent;
+    }
   }
   function scrollFrom(w,node,dx,dy){
     const root=w.document.scrollingElement;
@@ -102,7 +129,7 @@
       if(y&&/contain|none/.test(style.overscrollBehaviorY))dy=0;
       node=scrollParent(node);
     }
-    if(root)scrollViewport(w,dx,dy);
+    return root?scrollViewport(w,dx,dy):[dx,dy];
   }
   function sync(force=false){
     if(!open)return;
@@ -649,19 +676,19 @@
         if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End'].includes(event.key))return;
         event.preventDefault();event.stopPropagation();
         try{
-          const d=frame.contentDocument,w=frame.contentWindow,loc=w.location,root=d?.scrollingElement;
-          if(!root||loc.origin!==location.origin||loc.pathname+loc.search+loc.hash!==path())return;
-          const node=scrollTarget(d,width/2,height/2);
+          const d=frame.contentDocument,outer=frame.contentWindow,loc=outer.location;
+          if(!d?.scrollingElement||loc.origin!==location.origin||loc.pathname+loc.search+loc.hash!==path())return;
+          const context=scrollContext(outer,width/2,height/2),{w,node}=context,root=w.document.scrollingElement;if(!root)return;
           let target=node;
           while(target&&target!==root){
             const style=w.getComputedStyle(target);
             if(typeof target.scrollBy==='function'&&/auto|scroll/.test(style.overflowY)&&(target.scrollHeight>target.clientHeight||/contain|none/.test(style.overscrollBehaviorY)))break;
             target=scrollParent(target);
           }
-          const nested=target&&target!==root,page=Math.floor((nested?target.clientHeight:height)*.9),top=nested?target.scrollTop:w.scrollY;
+          const nested=target&&target!==root,page=Math.floor((nested?target.clientHeight:w.innerHeight)*.9),top=nested?target.scrollTop:w.scrollY;
           const dx=event.key==='ArrowLeft'?-40:event.key==='ArrowRight'?40:0;
-          const dy=({ArrowUp:-40,ArrowDown:40,PageUp:-page,PageDown:page,Home:-top,End:nested?target.scrollHeight-target.clientHeight-top:root.scrollHeight-height-top})[event.key]||0;
-          scrollFrom(w,node,dx,dy);
+          const dy=({ArrowUp:-40,ArrowDown:40,PageUp:-page,PageDown:page,Home:-top,End:nested?target.scrollHeight-target.clientHeight-top:root.scrollHeight-w.innerHeight-top})[event.key]||0;
+          scrollContexts(context,dx,dy);
         }catch{}
       });
       viewport.addEventListener('wheel',e=>{
@@ -670,10 +697,9 @@
         try{
           const d=frame.contentDocument,w=frame.contentWindow,bounds=viewport.getBoundingClientRect(),scale=viewport.clientWidth/width;
           if(!d?.body||!Number.isFinite(scale)||scale<=0)return;
-          let node=scrollTarget(d,(e.clientX-bounds.left)/scale,(e.clientY-bounds.top)/scale);
-          const css=w.getComputedStyle(node),line=parseFloat(css.lineHeight)||16;
-          let dx=e.deltaX*(e.deltaMode===1?line:e.deltaMode===2?width:1/scale),dy=e.deltaY*(e.deltaMode===1?line:e.deltaMode===2?height:1/scale);
-          scrollFrom(w,node,dx,dy);
+          const context=scrollContext(w,(e.clientX-bounds.left)/scale,(e.clientY-bounds.top)/scale),css=context.w.getComputedStyle(context.node),line=parseFloat(css.lineHeight)||16;
+          const dx=e.deltaX*(e.deltaMode===1?line:e.deltaMode===2?context.w.innerWidth:1/(scale*context.scaleX)),dy=e.deltaY*(e.deltaMode===1?line:e.deltaMode===2?context.w.innerHeight:1/(scale*context.scaleY));
+          scrollContexts(context,dx,dy);
         }catch{}
       },{passive:false});
       cards.push({card,frame,surface,retryImageControl,previewBody,setCollapsed,attachMarquee,overlay,message,scopeMessage,scopeButton,viewport,previewFrame,resizeHandles,width,height,edit,reveal,up,down,move});cardLayout.observe(card);
