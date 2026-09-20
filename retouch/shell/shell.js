@@ -790,8 +790,8 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
   const editId = info.id;
   renderPanel(true);
   const originalHTML=el.innerHTML;
-  // Keep Vue's VNode-owned children untouched while the editor changes markup.
-  const originalNodes=info.renderRevisionAttribute==='data-rt-revision'&&info.canSetChildren?[...el.childNodes]:null;
+  // Keep framework-owned children untouched while the editor changes markup.
+  const originalNodes=info.renderRevisionAttribute==='data-rt-revision'&&(info.canSetChildren||info.preserveTextNodes)?[...el.childNodes]:null;
   if(originalNodes)el.replaceChildren(...originalNodes.map(node=>node.cloneNode(true)));
   if (info.richText) {
     try { RetouchRichTextSource.prepare(el,info.richText); }
@@ -885,7 +885,7 @@ async function persistInlineEdit() {
       updateSource(ed.info, res);
       if (op.type === 'setText') {
         ed.info.text = op.text;
-        for (const m of (ed.info.textSource ? [] : matchingEls(ed.id))) if (m !== ed.el) m.textContent = op.text;
+        for (const m of (ed.info.textSource||ed.info.preserveTextNodes ? [] : matchingEls(ed.id))) if (m !== ed.el) m.textContent = op.text;
       }
       // Confirm the framework consumed the edited text before allowing undo.
       // Otherwise rapid save/undo can coalesce into the original virtual node,
@@ -2078,9 +2078,10 @@ function renderPanelContents(textEditing=false) {
   file.textContent = info.file;
   head.appendChild(file);
   if(info.kind==='instance'&&sel.multiple?.length>1){panelBody.append(head,componentSelectionSection(sel.multiple));return;}
-  if(!info.svgBooleanOwner&&!(sel.multiple||[]).some(i=>i.svgBooleanOwner))head.appendChild(screenScopeSection());
+  if(info.styleAuthoring!==false&&!info.svgBooleanOwner&&!(sel.multiple||[]).some(i=>i.svgBooleanOwner))head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
   mountLayerStyleClipboard();
+  if(sel.multiple?.length>1&&info.styleAuthoring===false){const section=RetouchInspector.section('Selection');RetouchInspector.note(section,'Select one layer to edit its content.');panelBody.append(section);return;}
   if(groupMovementRoots())panelBody.append(groupMovementSection(info));
   else{const roots=groupMovementRoots(true);if(roots?.every(el=>el.namespaceURI==='http://www.w3.org/1999/xhtml')&&(sel.multiple||[info]).every(item=>item.kind!=='instance'&&(item.cssAuthoring||item.classSelection&&!item.classNameDynamic))){const section=RetouchInspector.section('Scale');appendSelectionScaleControls(section,info,roots);panelBody.append(section);}}
   if(info.svgBooleanOwner||(sel.multiple||[]).some(i=>i.svgBooleanOwner)){
@@ -2250,7 +2251,7 @@ function renderPanelContents(textEditing=false) {
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{},(save,preview)=>repositionImage(target,save,preview)));
     if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
     if(info.src!==null||info.responsiveImage)panelBody.appendChild(imageSection(info));
-  }else{
+  }else if(info.styleAuthoring!==false){
   if(target)panelBody.appendChild(RetouchClassSiteVariables.mount(style,target,setClasses,message=>toast(message,'err')));
   const imageFill=RetouchImageFill.mount(style,target,setClasses,null,{},imageFillUpload(info),/\.liquid$/i.test(info.file)?(src,initialize,action,stack)=>setLiquidImageFill(info,src,initialize,action,stack):null,projectImageBrowser(info));if(imageFill)panelBody.append(imageFill);
   if(target?.namespaceURI==='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchSVGPaint.mount(style,target,setClasses));
@@ -2267,11 +2268,11 @@ function renderPanelContents(textEditing=false) {
   panelBody.appendChild(colorSection('Text color', 'text', style));
   panelBody.appendChild(RetouchInspector.effects(style, target, setClasses, message => toast(message, 'err')));
 
-  }
+  }else{RetouchInspector.note(head,'Style editing is not available for this source yet.');if(info.canSetSrc)panelBody.append(imageSection(info));}
   // Text
   const tsec = document.createElement('div');
   tsec.className = 'sec';
-  tsec.innerHTML = '<h3>Text</h3>';
+  tsec.innerHTML = info.styleAuthoring===false?'<h3>Typography</h3>':'<h3>Text</h3>';
   if(target&&(info.text!=null||info.mixedText)&&(!info.textSource||info.textSource.format==='text'||info.richText)){
     const edit=RetouchInspector.button('Edit text',()=>{
       if(mode!=='edit'||editing||panelTasks||sourceRequests||undoBusy||sel?.info!==info||!target.isConnected)return;
@@ -2343,7 +2344,7 @@ function renderPanelContents(textEditing=false) {
   }
   panelBody.appendChild(tsec);
 
-  if(info.cssAuthoring)return;
+  if(info.cssAuthoring||info.styleAuthoring===false)return;
   // Advanced: raw CSS class manipulation, collapsed by default (not tier 1).
   const adv = document.createElement('details');
   adv.className = 'sec advanced';

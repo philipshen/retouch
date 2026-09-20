@@ -9,6 +9,7 @@
   "scripts": {
     "test": "node --test 'test/**/*.test.cjs'",
     "test:e2e": "node test/e2e/run.cjs",
+    "test:e2e:vite-svelte": "node test/e2e/vite-svelte.cjs",
     "test:e2e:style-clipboard": "node test/e2e/style-clipboard.cjs",
     "test:e2e:layer-style-classes": "node test/e2e/layer-style-classes.cjs",
     "test:e2e:component-default": "node test/e2e/component-default.cjs",
@@ -166,6 +167,7 @@
     "playwright": "1.59.1",
     "postcss": "8.5.28",
     "postcss-selector-parser": "7.1.6",
+    "svelte": "5.57.1",
     "tailwind-merge": "^3.0.0"
   },
   "engines": {

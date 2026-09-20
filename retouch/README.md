@@ -95,8 +95,8 @@ It serves the editor and authenticated source API on the Vite origin and closes
 its writer when Vite shuts down. Production builds exclude the plugin.
 
 The browser fixture verifies text editing, exact source undo, and React state
-and document retention through hot updates. Svelte, SSR editing, and universal
-hot-update retention are not covered. Initial Vue support is described below.
+and document retention through hot updates. SSR editing and universal
+hot-update retention are not covered. Vue and initial Svelte support are described below.
 Image uploads use Vite's configured public directory and base URL. Generated
 upload URLs are served immediately, before Vite's file watcher catches up.
 With `publicDir: false`, uploading is unavailable; directories outside the source
@@ -188,6 +188,42 @@ and tree drag/drop, text/frame insertion, canvas text placement and
 dragged text boxes with immediate typing and undo, and production style retention with transient
 instrumentation excluded. Tested with Vite 8.3.0, Vue 3.5.42 and
 `@vitejs/plugin-vue` 6.0.9 in Chromium and WebKit. This does not establish compatibility with every Vue setup.
+
+## Vite Svelte projects (initial support)
+
+Svelte 5 projects can enable Retouch before the Svelte Vite plugin:
+
+```js
+import { defineConfig } from 'vite';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { retouch } from 'retouch/vite';
+
+export default defineConfig({
+  plugins: [retouch({ adapter: 'svelte' }), svelte()],
+});
+```
+
+Run the normal development command and open `/rt` on the same loopback port.
+With only the Svelte plugin present, `retouch()` detects it automatically. Mixed
+Vue/Svelte projects require an explicit adapter choice.
+
+This initial integration maps native source layers through conditional branches,
+loops, snippets, and slots. Literal text, layer names, literal link destinations,
+and literal image sources write back to `.svelte` files with exact source undo.
+Expressions, raw HTML, text bindings, marker-conflicting spreads, and responsive
+image bindings remain protected. Responsive CSS, rich text, structural editing,
+and component-property controls for Svelte are not implemented yet.
+
+Simple literal text updates use development-only Svelte store bindings so the
+component stays mounted, including through undo/redo and conditional remounts.
+The inline editor temporarily edits cloned child nodes and restores Svelte's
+original nodes before the source update. Script, structure, attribute, and
+whitespace-sensitive text changes use ordinary Svelte HMR; their local state
+retention is not guaranteed. Production builds omit the source markers and text
+runtime. SvelteKit SSR/hydration, custom preprocessing, and other Svelte compiler
+versions remain unverified.
+
+Verified with Vite 8.3.0, Svelte 5.57.1, and `@sveltejs/vite-plugin-svelte` 7.3.0.
 
 ## Explicit config mode
 

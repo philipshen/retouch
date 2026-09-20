@@ -3,8 +3,8 @@ const fs=require('node:fs'),path=require('node:path'),{once}=require('node:event
 const virtual='virtual:retouch-group-scale.jsx',resolvedVirtual='\0retouch-group-scale.jsx';
 const vueStylePrefix='virtual:retouch-vue-css/';
 function retouch(options={}){
- if(options.adapter!==undefined&&!['react','vue'].includes(options.adapter))throw Error('[retouch] Choose the react or vue source adapter.');
- let config,sidecar,sourceAdapter;const vueStyleModules=new Map(),vueSourceRevisions=new Map();
+ if(options.adapter!==undefined&&!['react','vue','svelte'].includes(options.adapter))throw Error('[retouch] Choose the react, vue, or svelte source adapter.');
+ let config,sidecar,sourceAdapter;const vueStyleModules=new Map(),vueSourceRevisions=new Map(),svelteSnapshots=new Map();
  function vueStyleFile(id){
   const key=id.replace(/^\0/,'').split('?')[0];if(!key.startsWith(vueStylePrefix)||!key.endsWith('.css'))return null;
   const encoded=key.slice(vueStylePrefix.length,-4);if(!/^[A-Za-z0-9_-]+$/.test(encoded))return null;
@@ -23,11 +23,13 @@ function retouch(options={}){
    const root=fs.realpathSync(value.root),publicDir=value.publicDir===undefined?path.join(value.root,'public'):value.publicDir;
    config={...value,root,publicDir:publicDir?path.resolve(root,path.relative(value.root,publicDir)):null};
    const vuePlugins=(value.plugins||[]).filter(plugin=>plugin.name==='vite:vue');
-   const renderer=options.adapter||(vuePlugins.length?'vue':'react');
+   const sveltePlugins=(value.plugins||[]).filter(plugin=>plugin.name==='vite-plugin-svelte');
+   const renderer=options.adapter||(sveltePlugins.length?'svelte':vuePlugins.length?'vue':'react');
+   if(!options.adapter&&sveltePlugins.length&&vuePlugins.length)throw Error('[retouch] Choose a source adapter for this mixed-framework project.');
    if(renderer==='vue'){
     if(vuePlugins.length!==1||!vuePlugins[0].api?.options)throw Error('[retouch] Vue editing needs one @vitejs/plugin-vue integration.');
     sourceAdapter=require('./adapters/vue.cjs').create({compilerOptions:()=>vuePlugins[0].api.options.template?.compilerOptions||{},styleModule:relative=>vueStylePrefix+Buffer.from(relative).toString('base64url')+'.css'});
-   }else sourceAdapter=require('./adapter.cjs').getAdapter('react');
+   }else{if(renderer==='svelte'&&sveltePlugins.length!==1)throw Error('[retouch] Svelte editing needs one @sveltejs/vite-plugin-svelte integration.');sourceAdapter=require('./adapter.cjs').getAdapter(renderer);}
   },
   async configureServer(server){
    require('./installation.cjs').check();
@@ -45,9 +47,10 @@ function retouch(options={}){
    });
    server.httpServer?.once('listening',()=>{const address=server.httpServer.address();if(address&&typeof address==='object')server.config.logger.info('[retouch] Open http://localhost:'+address.port+'/rt'+(config.base==='/'?'':config.base));});
   },
-  resolveId(id){if(config?.command!=='serve')return;if(sourceAdapter?.name==='react'&&id===virtual)return resolvedVirtual;if(sourceAdapter?.name==='vue'&&id.startsWith(vueStylePrefix)&&vueStyleFile(id))return '\0'+id;},
+  resolveId(id){if(config?.command!=='serve')return;if(sourceAdapter?.name==='svelte'&&id==='virtual:retouch-svelte-source')return '\0retouch-svelte-source';if(sourceAdapter?.name==='react'&&id===virtual)return resolvedVirtual;if(sourceAdapter?.name==='vue'&&id.startsWith(vueStylePrefix)&&vueStyleFile(id))return '\0'+id;},
   async load(id){
    if(config?.command!=='serve')return null;
+   if(sourceAdapter?.name==='svelte'&&id==='\0retouch-svelte-source')return require('./svelte-hmr.cjs').runtime();
    if(sourceAdapter?.name==='vue'&&id.startsWith('\0'+vueStylePrefix)){
     const target=vueStyleFile(id);if(!target)return null;
     this.addWatchFile(target.file);if(!vueStyleModules.has(target.file))vueStyleModules.set(target.file,new Set());vueStyleModules.get(target.file).add(id);
@@ -56,15 +59,23 @@ function retouch(options={}){
    if(sourceAdapter?.name!=='react'||id!==resolvedVirtual)return null;const load=require('node:module').createRequire(path.join(config.root,'package.json')),vite=await import(require('node:url').pathToFileURL(load.resolve('vite')).href);if(typeof vite.transformWithOxc!=='function')throw Error('[retouch] The Vite plugin currently requires Vite 8.');const result=await vite.transformWithOxc(require('./react-group-scale-runtime.cjs').component(),'retouch-group-scale.jsx',{jsx:{runtime:'automatic',development:true},sourcemap:true});return {code:result.code,map:result.map};
   },
   transform(source,id,options){
-   if(config?.command!=='serve'||options?.ssr||id.startsWith('\0')||id.includes('?')||!(sourceAdapter.name==='vue'?/\.vue$/i:/\.(jsx|tsx)$/).test(id))return null;
+   if(config?.command!=='serve'||options?.ssr||id.startsWith('\0')||id.includes('?')||!sourceAdapter.matches(id))return null;
    if(id.split(path.sep).includes('node_modules'))return null;
    try{
     const real=fs.realpathSync(id),realRelative=path.relative(config.root,real);if(real.split(path.sep).includes('node_modules')||realRelative.startsWith('..'+path.sep)||path.isAbsolute(realRelative))return null;
+    if(sourceAdapter.name==='svelte'){if(!svelteSnapshots.has(real))svelteSnapshots.set(real,require('./svelte-source.cjs').textSnapshot(source,realRelative.split(path.sep).join('/')));return sourceAdapter.stamp(source,real,config.root,{runtime:true});}
     if(sourceAdapter.name==='vue'){vueSourceRevisions.set(id,sourceAdapter.contentHash(source));return sourceAdapter.stamp(source,real,config.root);}
     const helper=path.join(path.dirname(real),'.retouch-group-scale.jsx'),runtime=require('./react-group-scale-runtime.cjs');if(fs.existsSync(helper))this.addWatchFile(helper);
     return require('./stamp.cjs').stamp(source,real,config.root,{groupScaleRuntime:virtual,redirectGroupScaleRuntime:fs.existsSync(helper)&&fs.readFileSync(helper,'utf8')===runtime.component()});
    }catch(error){this.warn('[retouch] Stamping skipped for '+id+': '+error.message);return null;}
   },
+  hotUpdate:{order:'pre',async handler(ctx){
+   if(sourceAdapter?.name!=='svelte'||this.environment?.config.consumer!=='client'||!sourceAdapter.matches(ctx.file))return;
+   let file;try{file=fs.realpathSync(ctx.file);}catch{return;}const before=svelteSnapshots.get(file);if(!before)return;
+   const relative=path.relative(config.root,file).split(path.sep).join('/');let next;try{next=require('./svelte-source.cjs').textSnapshot(await ctx.read(),relative);}catch{return;}
+   svelteSnapshots.set(file,next);if(before.signature!==next.signature)return;if(before.revision===next.revision)return [];
+   this.environment.hot.send({type:'custom',event:'retouch:svelte-source',data:{file:relative,revision:next.revision,texts:next.texts}});return [];
+  }},
   async handleHotUpdate(ctx){
    if(config?.command!=='serve'||sourceAdapter?.name!=='vue'||!sourceAdapter.matches(ctx.file)||ctx.file.split(path.sep).includes('node_modules'))return;
    let real;try{real=fs.realpathSync(ctx.file);}catch{return;}
