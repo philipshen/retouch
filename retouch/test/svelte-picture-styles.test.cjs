@@ -26,5 +26,17 @@ test('Svelte whole-selector globals retain global scope across picture alternati
  const rules=[];postcss.parse(compiled.css.code).walkRules(rule=>{if(rule.nodes.some(node=>node.type==='decl'&&node.prop==='margin-left'))rules.push(rule.selector);});
  assert.equal(rules.length,1);assert.match(rules[0],/data-rt-picture/);assert.doesNotMatch(rules[0],/svelte-scope-test/);assert.match(result.source,/keep global/);
  assert.equal(styles.plan(resolve(result.source)).source,result.source);
- for(const selector of [':global', '.frame > :global(img)', ':global(.frame) > img', ':global(:global(img))'])assert.throws(()=>styles.plan(resolve(original.replace('.frame > img',selector))));
+ for(const selector of ['.frame > :global(img)', ':global(.frame) > img', ':global(:global(img))'])assert.throws(()=>styles.plan(resolve(original.replace('.frame > img',selector))));
+});
+
+test('Svelte global blocks retain keyframe scope, media rules and nested selector order',()=>{
+ const globalCSS='/* before */ :global { /* inside */ .frame { > img {width:40px; animation:pulse 1s} > img + button {margin-left:8px} } @media(max-width:600px){.frame > img{width:20px}} @keyframes pulse{from{opacity:0}to{opacity:1}} } /* after */';
+ const text=original.replace(/<style>[\s\S]*<\/style>/,'<style>'+globalCSS+'</style>');
+ const wrapped=text.replace('<img','<picture data-rt-picture="" style="display:contents"><img').replace('/><button','/></picture><button');
+ const result=styles.plan(resolve(wrapped));
+ const compiled=require('svelte/compiler').compile(result.source,{filename:'App.svelte',cssHash:()=> 'svelte-scope-test'});
+ assert.match(result.source,/:global\s*\{/);assert.match(result.source,/inside/);assert.match(result.source,/before/);assert.match(result.source,/after/);
+ assert.match(compiled.css.code,/@keyframes pulse/);assert.match(compiled.css.code,/animation:pulse 1s/);assert.doesNotMatch(compiled.css.code,/svelte-scope-test/);assert.match(compiled.css.code,/data-rt-picture/);assert.match(compiled.css.code,/@media/);
+ assert.equal(styles.plan(resolve(result.source)).source,result.source);
+ assert.throws(()=>styles.plan(resolve(text.replace(':global {','.frame { :global {').replace('/* after */','} /* after */'))),/Nested global/);
 });

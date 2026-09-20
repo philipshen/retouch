@@ -27815,3 +27815,11 @@ The component stylesheet planner now supports whole-selector `:global(...)` rule
 Validation: all 2,286 tests passed (`/tmp/retouch-svelte-global-picture-full.log`). The compiler test verifies expanded sibling rules have no Svelte scope class, preserves comments, checks idempotence and rejects mixed/block/nested global directives. Chromium and WebKit passed the updated fixture with scoped responsive image sizing and global sibling/positional styling, unchanged main/phone geometry and retained state/documents. Both recovered from 80 dropped source broadcasts and passed production exclusion checks (`/tmp/retouch-svelte-global-picture-{chromium,webkit}.log`). These remain direct source-update checks, not evidence of an enabled inspector wrapping workflow.
 
 Full parity, arbitrary-site coverage and notarized/Homebrew distribution remain unfinished. Native artifacts were not modified or launched.
+
+### Svelte global CSS block checkpoint
+
+Added picture-selector adaptation inside standalone Svelte `:global { ... }` blocks, including responsive rules and native selector nesting. Blocks retain their position and global boundary while the surrounding scoped stylesheet is adapted separately. Keeping the boundary also preserves Svelte's global keyframe naming. Comments survive; output remains idempotent and subject to stylesheet size limits. Global blocks nested under scoped selectors still refuse because moving that boundary needs separate handling.
+
+Validation: all 2,287 tests passed (`/tmp/retouch-svelte-global-block-full.log`). New compiler coverage checks global keyframe/animation names, absent scope classes, nested selectors, media rules, comments, repeat adaptation and nested-scope refusal. Chromium and WebKit passed main/phone geometry checks with differing responsive caption margins authored inside a global block, plus existing global positional and scoped sizing rules. Both retained state/documents, recovered from 80 dropped source broadcasts and passed production exclusion (`/tmp/retouch-svelte-global-block-{chromium,webkit}.log`).
+
+Picture wrapping remains unavailable in the inspector until mixed scope boundaries and imported/ancestor/document styles are accounted for. Full Figma parity, arbitrary-site coverage and notarized/Homebrew distribution remain unfinished. Native artifacts were not modified or launched.
