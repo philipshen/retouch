@@ -28516,3 +28516,33 @@ reactive styles, bindings, drafts and local store retention passed
 (/tmp/retouch-svelte-independent-create-{chromium,webkit}.log).
 The signed desktop artifact has not been rebuilt. Full Figma parity,
 arbitrary-site authoring and trusted public macOS distribution remain incomplete.
+
+
+### Svelte component extraction with conditional content
+
+Create component now retains native markup inside if/else and nested else-if
+branches. Conditional tests and branch expressions become lazy parent-owned
+getter props, preserving short-circuit visibility and avoiding eager reads such
+as person.name while person is null. Conditional form bindings use getter/setter
+props so assignments still reach the original parent, without evaluating an
+inactive member path. Callback closures, directives and repeated references
+retain their parent scope; generated setter arguments avoid name collisions.
+
+All 2,428 unit tests passed (/tmp/retouch-svelte-create-conditional-full.log).
+Source tests cover nested branches, lazy null-sensitive expressions, binding
+setter scope, eager/lazy name separation and exact two-file history.
+Chromium and WebKit passed normal creation, duplication, undo and redo with the
+conditional branch initially hidden, then with the main branch initially open
+and its bound value edited while the phone preview remained empty. The edited
+value survived extraction/history. Showing/hiding a person, editing its name,
+opening nested details and switching the else-if branch worked after creation,
+undo and redo. Existing styles, drafts, parent/sibling state and local store
+retention checks also passed. Logs:
+/tmp/retouch-svelte-create-conditional-{chromium,webkit}.log and
+/tmp/retouch-svelte-create-conditional-visible-{chromium,webkit}.log.
+
+Each/await/key/snippet blocks, nested component context, authored scoped CSS and
+other unsupported directives still prevent extraction. Evaluated side-effect
+expressions retain their existing refusal. The desktop package was not rebuilt
+or launched. Full Figma parity, arbitrary-site authoring and trusted public macOS
+distribution remain incomplete.
