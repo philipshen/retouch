@@ -27705,3 +27705,11 @@ Enabled native-container insertion through the existing layer actions and canvas
 Validation: all 2,258 tests passed (`/tmp/retouch-svelte-insert-full.log`). Source tests cover populated/control-flow containers, empty-tag expansion, CRLF preservation, existing identities, invalid positions and exact text/frame history. Chromium and WebKit passed text/frame actions, literal brace typing, nested insertion, measured click placement, dragged box dimensions/wrapping, exact undo/redo and retained counter/input/document state. Both runs recovered from 112 dropped custom source updates and passed existing production checks. Logs: `/tmp/retouch-svelte-insert-{chromium,webkit}.log`. The empty-tag fixture deliberately uses Svelte's accepted but warned-about non-void self-closing syntax.
 
 Remaining work includes reparenting, grouping, more insertion types, broader component/state support and the original full Figma parity objective. Native notarization and Homebrew Cask delivery remain unproven.
+
+### Svelte container movement checkpoint
+
+Enabled Move into and layer-tree drag between native containers in the same component and lexical scope, including empty destinations and before/after placement. Moves preserve subtree source bytes, style ownership, source identity mappings, locks and exact history. Cycles, stale revisions, generated-content destinations, and crossings of loop, branch, local declaration, slot or namespace boundaries refuse before writes.
+
+Validation: all 2,262 tests passed after the final namespace guard (`/tmp/retouch-svelte-reparent-final.log`). Focused source tests compile accepted moves, verify responsive styles and exact undo/redo, and reject scope changes. Chromium and WebKit passed the destination picker, actual tree drag, style/lock retention, exact history, retained counter/input/document state and production exclusion. Both browser runs recovered from 88 dropped source broadcasts. Logs: `/tmp/retouch-svelte-reparent-{chromium,webkit}.log`; inspected screenshot: `/tmp/retouch-svelte-reparent-webkit.png`. Browser runs preceded the final namespace refusal guard; the final full suite includes that guard.
+
+Full Figma parity, broader component editing, universal site coverage and notarized/Homebrew desktop delivery remain incomplete. This checkpoint does not alter or launch the native artifact.

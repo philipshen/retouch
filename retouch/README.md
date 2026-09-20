@@ -232,8 +232,10 @@ text, control-flow or component siblings remain unavailable; copies containing
 IDs, refs, spread attributes or computed style identities are refused. Content
 containers support new text and frame layers, including expanding empty tags,
 click-to-place text and dragged text boxes. Containers with bound generated
-content refuse insertion. General reparenting, grouping and component-property
-controls remain unfinished.
+content refuse insertion. Layers can move between native containers in the same
+component and lexical scope using Move into or layer-tree drag. Moves across
+loop, branch, declaration, slot or namespace boundaries are refused. Grouping
+and component-property controls remain unfinished.
 
 Simple literal text, managed styles, style links, and variable bindings use development-only Svelte store
 bindings and an independent stylesheet so the component stays mounted, including
