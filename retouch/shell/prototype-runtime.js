@@ -7,6 +7,7 @@
  function current(target=frame){try{const w=target.contentWindow;if(w.location.origin!==location.origin)return null;return {url:w.location.pathname+w.location.search+w.location.hash,x:w.scrollX,y:w.scrollY};}catch{return null;}}
  function navigate(destination,scroll,transition){root.RetouchPrototypeNavigation.begin(transition,scroll);main.release?.();main.release=null;const url=new URL(destination,location.href);main.pendingScroll={...scroll,url:url.href};frame.src=url.pathname+url.search+url.hash;}
  function perform(item,context,opener){const before=current();if(!before)return;context.scrollMotion?.cancel();context.scrollMotion=null;
+  if(item.action==='set-variable-mode'){root.RetouchPrototypeVariables.setMode(item.modeChange);return;}
   if(item.action==='set-variable'){root.RetouchPrototypeVariables.assign(item.assignment);return;}
   if(item.action==='open-link'){if(!V.link(item.destination))return;const link=document.createElement('a');link.href=item.destination;link.target='_blank';link.rel='noopener noreferrer';document.body.append(link);link.click();link.remove();return;}
   if(item.action==='open-overlay'){overlays.open(item.destination,item.overlay,opener,item.transition);return;}

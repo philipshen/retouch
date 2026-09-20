@@ -41,6 +41,10 @@
  }
  function route(value){if(typeof value!=='string'||value.length>2048||!value.startsWith('/')||value.startsWith('//')||/[\u0000-\u0020\u007f\\]/.test(value))return false;try{const url=new URL(value,'http://retouch.local');return url.origin==='http://retouch.local'&&!/^\/rt(?:\/|$)/.test(decodeURIComponent(url.pathname));}catch{return false;}}
  function link(value){if(typeof value!=='string'||value.length>2048||!/^https?:\/\//i.test(value)||/[\u0000-\u0020\u007f\\]/.test(value))return false;try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)&&!!url.hostname&&!url.username&&!url.password;}catch{return false;}}
+ function modeChange(value){
+  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['collectionId','modeId'].includes(key))||!['collectionId','modeId'].every(key=>typeof value[key]==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value[key])))throw Error('Choose a variable collection and mode.');
+  return {collectionId:value.collectionId,modeId:value.modeId};
+ }
  function assignment(value){
   if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['id','type','value','variableId','expression'].includes(key))||typeof value.id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.id))throw Error('Choose a variable.');
   if(!['color','number','boolean','string'].includes(value.type))throw Error('Choose a supported variable type.');
@@ -63,23 +67,24 @@
  function validate(value){
   if(!Array.isArray(value)||value.length>32)throw Error('Use at most 32 interactions per source layer.');
   const used=new Set();const result=value.map(item=>{
-   if(!item||typeof item!=='object'||Array.isArray(item)||Object.keys(item).some(key=>!['trigger','action','destination','preserveScroll','overlay','transition','delay','shortcut','scrollOffset','assignment'].includes(key))||!triggers.includes(item.trigger))throw Error('Choose distinct supported interaction triggers.');const key=item.trigger==='keyboard'?'keyboard:'+K.signature(item.shortcut):item.trigger;if(used.has(key))throw Error('Use each trigger or keyboard shortcut only once per layer.');used.add(key);
+   if(!item||typeof item!=='object'||Array.isArray(item)||Object.keys(item).some(key=>!['trigger','action','destination','preserveScroll','overlay','transition','delay','shortcut','scrollOffset','assignment','modeChange'].includes(key))||!triggers.includes(item.trigger))throw Error('Choose distinct supported interaction triggers.');const key=item.trigger==='keyboard'?'keyboard:'+K.signature(item.shortcut):item.trigger;if(used.has(key))throw Error('Use each trigger or keyboard shortcut only once per layer.');used.add(key);
    if(item.trigger!=='keyboard'&&item.shortcut!==undefined)throw Error('Shortcuts belong to keyboard triggers.');
    if(item.trigger==='after-delay'&&(!Number.isInteger(item.delay)||item.delay<1||item.delay>10000)||item.trigger!=='after-delay'&&item.delay!==undefined)throw Error('After delay needs a whole duration from 1 to 10000 ms. Other triggers do not have a delay.');
-   if(!['navigate','back','scroll','open-overlay','swap-overlay','close-overlay','open-link','set-variable'].includes(item.action))throw Error('Choose a supported navigation or overlay action.');
+   if(!['navigate','back','scroll','open-overlay','swap-overlay','close-overlay','open-link','set-variable','set-variable-mode'].includes(item.action))throw Error('Choose a supported navigation or overlay action.');
    if(['navigate','open-overlay','swap-overlay'].includes(item.action)&&!route(item.destination))throw Error('Choose a project page URL beginning with /.');
    if(item.action==='open-link'&&!link(item.destination))throw Error('Enter a complete HTTP or HTTPS URL without embedded credentials.');
    if(item.action==='scroll'&&(typeof item.destination!=='string'||!item.destination||item.destination.length>256||/[\u0000-\u0020\u007f]/.test(item.destination)))throw Error('Choose the destination element ID without #.');
-   if(['back','close-overlay','set-variable'].includes(item.action)&&item.destination!==undefined)throw Error('This action does not have a destination.');
+   if(['back','close-overlay','set-variable','set-variable-mode'].includes(item.action)&&item.destination!==undefined)throw Error('This action does not have a destination.');
+   if(item.action!=='set-variable-mode'&&item.modeChange!==undefined)throw Error('Mode selection belongs to Set variable mode.');
    if(item.action!=='set-variable'&&item.assignment!==undefined)throw Error('Variable assignments belong to Set variable.');
    if(item.preserveScroll!==undefined&&(item.action!=='navigate'||typeof item.preserveScroll!=='boolean'))throw Error('Scroll preservation is available for navigation only.');
    if(item.overlay!==undefined&&item.action!=='open-overlay')throw Error('Overlay settings belong to Open overlay. Swap overlay keeps the current settings.');
    if(item.scrollOffset!==undefined&&(item.action!=='scroll'||!item.scrollOffset||typeof item.scrollOffset!=='object'||Array.isArray(item.scrollOffset)||Object.keys(item.scrollOffset).some(key=>!['x','y'].includes(key))||!['x','y'].every(key=>Number.isFinite(item.scrollOffset[key])&&Math.abs(item.scrollOffset[key])<=100000)))throw Error('Scroll offsets must be finite X and Y values between -100000 and 100000.');
-   return {trigger:item.trigger,action:item.action,...(item.action==='set-variable'?{assignment:assignment(item.assignment)}:{}),...(item.trigger==='keyboard'?{shortcut:K.validate(item.shortcut)}:{}),...(item.trigger==='after-delay'?{delay:item.delay}:{}),...(!['back','close-overlay','set-variable'].includes(item.action)?{destination:item.destination}:{}),...(item.action==='navigate'?{preserveScroll:!!item.preserveScroll}:{}),...(item.action==='open-overlay'?{overlay:overlay(item.overlay)}:{}),...(item.scrollOffset!==undefined?{scrollOffset:{...item.scrollOffset}}:{}),...(item.transition!==undefined?{transition:transition(item.transition,item.action)}:{})};
+   return {trigger:item.trigger,action:item.action,...(item.action==='set-variable-mode'?{modeChange:modeChange(item.modeChange)}:{}),...(item.action==='set-variable'?{assignment:assignment(item.assignment)}:{}),...(item.trigger==='keyboard'?{shortcut:K.validate(item.shortcut)}:{}),...(item.trigger==='after-delay'?{delay:item.delay}:{}),...(!['back','close-overlay','set-variable','set-variable-mode'].includes(item.action)?{destination:item.destination}:{}),...(item.action==='navigate'?{preserveScroll:!!item.preserveScroll}:{}),...(item.action==='open-overlay'?{overlay:overlay(item.overlay)}:{}),...(item.scrollOffset!==undefined?{scrollOffset:{...item.scrollOffset}}:{}),...(item.transition!==undefined?{transition:transition(item.transition,item.action)}:{})};
   });
   if(JSON.stringify(result).length>131072)throw Error('Prototype interactions exceed the source size limit.');
   return result;
  }
  function parse(value){if(value===null)return [];if(typeof value!=='string'||value.length>131072)throw Error('Invalid prototype interactions.');return validate(JSON.parse(value));}
- const api={attribute,positions,triggers,transitions,easings,curves,easing,easingCss,transition,overlay,route,link,assignment,validate,parse};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPrototypeValues=api;
+ const api={attribute,positions,triggers,transitions,easings,curves,easing,easingCss,transition,overlay,route,link,modeChange,assignment,validate,parse};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPrototypeValues=api;
 })(typeof window==='object'?window:globalThis);

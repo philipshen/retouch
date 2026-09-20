@@ -27001,3 +27001,32 @@ mode-changing actions, non-style bindings and the broader design parity matrix
 remain unfinished. This increment does not establish universal site parity.
 No desktop artifact rebuild or native launch; notarized Homebrew distribution
 remains incomplete.
+
+### 2026-09-20 — Set variable mode prototype action
+
+Added collection/mode controls to prototype interactions and a typed source schema
+round-tripped through HTML, React, Vue and Liquid. Presentation mode selections
+are queued alongside assignments and used by copied values and expressions.
+Automatic style bindings merge the current presentation modes with explicit
+binding modes taking precedence. Alias paths, newly mounted instances and live
+binding refresh use the same resolution. Reset cancels pending mode requests and
+restores original styles; source/library files are never changed by playback.
+
+Reference: https://help.figma.com/hc/en-us/articles/15253268379799-Variable-modes-in-prototypes
+Figma changes the current design page's Auto mode and preserves explicit modes.
+Retouch currently treats the connected site's presentation as one shared mode
+context across its navigation/overlay documents. Its explicit modes are stored
+per binding; inherited object mode authoring and separate design-page contexts
+remain gaps. Existing Set variable assignments still override a variable across
+modes; independent per-mode assignments and expression references are unfinished.
+
+All 2,117 unit tests passed, including source history across four adapters, mode
+identity validation, current-mode copy/expression resolution and reset during an
+in-flight mode request. Chromium and WebKit mode tests cover UI authoring, exact
+undo/redo, repeated mode switching, automatic/explicit/alias bindings, dynamic
+mounting, keyboard activation, restart/exit and unchanged source/library files.
+The light-theme interaction screenshot was inspected. Expression browser suites
+passed both engines; existing literal/copy playback passed Chromium.
+
+No desktop artifact rebuild, native launch or push in this increment. Full design
+parity and notarized Homebrew distribution remain unfinished.
