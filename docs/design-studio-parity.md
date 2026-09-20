@@ -26368,3 +26368,36 @@ screenshots were inspected. Syntax and diff checks passed; no source-operation
 changes or full unit-suite rerun. Native touch/pen and complete comparison-canvas
 authoring remain unfinished. No desktop rebuild or push; full Figma parity and
 notarized Homebrew distribution remain unfinished.
+
+### PNG export of live screen snapshots
+
+The toolbar and Actions menu now open Export screen. Users can choose the main
+canvas or a loaded comparison and download its visible viewport as a 1× or 2× PNG.
+The shared capture serializer now accepts a source document and can preserve
+nested/root scroll positions for export. It copies current computed styles and
+form values without navigating or modifying the source document. The server
+renders the inert snapshot with the existing Chromium capture browser. Snapshots
+are sanitized again server-side; a CSP and request interception block scripts,
+embedded documents, unsupported protocols, non-GET requests and editor endpoints.
+The authenticated endpoint bounds document size, dimensions and pixel count,
+serializes exports per server, and releases the browser/slot on cancellation.
+Known missing media/canvas/font content and failed image/font/resource loads return
+an error instead of a successful download. The modal remains open with feedback.
+
+Validation: Chromium and WebKit editor suites passed main/comparison PNG downloads,
+1×/2× dimensions and decoded color pixels, nested scroll capture, live-style/state
+retention, Actions discovery, narrow-dialog bounds, token/method rejection,
+non-execution of supplied script content, oversized-pixel refusal and missing-image
+errors. Existing asset/font and shadow-root capture suites passed both engines,
+as did compact screen controls. Export validation and concurrent-request/client-
+cancellation tests passed. All 2,063 unit tests passed on the final changes, along with syntax and diff
+checks. The centered light dialog screenshot was inspected.
+
+This uses Chromium to render a frozen DOM snapshot, so it is not a promise of
+pixel-identical native WebKit rendering. Authenticated assets without public access,
+blob URLs, unreadable font definitions, inaccessible closed shadow roots, embedded
+documents and live media still need fuller support. Password/file input values are
+not serialized. Exports currently cover a viewport, not arbitrary selected layers,
+full-page output, PDF/JPEG, transparent backgrounds or batches. No desktop artifact
+was rebuilt or branch pushed; packaged export/native launch remains unverified.
+Full Figma parity and notarized Homebrew distribution remain unfinished.

@@ -59,9 +59,10 @@ function startServer({ appRoot, port, adapter, proxyTo, serveSite, rendering = {
     `[retouch] adapter=${adapter.name}; indexed ${fileCount} files under ${appRoot} (${index.idToFile.size} elements)`
   );
 
+  const screenExportState={busy:false};
   const server = http.createServer((req, res) => {
     try {
-      handle(req, res, { index, token, stateScope, appRoot, adapter, proxyTo, serveSite, rendering, history, sourceMonitor, retryHistoryRecovery, reviewHistoryRecovery });
+      handle(req, res, { screenExportState, index, token, stateScope, appRoot, adapter, proxyTo, serveSite, rendering, history, sourceMonitor, retryHistoryRecovery, reviewHistoryRecovery });
     } catch (err) {
       res.writeHead(err.statusCode || 500, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: err.message }));
@@ -103,6 +104,14 @@ function handle(req, res, ctx) {
 
   if(p==='/rt/__api/history-recovery'&&req.method==='POST'){requireToken(req,ctx.token);const result=ctx.retryHistoryRecovery();return json(res,result.ok?200:409,result);}
 
+  if(p==='/rt/__assets/capture-document.js'){res.writeHead(200,{'content-type':'application/javascript','cache-control':'no-store'});return res.end('window.RetouchCaptureDocument='+require('./capture-document.cjs').toString()+';');}
+  if(p==='/rt/__api/screen-export'){
+    requireToken(req,ctx.token);if(req.method!=='POST')return json(res,405,{ok:false,reason:'Use POST to export a screen.'});
+    return readBinary(req,24*1024*1024,async bytes=>{if(!bytes)return json(res,413,{ok:false,reason:'Screen export exceeds 24 MiB.'});let body;try{body=JSON.parse(bytes.toString());require('./screen-export.cjs').validate(body);}catch(error){return json(res,400,{ok:false,reason:error.message});}
+      if(ctx.screenExportState.busy)return json(res,409,{ok:false,reason:'Another screen is being exported. Try again when it finishes.'});ctx.screenExportState.busy=true;const controller=new AbortController(),cancel=()=>controller.abort();res.on('close',cancel);
+      try{const png=await require('./screen-export.cjs').render(body,{signal:controller.signal});if(!res.destroyed){res.writeHead(200,{'content-type':'image/png','cache-control':'no-store'});res.end(png);}}catch(error){if(!res.destroyed)json(res,422,{ok:false,reason:error.message});}finally{res.off('close',cancel);ctx.screenExportState.busy=false;}
+    });
+  }
   if (p.startsWith('/rt/__assets/')) return serveAsset(p.slice('/rt/__assets/'.length), res);
   if (p === '/rt/__api/source-revision' && req.method === 'GET') {
     requireToken(req, ctx.token);

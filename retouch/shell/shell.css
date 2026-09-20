@@ -1428,3 +1428,16 @@ html, body { overflow:clip; }
 .compare-resize-handle[data-axis] { right:auto;bottom:auto;transform:none; }
 .compare-resize-handle[hidden] { display:none; }
 .compare-resize-handle[data-clipped="true"][data-axis="height"],.compare-resize-handle[data-clipped="true"][data-axis="both"] { border-style:dashed; }
+
+.screen-export-dialog { margin:auto;max-height:calc(100dvh - 32px);overflow:auto;width:min(360px,calc(100vw - 32px));box-sizing:border-box;padding:20px;border:1px solid var(--line);border-radius:12px;color:var(--ink);background:white;font:12px Inter,system-ui,sans-serif; }
+.screen-export-dialog::backdrop { background:#0003; }
+.screen-export-dialog h2 { margin:0 0 12px;font-size:14px; }
+.screen-export-dialog select { display:block;width:100%;margin:10px 0;padding:7px; }
+.screen-export-dialog button { margin-right:8px;padding:7px 12px; }
+.screen-export-dialog [role="status"] { min-height:16px; }
+
+.screen-export-dialog label { display:block;margin-top:12px; }
+.screen-export-dialog select { margin:6px 0;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:5px;font:12px var(--font); }
+.screen-export-dialog footer { display:flex;justify-content:flex-end;gap:8px; }
+.screen-export-dialog button { margin:0;border:0;border-radius:5px;background:var(--bg);color:var(--ink);font:12px var(--font); }
+.screen-export-dialog .screen-export-primary { background:var(--accent);color:white; }
