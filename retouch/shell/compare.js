@@ -688,9 +688,17 @@
     clearTimeout(timer);open=!open;toggle.setAttribute('aria-pressed',String(open));rail.hidden=!open;
     if(open){mount();sync(true);paint();}else{toggle.disabled=true;updateControls();try{await dispose();}finally{toggle.disabled=false;updateControls();}}
   };
-  window.addEventListener('retouch:selection',e=>{selected=e.detail;selectedIds=selected?[selected]:[];selectionDetails.clear();updateControls();});
-  window.addEventListener('retouch:selection-set',e=>{selectedIds=e.detail;});
-  window.addEventListener('retouch:selection-details',e=>{selectionDetails=new Map(e.detail.map(info=>[info.id,info]));});
+  let selectionPaintPending=false;
+  function repaintSelection(){
+    if(selectionPaintPending)return;
+    selectionPaintPending=true;
+    // Selection, selection-set and details arrive together. Paint their final
+    // state before the next frame, without starting another polling loop.
+    queueMicrotask(()=>{selectionPaintPending=false;clearTimeout(timer);paint();});
+  }
+  window.addEventListener('retouch:selection',e=>{selected=e.detail;selectedIds=selected?[selected]:[];selectionDetails.clear();updateControls();repaintSelection();});
+  window.addEventListener('retouch:selection-set',e=>{selectedIds=e.detail;repaintSelection();});
+  window.addEventListener('retouch:selection-details',e=>{selectionDetails=new Map(e.detail.map(info=>[info.id,info]));repaintSelection();});
   window.addEventListener('retouch:style-scope',e=>{scope=e.detail;if(scopeSummary)scopeSummary.textContent='Style scope: '+scope.label;});
   window.addEventListener('retouch:route',()=>sync());
   let mainLoadRevision=0;

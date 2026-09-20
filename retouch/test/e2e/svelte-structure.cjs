@@ -43,6 +43,16 @@ exports.run = async ({ page, app, phone:live, file, original:source, state }) =>
   await undo();assert.equal(fs.readFileSync(file,'utf8'),duplicated);await action('deleteElement');await waitOrder(['First','Second','Third']);assert.equal(fs.readFileSync(file,'utf8'),styledCopy);
   await undo();assert.equal(fs.readFileSync(file,'utf8'),duplicated);await undo();assert.equal(fs.readFileSync(file,'utf8'),styledCopy);
   await page.getByRole('treeitem',{name:'div · First',exact:true}).click();await settled();await action('copyElement');await page.getByRole('treeitem',{name:'div · Third',exact:true}).click();await settled();await action('pasteElement');await waitOrder(['First','Second','Third','First']);assert.equal(await app.locator('#order > div').last().evaluate(el=>getComputedStyle(el).paddingTop),'13px');
+  await page.evaluate(async()=>{
+    const frame=document.querySelector('iframe[title="Phone comparison preview"]'),card=document.querySelector('.compare-card[aria-label="Phone comparison"]'),viewport=card.querySelector('.compare-viewport'),d=frame.contentDocument;
+    const nodes=[...d.querySelectorAll('#order > div')],third=nodes[2],copy=nodes[3];
+    const emit=el=>{const id=el.getAttribute('data-rt');window.dispatchEvent(new CustomEvent('retouch:selection',{detail:id}));window.dispatchEvent(new CustomEvent('retouch:selection-set',{detail:[id]}));window.dispatchEvent(new CustomEvent('retouch:selection-details',{detail:[{id,kind:'host'}]}));};
+    const check=el=>{const box=card.querySelector('.compare-selection'),rect=el.getBoundingClientRect(),scale=viewport.clientWidth/frame.contentWindow.innerWidth;if(!box||Math.abs(parseFloat(box.style.top)-rect.top*scale)>.5||Math.abs(parseFloat(box.style.height)-rect.height*scale)>.5)throw Error('Comparison selection outline did not follow the latest source layer');};
+    emit(third);await Promise.resolve();check(third);
+    emit(third);emit(copy);await Promise.resolve();check(copy);
+    window.dispatchEvent(new CustomEvent('retouch:selection',{detail:null}));await Promise.resolve();if(card.querySelector('.compare-selection'))throw Error('Deselection retained an outline');
+    renderPanel();await Promise.resolve();check(copy);
+  });
   await page.screenshot({path:'/tmp/retouch-svelte-structure-'+(process.env.RT_E2E_BROWSER||'chromium')+'.png'});await undo();assert.equal(fs.readFileSync(file,'utf8'),styledCopy);await undo();assert.equal(fs.readFileSync(file,'utf8'),source);await waitOrder(['First','Second','Third']);
   await page.getByRole('treeitem', { name: 'h1 · Hello Svelte', exact: true }).click(); await settled();
   console.log('SVELTE LAYER ORDER, DUPLICATE, PASTE, DELETE, STYLE OWNERSHIP, EXACT HISTORY AND HMR STATE PASS');
