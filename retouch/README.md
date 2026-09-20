@@ -299,8 +299,16 @@ to delete a detached module referenced by another source file. Detachment applie
 to the authored usage, including all of its repeated runtime occurrences. The
 detached instance and an instance restored by undo initialize fresh; supported
 parent and unaffected instance state remain retained. Nested component imports
-stay shared. Editing shared default declarations, variants and broader component
-authoring remain unfinished.
+stay shared.
+
+Use Default… beside a property to edit its shared literal default. Rune `$props()`
+destructuring and legacy `export let` defaults support strings, finite numbers and
+booleans, with supported local TypeScript choices enforced. All inheriting usages
+update; explicit overrides stay unchanged. The definition edit is one undo step,
+and comparison previews synchronize. This script edit uses normal Svelte HMR;
+local state in affected component definitions can reinitialize. Computed defaults,
+`$bindable` defaults and unsupported declared types are not editable here.
+Variants and broader component authoring remain unfinished.
 
 Simple literal text, managed styles, style links, and variable bindings use development-only Svelte store
 bindings and an independent stylesheet so the component stays mounted, including
