@@ -5,7 +5,15 @@
   const maxScale=64;
   const endPadding=96; // Screen pixels, independent of zoom.
   let scale=1,width=0,height=0,gestureBase=null,positioned=false,screen=null,viewRevision=0,presentation=null;
-  const hooked=new WeakSet();
+  const hooked=new WeakSet(),screenViews=new WeakMap();
+  const screenKey=value=>value?value.width+'x'+value.height:'fluid';
+  function viewsForPage(){
+    try{
+      const d=frame.contentDocument;if(!d?.body)return null;
+      let views=screenViews.get(d);if(!views){views=new Map();screenViews.set(d,views);}
+      return {views,route:d.location.href};
+    }catch{return null;}
+  }
   for(const event of ['retouch:before-zoom','retouch:screen'])window.addEventListener(event,()=>viewRevision++);
   function layout(){
     if(!width||!height)return;
@@ -149,8 +157,19 @@
     window.dispatchEvent(new CustomEvent('retouch:viewport',{detail:{width,height,fixed:!!screen}}));
   }
   window.addEventListener('retouch:screen',e=>{
+    const changed=screenKey(screen)!==screenKey(e.detail),page=!e.preservePan&&!presentation&&changed?viewsForPage():null;
+    let restore;
+    if(page){
+      const previous=page.route+'|'+screenKey(screen),next=page.route+'|'+screenKey(e.detail),w=frame.contentWindow;
+      restore=page.views.get(next);
+      page.views.delete(previous);page.views.set(previous,{x:w.scrollX,y:w.scrollY,panX:(canvas.scrollLeft-stage.offsetLeft)/scale,panY:(canvas.scrollTop-endPadding)/scale});
+      if(page.views.size>100)page.views.delete(page.views.keys().next().value);
+    }
     screen=e.detail;measure();
-    if(!e.preservePan)canvas.scrollLeft=0;
+    if(restore){
+      frame.contentWindow.scrollTo({left:restore.x,top:restore.y,behavior:'instant'});
+      canvas.scrollLeft=stage.offsetLeft+restore.panX*scale;canvas.scrollTop=endPadding+restore.panY*scale;
+    }else if(!e.preservePan&&changed)canvas.scrollLeft=0;
   });
   new ResizeObserver(()=>{measure();if(presentation)window.RetouchZoom.fitPresentation();}).observe(canvas);
   window.RetouchScreens?.restore();

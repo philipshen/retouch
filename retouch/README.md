@@ -636,6 +636,12 @@ and Escape-to-cancel behavior. Up/Down keys step 1 px; Shift steps 10 px.
 Height resizing updates viewport units and height media queries while keeping
 width fixed. Both edge handles operate in CSS pixels at any canvas zoom.
 
+Switching back to a previously used main-screen size restores its page scroll
+and canvas pan at the current zoom. Positions are separate for each page URL and
+size in the current preview document; reloading the page clears them. Resizing
+gestures and screen-size undo keep their existing pan behavior. This remembers
+the page scroll, not independently scrolling containers inside the page.
+
 Click a layer in a comparison preview to open that screen size on the main
 canvas and select the matching layer. Links in comparison previews select
 instead of navigating. This enters Edit mode and keeps your style scope; choose

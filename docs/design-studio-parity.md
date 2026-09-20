@@ -28098,3 +28098,28 @@ exclusion (`/tmp/retouch-svelte-alias-reuse-chromium.log`,
 `/tmp/retouch-svelte-alias-reuse-webkit.log`). Native artifacts were not rebuilt or
 launched. Full Figma parity, arbitrary-site coverage and notarized public macOS
 cask distribution remain unfinished.
+
+### Main-screen view memory checkpoint
+
+Switching between previously visited main-screen sizes now restores that size's
+page scroll and canvas pan at the current zoom. This prevents a short desktop
+layout from erasing the position used on a long phone layout. Memory is bounded
+and scoped to the live preview document plus page URL and dimensions. It does not
+reload the page or write source, and separate same-document routes cannot recall
+one another's positions. A new document starts without old view memory.
+
+Resize previews and screen-history operations that preserve pan retain their
+existing behavior. Positions are not persisted across reloads, and independently
+scrolling containers inside the page are not captured by this checkpoint.
+
+Validation: the new browser workflow passed in Chromium and WebKit, covering
+long/short responsive layouts, independent positions, changed canvas zoom, pan,
+unchanged document identity, real interactive form/counter state, route separation
+and reload isolation (`/tmp/retouch-screen-view-{chromium,webkit}-final.log`).
+Comparison resize workflows passed in both browsers; main-screen drag/ratio/
+cancel/history/zoom behavior and project-screen persistence passed in Chromium.
+All 2,393 unit tests passed (`/tmp/retouch-screen-view-full.log`). Initial test
+iterations corrected an input label, enabled Interact mode for the page counter,
+and closed the fixture's source watcher during teardown. Native artifacts were
+not rebuilt or launched. Full Figma parity, arbitrary-site coverage and notarized
+public macOS distribution remain incomplete.
