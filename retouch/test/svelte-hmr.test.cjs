@@ -9,7 +9,7 @@ function fixture() {
   const document = { ...target, visibilityState: 'visible', querySelector: () => styles.find(s => !s.removed), createElement: () => ({ setAttribute() {}, textContent: '', remove() { this.removed = true; } }), head: { append: element => styles.push(element) } };
   const hot = { on: (type, fn) => listeners.set(type, fn), send: (type, value) => sent.push({ type, ...value }), invalidate: message => invalidations.push(message), dispose: fn => hot.cleanup = fn };
   const context = vm.createContext({ hot, document, window: target, Date: { now: () => clock }, writable: value => ({ value, sets: 0, set(next) { this.value = next; this.sets++; } }) });
-  vm.runInContext(runtime().replace("import {writable} from 'svelte/store';", '').replace('export function sourceState', 'function sourceState').replace('export const componentState', 'const componentState').replaceAll('import.meta.hot', 'hot'), context);
+  vm.runInContext(runtime().replace("import {writable} from 'svelte/store';", '').replace('export function sourceState', 'function sourceState').replace('export function literalProp', 'function literalProp').replace('export const componentState', 'const componentState').replaceAll('import.meta.hot', 'hot'), context);
   const store = context.sourceState(file, data(0));
   const emit = (value, snapshot = false) => listeners.get(snapshot ? 'retouch:svelte-snapshot' : 'retouch:svelte-source')(value);
   const reply = value => emit({ ...value, request: sent.at(-1).request }, true);
@@ -56,4 +56,8 @@ test('Svelte runtime ignores malformed and conflicting duplicate payloads withou
   for (const changes of [{ sequence: -1 }, { sequence: 1.5 }, { revision: 'invalid' }, { texts: null }, { texts: { heading: 42 } }, { styleIds: [] }, { css: { id: 'invalid', text: 'bad' } }]) f.emit(data(2, 'wrong', changes));
   f.emit(data(1, 'conflicting duplicate', { revision: hash(2) }));
   assert.equal(f.store.value.texts.heading, '1'); assert.equal(f.styles[0].textContent, data(1).css.text); assert.equal(f.invalidations.length, 0);
+});
+test('Svelte live properties preserve primitive types and refuse nonliteral wire values',()=>{
+ const f=fixture();f.reply(data(1));for(const componentProps of [{x:'null'},{x:'{}'},{x:'[]'},{x:'1e999'},{x:'function(){}'},{x:42}])f.emit(data(2,'bad',{componentProps}));assert.equal(f.store.value.texts.heading,'1');
+ f.emit(data(2,'good',{componentProps:{number:'-0',flag:'false',text:'"<&>{}"'}}));assert.ok(Object.is(f.context.literalProp(f.store.value.componentProps.number),-0));assert.equal(f.context.literalProp(f.store.value.componentProps.flag),false);assert.equal(f.context.literalProp(f.store.value.componentProps.text),'<&>{}');
 });

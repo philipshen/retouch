@@ -1,8 +1,9 @@
 'use strict';
 function payload(snapshot, sequence, epoch) {
- return { revision:snapshot.revision, signature:require('./svelte-source.cjs').contentHash(snapshot.signature), sequence, epoch, texts:snapshot.texts, attributes:snapshot.styling?.attributes||{}, styleIds:snapshot.styling?.ids||{}, css:snapshot.styling?.css||null };
+ return { revision:snapshot.revision, signature:require('./svelte-source.cjs').contentHash(snapshot.signature), sequence, epoch, texts:snapshot.texts, componentProps:snapshot.componentProps||{}, attributes:snapshot.styling?.attributes||{}, styleIds:snapshot.styling?.ids||{}, css:snapshot.styling?.css||null };
 }
 function runtime(){return `import {writable} from 'svelte/store';
+export function literalProp(value){return JSON.parse(value);}
 export const componentState=(${require('./svelte-component-state.cjs').createRegistry.toString()})();
 const states=new Map(),styles=new Map();let requestId=0;
 function applyCSS(file,css){
@@ -42,7 +43,8 @@ export function sourceState(file,initial){
 }
 function receive(data,snapshot=false){
  const dictionary=value=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.values(value).every(item=>typeof item==='string');
- if(!data||typeof data.file!=='string'||!Number.isSafeInteger(data.sequence)||data.sequence<0||typeof data.epoch!=='string'||!data.epoch||![data.signature,data.revision].every(value=>typeof value==='string'&&/^[a-f0-9]{40}$/.test(value))||!dictionary(data.texts)||!dictionary(data.styleIds)||!dictionary(data.attributes)||data.css!==null&&(!data.css||!/^[a-f0-9]{10}$/.test(data.css.id)||typeof data.css.text!=='string'))return;
+ const props=value=>value===undefined||dictionary(value)&&Object.values(value).every(item=>{try{const parsed=JSON.parse(item);return ['string','boolean'].includes(typeof parsed)||typeof parsed==='number'&&Number.isFinite(parsed);}catch{return false;}});
+ if(!data||!props(data.componentProps)||typeof data.file!=='string'||!Number.isSafeInteger(data.sequence)||data.sequence<0||typeof data.epoch!=='string'||!data.epoch||![data.signature,data.revision].every(value=>typeof value==='string'&&/^[a-f0-9]{40}$/.test(value))||!dictionary(data.texts)||!dictionary(data.styleIds)||!dictionary(data.attributes)||data.css!==null&&(!data.css||!/^[a-f0-9]{10}$/.test(data.css.id)||typeof data.css.text!=='string'))return;
  const record=states.get(data.file);if(!record)return;
  if(snapshot){
   if(record.pending?.id!==data.request)return;
