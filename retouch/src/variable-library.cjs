@@ -39,7 +39,13 @@ function resolve(root,request){
  const definition={version:current.version,collections:current.collections,variables:current.variables};
  if(Object.hasOwn(request,'expression')){
   if(['bindings','variableId','variableIds'].some(key=>Object.hasOwn(request,key)))fail('Expression previews cannot also request bindings or variable lists.',422);
-  try{const resolver=model.resolver(definition,request.modes,request.overrides,request.modeOverrides),result=require('../shell/prototype-expressions.js').evaluate(request.expression,id=>resolver.resolve(id));return {revision:current.revision,result};}catch(error){fail(error.message,422);}
+  try{
+   const resolver=model.resolver(definition,request.modes,request.overrides,request.modeOverrides),byId=new Map(definition.variables.map(v=>[v.id,v])),cache=new Map();
+   const result=require('../shell/prototype-expressions.js').evaluate(request.expression,(id,modeId)=>{
+    if(!modeId)return resolver.resolve(id);const variable=byId.get(id);if(!variable)throw Error('Unknown variable.');
+    const key=variable.collectionId+'/'+modeId;if(!cache.has(key))cache.set(key,model.resolver(definition,{...request.modes,[variable.collectionId]:modeId},request.overrides,request.modeOverrides));return cache.get(key).resolve(id);
+   });return {revision:current.revision,result};
+  }catch(error){fail(error.message,422);}
  }
  if(request.bindings!==undefined){
   if(['modes','variableId','variableIds'].some(key=>Object.hasOwn(request,key)))fail('Binding previews use each binding’s own modes.',422);

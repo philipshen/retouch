@@ -27,11 +27,12 @@
    });
    if(value.kind==='variable'){
     const available=(library?.variables||[]).filter(v=>v.type===expected),names=available.map(v=>[v.id,(library.collections.find(c=>c.id===v.collectionId)?.name||'')+' / '+v.name]);if(!available.some(v=>v.id===value.id))names.unshift([value.id,'Missing or incompatible variable']);I.select(group,'Expression variable '+address,names,value.id,id=>set(path,{kind:'variable',id,type:expected}));
+    const variable=available.find(v=>v.id===value.id),collection=library?.collections.find(c=>c.id===variable?.collectionId);I.select(group,'Expression mode '+address,[['','Current mode'],...(value.modeId&&!collection?.modes.some(m=>m.id===value.modeId)?[[value.modeId,'Missing mode']]:[]),...(collection?.modes||[]).map(m=>[m.id,m.name])],value.modeId||'',modeId=>set(path,{kind:'variable',id:value.id,type:expected,...(modeId?{modeId}:{})}));
    }else if(value.kind==='literal'){
     if(expected==='boolean')I.select(group,'Expression value '+address,[['false','False'],['true','True']],String(value.value),v=>set(path,{kind:'literal',type:expected,value:v==='true'}));
     else {const input=document.createElement('input');input.type=expected==='number'?'number':'text';input.value=value.value;if(expected==='number'){input.step='any';input.min='-1000000';input.max='1000000';}else input.maxLength=4096;I.field(group,'Expression value '+address,input);input.onchange=()=>set(path,{kind:'literal',type:expected,value:expected==='number'?(input.value===''?NaN:Number(input.value)):input.value});}
    }else for(const [n,arg]of value.args.entries())group.append(node(arg,E.analyze(arg).type,[...path,n],value.op==='if'?['Condition','Then','Otherwise'][n]:value.args.length===1?'Input':n===0?'Left':'Right'));
-   for(const label of group.querySelectorAll('.inspector-field > span')){const match=/^Expression (input|variable|value) /.exec(label.textContent);if(match)label.textContent={input:'Use',variable:'Variable',value:'Value'}[match[1]];}
+   for(const label of group.querySelectorAll('.inspector-field > span')){const match=/^Expression (input|variable|value|mode) /.exec(label.textContent);if(match)label.textContent={input:'Use',variable:'Variable',value:'Value',mode:'Mode'}[match[1]];}
    return group;
   }
   box.prepend(node(draft,type,[],'Expression'));I.note(box,'Uses the current presentation values when triggered.');

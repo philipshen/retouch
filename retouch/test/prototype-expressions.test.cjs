@@ -36,3 +36,12 @@ test('input and intermediate bounds reject overflow, oversized text, deep trees 
  const cycle=op('negate',null);cycle.args[0]=cycle;assert.throws(()=>E.validate(cycle),/16 levels/);
  assert.equal(E.evaluate(str('x'.repeat(4096))).value.length,4096);assert.equal(E.evaluate(op('-',num(1000000),num(1000000))).value,0);
 });
+
+test('expression references distinguish modes while snapshotting repeated reads of each mode',()=>{
+ const current=variable(1),alternate={...current,modeId:id(2)},expression=op('+',op('+',current,alternate),alternate),calls=[];
+ assert.deepEqual(E.analyze(expression).references,[{id:id(1),type:'number'},{id:id(1),type:'number',modeId:id(2)}]);
+ assert.equal(E.evaluate(expression,(variableId,modeId)=>{calls.push([variableId,modeId]);return {type:'number',value:modeId?20:10};}).value,50);assert.deepEqual(calls,[[id(1),undefined],[id(1),id(2)]]);
+ for(const modeId of [undefined,null,'',123,'bad'])assert.throws(()=>E.analyze({...current,modeId}),/variable mode/);
+ assert.throws(()=>E.analyze(op('==',current,{...alternate,type:'string'})),/conflicting types/);
+ assert.equal(E.evaluate(op('if',bool(true),num(4),alternate),()=>{throw Error('must not read');}).value,4);
+});

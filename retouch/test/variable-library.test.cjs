@@ -106,3 +106,15 @@ test('collection import preserves existing definitions and portable identities w
  const sameName=structuredClone(incoming);sameName.collections[0].name='Theme';assert.throws(()=>library.planChange(root,{type:'import',revision:before.revision,library:sameName}),/changed/);
  assert.equal(history.apply(root,'undo',imported.undoId,{}).ok,true);assert.deepEqual(library.read(root),before);assert.throws(()=>library.planChange(root,{type:'import',revision:before.revision,library:sameName}),/Duplicate collection name/);assert.equal(history.apply(root,'redo',imported.undoId,{}).ok,true);assert.deepEqual(library.read(root),after);
 });
+
+test('expression modes resolve independent snapshots, aliases and inherited collection selections',t=>{
+ const root=setup(t),definition=data();definition.collections[0].modes.push({id:id(4),name:'Dark'});definition.variables[0].type='number';definition.variables[0].values={[id(2)]:10,[id(4)]:20};
+ definition.collections.push({id:id(5),name:'Semantic',defaultMode:id(6),modes:[{id:id(6),name:'Default'}]});definition.variables.push({id:id(7),collectionId:id(5),name:'Alias',type:'number',values:{[id(6)]:{alias:id(3)}}});
+ library.commitPlan(root,library.planChange(root,{type:'replace',revision:null,library:definition}));const saved=library.read(root),before=fs.readFileSync(path.join(root,'.retouch/variables.json'),'utf8'),ref=(id,modeId)=>({kind:'variable',type:'number',id,...(modeId?{modeId}:{})}),expression={kind:'operation',op:'+',args:[ref(id(3),id(2)),ref(id(3),id(4))]};
+ assert.equal(library.resolve(root,{revision:saved.revision,expression}).result.value,30);
+ assert.equal(library.resolve(root,{revision:saved.revision,expression,modeOverrides:{[id(3)]:{[id(2)]:11,[id(4)]:22}}}).result.value,33);
+ assert.equal(library.resolve(root,{revision:saved.revision,expression:ref(id(7),id(6)),modes:{[id(1)]:id(4)}}).result.value,20,'explicit mode on the alias keeps other collection selections');
+ for(const expression of [ref(id(3),id(6)),ref(id(3),id(99)),ref(id(99),id(4))])assert.throws(()=>library.resolve(root,{revision:saved.revision,expression}),error=>error.statusCode===422);
+ assert.throws(()=>library.resolve(root,{revision:null,expression}),error=>error.statusCode===409);
+ assert.equal(fs.readFileSync(path.join(root,'.retouch/variables.json'),'utf8'),before);
+});

@@ -12,15 +12,17 @@
   fail('Unsupported expression value type.');
  }
  function analyze(input){
-  let count=0;const references=new Map();
+  let count=0;const references=new Map(),referenceTypes=new Map();
   function visit(node,depth){
    if(++count>128||depth>16)fail('Use at most 128 expression nodes and 16 levels.');
-   shape(node,['kind','type','value','id','op','args']);
+   shape(node,['kind','type','value','id','modeId','op','args']);
    if(node.kind==='literal'){shape(node,['kind','type','value']);const value=literal(node.type,node.value);return {type:node.type,expression:{kind:'literal',type:node.type,value}};}
    if(node.kind==='variable'){
-    shape(node,['kind','type','id']);if(!types.includes(node.type)||typeof node.id!=='string'||!uuid.test(node.id))fail('Choose a typed expression variable.');
-    if(references.has(node.id)&&references.get(node.id)!==node.type)fail('An expression variable cannot have conflicting types.');references.set(node.id,node.type);
-    return {type:node.type,expression:{kind:'variable',type:node.type,id:node.id}};
+    shape(node,['kind','type','id','modeId']);if(!types.includes(node.type)||typeof node.id!=='string'||!uuid.test(node.id))fail('Choose a typed expression variable.');
+    if(Object.hasOwn(node,'modeId')&&(typeof node.modeId!=='string'||!uuid.test(node.modeId)))fail('Choose a valid expression variable mode.');
+    if(referenceTypes.has(node.id)&&referenceTypes.get(node.id)!==node.type)fail('An expression variable cannot have conflicting types.');referenceTypes.set(node.id,node.type);
+    const reference={id:node.id,type:node.type,...(node.modeId?{modeId:node.modeId}:{})};references.set(node.id+'/'+(node.modeId||''),reference);
+    return {type:node.type,expression:{kind:'variable',...reference}};
    }
    shape(node,['kind','op','args']);if(node.kind!=='operation'||typeof node.op!=='string'||!Object.hasOwn(arity,node.op)||!Array.isArray(node.args)||node.args.length!==arity[node.op])fail('Choose an expression operator with the correct number of inputs.');
    const args=node.args.map(child=>visit(child,depth+1)),argTypes=args.map(child=>child.type),every=type=>argTypes.every(t=>t===type);let type;
@@ -33,18 +35,18 @@
    else if(node.op==='to-string')type='string';
    return {type,expression:{kind:'operation',op:node.op,args:args.map(child=>child.expression)}};
   }
-  const result=visit(input,1);return {...result,references:[...references].map(([id,type])=>({id,type}))};
+  const result=visit(input,1);return {...result,references:[...references.values()]};
  }
  function evaluate(input,resolve){
   const checked=analyze(input),values=new Map();
   function visit(node){
    if(node.kind==='literal')return node.value;
    if(node.kind==='variable'){
-    if(!values.has(node.id)){
-     if(typeof resolve!=='function')fail('An expression variable resolver is required.');const result=resolve(node.id);
-     if(!result||result.type!==node.type)fail('An expression variable is missing or its type changed.');values.set(node.id,literal(node.type,result.value));
+    const key=node.id+'/'+(node.modeId||'');if(!values.has(key)){
+     if(typeof resolve!=='function')fail('An expression variable resolver is required.');const result=resolve(node.id,node.modeId);
+     if(!result||result.type!==node.type)fail('An expression variable is missing or its type changed.');values.set(key,literal(node.type,result.value));
     }
-    return values.get(node.id);
+    return values.get(key);
    }
    const a=visit(node.args[0]);
    if(node.op==='if')return visit(node.args[a?1:2]);

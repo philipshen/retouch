@@ -27087,3 +27087,31 @@ Explicit modes on expression references, inherited object mode contexts, separat
 design pages, conditional/multiple actions and the broader parity matrix remain
 unfinished. No native rebuild/launch or push. Notarized Homebrew distribution is
 still incomplete.
+
+### 2026-09-20 — Mode-specific expression references
+
+Each variable input in the expression composer now has a Mode selector, defaulting
+to Current mode. One calculation can read different modes of the same variable;
+changing its variable clears its old explicit mode. Missing saved modes remain
+visible instead of silently selecting another mode.
+
+Expression variable nodes accept an optional validated mode UUID. Analysis keeps
+mode-specific dependencies distinct while rejecting conflicting types for the
+same variable. Evaluation snapshots each variable/mode pair once, preserving
+lazy conditional/Boolean evaluation. The preview API resolves explicit modes
+against their variable's collection, retains other collection selections through
+aliases, and applies the current temporary per-mode values. Unknown or mismatched
+modes fail before producing a result; resolution remains read-only.
+
+All 2,132 unit tests passed, including independent mode references, snapshot call
+counts, invalid identifiers/types, lazy reads, source/history round trips across
+four adapters, aliases, mode-specific temporary values and stale API revisions.
+Chromium and WebKit passed real authoring of Compact + Spacious, default preview,
+exact undo/redo, repeated current-value calculation and assignment while another
+presentation mode is active, alongside the existing mode/copy/reset flow. The
+light-theme expression mode screenshot was inspected; source/library files were
+unchanged after playback.
+
+Inherited object mode contexts, separate design pages, conditional action lists,
+multiple actions and the broader design-feature matrix remain unfinished. No
+native rebuild/launch or push; notarized Homebrew distribution remains incomplete.
