@@ -26348,3 +26348,23 @@ This does not turn comparison previews into independent full editing canvases.
 Native touch/pen validation and very large comparison-screen ergonomics remain.
 No desktop artifact was rebuilt or branch pushed. Full Figma parity and notarized
 Homebrew distribution remain unfinished.
+
+### Reachable grips on tall and narrow comparison views
+
+Comparison grips now track the visible portion of each preview as the panel
+scrolls or resizes. A dashed lower grip indicates that the preview continues
+below the panel. Very short scaled previews retain a minimum control area without
+changing the iframe's actual dimensions. This fixes the reproduced case where a
+390-by-7680 preview put every grip outside the visible panel. Width/height grips
+now use slider semantics with current/min/max values and orientation, plus
+Home/End shortcuts that participate in the same per-screen size history.
+
+Chromium and WebKit passed the expanded comparison-grip suite: tall and narrow
+scrolled-panel hit testing, a 7680-by-240 preview, keyboard focus after resizing,
+Home/End, accessible current values, exact undo, retained document/form state,
+media-query changes, proportion controls and cancellation. Existing nested-scroll
+and panel-resize suites passed both engines. Tall WebKit and narrow Chromium
+screenshots were inspected. Syntax and diff checks passed; no source-operation
+changes or full unit-suite rerun. Native touch/pen and complete comparison-canvas
+authoring remain unfinished. No desktop rebuild or push; full Figma parity and
+notarized Homebrew distribution remain unfinished.

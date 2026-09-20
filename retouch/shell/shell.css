@@ -1415,7 +1415,7 @@ html, body { overflow:clip; }
 .prototype-navigation-loading{position:absolute;z-index:3;bottom:16px;left:16px;padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink);font:11px Inter,system-ui,sans-serif;pointer-events:none}
 
 /* Comparison grips stay outside the preview hit target and preserve its document. */
-.compare-preview-frame { position:relative; }
+.compare-preview-frame { position:relative;min-height:36px; }
 .compare-resize-handle { position:absolute;z-index:4;min-width:0;padding:0;border:1px solid #d4d4d4;border-radius:3px;background:#fff;touch-action:none; }
 .compare-resize-handle[data-axis="width"] { right:0;top:50%;width:10px;height:32px;transform:translateY(-50%);cursor:ew-resize; }
 .compare-resize-handle[data-axis="height"] { left:50%;bottom:0;width:32px;height:10px;transform:translateX(-50%);cursor:ns-resize; }
@@ -1424,3 +1424,7 @@ html, body { overflow:clip; }
 .compare-resize-handle[data-axis="height"]::after { width:14px;height:2px; }
 .compare-resize-handle[data-axis="both"]::after { width:6px;height:6px;background:none;border-right:2px solid #a3a3a3;border-bottom:2px solid #a3a3a3; }
 .compare-resize-handle:hover,.compare-resize-handle:focus-visible,.compare-resize-handle.dragging { border-color:var(--accent);outline:2px solid var(--accent); }
+
+.compare-resize-handle[data-axis] { right:auto;bottom:auto;transform:none; }
+.compare-resize-handle[hidden] { display:none; }
+.compare-resize-handle[data-clipped="true"][data-axis="height"],.compare-resize-handle[data-clipped="true"][data-axis="both"] { border-style:dashed; }

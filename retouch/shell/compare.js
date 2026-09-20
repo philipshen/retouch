@@ -35,7 +35,10 @@
   function layoutPreviews(){
     const railBounds=rail.getBoundingClientRect();
     for(const item of cards){item.surface.hidden=item.previewBody.hidden;if(item.previewBody.hidden)continue;const scale=item.viewport.clientWidth/item.width;item.frame.style.transform=`scale(${scale})`;item.viewport.style.height=item.height*scale+'px';}
-    for(const item of cards){if(item.previewBody.hidden)continue;const bounds=item.viewport.getBoundingClientRect();Object.assign(item.surface.style,{left:bounds.left-railBounds.left+rail.scrollLeft-rail.clientLeft+'px',top:bounds.top-railBounds.top+rail.scrollTop-rail.clientTop+'px',width:bounds.width+'px',height:bounds.height+'px'});}
+    for(const item of cards){if(item.previewBody.hidden)continue;const bounds=item.viewport.getBoundingClientRect();Object.assign(item.surface.style,{left:bounds.left-railBounds.left+rail.scrollLeft-rail.clientLeft+'px',top:bounds.top-railBounds.top+rail.scrollTop-rail.clientTop+'px',width:bounds.width+'px',height:bounds.height+'px'});
+      const controls=item.previewFrame.getBoundingClientRect(),left=Math.max(bounds.left,railBounds.left+rail.clientLeft),right=Math.min(bounds.right,railBounds.left+rail.clientLeft+rail.clientWidth),top=Math.max(bounds.top,railBounds.top+rail.clientTop),bottom=Math.min(controls.bottom,railBounds.top+rail.clientTop+rail.clientHeight);
+      for(const handle of item.resizeHandles){const axis=handle.dataset.axis;handle.hidden=right-left<36||bottom-top<36;const w=axis==='height'?32:axis==='both'?14:10,h=axis==='width'?32:axis==='both'?14:10;handle.style.left=(axis==='height'?(left+right-w)/2:right-w-3)-bounds.left+'px';handle.style.top=(axis==='width'?(top+bottom-h)/2:bottom-h-3)-bounds.top+'px';handle.dataset.clipped=String(bounds.bottom>bottom+1);}
+    }
   }
   function updateControls(){
     window.dispatchEvent(new Event('retouch:comparisons'));
@@ -515,7 +518,7 @@
         field.append(input);dimensions.append(field);
       }
       for(const axis of ['width','height','both']){
-        const handle=document.createElement('button');handle.type='button';handle.className='compare-resize-handle';handle.dataset.axis=axis;handle.title='Drag to resize this screen. Arrow keys: 1 pixel; Shift+arrow: 10 pixels. Shift+corner drag locks proportions. Escape cancels.';resizeHandles.push(handle);
+        const handle=document.createElement('button');handle.type='button';handle.className='compare-resize-handle';handle.dataset.axis=axis;if(axis!=='both'){handle.setAttribute('role','slider');handle.setAttribute('aria-orientation',axis==='width'?'horizontal':'vertical');handle.setAttribute('aria-valuemin','240');handle.setAttribute('aria-valuemax','7680');}handle.title='Drag to resize this screen. Dashed grips indicate the preview continues below. Home/End set an axis to its minimum/maximum. Arrow keys: 1 pixel; Shift+arrow: 10 pixels. Shift+corner drag locks proportions. Escape cancels.';resizeHandles.push(handle);
         handle.addEventListener('pointerdown',event=>{
           if(event.button!==0||loadingSet||removals)return;event.preventDefault();event.stopPropagation();activeDimensionScrub?.cancel();handle.focus({preventScroll:true});dimensionGesture=null;
           dimensionScrub={id:event.pointerId,field:handle,axis,before:[width,height],ratio:[...history.ratio],x:event.clientX,y:event.clientY,scale:viewport.clientWidth/width,workspaceWidth:innerWidth,workspaceHeight:innerHeight,previewWidth:viewport.clientWidth,edge:true};activeDimensionScrub={field:handle,edge:true,cancel:()=>finishDimensionScrub(true),layoutChanged:()=>{if(edgeLayoutChanged(dimensionScrub))finishDimensionScrub(true);},updateShift:shiftKey=>{const saved=dimensionScrub;if(saved?.edge)moveEdge({pointerId:saved.id,clientX:saved.lastX??saved.x,clientY:saved.lastY??saved.y,shiftKey,preventDefault(){}});}};handle.classList.add('dragging');handle.setPointerCapture(event.pointerId);
@@ -532,7 +535,8 @@
         for(const type of ['click','dblclick','contextmenu'])handle.addEventListener(type,event=>{event.preventDefault();event.stopPropagation();});
         handle.addEventListener('keyup',event=>{if(event.key.startsWith('Arrow'))dimensionGesture=null;});handle.addEventListener('blur',()=>{dimensionGesture=null;});
         handle.addEventListener('keydown',event=>{
-          if(loadingSet||removals||event.isComposing||event.altKey||event.ctrlKey||event.metaKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;
+          if(loadingSet||removals||event.isComposing||event.altKey||event.ctrlKey||event.metaKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))return;
+          if(['Home','End'].includes(event.key)){if(axis==='both')return;event.preventDefault();event.stopPropagation();dimensionGesture=null;const value=event.key==='Home'?240:7680;applyDimensions(axis==='width'?value:width,axis==='height'?value:height,true,axis);return;}
           event.preventDefault();event.stopPropagation();const horizontal=['ArrowLeft','ArrowRight'].includes(event.key);if(axis==='width'&&!horizontal||axis==='height'&&horizontal)return;
           const direction=['ArrowLeft','ArrowUp'].includes(event.key)?-1:1,amount=direction*(event.shiftKey?10:1),repeat=event.repeat&&dimensionGesture?.input===handle&&dimensionGesture.key===event.key&&dimensionGesture.entry===sizeUndo.at(-1),previous=sizeUndo.at(-1),changedAxis=horizontal?'width':'height';
           const applied=applyDimensions(Math.max(240,Math.min(7680,width+(horizontal?amount:0))),Math.max(240,Math.min(7680,height+(horizontal?0:amount))),!repeat,changedAxis);
@@ -601,7 +605,7 @@
         label.textContent=name===`Custom ${width} × ${height}`?name:`${name} · ${width} × ${height}`;
         reorder.setAttribute('aria-label','Reorder '+name+' comparison');label.setAttribute('aria-label','Rename '+name+' comparison');nameInput.setAttribute('aria-label','Comparison name');
         card.setAttribute('aria-label',name+' comparison');edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');remove.setAttribute('aria-label','Remove '+name+' comparison');viewport.setAttribute('aria-label','Edit from '+name+' comparison');frame.title=name+' comparison preview';scopeMessage.setAttribute('aria-label',name+' scope coverage');
-        for(const handle of resizeHandles){handle.setAttribute('aria-label','Resize '+name+' comparison '+(handle.dataset.axis==='both'?'dimensions':handle.dataset.axis));handle.setAttribute('aria-description',width+' by '+height+' pixels');}
+        for(const handle of resizeHandles){handle.setAttribute('aria-label','Resize '+name+' comparison '+(handle.dataset.axis==='both'?'dimensions':handle.dataset.axis));handle.setAttribute('aria-description',width+' by '+height+' pixels');if(handle.dataset.axis!=='both'){const value=handle.dataset.axis==='width'?width:height;handle.setAttribute('aria-valuenow',String(value));handle.setAttribute('aria-valuetext',value+' pixels');}}
         for(const axis of ['width','height'])inputs[axis].setAttribute('aria-label',name+' comparison '+axis);
         up.setAttribute('aria-label','Move '+name+' comparison up');down.setAttribute('aria-label','Move '+name+' comparison down');
         undoSize.setAttribute('aria-label','Undo '+name+' comparison size');redoSize.setAttribute('aria-label','Redo '+name+' comparison size');
@@ -663,7 +667,7 @@
           scrollFrom(w,node,dx,dy);
         }catch{}
       },{passive:false});
-      cards.push({card,frame,surface,retryImageControl,previewBody,setCollapsed,attachMarquee,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down,move});
+      cards.push({card,frame,surface,retryImageControl,previewBody,setCollapsed,attachMarquee,overlay,message,scopeMessage,scopeButton,viewport,previewFrame,resizeHandles,width,height,edit,reveal,up,down,move});
   }
   function unload(frame){cards.find(card=>card.frame===frame)?.cancelColdText?.();marqueeCleanup.get(frame)?.();marqueeCleanup.delete(frame);return new Promise(resolve=>{
     let timeout;
@@ -711,6 +715,7 @@
   });
   window.addEventListener('retouch:viewport',updateControls);
   window.addEventListener('retouch:screen',updateControls);
+  rail.addEventListener('scroll',()=>{if(open)layoutPreviews();},{passive:true});
   let railWidth=rail.clientWidth;new ResizeObserver(()=>{const nextWidth=rail.clientWidth;if(nextWidth!==railWidth)activeDimensionScrub?.layoutChanged?.();railWidth=nextWidth;if(open)layoutPreviews();}).observe(rail);
   const developmentRuntimes=new WeakMap();
   async function refreshClientClasses(frame){
