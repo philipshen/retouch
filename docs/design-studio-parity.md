@@ -26465,3 +26465,24 @@ uses Chromium, including when the editor is tested in WebKit. No full unit-suite
 rerun or desktop rebuild. Snapshot/resource limitations and arbitrary-layer/PDF/
 batch export gaps remain. Full Figma parity and notarized Homebrew distribution
 remain unfinished. This increment is committed locally without pushing.
+
+
+### Fractional and custom screen export scales
+
+Screen export now offers 0.5×, 1×, 1.5×, 2×, 3× and 4× presets, plus a Custom
+field accepting finite values from 0.01× through 8×. PNG and JPEG use the selected
+scale in both rendering and filenames. Custom values receive native input
+validation before capture; hidden custom values do not affect a selected preset.
+The backend enforces output dimensions from 1 to 32,768 pixels and conservatively
+rounds each scaled dimension upward when checking the 64-megapixel budget. Full
+page also checks its measured height against the scaled pixel budget.
+
+Chromium and WebKit editor flows passed actual 0.5× and 3× viewport dimensions,
+1.1× full-page PNG/JPEG dimensions and filename, pre-request rejection of an
+out-of-range custom value, and switching back to presets. Existing alpha, JPEG
+quality, viewport/full-page/comparison PNG, resource isolation and scroll-retention
+checks passed in both editors. All seven focused export unit tests passed. The
+custom-scale dialog screenshot was inspected; syntax and diff checks passed.
+Output rendering remains Chromium-based. No full unit-suite rerun, desktop rebuild
+or push. Arbitrary-layer, PDF and batch exports remain incomplete alongside the
+broader Figma parity and notarized Homebrew distribution work.
