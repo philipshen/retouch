@@ -7,6 +7,7 @@
  function current(target=frame){try{const w=target.contentWindow;if(w.location.origin!==location.origin)return null;return {url:w.location.pathname+w.location.search+w.location.hash,x:w.scrollX,y:w.scrollY};}catch{return null;}}
  function navigate(destination,scroll,transition){root.RetouchPrototypeNavigation.begin(transition,scroll);main.release?.();main.release=null;const url=new URL(destination,location.href);main.pendingScroll={...scroll,url:url.href};frame.src=url.pathname+url.search+url.hash;}
  function perform(item,context,opener){const before=current();if(!before)return;context.scrollMotion?.cancel();context.scrollMotion=null;
+  if(item.action==='set-variable'){root.RetouchPrototypeVariables.assign(item.assignment);return;}
   if(item.action==='open-link'){if(!V.link(item.destination))return;const link=document.createElement('a');link.href=item.destination;link.target='_blank';link.rel='noopener noreferrer';document.body.append(link);link.click();link.remove();return;}
   if(item.action==='open-overlay'){overlays.open(item.destination,item.overlay,opener,item.transition);return;}
   if(item.action==='close-overlay'){overlays.close(true,item.transition);return;}
@@ -21,6 +22,7 @@
  function overlayEscape(event){if(event.defaultPrevented||event.isComposing||event.key!=='Escape'||event.metaKey||event.ctrlKey||event.altKey||event.shiftKey)return;if(overlays.close()){event.preventDefault();event.stopPropagation();}}
  function mount(context=main){const frame=context.frame;context.release?.();context.release=null;if(!running)return;
   let d;try{d=frame.contentDocument;if(!d?.body)return;}catch{return;}
+  const releaseVariables=root.RetouchPrototypeVariables.mount(d);
   const listeners=[],changed=new Map();let scrollJob=null,timerJob=null;
   const active=()=>running&&frame.contentDocument===d&&context.frame===(overlays.topFrame||main.frame)&&!frame.closest('[inert]')&&!document.hidden&&!d.hidden&&(context===main||overlays.phase==='idle');
   const timers=root.RetouchPrototypeTimers.create({eligible:el=>active()&&el.isConnected&&!el.closest('[inert]')&&el.getClientRects().length>0&&d.defaultView.getComputedStyle(el).visibility==='visible',perform:(item,el)=>perform(item,context,el)});
@@ -60,7 +62,7 @@
   const style=d.createElement('style');style.textContent='['+V.attribute+']{cursor:pointer}';d.head?.append(style);
   const observer=new MutationObserver(decorate);observer.observe(d.body,{childList:true,subtree:true,attributes:true,attributeFilter:[V.attribute]});decorate();
   if(context!==main){d.defaultView.addEventListener('keydown',overlayEscape);listeners.push(()=>d.defaultView?.removeEventListener('keydown',overlayEscape));}
-  context.release=()=>{context.scrollMotion?.cancel();context.scrollMotion=null;for(const job of pendingActions)if(job.context===context){cancelAnimationFrame(job.id);pendingActions.delete(job);}if(held?.frame===frame)held=null;timers.dispose();if(timerJob!==null)cancelAnimationFrame(timerJob);timerJob=null;cancelScroll();observer.disconnect();listeners.forEach(fn=>fn());style.remove();for(const [el,before]of changed)restore(el,before);};
+  context.release=()=>{releaseVariables();context.scrollMotion?.cancel();context.scrollMotion=null;for(const job of pendingActions)if(job.context===context){cancelAnimationFrame(job.id);pendingActions.delete(job);}if(held?.frame===frame)held=null;timers.dispose();if(timerJob!==null)cancelAnimationFrame(timerJob);timerJob=null;cancelScroll();observer.disconnect();listeners.forEach(fn=>fn());style.remove();for(const [el,before]of changed)restore(el,before);};
   const pagehide=()=>context.release?.();d.defaultView.addEventListener('pagehide',pagehide);listeners.push(()=>d.defaultView?.removeEventListener('pagehide',pagehide));
   if(context.pendingScroll){const scroll=context.pendingScroll;context.pendingScroll=null;if(d.URL===scroll.url){
    // Client-rendered destinations may mount after iframe load. Wait for enough
@@ -72,9 +74,9 @@
  }
  frame.addEventListener('load',async()=>{const ticket=++loadSerial;if(running)overlays.clear();await root.RetouchPrototypeNavigation.loaded();if(ticket===loadSerial)mount(main);});
  root.RetouchPrototypeRuntime={
-  start(){running=true;trail=[];main.pendingScroll=null;mount(main);},
-  stop(){++loadSerial;root.RetouchPrototypeNavigation.clear();held=null;clickBlock=null;overlays.clear();running=false;main.release?.();main.release=null;trail=[];main.pendingScroll=null;},
-  restart(){++loadSerial;root.RetouchPrototypeNavigation.clear();overlays.clear();main.release?.();main.release=null;trail=[];main.pendingScroll=null;},
+  start(){root.RetouchPrototypeVariables.reset();running=true;trail=[];main.pendingScroll=null;mount(main);},
+  stop(){root.RetouchPrototypeVariables.reset();++loadSerial;root.RetouchPrototypeNavigation.clear();held=null;clickBlock=null;overlays.clear();running=false;main.release?.();main.release=null;trail=[];main.pendingScroll=null;},
+  restart(){root.RetouchPrototypeVariables.reset();++loadSerial;root.RetouchPrototypeNavigation.clear();overlays.clear();main.release?.();main.release=null;trail=[];main.pendingScroll=null;},
   dismissOverlay:()=>overlays.close(),
   attachFrame(frame){const context={frame,release:null,pendingScroll:null};context.loaded=()=>mount(context);contexts.set(frame,context);frame.addEventListener('load',context.loaded);},
   detachFrame(frame){const context=contexts.get(frame);if(!context||context===main)return;context.release?.();frame.removeEventListener('load',context.loaded);contexts.delete(frame);},

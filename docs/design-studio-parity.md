@@ -26741,3 +26741,42 @@ action picker, source interaction schema, active responsive binding discovery,
 runtime DOM application/restoration, navigation/overlay persistence and browser
 verification remain to be implemented. No UI or desktop artifact changed in this
 increment. Full Figma parity and notarized Homebrew distribution remain incomplete.
+
+### 2026-09-20 — Set variable prototype action and presentation state
+
+The light interaction popover now offers Set variable, with collection/name
+selection and typed color, number, boolean or string inputs. The authored action
+stores a stable variable ID, expected type and literal value. Shared validation
+rejects malformed IDs/values and fields belonging to navigation, overlays or
+transitions. HTML, React, Liquid and Vue source round-trip/history tests cover the
+new action.
+
+A presentation variable session queues assignments, checks the library revision,
+resolves mounted source bindings, and applies only properties whose resolved alias
+path uses an assigned variable. Projection completes before styles are applied;
+requests are transported in batches of up to 256 bindings. Each binding retains
+its mode and unit. Source-reported local overrides are excluded. Temporary state
+is shared by the main page and overlays, retained across navigation/Back, and
+cleared on restart or exit. Mounted nodes and resize events trigger re-resolution.
+Per-property restoration avoids replacing the whole style attribute, and a
+session generation check prevents late requests applying after Exit. No source
+or variable library writes happen during presentation.
+
+Chromium and WebKit passed the new HTML browser suite: UI authoring and exact
+Undo/Redo, color aliases, numeric width, boolean visibility, string font family,
+Enter activation, retained draft input, overlay inheritance and changes propagated
+to the underlying page, navigation/Back persistence, restart/exit restoration,
+and cancellation while a read-only variable response is held in flight. Source
+and library bytes remained unchanged. The screenshot was inspected. The existing
+HTML prototype navigation/back/scroll/hover regression passed both browsers.
+All 2,088 unit tests passed; syntax and diff checks passed.
+
+The runtime currently reuses the inspector's numeric and minimum-width class
+binding inheritance. Complex class media scopes (including range/orientation),
+framework-specific live runtime behavior, resizing across scope boundaries,
+application-controlled style conflicts and late mounting need broader browser
+coverage and completion. Source round-trip evidence for React/Liquid/Vue is not
+runtime parity evidence. Expressions, variable-to-variable assignment, conditions,
+multiple actions and non-style variable bindings remain unfinished. No desktop
+artifact was rebuilt or launched, and this increment was not pushed. Full Figma
+parity and notarized Homebrew distribution remain incomplete.
