@@ -991,7 +991,7 @@ async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawin
     if(!info.renderRevisionAttribute)return false;
     // A fresh server response can precede delivery of the browser hot update.
     // Use the same bounded window as RetouchRenderSync before falling back.
-    let stable=0;const deadline=performance.now()+8000;
+    let stable=0,syncAfter=0;const deadline=performance.now()+8000;
     while(performance.now()<deadline){
       if(!current())return false;
       try{
@@ -999,6 +999,7 @@ async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawin
         const stylesReady=[...d.querySelectorAll('link[rel="stylesheet"]')].every(link=>link.disabled||!!link.sheet);
         const ready=el&&el.getAttribute(info.renderRevisionAttribute)===info.hash&&matches(el)&&(expectedText===null||el.textContent===expectedText)&&stylesReady&&clientMountReady(d);
         stable=ready?stable+1:0;
+        if(!ready&&performance.now()>=syncAfter){RetouchRenderSync.requestSourceSync(iframe);syncAfter=performance.now()+1000;}
         if(stable>=3)return true;
       }catch{stable=0;}
       await new Promise(resolve=>setTimeout(resolve,50));

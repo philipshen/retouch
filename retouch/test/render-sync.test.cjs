@@ -88,3 +88,10 @@ test('superseded image refresh cannot overwrite a newer edit with a delayed resp
     assert.equal(frame.contentDocument, d);
   } finally { globalThis.DOMParser = savedParser; }
 });
+test('compiled style verification requests a source snapshot when the live revision is behind', async () => {
+ const rendering={attribute:'data-rt-revision',hash:'a'.repeat(40),selector:'[data-rt-svelte-css="1234567890"]',property:'--retouch-css-revision',value:'b'.repeat(40)};
+ let hash='old',css='old';const events=[];
+ const document={querySelectorAll:()=>[{getAttribute:name=>name==='data-rt'?'1234567890':hash}],styleSheets:[{cssRules:[{selectorText:rendering.selector,style:{getPropertyValue:()=>css}}]}]};
+ const frame={contentDocument:document,contentWindow:{location:{href:'http://localhost/'},CustomEvent:class{constructor(type){this.type=type;}},dispatchEvent(event){events.push(event.type);hash=rendering.hash;css=rendering.value;}}};
+ const result=await require('../shell/render-sync.js').syncCSS({frame,id:'1234567890',rendering});assert.equal(result.method,'compiled-styles');assert.deepEqual(events,['retouch:source-sync']);
+});

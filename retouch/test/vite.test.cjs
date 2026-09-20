@@ -90,3 +90,29 @@ test('Svelte Vite styles and exact first-write undo use CSS HMR while authored s
  assert.deepEqual(await update(original),[]);assert.equal(messages.length,2);assert.doesNotMatch(messages[1].data.css.text,/min-width/);assert.equal(messages[1].data.revision,r.hash);
  assert.equal(await update(original.replace('color:red','color:blue')),undefined);assert.equal(messages.length,2);
 });
+test('Svelte recovery snapshots are scoped to served components and carry monotonic source versions',async t=>{
+ const {root,config}=fixture(t),file=path.join(root,'App.svelte'),source='<h1>Hello</h1>',plugin=retouch(),channel=new (require('node:events').EventEmitter)();
+ fs.writeFileSync(file,source);fs.writeFileSync(path.join(root,'Unserved.svelte'),'<h1>Private</h1>');plugin.configResolved({...config,plugins:[{name:'vite-plugin-svelte'}]});
+ await plugin.configureServer({environments:{client:{hot:channel}},middlewares:{use(){}},config:{logger:{info(){}}}});t.after(()=>plugin.closeBundle());
+ const replies=[],client={send:message=>replies.push(message)};
+ channel.emit('retouch:svelte-sync',{file:'App.svelte',request:1},client);assert.equal(replies.length,0);
+ plugin.transform.call({warn:message=>assert.fail(message)},source,file);
+ for(const file of ['../App.svelte','/App.svelte','Unserved.svelte','node_modules/App.svelte'])channel.emit('retouch:svelte-sync',{file,request:1},client);
+ for(const request of [null,-1,0,1.5,'1',Infinity])channel.emit('retouch:svelte-sync',{file:'App.svelte',request},client);
+ assert.equal(replies.length,0);channel.emit('retouch:svelte-sync',{file:'App.svelte',request:1},client);
+ assert.equal(replies.length,1);assert.equal(replies[0].event,'retouch:svelte-snapshot');assert.equal(replies[0].data.sequence,0);assert.equal(replies[0].data.request,1);assert.match(replies[0].data.signature,/^[a-f0-9]{40}$/);
+ const events=[],context={environment:{config:{consumer:'client'},hot:{send:message=>events.push(message)}}};
+ await plugin.hotUpdate.handler.call(context,{file,read:async()=>source.replace('Hello','New')});
+ await plugin.hotUpdate.handler.call(context,{file,read:async()=>source});
+ assert.deepEqual(events.map(e=>e.data.sequence),[1,2]);assert.equal(events[1].data.revision,replies[0].data.revision);
+ channel.emit('retouch:svelte-sync',{file:'App.svelte',request:2},client);assert.equal(replies[1].data.sequence,2);assert.equal(replies[1].data.epoch,replies[0].data.epoch);
+ await plugin.closeBundle();assert.equal(channel.listenerCount('retouch:svelte-sync'),0);
+});
+test('Svelte delayed file reads cannot publish an older edit after a newer HMR result',async t=>{
+ const {root,config}=fixture(t),file=path.join(root,'App.svelte'),source='<h1>Hello</h1>',plugin=retouch();fs.writeFileSync(file,source);plugin.configResolved({...config,plugins:[{name:'vite-plugin-svelte'}]});plugin.transform.call({warn:message=>assert.fail(message)},source,file);
+ const events=[],context={environment:{config:{consumer:'client'},hot:{send:message=>events.push(message)}}};let release;
+ const slow=plugin.hotUpdate.handler.call(context,{file,read:()=>new Promise(resolve=>release=resolve)});
+ await plugin.hotUpdate.handler.call(context,{file,read:async()=>source.replace('Hello','Latest')});release(source.replace('Hello','Stale'));assert.deepEqual(await slow,[]);
+ assert.equal(events.length,1);assert.ok(Object.values(events[0].data.texts).includes('Latest'));
+ await plugin.hotUpdate.handler.call(context,{file,read:async()=>source});assert.equal(events[1].data.sequence,2);
+});

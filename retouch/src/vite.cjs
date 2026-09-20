@@ -4,14 +4,15 @@ const virtual='virtual:retouch-group-scale.jsx',resolvedVirtual='\0retouch-group
 const vueStylePrefix='virtual:retouch-vue-css/';
 function retouch(options={}){
  if(options.adapter!==undefined&&!['react','vue','svelte'].includes(options.adapter))throw Error('[retouch] Choose the react, vue, or svelte source adapter.');
- let config,sidecar,sourceAdapter;const vueStyleModules=new Map(),vueSourceRevisions=new Map(),svelteSnapshots=new Map();
+ let config,sidecar,sourceAdapter,svelteChannel,svelteSyncHandler;const vueStyleModules=new Map(),vueSourceRevisions=new Map(),svelteSnapshots=new Map(),svelteSequences=new Map(),svelteTickets=new Map(),svelteFiles=new Map();
+ const svelteEpoch=require('node:crypto').randomUUID();
  function vueStyleFile(id){
   const key=id.replace(/^\0/,'').split('?')[0];if(!key.startsWith(vueStylePrefix)||!key.endsWith('.css'))return null;
   const encoded=key.slice(vueStylePrefix.length,-4);if(!/^[A-Za-z0-9_-]+$/.test(encoded))return null;
   const relative=Buffer.from(encoded,'base64url').toString('utf8');if(Buffer.from(relative).toString('base64url')!==encoded||!relative.endsWith('.vue'))return null;
   try{const file=fs.realpathSync(path.resolve(config.root,relative)),rel=path.relative(config.root,file);if(rel.startsWith('..'+path.sep)||path.isAbsolute(rel)||file.split(path.sep).includes('node_modules'))return null;return {file,relative:rel.split(path.sep).join('/')};}catch{return null;}
  }
- async function closeSidecar(){if(!sidecar)return;const active=sidecar;sidecar=null;active.retouchIndex.close();active.closeAllConnections();await new Promise(resolve=>active.close(resolve));}
+ async function closeSidecar(){if(svelteChannel){svelteChannel.off('retouch:svelte-sync',svelteSyncHandler);svelteChannel=null;svelteSyncHandler=null;}if(!sidecar)return;const active=sidecar;sidecar=null;active.retouchIndex.close();active.closeAllConnections();await new Promise(resolve=>active.close(resolve));}
  const plugin={
   name:'vite-plugin-retouch',apply:'serve',enforce:'pre',
   configResolved(value){
@@ -33,6 +34,14 @@ function retouch(options={}){
   },
   async configureServer(server){
    require('./installation.cjs').check();
+   if(sourceAdapter.name==='svelte'){
+    const channel=server.environments?.client?.hot||server.ws;
+    svelteChannel=channel;svelteSyncHandler=(data,client)=>{
+     if(!data||typeof data.file!=='string'||data.file.length>4096||!Number.isSafeInteger(data.request)||data.request<1)return;
+     const file=svelteFiles.get(data.file),snapshot=svelteSnapshots.get(file);if(!snapshot)return;
+     client.send({type:'custom',event:'retouch:svelte-snapshot',data:{file:data.file,request:data.request,...require('./svelte-hmr.cjs').payload(snapshot,svelteSequences.get(file)||0,svelteEpoch)}});
+    };channel.on('retouch:svelte-sync',svelteSyncHandler);
+   }
    const adapter={...sourceAdapter,assets:config.publicDir?{...sourceAdapter.assets,directory:path.relative(config.root,config.publicDir),urlPrefix:config.base}:undefined};
    sidecar=require('./server.cjs').startServer({appRoot:config.root,port:0,adapter,rendering:{reloadOnServerRestart:true},quiet:true});
    if(!sidecar.listening)await once(sidecar,'listening');
@@ -63,7 +72,7 @@ function retouch(options={}){
    if(id.split(path.sep).includes('node_modules'))return null;
    try{
     const real=fs.realpathSync(id),realRelative=path.relative(config.root,real);if(real.split(path.sep).includes('node_modules')||realRelative.startsWith('..'+path.sep)||path.isAbsolute(realRelative))return null;
-    if(sourceAdapter.name==='svelte'){if(!svelteSnapshots.has(real))svelteSnapshots.set(real,require('./svelte-source.cjs').textSnapshot(source,realRelative.split(path.sep).join('/')));return sourceAdapter.stamp(source,real,config.root,{runtime:true});}
+    if(sourceAdapter.name==='svelte'){svelteFiles.set(realRelative.split(path.sep).join('/'),real);if(!svelteSnapshots.has(real))svelteSnapshots.set(real,require('./svelte-source.cjs').textSnapshot(source,realRelative.split(path.sep).join('/')));return sourceAdapter.stamp(source,real,config.root,{runtime:true});}
     if(sourceAdapter.name==='vue'){vueSourceRevisions.set(id,sourceAdapter.contentHash(source));return sourceAdapter.stamp(source,real,config.root);}
     const helper=path.join(path.dirname(real),'.retouch-group-scale.jsx'),runtime=require('./react-group-scale-runtime.cjs');if(fs.existsSync(helper))this.addWatchFile(helper);
     return require('./stamp.cjs').stamp(source,real,config.root,{groupScaleRuntime:virtual,redirectGroupScaleRuntime:fs.existsSync(helper)&&fs.readFileSync(helper,'utf8')===runtime.component()});
@@ -72,9 +81,12 @@ function retouch(options={}){
   hotUpdate:{order:'pre',async handler(ctx){
    if(sourceAdapter?.name!=='svelte'||this.environment?.config.consumer!=='client'||!sourceAdapter.matches(ctx.file))return;
    let file;try{file=fs.realpathSync(ctx.file);}catch{return;}const before=svelteSnapshots.get(file);if(!before)return;
+   const ticket=(svelteTickets.get(file)||0)+1;svelteTickets.set(file,ticket);
    const relative=path.relative(config.root,file).split(path.sep).join('/');let next;try{next=require('./svelte-source.cjs').textSnapshot(await ctx.read(),relative);}catch{return;}
-   svelteSnapshots.set(file,next);if(before.signature!==next.signature)return;if(before.revision===next.revision)return [];
-   this.environment.hot.send({type:'custom',event:'retouch:svelte-source',data:{file:relative,revision:next.revision,texts:next.texts,styleIds:next.styling?.ids||{},css:next.styling?.css||null}});return [];
+   if(svelteTickets.get(file)!==ticket)return [];
+   svelteSnapshots.set(file,next);if(before.revision!==next.revision)svelteSequences.set(file,(svelteSequences.get(file)||0)+1);
+   if(before.signature!==next.signature)return;if(before.revision===next.revision)return [];
+   this.environment.hot.send({type:'custom',event:'retouch:svelte-source',data:{file:relative,...require('./svelte-hmr.cjs').payload(next,svelteSequences.get(file),svelteEpoch)}});return [];
   }},
   async handleHotUpdate(ctx){
    if(config?.command!=='serve'||sourceAdapter?.name!=='vue'||!sourceAdapter.matches(ctx.file)||ctx.file.split(path.sep).includes('node_modules'))return;

@@ -76,14 +76,20 @@
       });
     }
   }
+  function requestSourceSync(frame) {
+    const win=frame.contentWindow;
+    if(typeof win?.dispatchEvent==='function'&&typeof win.CustomEvent==='function')win.dispatchEvent(new win.CustomEvent('retouch:source-sync'));
+  }
   async function sync({ frame, serverRendered = false, select, matches = () => true, current = () => true, revalidate = false, authorStyles = false, timeout = 8000, fetcher = root.fetch.bind(root) }) {
     const d = frame.contentDocument, href = frame.contentWindow.location.href, started = Date.now();
+    let attempts=0;
     const unchanged = () => current() && frame.contentDocument === d && frame.contentWindow.location.href === href;
     while (Date.now() - started < timeout) {
       if (!unchanged()) throw new Error('Preview navigated while synchronizing the saved edit');
       if (!serverRendered) {
         const live = select(d);
         if (live.length && live.every(matches)) return { ok: true, method: 'hmr' };
+        if(attempts++%10===0)requestSourceSync(frame);
       } else {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), Math.max(1, timeout - (Date.now() - started)));
@@ -124,6 +130,7 @@
         if(frame.contentDocument!==document||frame.contentWindow.location.href!==href)throw Error('Preview navigated while waiting for the compiled styles.');
         const ready=entries.every(({id,rendering})=>{const nodes=[...document.querySelectorAll('[data-rt]')].filter(node=>node.getAttribute('data-rt')===id);return nodes.length>0&&nodes.every(node=>node.getAttribute(rendering.attribute)===rendering.hash)&&sheetMatches(rendering);});
         stable=ready?stable+1:0;if(stable>=3)return {ok:true,method:'compiled-styles',layers:entries.length};
+        if(!ready&&attempt%20===0)requestSourceSync(frame);
         await new Promise(resolve=>setTimeout(resolve,50));
       }
       throw Error('The preview has not received the compiled style revision.');
@@ -228,7 +235,7 @@
     d[Symbol.for('retouch.group-scale.runtime')]?.refresh();
     if(frame.contentDocument!==d)throw Error('Preview navigated while synchronizing group scale.');
   }
-  const api = { capture, restore, reconcile, sync, syncCSS, syncClasses, ensureGroupScaleRuntime, refreshStyles: revalidateStyles };
+  const api = { capture, restore, reconcile, sync, syncCSS, requestSourceSync, syncClasses, ensureGroupScaleRuntime, refreshStyles: revalidateStyles };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.RetouchRenderSync = api;
 })(typeof window !== 'undefined' ? window : globalThis);

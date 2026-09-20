@@ -54,7 +54,7 @@ function stamp(source,file,root,{runtime=false}={}){
    }
   }
   for(const element of elements)if(Object.hasOwn(snapshot.texts,element.id)){const range=textRange(element,source),expression='{$'+binding+'.texts['+JSON.stringify(element.id)+']}';if(range.start===range.end)out.appendLeft(range.start,expression);else out.overwrite(range.start,range.end,expression);}
-  const script='\nimport {sourceState as '+binding+'_create} from "virtual:retouch-svelte-source";\nconst '+binding+' = '+binding+'_create('+JSON.stringify(relative)+','+JSON.stringify({revision,texts:snapshot.texts,styleIds:snapshot.styling?.ids||{},css:snapshot.styling?.css||null}).replace(/</g,'\\u003c')+');\n';
+  const script='\nimport {sourceState as '+binding+'_create} from "virtual:retouch-svelte-source";\nconst '+binding+' = '+binding+'_create('+JSON.stringify(relative)+','+JSON.stringify({revision,signature:contentHash(snapshot.signature),texts:snapshot.texts,styleIds:snapshot.styling?.ids||{},css:snapshot.styling?.css||null}).replace(/</g,'\\u003c')+');\n';
   if(ast.module)out.appendLeft(ast.module.content.start,script);else out.prepend('<script module>'+script+'</script>\n');
  }
  return {code:out.toString(),map:out.generateMap({hires:true,source:file,includeContent:true})};

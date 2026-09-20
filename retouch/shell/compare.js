@@ -812,6 +812,7 @@
     },
     async syncText(info){
       if(!open||info.kind!=='host'||info.textSource)return;
+      if(info.preserveTextNodes&&info.renderRevisionAttribute)return this.syncRendered({select:d=>[...d.querySelectorAll('[data-rt]')].filter(el=>el.getAttribute('data-rt')===info.id),matches:el=>el.textContent===info.text,serverRendered:false,revisionAttribute:info.renderRevisionAttribute,hash:info.hash,kind:'Text'});
       if(!window.__RT_RENDERING?.reloadAfterWrite){syncColdText(info);return;}
       const targets=[...cards];
       await Promise.all(targets.map(async card=>{

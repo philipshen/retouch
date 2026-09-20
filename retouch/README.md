@@ -230,6 +230,14 @@ styles and their literal ownership attributes, while omitting development source
 markers and the live-update runtime. SvelteKit SSR/hydration, custom preprocessing,
 and other Svelte compiler versions remain unverified.
 
+Live updates carry ordered versions. Preview verification and returning to a
+backgrounded page request fresh snapshots, so a missed or delayed text/style
+message can recover without remounting. Old broadcasts and stale module
+initialization cannot roll the preview back. Snapshots are limited to components
+already served by this Vite instance. Vite itself reloads the page after an actual
+websocket disconnect or server restart; state retention through those events is
+not provided by this integration.
+
 Verified with Vite 8.3.0, Svelte 5.57.1, and `@sveltejs/vite-plugin-svelte` 7.3.0.
 
 ## Explicit config mode
