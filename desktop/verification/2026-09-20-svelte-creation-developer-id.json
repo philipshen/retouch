@@ -1,0 +1,242 @@
+{
+  "date": "2026-09-20",
+  "artifact": "/Users/philipshen/Developer/retouch-worktrees/desktop-creation-de10b322/Retouch-0.1.0-mac.zip",
+  "sha256": "89c3b2ee1a10f1cbd46ae56e3c5d243b080d6aa9dcdd938a5dcb9f8a4fe47327",
+  "sourceCommit": "de10b322cf170af819e37a7ae408de733949e0f4",
+  "sourceTreeDirty": false,
+  "sourceFilesMatched": 397,
+  "nativeInputsMatched": 4,
+  "packageVerification": {
+    "captureBrowser": {
+      "playwrightVersion": "1.59.1",
+      "revision": "1217",
+      "architectures": [
+        "arm64",
+        "x64"
+      ],
+      "files": 34
+    },
+    "sourceCommit": "de10b322cf170af819e37a7ae408de733949e0f4",
+    "sourceTreeDirty": false,
+    "sourceFiles": 397,
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "signature": "strict verification passed; trust and notarization are separate checks"
+  },
+  "testRuntimeIntegrity": {
+    "package": {
+      "captureBrowser": {
+        "playwrightVersion": "1.59.1",
+        "revision": "1217",
+        "architectures": [
+          "arm64",
+          "x64"
+        ],
+        "files": 34
+      },
+      "sourceCommit": "de10b322cf170af819e37a7ae408de733949e0f4",
+      "sourceTreeDirty": false,
+      "sourceFiles": 397,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "runtime": {
+      "packagedFiles": 4822,
+      "packagedSymlinks": 7,
+      "addedDependencyRoots": [
+        "node_modules/.bin/liquid",
+        "node_modules/.bin/liquidjs",
+        "node_modules/@vue/reactivity",
+        "node_modules/@vue/runtime-core",
+        "node_modules/@vue/runtime-dom",
+        "node_modules/@vue/server-renderer",
+        "node_modules/commander",
+        "node_modules/csstype",
+        "node_modules/liquidjs",
+        "node_modules/vue"
+      ],
+      "integrity": "Packaged bytes, modes, symlink targets and inventories match"
+    }
+  },
+  "runtimeUnitTests": 2419,
+  "desktopUnitTests": 33,
+  "packagedExport": {
+    "sourceCommit": "de10b322cf170af819e37a7ae408de733949e0f4",
+    "sourceTreeDirty": false,
+    "sourceFilesMatched": 397,
+    "captureBrowser": "/Users/philipshen/Developer/retouch-worktrees/desktop-creation-de10b322/archive-check/Retouch.app/Contents/Resources/capture-browser/arm64/chrome-headless-shell",
+    "passed": [
+      "selected PNG dimensions and alpha",
+      "fractional viewport export",
+      "separate ZIP dimensions and pixels",
+      "JPEG signature",
+      "cancellation before launch",
+      "unchanged packaged source"
+    ]
+  },
+  "packagedBrowserWorkflows": {
+    "svelteCreationChromiumAndWebKit": "Passed normal creation, duplication, exact two-file undo/redo, moved responsive styles, uncontrolled drafts, two-way form bindings, local writable-store identity, sibling state and fresh initialization after external script edits",
+    "svelteContractsChromiumAndWebKit": "Passed imported indexed and filtered contracts, aliases, shared defaults, insertion, swapping, detach, ordering, retained state, exact history, dropped-update recovery and production exclusion",
+    "reactChromiumAndWebKit": "Passed normal component creation, drafts, exact undo/redo and recovery of three comparisons with dropped updates",
+    "screenViewChromiumAndWebKit": "Passed page, nested, shadow and same-origin embedded scroll restoration, canvas pan, state retention, route/reload isolation and cross-origin exclusions",
+    "comparisonScrollChromiumAndWebKit": "Passed panel resize and ordering, SVG/open-shadow/same-origin embedded scrolling, scaled deltas, nested iframe containment and parent handoff, source and main-canvas isolation",
+    "projectScreensChromiumAndWebKit": "Passed current markers, comparison geometry after content resizing, screen persistence and project isolation"
+  },
+  "packageTamperVerification": "Passed mutation and relocation checks; original unchanged",
+  "homebrew": {
+    "version": "Homebrew 7.0.1",
+    "installation": {
+      "verification": {
+        "captureBrowser": {
+          "playwrightVersion": "1.59.1",
+          "revision": "1217",
+          "architectures": [
+            "arm64",
+            "x64"
+          ],
+          "files": 34
+        },
+        "sourceCommit": "de10b322cf170af819e37a7ae408de733949e0f4",
+        "sourceTreeDirty": false,
+        "sourceFiles": 397,
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ],
+        "signature": "strict verification passed; trust and notarization are separate checks"
+      },
+      "manifestMatchesArchive": true,
+      "quarantine": "0381;6ab0006b;;C15C3436-1788-4F69-B5A2-F4F5C4D0BE58",
+      "nativeLaunchAttempted": false
+    },
+    "originalInventoriesRestored": true,
+    "temporaryAppAndTapRemoved": true,
+    "isolatedTrustEmpty": true,
+    "autoRemoveDisabled": true,
+    "localCask": "/Users/philipshen/Developer/retouch-worktrees/desktop-creation-de10b322/retouch-studio.rb",
+    "localCaskSha256": "6c515f620f8cc66e66d3c086b7d374c2522b24a2ef981c9205b328127ccb652a"
+  },
+  "gatekeeper": {
+    "exitCode": 3,
+    "result": "Unnotarized Developer ID"
+  },
+  "nativeLaunchAttempted": false,
+  "notarization": "Not submitted; existing notarytool Keychain profile name pending",
+  "unverified": [
+    "native UI launch for this artifact",
+    "Intel runtime execution",
+    "notarization and trusted public distribution",
+    "Homebrew upgrade"
+  ],
+  "evidenceLogs": {
+    "retouch-desktop-creation-brew-cleanup.log": {
+      "path": "/tmp/retouch-desktop-creation-brew-cleanup.log",
+      "sha256": "cfc0115874a1dc0474f955b066fc8bda073548af6890762f2d322052fcacdcdf"
+    },
+    "retouch-desktop-creation-brew-install.log": {
+      "path": "/tmp/retouch-desktop-creation-brew-install.log",
+      "sha256": "29ddf2f51c45bd243eb1efa8c9c9cdb55d5c8fe255d41fea6045ccb2442d1a34"
+    },
+    "retouch-desktop-creation-brew-prepare.log": {
+      "path": "/tmp/retouch-desktop-creation-brew-prepare.log",
+      "sha256": "3eade84f0a37095be656f37505b94e36bcb88425e2950c997cb12407c260a369"
+    },
+    "retouch-desktop-creation-brew-verify.json": {
+      "path": "/tmp/retouch-desktop-creation-brew-verify.json",
+      "sha256": "9ea5906cc284c31e79fe6f17c1e4754d8cd1fc62fffa0e6cf6895bc4ce5773f9"
+    },
+    "retouch-desktop-creation-build.log": {
+      "path": "/tmp/retouch-desktop-creation-build.log",
+      "sha256": "a22ef694fd2f9ab11be4edbb2a0b9f12bfc1cc8939cc0fb5969f978e424e2962"
+    },
+    "retouch-desktop-creation-compare-scroll-chromium.log": {
+      "path": "/tmp/retouch-desktop-creation-compare-scroll-chromium.log",
+      "sha256": "4b0a3a0fa507f3126985412cef7a97427ad13c15bbc53cb5efa1c659a9878342"
+    },
+    "retouch-desktop-creation-compare-scroll-webkit.log": {
+      "path": "/tmp/retouch-desktop-creation-compare-scroll-webkit.log",
+      "sha256": "b77f6f8b257ae62666edf90950c23dc3bf3d15e8e4a355bba131444c24e56ba5"
+    },
+    "retouch-desktop-creation-export.json": {
+      "path": "/tmp/retouch-desktop-creation-export.json",
+      "sha256": "291c83440837f159d321aaaef41f59366cec593bab55e247c59f034b0e500027"
+    },
+    "retouch-desktop-creation-final.json": {
+      "path": "/tmp/retouch-desktop-creation-final.json",
+      "sha256": "e2ed2626c6ef9796e94823651471dfdef8104137a5042cca3e924266c4fa9789"
+    },
+    "retouch-desktop-creation-gatekeeper.log": {
+      "path": "/tmp/retouch-desktop-creation-gatekeeper.log",
+      "sha256": "9ac261a15406107866f4298c430ea4d80af40daa90a0e23b6ffa8e8c6ec78a25"
+    },
+    "retouch-desktop-creation-original-final.json": {
+      "path": "/tmp/retouch-desktop-creation-original-final.json",
+      "sha256": "7f903b2738bf2e78951b1119ed78ff9fa5964687acd19c5032c362ee708eb812"
+    },
+    "retouch-desktop-creation-prepare.json": {
+      "path": "/tmp/retouch-desktop-creation-prepare.json",
+      "sha256": "e2ed2626c6ef9796e94823651471dfdef8104137a5042cca3e924266c4fa9789"
+    },
+    "retouch-desktop-creation-project-screens-chromium.log": {
+      "path": "/tmp/retouch-desktop-creation-project-screens-chromium.log",
+      "sha256": "404881e37fbb755f2577dc69fdf2ffd9783241fad0be7b2c3f851e2342232d78"
+    },
+    "retouch-desktop-creation-project-screens-webkit.log": {
+      "path": "/tmp/retouch-desktop-creation-project-screens-webkit.log",
+      "sha256": "23b644aa00f2245167bf79fb4f5df3dd9b1a059265fb4718f76ba11af760ef8a"
+    },
+    "retouch-desktop-creation-react-chromium.log": {
+      "path": "/tmp/retouch-desktop-creation-react-chromium.log",
+      "sha256": "f15a53bcf4676360e199b9ff529ded4af23591b17f2cf72f764b1a822c486d3f"
+    },
+    "retouch-desktop-creation-react-webkit.log": {
+      "path": "/tmp/retouch-desktop-creation-react-webkit.log",
+      "sha256": "fa8263ee262c822bd8938b28ba4a79dd1a7555900666ebbff05ddcec95223487"
+    },
+    "retouch-desktop-creation-runtime-tests.log": {
+      "path": "/tmp/retouch-desktop-creation-runtime-tests.log",
+      "sha256": "3a0424382a7a4b133a28af8a6f94911241a8a70c9eeae07740488c4df2c9a5a2"
+    },
+    "retouch-desktop-creation-screen-view-memory-chromium.log": {
+      "path": "/tmp/retouch-desktop-creation-screen-view-memory-chromium.log",
+      "sha256": "90d8b8c5c11d25a2ddce02859fe5880127c5977747721cb79f607aef5738f47f"
+    },
+    "retouch-desktop-creation-screen-view-memory-webkit.log": {
+      "path": "/tmp/retouch-desktop-creation-screen-view-memory-webkit.log",
+      "sha256": "37f8d3d18c3adb7b4fd1e846cb7409370c4a8d29d266ca1d9ed9db236b15a6d8"
+    },
+    "retouch-desktop-creation-source.json": {
+      "path": "/tmp/retouch-desktop-creation-source.json",
+      "sha256": "8526e74bfb056deae955366b0e855c941e3d1c08db546febb7776e5d234d393b"
+    },
+    "retouch-desktop-creation-svelte-create-component-chromium.log": {
+      "path": "/tmp/retouch-desktop-creation-svelte-create-component-chromium.log",
+      "sha256": "ab522913f1c73ba579d6e0a60860a33dc4a1581e92b4195b5f61bac3c41621f0"
+    },
+    "retouch-desktop-creation-svelte-create-component-webkit.log": {
+      "path": "/tmp/retouch-desktop-creation-svelte-create-component-webkit.log",
+      "sha256": "db6ec3b9fa201f31cc54e02f616e7fb688d3b09c92e3bbfb63a7d3f91fc96f0e"
+    },
+    "retouch-desktop-creation-tamper.log": {
+      "path": "/tmp/retouch-desktop-creation-tamper.log",
+      "sha256": "ee0e093762528692b73c240d1f29ca071435cf6ff09dc8004e5d36360d46904a"
+    },
+    "retouch-desktop-creation-unit.log": {
+      "path": "/tmp/retouch-desktop-creation-unit.log",
+      "sha256": "ae09658727575656acd5c88e84ccb30cdbd5252b5e565ce3f5eef9e900f1e5d7"
+    },
+    "retouch-desktop-creation-vite-svelte-chromium.log": {
+      "path": "/tmp/retouch-desktop-creation-vite-svelte-chromium.log",
+      "sha256": "05bf57e490275ed206857ce0334a0d2ae1c9519b4886e36294d3b1ceb4794016"
+    },
+    "retouch-desktop-creation-vite-svelte-webkit.log": {
+      "path": "/tmp/retouch-desktop-creation-vite-svelte-webkit.log",
+      "sha256": "c52c29f8437bf3f56616f34c3357e25c31f973578283a4c8d207b6c8e168cb70"
+    }
+  }
+}

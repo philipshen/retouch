@@ -27,7 +27,7 @@ changing those files. The original checkout may continue to evolve independently
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. Vite 8 React now has an explicit development plugin; installed-package startup, TSX text editing, hot-update state retention, process shutdown/restart and persisted exact undo pass in Chromium/WebKit (see docs/cli.md). Vue now has a Vite compiler adapter with source-backed responsive CSS, native structure and grouping, link editing, and rich text that retains live values and authored bindings. HTML has responsive CSS, structural edits and batch selection operations. URL capture now provides an editable local snapshot with downloaded images and readable font assets. Arbitrary-site fidelity, responsive reconstruction, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Comparison cards now show current scope coverage and offer an explicit width-and-larger style-scope action. Compact comparison defaults, explicit screen controls, add/reveal, remove/restore, keyboard focus and empty-state recovery now have browser coverage. Literal Liquid class edits retain main/comparison state and support preview-failure retry. Fully editable comparison canvases and cross-framework parity remain. |
 | Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop. Controlled native testing resumed with user authorization; rebuilt bundles still require individual launch verification under desktop/AGENTS.md. Current archive details and exact runtime evidence are in desktop/README.md. Current native interaction remains unverified. File flows, Intel runtime and broader lifecycle verification remain. |
-| Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. The latest `d70896e1` candidate has verified Developer ID signing, archive/source integrity, extracted-runtime checks and isolated Homebrew install/uninstall with quarantine retained and original inventories restored; see [its receipt](../desktop/verification/2026-09-17-variables-developer-id.json). Gatekeeper rejects it as unnotarized. Notarization, public publishing, upgrades, trusted quarantined launch and Intel execution remain unverified. |
+| Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. The latest `de10b322` candidate has verified Developer ID signing, archive/source integrity, extracted-runtime checks and isolated Homebrew install/uninstall with quarantine retained and original inventories restored; see [its receipt](../desktop/verification/2026-09-20-svelte-creation-developer-id.json). Gatekeeper rejects it as unnotarized. Notarization, public publishing, upgrades, trusted quarantined launch and Intel execution remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
 
 Figma reference material used to anchor the inventory:
@@ -28434,3 +28434,31 @@ This is bounded retention for supported store declarations, not arbitrary store
 factory/lifecycle or external-dependency preservation. Desktop artifacts were not
 rebuilt. Full Figma parity, arbitrary-site authoring and trusted public macOS
 distribution remain incomplete.
+
+
+### Signed Svelte creation and embedded-preview package checkpoint
+
+The universal Developer ID signed archive packages clean commit de10b322.
+All 397 source entries and four native build inputs matched that checkpoint.
+The extracted runtime passed 2,419 unit tests; all 33 desktop tests passed.
+Chromium and WebKit passed Svelte creation, duplication and exact two-file
+undo/redo with managed responsive styles, form bindings, retained drafts and
+local writable stores. External script edits correctly initialized fresh stores.
+Both browsers also passed imported component contracts, authoring and dropped
+update recovery, React creation/recovery, comparison panel controls and scrolling
+through SVG, open shadow roots and same-origin embedded pages, screen view
+memory and project-screen persistence/isolation.
+
+Bundled PNG/JPEG/ZIP export and package tamper checks passed. Final integrity
+verification confirmed 4,822 packaged files and seven symlinks unchanged.
+Homebrew 7.0.1 installed the checksum-bound local cask into an isolated directory;
+the installed manifest and strict signatures passed with quarantine retained.
+Cleanup restored the original formula, cask, tap, trust and developer inventories.
+Autoremove was disabled throughout.
+
+The artifact, SHA-256 and evidence hashes are recorded in
+[the verification receipt](../desktop/verification/2026-09-20-svelte-creation-developer-id.json).
+Gatekeeper reports Unnotarized Developer ID. No native launch was attempted.
+Native UI launch, Intel execution, notarization, trusted public distribution and
+Homebrew upgrade remain unverified. Full Figma parity and arbitrary-site authoring
+remain incomplete.

@@ -1,6 +1,31 @@
 # Retouch for macOS
 
-## Latest local signed candidate — imported contracts and screens, 2026-09-20
+## Latest local signed candidate — Svelte creation and embedded previews, 2026-09-20
+
+The universal Developer ID signed app packages clean commit `de10b322`.
+All 397 source entries and four native build inputs matched that checkpoint.
+It includes Svelte component extraction with managed styles, form bindings,
+retained drafts/local stores, imported property contracts and improved comparison
+scrolling through SVG, open shadow roots and same-origin embedded pages.
+
+Artifact: `/Users/philipshen/Developer/retouch-worktrees/desktop-creation-de10b322/Retouch-0.1.0-mac.zip`
+
+SHA-256: `89c3b2ee1a10f1cbd46ae56e3c5d243b080d6aa9dcdd938a5dcb9f8a4fe47327`
+
+The extracted runtime passed 2,419 unit tests and Chromium/WebKit component
+creation, authoring, recovery and screen-management workflows. All 33 desktop
+tests, package tamper checks and bundled PNG/JPEG/ZIP export checks passed.
+Final verification confirmed 4,822 packaged files and seven symlinks unchanged.
+
+Homebrew installed the checksum-bound local cask into an isolated app directory.
+Installed signatures and manifest passed, with quarantine intact. Cleanup restored
+original formula, cask, tap, trust and developer inventories; autoremove was disabled.
+
+Gatekeeper reports **Unnotarized Developer ID**. No native launch was attempted.
+Native UI launch, Intel execution, notarization, trusted public distribution and
+cask upgrade remain unverified. See the [verification receipt](verification/2026-09-20-svelte-creation-developer-id.json).
+
+## Previous signed candidate — imported contracts and screens, 2026-09-20
 
 The universal Developer ID signed app packages clean commit `cf4ca734`.
 All 395 source entries and four native build inputs matched that checkpoint.
