@@ -28462,3 +28462,29 @@ Gatekeeper reports Unnotarized Developer ID. No native launch was attempted.
 Native UI launch, Intel execution, notarization, trusted public distribution and
 Homebrew upgrade remain unverified. Full Figma parity and arbitrary-site authoring
 remain incomplete.
+
+
+### Svelte extraction with reactive class and style directives
+
+Create component now preserves class directives and style directives by passing
+their reactive values from the original parent. Shorthand forms become explicit
+expressions in the new component. Literal and mixed text/expression styles,
+custom properties and important priority remain intact. Repeated identifier
+references share a prop, while store values receive legal local aliases.
+Evaluated side effects and unsupported directives still refuse atomically.
+
+All 2,422 unit tests passed, including directive capture, exact two-file history,
+store aliases and side-effect refusal (/tmp/retouch-svelte-create-directives-full.log).
+Chromium and WebKit passed normal creation, duplication, undo and redo with
+independent main/phone class, opacity, font size, important priority, background
+and custom-property values. The original callback changed those styles after
+redo. Existing managed styles, form bindings, drafts, local store identity and
+external-script invalidation checks also passed
+(/tmp/retouch-svelte-create-directives-{chromium,webkit}.log).
+
+The browser fixture adds authored directives after generating managed styles;
+it does not claim that setCSS can override a computed inline style. Authored
+scoped CSS, template control-flow extraction and arbitrary directives remain
+unsupported. This source checkpoint is newer than the signed desktop package;
+no desktop rebuild or native launch was performed. Full Figma parity,
+arbitrary-site authoring and trusted public macOS distribution remain incomplete.

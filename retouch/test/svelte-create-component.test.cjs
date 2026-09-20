@@ -29,3 +29,15 @@ test('Svelte creation refuses binding expressions with side effects or group con
 test('Svelte creation aliases store bindings without moving store ownership',t=>{
  const f=fixture(t,'<script>import {writable} from "svelte/store";const title=writable("Hi");</script><article><input bind:value={$title}/><p>{$title}</p></article>'),plan=create(f);assert.equal(plan.ok,true,plan.reason);assert.match(plan.edits[0].after,/value1 = \$bindable\(\)/);assert.match(plan.edits[1].after,/<Card bind:value1=\{\$title\}\/>/);assert.equal(plan.createdComponent.props.length,1);
 });
+
+test('Svelte creation retains reactive class and style directives with exact history',t=>{
+ const f=fixture(t,'<script>let active=$state(true);let color=$state("red");let size=$state(12);let r=$state(20);</script><article class:active class:large={size>10} style:color|important style:font-size|important={size+"px"} style:background="rgb({r}, 0, 0)" style:display="block"><p class:active>{color}</p></article>'),plan=create(f);assert.equal(plan.ok,true,plan.reason);
+ const child=plan.edits[0].after,parent=plan.edits[1].after;assert.match(child,/class:active=\{active\}/);assert.match(child,/class:large=\{value2\}/);assert.match(child,/style:color\|important=\{color\}/);assert.match(child,/style:font-size\|important=\{value4\}/);assert.match(child,/style:background="rgb\(\{r\}, 0, 0\)"/);assert.match(child,/style:display="block"/);assert.match(parent,/value2=\{size>10\}/);assert.match(parent,/value4=\{size\+"px"\}/);assert.equal(plan.createdComponent.props.length,5);
+ const h=new SourceHistory(),saved=h.commit(f.root,plan);assert.equal(saved.ok,true,saved.reason);assert.equal(h.apply(f.root,'undo',saved.undoId,adapter).ok,true);assert.equal(fs.readFileSync(f.file,'utf8'),f.text);assert.equal(fs.existsSync(path.join(f.root,'Card.svelte')),false);assert.equal(h.apply(f.root,'redo',saved.undoId,adapter).ok,true);assert.equal(fs.readFileSync(path.join(f.root,'Card.svelte'),'utf8'),child);
+});
+test('Svelte creation aliases store-valued class and style directives',t=>{
+ const f=fixture(t,'<script>import {writable} from "svelte/store";const active=writable(true);const color=writable("red");</script><article class:active={$active} style:color={$color}><p>{$color}</p></article>'),plan=create(f);assert.equal(plan.ok,true,plan.reason);assert.match(plan.edits[0].after,/class:active=\{value1\}/);assert.match(plan.edits[0].after,/style:color=\{value2\}/);assert.equal(plan.createdComponent.props.length,2);
+});
+test('Svelte creation refuses evaluated side effects in class and style directives',t=>{
+ for(const attr of ['class:active={toggle()}','style:color={nextColor()}','style:width="{size++}px"']){const f=fixture(t,'<article '+attr+'>Hi</article>');assert.equal(create(f).refused,true,attr);assert.equal(fs.existsSync(path.join(f.root,'Card.svelte')),false);assert.equal(fs.readFileSync(f.file,'utf8'),f.text);}
+});

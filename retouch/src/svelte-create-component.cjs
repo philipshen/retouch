@@ -32,6 +32,19 @@ function plan(r,op,adapter){try{
     if(a.modifiers?.length||!['Identifier','MemberExpression'].includes(a.expression?.type))throw Error('This form binding needs a directly assignable parent value.');
     const name=capture(a.expression,true);fragment.overwrite(a.start-selected.start,a.end-selected.start,'bind:'+a.name+'={'+name+'}');continue;
    }
+   if(a.type==='ClassDirective'){
+    if(a.modifiers?.length)throw Error('This class directive needs its original component context.');
+    const name=capture(a.expression);fragment.overwrite(a.start-selected.start,a.end-selected.start,'class:'+a.name+'={'+name+'}');continue;
+   }
+   if(a.type==='StyleDirective'){
+    if(a.modifiers?.some(m=>m!=='important'))throw Error('This style directive needs its original component context.');
+    if(a.value===true){
+     if(!/^[A-Za-z_$][\w$]*$/.test(a.name))throw Error('Use an explicit expression for this style directive.');
+     const name=capture({type:'Identifier',name:a.name,start:a.start+6,end:a.start+6+a.name.length});
+     fragment.overwrite(a.start-selected.start,a.end-selected.start,'style:'+a.name+(a.modifiers?.length?'|important':'')+'={'+name+'}');
+    }else if(a.value?.type==='ExpressionTag')template(a.value);else for(const part of a.value||[])if(part.type==='ExpressionTag')template(part);
+    continue;
+   }
    if(a.type!=='Attribute')throw Error('This subtree uses a binding, directive or spread that needs its original component context.');
    if(/^(?:data-rt(?:$|-revision)|__retouch)/.test(a.name))throw Error('This subtree contains reserved source markers.');
    if(a.value===true)continue;
