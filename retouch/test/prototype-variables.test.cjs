@@ -68,3 +68,10 @@ test('explicit target and source modes copy independent snapshots without switch
  const count=requests.length;for(const bad of [{id:id(3),type:'number',modeId:id(99),value:1},{id:id(4),type:'number',variableId:id(3),sourceModeId:id(99)}])await runtime.assign(bad);assert.equal(requests.length,count);assert.equal(errors.length,2);assert.ok(errors.every(e=>/mode is missing/.test(e)));
  runtime.reset();await runtime.assign({id:id(4),type:'number',variableId:id(3),sourceModeId:id(20)});assert.equal(requests.at(-1).modeOverrides[id(4)][id(2)],50);
 });
+
+test('ordered action lists evaluate conditions against completed presentation assignments',async()=>{
+ const {runtime,requests,errors}=setup(),A=require('../shell/prototype-action-list.js'),events=[],runner=A.create({perform:action=>action.action==='set-variable'?runtime.assign(action.assignment):events.push(action.action),evaluate:expression=>runtime.evaluate(expression)}),condition={kind:'operation',op:'==',args:[{kind:'variable',id:id(3),type:'number'},{kind:'literal',type:'number',value:42}]};
+ await runner.run([{action:'set-variable',assignment:{id:id(3),type:'number',value:42}},{action:'conditional',condition,then:[{action:'navigate',destination:'/success'}],else:[{action:'back'}]}]);assert.deepEqual(events,['navigate']);assert.equal(requests.at(-1).modeOverrides[id(3)][id(2)],42);
+ await assert.rejects(runner.run([{action:'set-variable',assignment:{id:id(99),type:'number',value:1}},{action:'navigate',destination:'/wrong'}]),/missing/);assert.deepEqual(events,['navigate']);assert.equal(errors.length,1);
+ runtime.reset();assert.deepEqual(await runtime.evaluate(condition),{type:'boolean',value:false});
+});

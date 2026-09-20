@@ -27115,3 +27115,33 @@ unchanged after playback.
 Inherited object mode contexts, separate design pages, conditional action lists,
 multiple actions and the broader design-feature matrix remain unfinished. No
 native rebuild/launch or push; notarized Homebrew distribution remains incomplete.
+
+### 2026-09-20 — Ordered action and conditional execution foundation
+
+Added a shared action-list validator and executor for the next interaction-editor
+increment. Lists reuse the existing leaf action grammar and support nested typed
+Boolean if/else branches. They snapshot input at trigger time, reject per-action
+trigger fields, and enforce 128 actions, 16 conditional levels and the source-size
+bound. Every branch is validated even when not selected for execution.
+
+The executor awaits each action before evaluating the next condition, serializes
+triggered lists, stops on failures without poisoning later runs, and cancels waits
+on reset or external abort. Action/condition callbacks receive an AbortSignal and
+must cooperate to cancel their in-flight side effects. Late callback rejections
+are observed. The variable runtime now exposes queued read-only expression
+resolution and returns an explicit failure result after reporting assignment
+errors, allowing an action list to stop before navigation.
+
+Reference: https://help.figma.com/hc/en-us/articles/15253220891799-Multiple-actions-and-conditionals
+All 2,139 unit tests passed. New tests cover asynchronous order, nested branch
+selection, trigger-time snapshots, invalid/bounded lists, queued cancellation,
+reset during evaluation, late failures and subsequent-run recovery. Integration
+with the actual variable runtime confirms that a condition sees an assignment
+completed earlier in its list and that a missing variable stops later actions.
+Existing expression authoring/playback/error handling passed Chromium.
+
+This module is not loaded into the browser shell yet. Multiple-action source
+storage, editor controls, navigation/overlay/animation completion adapters and
+browser verification of full sequences are next. No user-facing multiple-action
+or conditional feature is claimed by this increment. Full design parity and
+notarized Homebrew distribution remain unfinished; no native rebuild/launch/push.
