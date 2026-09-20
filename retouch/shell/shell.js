@@ -3187,8 +3187,17 @@ async function setHref(href,info){
     renderPanel();toast('Link saved','ok');
   }finally{busyPanel(false);}
 }
+const imageThumbnailHeights=new Map();
+function rememberImageThumbnail(image){
+  image.style.minHeight='';if(!image.isConnected||!image.naturalWidth)return;
+  const height=getComputedStyle(image).height;if(!(parseFloat(height)>0))return;
+  imageThumbnailHeights.set(image.src,height);if(imageThumbnailHeights.size>128)imageThumbnailHeights.delete(imageThumbnailHeights.keys().next().value);
+}
+function setImageThumbnailSource(image,url){
+  image.style.minHeight=imageThumbnailHeights.get(url)||'';image.onload=()=>rememberImageThumbnail(image);image.onerror=()=>{image.style.minHeight='';};image.src=url;
+}
 async function refreshPictureSources(imageId,scope,candidate,{sourceIdMap=[],removedSourceIds=[],createdSourceIds=[],direction='redo',authorStyles=false,revalidateStyles=false}={}){
-  const panelScroll=panelBody.scrollTop,anchor=panelBody.querySelector('.picture-sources')?.getBoundingClientRect().top;
+  const scrollPanel=document.getElementById('panel'),panelScroll=scrollPanel.scrollTop,anchor=panelBody.querySelector('.picture-sources')?.getBoundingClientRect().top;
   const result=await api('GET',resolveUrl(imageId));if(!result?.ok||!result.element.responsiveImage?.sources)throw Error('The edited image could not be resolved.');
   const info=result.element,descriptor=info.responsiveImage;
   if(info.renderRevisionAttribute)await refreshResponsiveImage(info);else{
@@ -3198,7 +3207,13 @@ async function refreshPictureSources(imageId,scope,candidate,{sourceIdMap=[],rem
   await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select,matches,authorStyles,revalidate:revalidateStyles});
   const comparisons=await window.RetouchComparisons?.syncImage({select,matches,authorStyles,revalidate:revalidateStyles});if(comparisons?.failures.length)toast('Artwork saved. Retry the failed comparison previews.','err');
   }
-  info._responsiveCandidate=candidate;info._pictureSourcesOpen=true;sel={hostId:info.id,instanceId:null,scope:'host',info};await layers.refresh();renderPanel();const nextAnchor=panelBody.querySelector('.picture-sources')?.getBoundingClientRect().top;panelBody.scrollTop=panelScroll;if(Number.isFinite(anchor)&&Number.isFinite(nextAnchor))panelBody.scrollTop+=panelBody.querySelector('.picture-sources').getBoundingClientRect().top-anchor;
+  info._responsiveCandidate=candidate;info._pictureSourcesOpen=true;sel={hostId:info.id,instanceId:null,scope:'host',info};await layers.refresh();renderPanel();
+  // Candidate thumbnails can gain intrinsic height after the panel is rebuilt.
+  // Restore the artwork position after that layout change, without waiting
+  // indefinitely for an unavailable image.
+  let thumbnailTimer;try{await Promise.race([Promise.all([...panelBody.querySelectorAll('img.imgthumb')].map(image=>image.decode().then(()=>rememberImageThumbnail(image)).catch(()=>{}))),new Promise(resolve=>{thumbnailTimer=setTimeout(resolve,1500);})]);}finally{clearTimeout(thumbnailTimer);}
+  if(sel?.info!==info)return;
+  const nextAnchor=panelBody.querySelector('.picture-sources')?.getBoundingClientRect().top;scrollPanel.scrollTop=panelScroll;if(Number.isFinite(anchor)&&Number.isFinite(nextAnchor))scrollPanel.scrollTop+=panelBody.querySelector('.picture-sources').getBoundingClientRect().top-anchor;
 }
 function pictureSourceControls(info){
   if(info.pictureSourceAuthoring===false)return document.createDocumentFragment();
@@ -3245,7 +3260,7 @@ function responsiveImageControls(sec,info) {
   const choices=document.createElement('select');for(const candidate of descriptor.candidates)choices.add(new Option(candidate.label,candidate.key));
   const active=descriptor.candidates.filter(candidate=>candidate.attribute==='srcset').find(candidate=>{try{return new URL(candidate.url,target.ownerDocument.baseURI).href===target.currentSrc&&(!candidate.media||target.ownerDocument.defaultView.matchMedia(candidate.media).matches);}catch{return false;}});
   choices.value=descriptor.candidates.some(candidate=>candidate.key===info._responsiveCandidate)?info._responsiveCandidate:active?.key||'fallback';RetouchInspector.field(sec,'Image candidate',choices);
-  const input=document.createElement('input');input.type='text';const update=()=>{input.value=descriptor.candidates.find(candidate=>candidate.key===choices.value)?.url||'';preview.hidden=!input.value;if(!input.value){preview.removeAttribute('src');return;}try{preview.src=new URL(input.value,target.ownerDocument.baseURI).href;}catch{preview.removeAttribute('src');}};const sourceControls=document.createElement('div');
+  const input=document.createElement('input');input.type='text';const update=()=>{input.value=descriptor.candidates.find(candidate=>candidate.key===choices.value)?.url||'';preview.hidden=!input.value;if(!input.value){preview.removeAttribute('src');return;}try{setImageThumbnailSource(preview,new URL(input.value,target.ownerDocument.baseURI).href);}catch{preview.removeAttribute('src');}};const sourceControls=document.createElement('div');
   const selectCandidate=()=>{info._responsiveCandidate=choices.value;choices.title=choices.selectedOptions[0]?.textContent||'';update();const candidate=descriptor.candidates.find(candidate=>candidate.key===choices.value),source=descriptor.sources.find(source=>source.index===candidate.sourceIndex);sourceControls.replaceChildren(RetouchResponsiveImageCandidates.mount(descriptor,candidate,change=>saveResponsiveImageCandidates(info,change,choices.value),{open:!!info._responsiveCandidateOptionsOpen,onToggle:open=>{info._responsiveCandidateOptionsOpen=open;}}),RetouchResponsiveImageSource.mount(source,changes=>saveSource(changes,source.index,choices.value),{open:!!info._responsiveSourceOpen,onToggle:open=>{info._responsiveSourceOpen=open;}}));};choices.onchange=selectCandidate;selectCandidate();RetouchInspector.field(sec,'Candidate image path',input);
   const note=document.createElement('p');note.className='hint';note.textContent='Replace this candidate only. Screen conditions, resolution and sizing stay the same.';sec.append(note);
   async function apply(src,key=choices.value,hash=info.hash){
@@ -3290,7 +3305,7 @@ function imageSection(info) {
   const target = matchingEls(info.id)[0];
   let thumbnail=target?.currentSrc||target?.src||info.src;
   if(info.responsiveImage?.plain){thumbnail=null;try{if(info.src)thumbnail=new URL(info.src,target?.ownerDocument.baseURI||iframe.src).href;}catch{}}
-  if(thumbnail)img.src=thumbnail;else img.hidden=true;
+  if(thumbnail)setImageThumbnailSource(img,thumbnail);else img.hidden=true;
   img.alt = 'Selected image';
   sec.appendChild(img);
   if(target?.tagName==='IMG'&&thumbnail)sec.append(RetouchInspector.button('Crop image',()=>{stopDrawing?.();const hash=info.hash,source=target.currentSrc;RetouchImageCrop.open({target,current:()=>sel?.info===info&&info.hash===hash&&target.currentSrc===source&&!panelTasks&&!sourceRequests&&!undoBusy,onError:message=>toast(message,'err'),onApply:async blob=>{const response=await fetch('/rt/__api/upload?name=cropped-image.svg',{method:'POST',headers:{'x-retouch-token':TOKEN},body:blob}),result=await response.json();if(!result.ok)throw Error(result.reason||result.error||'Crop upload failed.');if(sel?.info!==info||info.hash!==hash||target.currentSrc!==source)throw Error('The selected image changed before the crop was saved.');await setSrc(result.src,false,info);if(info.src!==result.src)throw Error('The cropped image could not be applied.');}});}));
