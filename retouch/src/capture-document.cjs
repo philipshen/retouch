@@ -4,6 +4,7 @@
 module.exports=function captureDocument({shadowKey,responsive=false,sourceDocument,exportState=false,selectedNodes=[]}={}){
  const document=sourceDocument||globalThis.document,window=document.defaultView,{Node,CSSRule,CSS,location}=window,getComputedStyle=window.getComputedStyle.bind(window),matchMedia=window.matchMedia.bind(window),scroll=[],selectionIds=[],selectionNames=[];
  const warnings=new Set(),output=document.implementation.createHTMLDocument(document.title),rules=[],roots=new Set([document]),scopes=new WeakMap();let count=0,scopeCount=0;
+ const navigation=value=>{try{const url=new URL(value,document.baseURI);return ['http:','https:','mailto:','tel:'].includes(url.protocol)?url.href:'';}catch{return '';}};
  const absolute=value=>{try{const url=new URL(value,document.baseURI);return ['http:','https:','data:','blob:'].includes(url.protocol)?url.href:'';}catch{return '';}};
  function scope(node){const tree=node.getRootNode();if(!tree.host)return null;if(scopes.has(tree))return scopes.get(tree);roots.add(tree);const ids=new Map(),elements=new WeakMap(),prefix=(shadowKey||'retouchCapture')+'-'+(++scopeCount)+'-';let index=0;for(const element of tree.querySelectorAll('[id]')){const id=prefix+(++index);elements.set(element,id);if(!ids.has(element.id))ids.set(element.id,id);}const value={ids,elements};scopes.set(tree,value);return value;}
  const reference=(node,id)=>scope(node)?.ids.get(id)||id;
@@ -32,9 +33,9 @@ module.exports=function captureDocument({shadowKey,responsive=false,sourceDocume
   if(frozen)for(const pseudo of ['::before','::after']){const content=getComputedStyle(node,pseudo).content;if(content&&content!=='none'&&content!=='normal')rules.push('[data-capture-node="'+id+'"]'+pseudo+'{'+styles(node,pseudo)+'}');}
   if(tag==='img'){const source=responsive?node.getAttribute('src'):node.currentSrc||node.src;if(source)target.setAttribute('src',absolute(source));if(!responsive)target.removeAttribute('loading');if(responsive&&node.hasAttribute('srcset'))target.setAttribute('srcset',node.getAttribute('srcset'));}
   if(tag==='source'){if(!responsive||node.parentElement?.localName!=='picture')return null;if(node.hasAttribute('srcset'))target.setAttribute('srcset',node.getAttribute('srcset'));}
-  if(tag==='a'){const raw=node.getAttribute('href')||'',url=raw.startsWith('#')?fragment(node,raw):absolute(raw);if(url&&!url.startsWith('data:')&&!url.startsWith('blob:'))target.setAttribute('href',url);target.setAttribute('rel','noopener noreferrer');}
+  if(tag==='a'&&node.hasAttribute('href')){const raw=node.getAttribute('href')||'',url=raw.startsWith('#')?fragment(node,raw):navigation(raw);if(url&&!url.startsWith('data:')&&!url.startsWith('blob:'))target.setAttribute('href',url);target.setAttribute('rel','noopener noreferrer');}
   if(node.namespaceURI==='http://www.w3.org/2000/svg'&&node.hasAttribute('href')){const raw=node.getAttribute('href');if(raw.startsWith('#'))target.setAttribute('href',fragment(node,raw));else if(['image','feImage','use','linearGradient','radialGradient','pattern','textPath','filter','clipPath','mask'].includes(tag))target.setAttribute('href',absolute(raw));}
-  if(node.namespaceURI==='http://www.w3.org/2000/svg'&&node.hasAttribute('xlink:href')){const raw=node.getAttribute('xlink:href');target.setAttributeNS('http://www.w3.org/1999/xlink','xlink:href',raw.startsWith('#')?fragment(node,raw):absolute(raw));}
+  if(node.namespaceURI==='http://www.w3.org/2000/svg'&&node.hasAttribute('xlink:href')){const raw=node.getAttribute('xlink:href');target.setAttributeNS('http://www.w3.org/1999/xlink','xlink:href',raw.startsWith('#')?fragment(node,raw):tag==='a'?navigation(raw):absolute(raw));}
   if(tag==='form')target.setAttribute('method','dialog');
   if(tag==='input'){if(!['password','file','hidden'].includes(node.type))target.setAttribute('value',node.value);if(node.checked)target.setAttribute('checked','');}
   if(tag==='option'&&node.selected)target.setAttribute('selected','');

@@ -34,7 +34,7 @@ async function renderPDF(page,body,clip){
     el.style.setProperty('top',delta.y+'px','important');el.style.setProperty('left',delta.x+'px','important');
    }
   }
-  const width=Math.max(innerWidth,bounds.x+bounds.width),height=Math.max(innerHeight,html.scrollHeight,document.body.scrollHeight,bounds.y+bounds.height);
+  const width=Math.max(innerWidth,html.scrollWidth,document.body.scrollWidth,bounds.x+bounds.width),height=Math.max(innerHeight,html.scrollHeight,document.body.scrollHeight,bounds.y+bounds.height);
   const style=document.createElement('style');style.textContent='@page{size:'+width+'px '+height+'px;margin:0}*{break-before:auto!important;break-after:auto!important;break-inside:auto!important;page-break-before:auto!important;page-break-after:auto!important;page-break-inside:auto!important}html{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}';document.head.append(style);
   scrollTo(0,0);return {width,height};
  },bounds);
@@ -42,9 +42,11 @@ async function renderPDF(page,body,clip){
  const bytes=await page.pdf({width:extent.width+'px',height:extent.height+'px',preferCSSPageSize:true,printBackground:true,displayHeaderFooter:false,margin:{top:0,right:0,bottom:0,left:0},timeout:15000});
  const input=await PDFDocument.load(bytes);if(input.getPageCount()!==1)throw Error('This screen could not be kept on one PDF page. Try a smaller selection.');
  const output=await PDFDocument.create(),source=input.getPage(0),factor=72/96;
- const artwork=await output.embedPage(source,{left:bounds.x*factor,bottom:source.getHeight()-(bounds.y+bounds.height)*factor,right:(bounds.x+bounds.width)*factor,top:source.getHeight()-bounds.y*factor});
+ const crop={left:bounds.x*factor,bottom:source.getHeight()-(bounds.y+bounds.height)*factor,right:(bounds.x+bounds.width)*factor,top:source.getHeight()-bounds.y*factor};
+ const artwork=await output.embedPage(source,crop);
  const width=bounds.width*factor*body.scale,height=bounds.height*factor*body.scale;
- output.addPage([width,height]).drawPage(artwork,{x:0,y:0,width,height});
+ const target=output.addPage([width,height]);target.drawPage(artwork,{x:0,y:0,width,height});
+ require('./screen-export-pdf-links.cjs').copyLinks({input,source,output,target,crop,scale:body.scale,baseURL:body.baseURL});
  output.setTitle(body.title||'Retouch export');output.setCreator('Retouch');return Buffer.from(await output.save());
 }
 module.exports={renderPDF};

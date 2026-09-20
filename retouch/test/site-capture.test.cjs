@@ -12,3 +12,7 @@ test('capture HTML is sanitized independently of the remote page serializer',()=
  const result=sanitize('<html><head><meta http-equiv="refresh" content="0;url=https://evil.test"><script>alert(1)</script></head><body onload="bad()"><iframe srcdoc="bad"></iframe><svg><foreignObject><script>bad()</script></foreignObject><use href="https://assets.test/a.svg#x"/><rect onclick="bad()"/></svg><a href="java&#10;script:bad()" ping="https://evil.test">Link</a><form action="https://evil.test"><button formaction="https://evil.test">Submit</button></form><img src="data:image/png;base64,AA" onerror="bad()"><div data-rt="forged">Safe</div></body></html>');
  assert.doesNotMatch(result,/script|onload|onerror|onclick|iframe|foreignObject|formaction|http-equiv|data-rt|evil\.test/);assert.match(result,/https:\/\/assets.test\/a.svg#x/);assert.match(result,/<form method="dialog">/);assert.match(result,/data:image\/png;base64,AA/);assert.match(result,/>Safe</);assert.equal(sanitize(result),result);
 });
+
+test('capture preserves email and phone navigation only on anchors',()=>{
+ const result=sanitize('<a href="mailto:hello@example.com">Email</a><svg><a href="tel:+15555550100">Phone</a><image href="mailto:bad@example.com"/></svg><img src="tel:123"><a href="javascript:bad()">Bad</a>');assert.match(result,/mailto:hello@example.com/);assert.match(result,/tel:\+15555550100/);assert.doesNotMatch(result,/bad@example|tel:123|javascript/);
+});

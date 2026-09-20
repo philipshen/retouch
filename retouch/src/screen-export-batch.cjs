@@ -14,7 +14,7 @@ async function renderBatch(body,{signal,render}){
    if(document){
     const source=await require('pdf-lib').PDFDocument.load(image);combined.throwIfAborted();
     if(source.getPageCount()!==1)throw Error('Each exported item must contain exactly one PDF page.');
-    const [page]=await document.copyPages(source,[0]);combined.throwIfAborted();document.addPage(page);continue;
+    const [page]=await document.copyPages(source,[0]);combined.throwIfAborted();document.addPage(page);require('./screen-export-pdf-links.cjs').rebindLocalLinks(source.getPage(0),page);continue;
    }
    const name=Array.from((item.name||(body.screens?'screen':'layer')).normalize('NFC').replace(/[^\p{L}\p{N}_-]+/gu,'-').replace(/^-+|-+$/g,'')).slice(0,80).join('')||'layer';
    const filename=String(index+1).padStart(2,'0')+'-'+name+(body.area==='page'?'-full-page':'')+'@'+body.scale+'x.'+(body.format==='pdf'?'pdf':body.format==='jpeg'?'jpg':'png');files[filename]=image;
