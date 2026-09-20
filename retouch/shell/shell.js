@@ -2053,7 +2053,9 @@ function renderPanel(textEditing=false) {
   renderedPanelSelection=key;
   // Rebuilding an empty fieldset can clamp its scroll container to zero.
   // Restore synchronously after all sections (including early returns) exist.
-  try { renderPanelContents(textEditing===true); panelBody.dataset.organized='false';RetouchInspectorUI.organize(panelBody);RetouchCollectionBindings.decorate(panelBody); } finally { panel.scrollTop=top;if(focusedScope)panelBody.querySelector('[aria-label="Style screen scope"]')?.focus({preventScroll:true});if(focusedTool)[...panelBody.querySelectorAll('[data-canvas-tool]')].find(el=>el.dataset.canvasTool===focusedTool)?.focus({preventScroll:true}); }
+  try { renderPanelContents(textEditing===true);
+    if(window.RetouchScreenExport){const existing=[...panelBody.querySelectorAll('.inspector-section')].find(section=>section.querySelector(':scope > h3')?.textContent==='Export'),section=existing||RetouchInspector.section('Export');const exportSelection=RetouchInspector.button('Export selection',()=>{if(window.RetouchExportSelection().length)window.RetouchScreenExport.open({selection:true,opener:exportSelection});});section.append(exportSelection);if(!existing)panelBody.append(section);}
+    panelBody.dataset.organized='false';RetouchInspectorUI.organize(panelBody);RetouchCollectionBindings.decorate(panelBody); } finally { panel.scrollTop=top;if(focusedScope)panelBody.querySelector('[aria-label="Style screen scope"]')?.focus({preventScroll:true});if(focusedTool)[...panelBody.querySelectorAll('[data-canvas-tool]')].find(el=>el.dataset.canvasTool===focusedTool)?.focus({preventScroll:true}); }
 }
 function renderPanelContents(textEditing=false) {
   window.dispatchEvent(new CustomEvent('retouch:selection',{detail:activeId()}));

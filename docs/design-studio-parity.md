@@ -26517,3 +26517,26 @@ adapter-specific selections are not yet verified. Unrelated unavailable resource
 can still block a snapshot. SVG vector export remains the existing containing-SVG
 workflow; PDF and batch screen exports remain incomplete. No desktop rebuild or
 push. Full Figma parity and notarized Homebrew distribution remain unfinished.
+
+
+### Discoverable selection export
+
+Selected layers now have an Export selection button in the inspector Export
+section, including selections whose inspector returns through an adapter-specific
+branch. Existing SVG export controls share that section. The same action is
+available in Actions search and the layer/canvas context menu, with Cmd+Shift+E
+on macOS or Ctrl+Shift+E elsewhere. The shortcut works when the canvas iframe has
+focus and respects the existing editing, text-input, presentation and modal
+guards. The action requires an available selection. It opens the existing export
+dialog with Selected layers and transparent PNG preselected. Closing an
+inspector-opened dialog restores focus to its button when that button still exists.
+
+Chromium and WebKit passed inspector, search, context-menu and shell/iframe
+shortcut entry paths, absent-selection action availability, defaults and focus
+restoration, plus the existing selected-layer raster checks. The established
+Actions and canvas-context-menu suites passed in both browsers, including native
+input guards, source undo and selection operations. The full screen-export
+regression passed Chromium. Syntax and diff checks passed. No new renderer or
+source semantics were introduced, so the full unit suite was not rerun. Layer
+bounds/effect limitations from the prior checkpoint remain. No desktop rebuild or
+push; full Figma parity and notarized Homebrew distribution remain unfinished.
