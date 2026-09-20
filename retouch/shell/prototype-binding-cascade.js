@@ -27,13 +27,21 @@
    const important=declarations.some(p=>style.getPropertyPriority(p)==='important');
    changed.push({style,value:style.getPropertyValue(name),priority:style.getPropertyPriority(name)});style.setProperty(name,marker,important?'important':'');
   }
-  function rules(list,parentMarker='blocked',sheetMarker='blocked'){
+  function rules(list,parentMarker='blocked',sheetMarker='blocked',numericScope='0'){
    for(const rule of list){
-    let marker=parentMarker;
-    if(rule.selectorText)marker=tokens.get(rule.selectorText)||(rule.selectorText==='[data-rt-style=\"'+styleId+'\"]'?sheetMarker:rule.selectorText==='&'?parentMarker:'blocked');
+    let marker=parentMarker,scope=numericScope;
+    if(rule.media?.mediaText&&rule.media.mediaText!=='all'){
+     const minimum=/^\(\s*(?:min-width\s*:\s*|width\s*>=\s*)(\d+(?:\.\d+)?)px\s*\)$/.exec(rule.media.mediaText);
+     scope=scope!==null&&minimum?String(Math.max(Number(scope),Number(minimum[1]))):null;
+    }
+    // Vue and other compilers may merge managed style blocks and discard their
+    // owner attributes. The stable selector and authored minimum-width scope
+    // still identify a binding; the browser supplies its actual precedence.
+    const scopedMarker=sheetMarker!=='blocked'?sheetMarker:scopes.get(scope)||'blocked';
+    if(rule.selectorText)marker=tokens.get(rule.selectorText)||(rule.selectorText.split(/\s*,\s*/).includes('[data-rt-style=\"'+styleId+'\"]')?scopedMarker:rule.selectorText==='&'?parentMarker:'blocked');
     if(rule.style&&rule.selectorText)mark(rule.style,marker);
     if(rule.styleSheet)scanSheet(rule.styleSheet);
-    if(rule.cssRules)rules(rule.cssRules,marker,sheetMarker);
+    if(rule.cssRules)rules(rule.cssRules,marker,sheetMarker,scope);
    }
   }
   function scanSheet(sheet){

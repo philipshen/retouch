@@ -26878,3 +26878,37 @@ animation-controlled values and complete Liquid/Vue integration remain gaps.
 Variable expressions, conditions, multiple actions, non-style bindings, the broader
 design-feature matrix and notarized Homebrew distribution remain incomplete.
 No desktop artifact rebuild, native launch or push in this increment.
+
+### 2026-09-20 — Compiled Vue and rendered Liquid variable playback
+
+A new compiled Vue fixture exposed that framework compilation discards the
+managed style-tag attributes used to identify numeric bindings. The cascade
+resolver now also identifies those bindings by their stable layer selector,
+authored minimum-width condition and declaration value. It handles selectors
+merged into comma-separated lists; the browser still determines precedence.
+
+Vue variable bindings created through the source planner now pass actual Vue
+compilation/rendering with both ordinary emitted CSS and esbuild-minified CSS.
+Chromium and WebKit passed assignments, switching across the 768px scope boundary,
+conditional mounting, removal/remount and Exit restoration, with unchanged source
+and library bytes and no page errors. Direct cascade tests in both browsers also
+cover merged numeric selector lists and media rules without owner attributes.
+
+A new Liquid fixture uses the source binding planner, stamped templates and the
+Liquid renderer. Both browsers passed repeated source instances inside a template
+loop, aliased colors, responsive range rules, application inline overrides and
+Exit restoration, with unchanged source/library bytes and no page errors. This
+is local Liquid-engine evidence, not a connected Shopify theme verification.
+HTML and React variable playback regressions passed Chromium and WebKit; the
+cascade/watcher suites passed both browsers. The 2,088-test unit suite passed;
+syntax and diff checks passed. New package scripts expose the Vue and Liquid
+variable suites. The existing framework fixture's default CSS emission is retained;
+minification is an explicit option used by the new Vue suite.
+
+These cases improve adapter runtime evidence without establishing complete
+framework or arbitrary-site parity. Aggressive compiler transformations that erase
+binding identity, direct CSSOM changes without observed signals, inaccessible
+stylesheets, animation-controlled properties, expressions/conditions/multiple
+actions and non-style variable bindings remain gaps. Broader Figma design parity
+and notarized Homebrew distribution remain incomplete. No desktop rebuild,
+native launch or push in this increment.
