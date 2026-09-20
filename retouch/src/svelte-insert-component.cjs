@@ -13,7 +13,13 @@ function plan(r,op,adapter){try{
  function binds(n,name){if(!n)return false;if(n.type==='Identifier')return n.name===name;if(n.type==='RestElement')return binds(n.argument,name);if(n.type==='AssignmentPattern')return binds(n.left,name);if(n.type==='ObjectPattern')return n.properties.some(p=>binds(p.value||p.argument,name));if(n.type==='ArrayPattern')return n.elements.some(p=>binds(p,name));return false;}
  function shadowed(name){let yes=false;walk(parsed.ast,n=>{if(n.type==='VariableDeclarator'&&binds(n.id,name)||n.params?.some(p=>binds(p,name))||n.type==='EachBlock'&&(binds(n.context,name)||n.index===name)||n.type==='AwaitBlock'&&(binds(n.value,name)||binds(n.error,name))||n.type==='SnippetBlock'&&(binds(n.expression,name)||n.parameters?.some(p=>binds(p,name))))yes=true;});return yes;}
  const statements=[...(parsed.ast.instance?.content.body||[]),...(parsed.ast.module?.content.body||[])];let local;
- for(const s of statements)if(s.type==='ImportDeclaration'&&/^\.\.?\//.test(s.source.value)&&path.resolve(path.dirname(fs.realpathSync(r.file)),s.source.value)===file){const spec=s.specifiers.find(p=>p.type==='ImportDefaultSpecifier');if(spec&&!shadowed(spec.local.name)){local=spec.local.name;break;}}
+ for(const s of statements){
+  if(s.type!=='ImportDeclaration'||s.importKind==='type'||!s.source.value.endsWith('.svelte'))continue;
+  const spec=s.specifiers.find(p=>p.type==='ImportDefaultSpecifier'&&p.importKind!=='type');if(!spec||shadowed(spec.local.name))continue;
+  // An unrelated unresolved import must not prevent a new, explicit import.
+  let target;try{target=resolver.resolve(fs.realpathSync(r.file),s.source.value);}catch{continue;}
+  if(target===file){local=spec.local.name;break;}
+ }
  let importText='',importAt=0;
  if(!local){const base=/^[A-Z][\w$]*$/.test(definition.name)?definition.name:'InsertedComponent';local=base;let suffix=2;while(used.has(local))local=base+suffix++;let spec=path.relative(path.dirname(fs.realpathSync(r.file)),file).split(path.sep).join('/');if(!spec.startsWith('.'))spec='./'+spec;const declaration='import '+local+' from '+JSON.stringify(spec).replace(/</g,'\\u003c')+';';if(parsed.ast.instance){importAt=parsed.ast.instance.content.start;importText='\n'+declaration+'\n';}else importText='<script>'+declaration+'</script>\n';}
  if(swapping&&local===r.element.tag)throw Error('This instance already uses that component.');

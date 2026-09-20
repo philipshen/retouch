@@ -28077,3 +28077,24 @@ recovered 96 dropped source broadcasts (`/tmp/retouch-svelte-alias-instance-chro
 `/tmp/retouch-svelte-alias-instance-webkit.log`). Native artifacts were not rebuilt
 or launched. Full Figma parity, arbitrary-site coverage and trusted public macOS
 cask distribution remain incomplete.
+
+### Svelte library import reuse checkpoint
+
+Insertion and swapping now reuse an accessible aliased default runtime import
+when it resolves to the selected definition, preserving the existing script
+bytes. Type-only imports and template-shadowed names are not reused; those paths
+receive a fresh runtime name. Unrelated unresolved imports do not prevent adding
+an explicit import. Reused alias resolution retains config and preferred-target
+transaction guards.
+
+Validation: all 2,393 unit tests passed (`/tmp/retouch-svelte-alias-reuse-full.log`).
+Focused insertion tests cover exact script preservation, preferred-target changes,
+shadowing, type-only imports and unrelated unresolved imports. Chromium and WebKit
+passed the combined aliased-instance/default/structural workflows with pre-existing
+library and swap aliases. The browser assertions verify both operations use those
+names and keep the script unchanged. Both passed exact undo/redo, retained state,
+all-preview synchronization, recovery from 96 dropped broadcasts and production
+exclusion (`/tmp/retouch-svelte-alias-reuse-chromium.log`,
+`/tmp/retouch-svelte-alias-reuse-webkit.log`). Native artifacts were not rebuilt or
+launched. Full Figma parity, arbitrary-site coverage and notarized public macOS
+cask distribution remain unfinished.

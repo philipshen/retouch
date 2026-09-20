@@ -283,8 +283,10 @@ by undo initialize fresh.
 The Components panel also discovers unused definitions with identifiable native
 roots. Select a frame and choose Insert into frame to create a linked usage.
 Required supported primitive properties have initial-value controls; optional
-properties keep their defaults. Insertion reuses accessible imports or adds a
-collision-free local name, with exact undo/redo and synchronized previews. Project
+properties keep their defaults. Insertion and swapping reuse accessible relative
+or aliased runtime imports, keeping the existing script unchanged. Type-only or
+shadowed imports receive a fresh local name. Exact undo/redo and synchronized
+previews apply to either path. Project
 component dependencies are checked for cycles and fixed DOM IDs. Nested imports
 ending in `.svelte` can use project `tsconfig.json` / `jsconfig.json` path mappings,
 including relative config inheritance and ordered fallback paths. The app bundler
