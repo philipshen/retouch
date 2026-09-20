@@ -26943,3 +26943,38 @@ Mode-changing prototype actions, expressions, conditions, multiple actions,
 non-style variable bindings and the remaining design-feature matrix are still
 unfinished. This increment does not establish universal framework/runtime parity.
 Notarized Homebrew distribution remains incomplete.
+
+### 2026-09-20 — Typed expression engine and read-only previews
+
+Added a shared expression evaluator with explicit literal, variable-reference and
+operation nodes. Supported operations are numeric arithmetic/remainder/negation,
+ordered number comparisons, same-type equality, Boolean logic, string joining,
+explicit conversion to text and typed conditional branches. Type checking never
+coerces number/string/Boolean operands. Colors normalize through the existing
+palette model. Evaluation resolves each referenced variable once per snapshot;
+logical and conditional branches skip unneeded reads and calculations. No eval,
+function construction, property access or arbitrary function-call nodes are used.
+
+Inputs are limited to 128 nodes and 16 levels. Literal and intermediate values
+retain the variable model's finite ±1,000,000 number and 4,096-character text
+bounds. Division/remainder by zero, invalid syntax/operators, mixed types, changed
+variable types, oversized output and cyclic/deep inputs fail without a result.
+
+The authenticated, revision-checked variable preview endpoint now accepts
+`expression` with optional `modes` and temporary `overrides`, returning a typed
+`result`. Expression requests cannot simultaneously request bindings or variable
+lists. The real collection resolver supplies modes and aliases; errors return 422,
+stale revisions return 409, and no source/history transaction is created.
+
+All 2,102 unit tests passed. New evaluator tests cover composed expressions,
+reference snapshots, lazy branches, types, normalization and bounds. API tests
+exercise expression evaluation against actual library/default/temporary values,
+stale and malformed requests, missing results on failures, and byte-identical
+library/page files afterward. Syntax/diff checks passed.
+
+This is expression evaluation and preview infrastructure, not a completed
+expression-editing feature. The visual composer, Set variable expression schema
+and playback integration are next; no expression UI is exposed yet. Prototype
+conditions/multiple actions/non-style bindings and the broader design parity
+matrix remain unfinished. No desktop artifact rebuild, native launch or push;
+notarized Homebrew distribution remains incomplete.

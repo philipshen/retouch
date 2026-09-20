@@ -34,9 +34,13 @@ function commitPlan(root,plan,apply=applyPlan){
  const result=apply(root,plan);if(!result.ok)fail(result.reason);return result;
 }
 function resolve(root,request){
- if(!request||typeof request!=='object'||Array.isArray(request)||Object.keys(request).some(key=>!['revision','modes','variableId','variableIds','overrides','bindings'].includes(key)))fail('Invalid variable mode preview.',422);
+ if(!request||typeof request!=='object'||Array.isArray(request)||Object.keys(request).some(key=>!['revision','modes','variableId','variableIds','overrides','bindings','expression'].includes(key)))fail('Invalid variable mode preview.',422);
  const current=read(root);if(request.revision!==current.revision)fail('Variable collections changed. Reload before previewing modes.');
  const definition={version:current.version,collections:current.collections,variables:current.variables};
+ if(Object.hasOwn(request,'expression')){
+  if(['bindings','variableId','variableIds'].some(key=>Object.hasOwn(request,key)))fail('Expression previews cannot also request bindings or variable lists.',422);
+  try{const resolver=model.resolver(definition,request.modes,request.overrides),result=require('../shell/prototype-expressions.js').evaluate(request.expression,id=>resolver.resolve(id));return {revision:current.revision,result};}catch(error){fail(error.message,422);}
+ }
  if(request.bindings!==undefined){
   if(['modes','variableId','variableIds'].some(key=>Object.hasOwn(request,key)))fail('Binding previews use each binding’s own modes.',422);
   try{return {revision:current.revision,bindings:require('./variable-bindings.cjs').project(definition,request.bindings,request.overrides)};}catch(error){fail(error.message,422);}
