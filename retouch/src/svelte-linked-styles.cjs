@@ -1,18 +1,18 @@
 'use strict';
 const source = require('./svelte-source.cjs');
-const families = ['text', 'color', 'effect'];
+const families = ['text', 'color', 'effect', 'variable'];
 const escapeAttribute = value => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/{/g, '&#123;').replace(/}/g, '&#125;');
 const attributeRemovalStart = (text, start) => text[start - 1] === ' ' ? start - 1 : start;
 function create(family, adapter = require('./adapters/svelte.cjs')) {
   if (!families.includes(family)) throw Error('Unsupported Svelte style family.');
-  const attribute = 'data-rt-' + family + '-styles', title = family[0].toUpperCase() + family.slice(1);
+  const attribute = family === 'variable' ? 'data-rt-variables' : 'data-rt-' + family + '-styles', title = family[0].toUpperCase() + family.slice(1);
   const refuse = reason => ({ ok: false, refused: true, reason });
   function project(element) {
     return { ...element, node: { ...element.node, attrs: element.attributes.map(a => ({ name: a.name, value: a.value })) }, location: { startTag: { startOffset: element.start }, attrs: Object.fromEntries(element.attributes.map(a => [a.name, { startOffset: a.start, endOffset: a.end }])) } };
   }
   const renderer = { ...adapter, escapeAttribute, attributeRemovalStart, collect: (text, relative) => { const parsed = adapter.collect(text, relative); return { ...parsed, elements: parsed.elements.map(project) }; } };
   const css = { describe: r => require('./svelte-css.cjs').describe(r), plan: (r, op) => require('./svelte-css.cjs').plan(r, { ...op, fileHash: r.hash }) };
-  const core = require('./html-' + family + '-styles.cjs').create(renderer, css);
+  const core = require(family === 'variable' ? './html-variable-bindings.cjs' : './html-' + family + '-styles.cjs').create(renderer, css);
   const resolve = r => ({ ...r, element: project(r.element) });
   function links(r) {
     const markers = r.element.node.attributes.filter(a => a.name?.toLowerCase() === attribute);
@@ -22,7 +22,7 @@ function create(family, adapter = require('./adapters/svelte.cjs')) {
   }
   function describe(r) {
     try { links(r); return core.describe(resolve(r)); }
-    catch (error) { return family === 'color' ? { colorStyles: false, colorStyleReason: error.message } : { [family + 'StyleLinkReason']: error.message }; }
+    catch (error) { return family === 'variable' ? { variables: false, variableReason: error.message } : family === 'color' ? { colorStyles: false, colorStyleReason: error.message } : { [family + 'StyleLinkReason']: error.message }; }
   }
   function plan(r, op, style) {
     try {
@@ -37,7 +37,8 @@ function create(family, adapter = require('./adapters/svelte.cjs')) {
   }
   function planFile(file, relPath, before, style) {
     try {
-      require('./' + family + '-styles.cjs').validate({ version: 1, styles: [style] });
+      if (family === 'variable') require('./variable-collections.cjs').validate(style);
+      else require('./' + family + '-styles.cjs').validate({ version: 1, styles: [style] });
       const parsed = adapter.collect(before, relPath), indexed = new Set(parsed.elements.map(e => e.start)), targets = [];
       function check(node) {
         if (!node || typeof node !== 'object') return;
@@ -51,7 +52,7 @@ function create(family, adapter = require('./adapters/svelte.cjs')) {
       for (const element of parsed.elements) {
         if (!element.node.attributes.some(a => a.name?.toLowerCase() === attribute)) continue;
         for (const [width, value] of Object.entries(links({ element }))) {
-          if (family === 'color') { for (const [property, link] of Object.entries(value)) if (link.id === style.id) targets.push({ id: element.id, width: Number(width), property }); }
+          if (family === 'color' || family === 'variable') { for (const [property, link] of Object.entries(value)) if (family === 'variable' || link.id === style.id) targets.push({ id: element.id, width: Number(width), property }); }
           else if (value.id === style.id) targets.push({ id: element.id, width: Number(width) });
         }
       }
@@ -59,7 +60,7 @@ function create(family, adapter = require('./adapters/svelte.cjs')) {
       for (const target of targets) {
         const element = adapter.collect(text, relPath).elements.find(e => e.id === target.id);
         if (!element) throw Error('A linked Svelte layer could not be resolved.');
-        const result = plan({ source: text, file, relPath, element, hash: adapter.contentHash(text) }, { type: 'refresh' + title + 'Style', width: target.width, property: target.property }, style);
+        const result = plan({ source: text, file, relPath, element, hash: adapter.contentHash(text) }, { type: 'refresh' + title + (family === 'variable' ? '' : 'Style'), width: target.width, property: target.property }, style);
         if (!result.ok) return result;
         text = result.edits[0]?.after || text;
       }

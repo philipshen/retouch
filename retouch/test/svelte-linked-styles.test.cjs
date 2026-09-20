@@ -5,7 +5,7 @@ const original = '<script>let count=$state(1);</script><main><p title={String(co
 const definitions = { text: { 'font-size': '20px', 'font-weight': '400' }, color: { color: '#123456' }, effect: { 'box-shadow': '0px 2px 4px #000000', filter: 'blur(2px)' } };
 function resolve(text = original, file = '/app/App.svelte') { const relPath = path.basename(file), elements = adapter.collect(text, relPath).elements; return { source: text, file, relPath, elements, element: elements.find(e => e.tag === 'p'), hash: adapter.contentHash(text) }; }
 function after(result, text) { assert.equal(result.ok, true, result.reason); return result.edits[0]?.after || text; }
-for (const family of factory.families) {
+for (const family of factory.families.filter(family => family !== 'variable')) {
   const linked = factory.create(family, adapter), title = family[0].toUpperCase() + family.slice(1), style = { id: '11111111-1111-4111-8111-111111111111', name: 'Shared ' + family, properties: definitions[family] };
   const property = family === 'color' ? 'color' : family === 'text' ? 'font-size' : 'filter', changed = family === 'color' ? '#abcdef' : family === 'text' ? '24px' : 'blur(4px)', override = family === 'color' ? '#fedcba' : family === 'text' ? '31px' : 'blur(8px)';
   test('Svelte ' + family + ' styles compile literal metadata and retain local overrides through update, reset and detach', () => {
@@ -47,7 +47,7 @@ for (const family of factory.families) {
 }
 test('Svelte linked metadata uses reactive attributes without changing the mounted template signature', () => {
   const source = require('../src/svelte-source.cjs'), initial = source.textSnapshot(original, 'App.svelte'); let text = original;
-  for (const family of factory.families) {
+  for (const family of factory.families.filter(family => family !== 'variable')) {
     const linked = factory.create(family), title = family[0].toUpperCase() + family.slice(1), r = resolve(text);
     const style = { id: '11111111-1111-4111-8111-111111111111', name: 'Reusable', properties: definitions[family] };
     text = after(linked.plan(r, { type: 'apply' + title + 'Style', width: 768, property: 'color' }, style), text);

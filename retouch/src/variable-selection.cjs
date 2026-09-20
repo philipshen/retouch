@@ -2,8 +2,8 @@
 const html=require('./adapters/html.cjs'),bindings=require('./variable-bindings.cjs');
 const refuse=reason=>({ok:false,refused:true,reason});
 function plan(resolved,op,library,adapter=html){try{
- const isLiquid=adapter.name==='liquid',isReact=adapter.name==='react',classBased=isReact||isLiquid;if(!classBased&&!['html','vue'].includes(adapter.name))return refuse('These layers do not support collection bindings.');
- const linked=adapter.name==='vue'?require('./vue-linked-styles.cjs').create('variable',adapter):require(isReact?'./jsx-variable-bindings.cjs':isLiquid?'./liquid-variable-bindings.cjs':'./html-variable-bindings.cjs');
+ const isLiquid=adapter.name==='liquid',isReact=adapter.name==='react',classBased=isReact||isLiquid;if(!classBased&&!['html','vue','svelte'].includes(adapter.name))return refuse('These layers do not support collection bindings.');
+ const linked=['vue','svelte'].includes(adapter.name)?require('./'+adapter.name+'-linked-styles.cjs').create('variable',adapter):require(isReact?'./jsx-variable-bindings.cjs':isLiquid?'./liquid-variable-bindings.cjs':'./html-variable-bindings.cjs');
  const scope=classBased?(op.scope??''):op.width;if(classBased)require('../shell/responsive.js').replaceScope('','',scope);
  const type={applyVariableSelection:'applyVariable',resetVariableSelection:'resetVariable',detachVariableSelection:'detachVariable',removeVariableSelection:'removeVariable'}[op.type];
  if(!type)return refuse('Unsupported variable selection operation.');
@@ -12,7 +12,7 @@ function plan(resolved,op,library,adapter=html){try{
  const ids=op.ids;if(!Array.isArray(ids)||ids.length<2||ids.length>100||new Set(ids).size!==ids.length||!ids.includes(resolved.element.id)||ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))return refuse('Choose between 2 and 100 distinct layers in one source document.');
  if(isLiquid&&(!op.contexts||typeof op.contexts!=='object'||Array.isArray(op.contexts)||Object.keys(op.contexts).length!==ids.length||ids.some(id=>!Object.hasOwn(op.contexts,id))))return refuse('Re-select every Liquid layer to capture its rendered context.');
  const initial=adapter.collect(resolved.source,resolved.relPath).elements;
- for(const id of ids){const element=initial.find(element=>element.id===id);if(classBased||adapter.name==='vue'){if(element?.kind!=='host')return refuse('Every selected layer must be a host layer in the same source file.');continue;}let node=element?.node;while(node&&node.tagName!=='body')node=node.parentNode;if(!node)return refuse('Every selected layer must belong to the same HTML body.');}
+ for(const id of ids){const element=initial.find(element=>element.id===id);if(classBased||['vue','svelte'].includes(adapter.name)){if(element?.kind!=='host')return refuse('Every selected layer must be a host layer in the same source file.');continue;}let node=element?.node;while(node&&node.tagName!=='body')node=node.parentNode;if(!node)return refuse('Every selected layer must belong to the same HTML body.');}
  let source=resolved.source;
  for(const id of ids){
   const elements=adapter.collect(source,resolved.relPath).elements,element=elements.find(item=>item.id===id),hash=adapter.contentHash(source);if(!element)return refuse('A selected layer no longer resolves.');

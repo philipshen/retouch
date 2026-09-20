@@ -3,8 +3,8 @@ const fs=require('node:fs'),path=require('node:path'),library=require('./variabl
 // Plan every linked page before committing either the catalog or source changes.
 function plan(root,operation,renderer='html',adapter){
  try{
-  if(!['html','react','liquid','vue'].includes(renderer))throw Error('Unsupported variable binding renderer.');
-  const linked=renderer==='vue'?require('./vue-linked-styles.cjs').create('variable',adapter):require(renderer==='react'?'./jsx-variable-bindings.cjs':renderer==='liquid'?'./liquid-variable-bindings.cjs':'./html-variable-bindings.cjs');
+  if(!['html','react','liquid','vue','svelte'].includes(renderer))throw Error('Unsupported variable binding renderer.');
+  const linked=['vue','svelte'].includes(renderer)?require('./'+renderer+'-linked-styles.cjs').create('variable',adapter):require(renderer==='react'?'./jsx-variable-bindings.cjs':renderer==='liquid'?'./liquid-variable-bindings.cjs':'./html-variable-bindings.cjs');
   const change=library.planChange(root,operation),next=change.result;
   const model={version:next.version,collections:next.collections,variables:next.variables};
   const inventory=renderer!=='html'?require('./text-style-update.cjs').sourceInventory(root,renderer):require('./html-pages.cjs').list(root);
