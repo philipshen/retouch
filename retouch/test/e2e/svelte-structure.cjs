@@ -8,7 +8,7 @@ exports.run = async ({ page, app, phone:live, file, original:source, state }) =>
       if (JSON.stringify(await order(app)) === JSON.stringify(expected) && JSON.stringify(await order(live)) === JSON.stringify(expected)) return;
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-    throw Error('Svelte ordering did not settle: ' + JSON.stringify(await order(app)));
+    throw Error('Svelte ordering did not settle: ' + JSON.stringify({main:await order(app),comparison:await order(live)}));
   };
   await page.getByRole('button', { name: 'Lock div · Second', exact: true }).click();
   await page.getByRole('treeitem', { name: 'div · First', exact: true }).click(); await settled();

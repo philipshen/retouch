@@ -4282,7 +4282,7 @@ async function restoreHistory(direction,op) {
       const info = fresh.element;
       const selectionResult=(['setClassesSelection','setSVGTransforms'].includes(op.type)||op.type==='setCSSSelection'&&op.managedCSS)?await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id)))):null;
       const component = op.type === 'detachComponent'||op.type==='createComponent'&&direction==='redo' ? await api('GET', componentUrl(op.id,op.context)) : null;
-      const refresh=()=>refreshWrittenElement(info, el => {
+      const refresh=()=>(['structure','structureSelection'].includes(op.type)?refreshWrittenStructure:refreshWrittenElement)(info, el => {
         if(selectionResult)return selectionResult.every(result=>result?.ok)&&(op.type==='setSVGTransforms'?svgSelectionMatches:classSelectionMatches)(selectionResult.map(result=>result.element),el.ownerDocument);
         if(op.svgCreatedId){const found=matchingInDocument(el.ownerDocument,op.svgCreatedId,null).length>0;return direction==='undo'?!found:found;}
         if(op.type==='createComponent'&&direction==='undo')return el.getAttribute('data-rt')===op.id;
@@ -4637,7 +4637,7 @@ async function moveLayerInto(info,destinationId,position='inside'){
     const result=await api('POST','/rt/__api/op',{type:'reparentElement',id:info.id,fileHash:info.hash,destinationId,position});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not move layer','err');
     editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter:[result.movedId],sourceIdMap:result.sourceIdMap,undoId:result.undoId});
-    if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);if(info.renderRevisionAttribute||/\.[jt]sx$/i.test(info.file)){const parent=await api('GET',resolveUrl(result.parentId));if(!parent?.ok)throw Error('The moved parent could not be resolved.');await refreshWrittenElement(parent.element,()=>true);}else await reloadFrame();
+    if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);if(info.renderRevisionAttribute||/\.[jt]sx$/i.test(info.file)){const parent=await api('GET',resolveUrl(result.parentId));if(!parent?.ok)throw Error('The moved parent could not be resolved.');await refreshWrittenStructure(parent.element);}else await reloadFrame();
     const fresh=await api('GET',resolveUrl(result.movedId));if(fresh?.ok){sel={hostId:result.movedId,instanceId:null,scope:'host',info:fresh.element};renderPanel();}
     toast('Layer moved','ok');
   }finally{busyPanel(false);}
@@ -4730,7 +4730,7 @@ async function insertLayer(preset,info,type='insertElement',extra={}){
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not add layer','err');
     editorHistory.record({type:'structureSelection',id:info.id,selectionBefore:[info.id],selectionAfter:[result.createdId],undoId:result.undoId,...(type==='insertSVG'?{svgCreatedId:result.createdId}:{})});
     const fresh=await api('GET',resolveUrl(result.createdId));
-    if(fresh?.ok)await refreshWrittenElement(fresh.element,el=>el.getAttribute('data-rt')===result.createdId);else await reloadFrame();
+    if(fresh?.ok)await refreshWrittenStructure(fresh.element,el=>el.getAttribute('data-rt')===result.createdId);else await reloadFrame();
     if(fresh?.ok){sel={hostId:result.createdId,instanceId:null,scope:'host',info:fresh.element};renderPanel();if(type==='insertElement'&&preset==='text')textTarget=matchingEls(result.createdId)[0];}
     toast('Layer added','ok');
   }finally{busyPanel(false);}
@@ -4738,6 +4738,17 @@ async function insertLayer(preset,info,type='insertElement',extra={}){
     await startInlineEdit(textTarget,null,true);
     if(editing?.el===textTarget){const d=textTarget.ownerDocument,range=d.createRange(),selection=d.getSelection();range.selectNodeContents(textTarget);selection.removeAllRanges();selection.addRange(range);}
   }
+}
+async function refreshWrittenStructure(info, matches=()=>true) {
+  await refreshWrittenElement(info,matches);
+  if(!info.renderRevisionAttribute)return;
+  // Identically shaped Svelte siblings can reorder through source-store updates.
+  // Prove every comparison received the revision even if a broadcast was lost.
+  const result=await window.RetouchComparisons?.syncSource({
+    select:d=>matchingInDocument(d,info.id,info),matches:()=>true,
+    revisionAttribute:info.renderRevisionAttribute,hash:info.hash
+  });
+  if(result?.failures.length)throw Error('Retry the failed comparison previews.');
 }
 async function restoreLayerSelection(ids){
   const selected=await Promise.all(ids.map(id=>{const element=matchingEls(id)[0];return api('GET',resolveUrl(id,element?renderContext(element):undefined));}));
@@ -4756,7 +4767,7 @@ async function structureSelection(action,extra={}){
     const deletedLocks=result.removedSourceIds?layerLocks.removeSourceIds(result.removedSourceIds):null;
     editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:selection.map(item=>item.id),selectionAfter:result.selectionIds,undoId:result.undoId,...(result.sourceIdMap?{sourceIdMap:result.sourceIdMap}:{}),...(deletedLocks?{deletedLocks,removedSourceIds:result.removedSourceIds}:{})});
     if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);
-    if(info.renderRevisionAttribute||/\.[jt]sx$/i.test(info.file)){const parent=await api('GET',resolveUrl(result.parentId));if(!parent?.ok)throw Error('The edited source parent no longer resolves.');await refreshWrittenElement(parent.element,()=>true);if(parent.element.renderRevisionAttribute){const written=parent.element,comparisons=await window.RetouchComparisons?.syncSource({select:d=>matchingInDocument(d,written.id,written),matches:()=>true,revisionAttribute:written.renderRevisionAttribute,hash:written.hash});if(comparisons?.failures.length)throw Error('Retry the failed comparison previews.');}}else await reloadFrame();await restoreLayerSelection(result.selectionIds);if(sel)renderPanel();
+    if(info.renderRevisionAttribute||/\.[jt]sx$/i.test(info.file)){const parent=await api('GET',resolveUrl(result.parentId));if(!parent?.ok)throw Error('The edited source parent no longer resolves.');await refreshWrittenStructure(parent.element);}else await reloadFrame();await restoreLayerSelection(result.selectionIds);if(sel)renderPanel();
     toast(result.rootCount+' layer'+(result.rootCount===1?'':'s')+(action==='duplicateElement'?' duplicated':action==='deleteElement'?' deleted':action==='frameSelection'?' framed':action==='groupSelection'?' grouped':action==='removeFrame'?' released from frame':' moved'),'ok');
   }finally{busyPanel(false);}
 }
@@ -4828,7 +4839,7 @@ async function structureAction(action) {
     if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);
     const fresh=parentId?await api('GET',resolveUrl(parentId,info.context)):null;
     if(fresh?.ok) {
-      await refreshWrittenElement(fresh.element,el=>JSON.stringify([...el.children].map(signature))===JSON.stringify(expected));
+      await refreshWrittenStructure(fresh.element,el=>JSON.stringify([...el.children].map(signature))===JSON.stringify(expected));
       sel={hostId:parentId,instanceId:null,scope:'host',info:fresh.element};if(result.createdId||result.movedId)await restoreLayerSelection([result.createdId||result.movedId]);renderPanel();
     } else {await reloadFrame();clearSelection();if(result.createdId||result.movedId){await restoreLayerSelection([result.createdId||result.movedId]);if(sel)renderPanel();}}
     toast('Layer updated','ok');
