@@ -3164,6 +3164,17 @@ function linkSection(info) {
   section.append(RetouchInspector.button('Remove link destination',()=>setHref(null,info)));
   return section;
 }
+async function refreshWrittenLink(info){
+  const matches=el=>el.getAttribute('href')===info.href,serverRendered=/\.(?:html?|liquid)$/i.test(info.file);
+  if(serverRendered)await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info),matches});
+  else await refreshWrittenElement(info,matches);
+  const result=await window.RetouchComparisons?.syncRendered({
+    select:d=>matchingInDocument(d,info.id,info),matches,
+    serverRendered,
+    revisionAttribute:info.renderRevisionAttribute,hash:info.hash,kind:'Link'
+  });
+  if(result?.failures.length)throw Error('Retry the failed comparison previews.');
+}
 async function setHref(href,info){
   if(sel?.info!==info||panelTasks||undoBusy||sourceRequests||!info.canSetHref||info.href===href)return;
   busyPanel(true);
@@ -3172,7 +3183,7 @@ async function setHref(href,info){
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not save the link.','err');
     editorHistory.record({type:'setHref',id:info.id,undoId:result.undoId,context:info.context});
     info.hash=result.hash;info.href=href;
-    await refreshWrittenElement(info,el=>el.getAttribute('href')===href);
+    await refreshWrittenLink(info);
     renderPanel();toast('Link saved','ok');
   }finally{busyPanel(false);}
 }
@@ -4300,7 +4311,8 @@ async function restoreHistory(direction,op) {
         }
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
       },{classSource:['setClasses','setClassesSelection'].includes(op.type),verifyText:op.type==='setText'&&!info.textSource,imageSource:op.type==='setSrc',svgGeometry:['setSVGGeometry','setSVGTransform','setSVGTransforms'].includes(op.type)});
-      if(['setResponsiveImage','setResponsiveImageSource','setResponsiveImageCandidates'].includes(op.type)){await refreshResponsiveImage(info);renderPanel();}
+      if(op.type==='setHref'){await refreshWrittenLink(info);renderPanel();}
+      else if(['setResponsiveImage','setResponsiveImageSource','setResponsiveImageCandidates'].includes(op.type)){await refreshResponsiveImage(info);renderPanel();}
       else if(op.type==='setImageFill'){await refreshLiquidImageFill(info);renderPanel();}
       else if(op.type==='setText'&&info.kind==='host'&&!info.textSource&&window.__RT_RENDERING?.reloadAfterWrite){
         await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info)});

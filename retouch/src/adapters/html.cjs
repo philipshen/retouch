@@ -49,6 +49,7 @@ function describe(resolved){
   ...require('../link-source.cjs').describe(resolved,'html'),
   canRename:true,layerName:attr(el,'data-rt-name')||'',text:canText?el.node.childNodes.map(n=>n.value).join(''):null,textDynamic:!canText&&!rich,mixedText:!!rich&&!canText,canSetChildren:!!rich,richText:rich,
   textReason:canText?null:'This HTML region contains nested markup, comments, or an implicit closing tag.',
+  href:el.tag==='a'?attr(el,'href'):undefined,canSetHref:el.tag==='a'&&el.node.namespaceURI==='http://www.w3.org/1999/xhtml',hrefReason:'Select an HTML link.',
   responsiveImage:require('../html-responsive-image.cjs').describe(resolved),src:attr(el,'src'),srcDynamic:false,canSetSrc:canSrc,srcReason:canSrc?null:'Select a plain image without responsive sources.',
   canSetTag:!!el.location.endTag&&textTags.has(el.tag),context:resolved.context||null};
 }
@@ -99,6 +100,9 @@ function planOp(resolved,op){
   if(!describe(resolved).canSetTag||!textTags.has(op.tag))return refuse('Unsupported HTML tag change.');
   out.overwrite(el.location.startTag.startOffset+1,el.location.startTag.startOffset+1+el.tag.length,op.tag);
   out.overwrite(el.location.endTag.startOffset+2,el.location.endTag.startOffset+2+el.tag.length,op.tag);
+ }else if(op.type==='setHref'){
+  if(!describe(resolved).canSetHref||op.href!==null&&!require('../../shell/link-values.js').valid(op.href))return refuse('Choose a valid link destination.');
+  if(op.href===null){const old=el.location.attrs?.href;if(old)out.remove(old.startOffset,old.endOffset);}else setAttr('href',op.href);
  }else if(op.type==='setSrc'){
   if(!describe(resolved).canSetSrc||typeof op.src!=='string'||/[\0-\x1f]/.test(op.src))return refuse('Unsupported image source.');
   try{if(!['http:','https:'].includes(new URL(op.src,'https://retouch.local/').protocol))return refuse('Unsupported image URL scheme.');}catch{return refuse('Invalid image URL.');}
@@ -118,4 +122,4 @@ function planOp(resolved,op){
 }
 module.exports={name:'html',matches:file=>/\.html?$/i.test(file),collect,stamp,contentHash:hash,describe,planOp,
  applyOp:(resolved,op)=>require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),planOp(resolved,op)),
- capabilities:{classAttr:'class',ops:['connectPrototypeScroll','setPrototypeInteractions',...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setChildren','setTag','setSrc','setResponsiveImage','setResponsiveImageSource','setResponsiveImageCandidates','setPictureSources',...structure.types]}};
+ capabilities:{classAttr:'class',ops:['connectPrototypeScroll','setPrototypeInteractions',...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setChildren','setTag','setHref','setSrc','setResponsiveImage','setResponsiveImageSource','setResponsiveImageCandidates','setPictureSources',...structure.types]}};
