@@ -109,7 +109,7 @@ function handle(req, res, ctx) {
     requireToken(req,ctx.token);if(req.method!=='POST')return json(res,405,{ok:false,reason:'Use POST to export a screen.'});
     return readBinary(req,24*1024*1024,async bytes=>{if(!bytes)return json(res,413,{ok:false,reason:'Screen export exceeds 24 MiB.'});let body;try{body=JSON.parse(bytes.toString());require('./screen-export.cjs').validate(body);}catch(error){return json(res,400,{ok:false,reason:error.message});}
       if(ctx.screenExportState.busy)return json(res,409,{ok:false,reason:'Another screen is being exported. Try again when it finishes.'});ctx.screenExportState.busy=true;const controller=new AbortController(),cancel=()=>controller.abort();res.on('close',cancel);
-      try{const image=await require('./screen-export.cjs').render(body,{signal:controller.signal});if(!res.destroyed){res.writeHead(200,{'content-type':body.separate||body.screens?'application/zip':body.format==='jpeg'?'image/jpeg':'image/png','cache-control':'no-store'});res.end(image);}}catch(error){if(!res.destroyed)json(res,422,{ok:false,reason:error.message});}finally{res.off('close',cancel);ctx.screenExportState.busy=false;}
+      try{const image=await require('./screen-export.cjs').render(body,{signal:controller.signal});if(!res.destroyed){res.writeHead(200,{'content-type':body.separate||body.screens?'application/zip':body.format==='pdf'?'application/pdf':body.format==='jpeg'?'image/jpeg':'image/png','cache-control':'no-store'});res.end(image);}}catch(error){if(!res.destroyed)json(res,422,{ok:false,reason:error.message});}finally{res.off('close',cancel);ctx.screenExportState.busy=false;}
     });
   }
   if (p.startsWith('/rt/__assets/')) return serveAsset(p.slice('/rt/__assets/'.length), res);

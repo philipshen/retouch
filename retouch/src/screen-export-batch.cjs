@@ -11,7 +11,7 @@ async function renderBatch(body,{signal,render}){
    try{image=await render(item.request,{signal:combined});}catch(error){combined.throwIfAborted();throw Error((body.screens?'Screen ':'Layer ')+(index+1)+': '+error.message);}
    bytes+=image.length;if(bytes>128*1024*1024)throw Error('The archive exceeds 128 MiB. Export fewer items or use a smaller scale.');
    const name=Array.from((item.name||(body.screens?'screen':'layer')).normalize('NFC').replace(/[^\p{L}\p{N}_-]+/gu,'-').replace(/^-+|-+$/g,'')).slice(0,80).join('')||'layer';
-   const filename=String(index+1).padStart(2,'0')+'-'+name+(body.area==='page'?'-full-page':'')+'@'+body.scale+'x.'+(body.format==='jpeg'?'jpg':'png');files[filename]=image;
+   const filename=String(index+1).padStart(2,'0')+'-'+name+(body.area==='page'?'-full-page':'')+'@'+body.scale+'x.'+(body.format==='pdf'?'pdf':body.format==='jpeg'?'jpg':'png');files[filename]=image;
   }
   combined.throwIfAborted();return Buffer.from(zipSync(files,{level:0}));
  }finally{clearTimeout(timer);}
