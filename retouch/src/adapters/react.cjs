@@ -55,6 +55,7 @@ module.exports = {
     if(op.type==='renameElement')return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../jsx-layer-name.cjs').plan(resolved,op));
     if(['insertComponent','swapComponent'].includes(op.type))return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../insert-component.cjs').plan(resolved,op));
     if(op.type==='setComponentPropSelection')return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../component-props.cjs').planSelection(resolved,op));
+    if(op.type==='resetComponentProps')return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../component-reset.cjs').plan(resolved,op));
     if(op.type==='setComponentDefault')return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../component-default.cjs').plan(resolved,op));
     if(op.type==='setComponentProp')return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../component-props.cjs').plan(resolved,op));
     if(op.type==='deleteComponentSelection')return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../delete-component.cjs').planSelection(resolved,op));
@@ -76,6 +77,7 @@ module.exports = {
     if(['duplicateSelection','deleteSelection','moveSelection'].includes(op.type))return require('../native-structure-selection.cjs').plan(resolved,op,'react');
     if(op.type==='insertElement')return require('../native-insert.cjs').plan(resolved,op,'react');
     if(op.type==='setComponentPropSelection')return require('../component-props.cjs').planSelection(resolved,op);
+    if(op.type==='resetComponentProps')return require('../component-reset.cjs').plan(resolved,op);
     if(op.type==='setComponentDefault')return require('../component-default.cjs').plan(resolved,op);
     const svg=svgPlanner(resolved,op);
     return op.type==='reparentComponentSelection'?require('../reparent-component.cjs').planSelection(resolved,op):op.type==='moveComponent'?require('../move-component.cjs').plan(resolved,op):op.type==='renameElement'?require('../jsx-layer-name.cjs').plan(resolved,op):['insertComponent','swapComponent'].includes(op.type)?require('../insert-component.cjs').plan(resolved,op):op.type==='setComponentProp'?require('../component-props.cjs').plan(resolved,op):op.type==='deleteComponentSelection'?require('../delete-component.cjs').planSelection(resolved,op):op.type==='deleteComponent'?require('../delete-component.cjs').plan(resolved,op):op.type==='duplicateComponentSelection'?require('../duplicate-component.cjs').planSelection(resolved,op):op.type==='duplicateComponent'?require('../duplicate-component.cjs').plan(resolved,op):op.type==='createComponent'?require('../create-component.cjs').plan(resolved,op):svg?svg.plan(resolved,op):structure.types.has(op.type)?structure.planOp(resolved,op,'react'):op.type==='detachComponent'?require('../components.cjs').planDetach(resolved,op):planOp(resolved,op);

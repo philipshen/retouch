@@ -2447,6 +2447,7 @@ function componentSection(id) {
     RetouchInspector.note(sec, `${count} ${unit}${count === 1 ? '' : 's'} at this usage. ${component.detached ? 'This module is independent of the original component.' : 'Definition edits are shared.'}`);
     if(!component.canDetach&&!component.detached&&component.reason)RetouchInspector.note(sec,component.reason);
     if (component.props.length) {
+      if(component.resetProperties){const reset=RetouchInspector.button('Reset properties',()=>resetComponentProperties(id,component.usageHash,component.resetProperties.revision));reset.title='Restore defaults or unset optional properties: '+component.resetProperties.names.join(', ');sec.append(reset);}
       sec.append(propTable(component.props,id,component.usageHash));
       RetouchInspector.note(sec,component.props.some(prop=>prop.editor?.editable)?'Property changes apply to this source usage at every screen size. Edit the definition for shared styles.':'These properties are read-only here. Edit the definition for shared styles.');
     } else RetouchInspector.note(sec,'No instance properties to edit here. Edit the definition for shared styles and content.');
@@ -2600,6 +2601,20 @@ async function refreshComponentDefault(instanceId){
  const comparisons=await window.RetouchComparisons?.syncSource({select:d=>matchingInDocument(d,instanceId,info),matches,revisionAttribute:info.renderRevisionAttribute,hash:info.hash});
  if(comparisons?.failures.length)throw Error('Default saved. Retry the failed comparison previews.');
  await refreshComponentProperty(instanceId,null);
+}
+async function refreshResetComponentProperties(instanceId,parentId){
+ await refreshComponentProperty(instanceId,parentId);
+ const resolved=await api('GET',resolveUrl(parentId||instanceId));
+ if(!resolved?.ok)throw Error('The reset properties could not be refreshed.');
+ const info=resolved.element,result=await window.RetouchComparisons?.syncSource({select:d=>matchingInDocument(d,info.id,info),matches:()=>true,revisionAttribute:info.renderRevisionAttribute||'data-rt-revision',hash:info.hash});
+ if(result?.failures.length)throw Error('Properties reset. Retry the failed comparison previews.');
+}
+async function resetComponentProperties(instanceId,fileHash,revision){
+ busyPanel(true);try{
+  const result=await api('POST','/rt/__api/op',{type:'resetComponentProps',id:instanceId,fileHash,revision});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not reset properties.');
+  const parentId=result.componentProp.parentId;if(result.undoId)editorHistory.record({type:'resetComponentProps',id:instanceId,parentId,undoId:result.undoId});
+  await refreshResetComponentProperties(instanceId,parentId);toast('Properties reset','ok');
+ }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
 async function setComponentDefault(instanceId,name,value,fileHash,revision){
  busyPanel(true);try{
@@ -4177,6 +4192,7 @@ async function restoreHistory(direction,op) {
     if(op.type==='reparentComponentSelection'){await refreshComponentSelection(direction==='undo'?op.selectionBefore:op.selectionAfter);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponentSelection'){await refreshComponentSelection(direction==='undo'?op.selectionBefore:op.selectionAfter);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='resetComponentProps'){await refreshResetComponentProperties(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentDefault'){await refreshComponentDefault(op.id);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='htmlGroupScale'){const resultInfo=await api('GET',resolveUrl(op.id));if(!resultInfo?.ok)throw Error('The scaled group no longer resolves.');try{await refreshHTMLGroupScale(resultInfo.element);}finally{await restoreLayerSelection([op.id]);if(sel)renderPanel();}return result;}
