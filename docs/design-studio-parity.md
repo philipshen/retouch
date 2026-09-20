@@ -28488,3 +28488,31 @@ scoped CSS, template control-flow extraction and arbitrary directives remain
 unsupported. This source checkpoint is newer than the signed desktop package;
 no desktop rebuild or native launch was performed. Full Figma parity,
 arbitrary-site authoring and trusted public macOS distribution remain incomplete.
+
+
+### Independent Svelte appearance edits beside authored style directives
+
+Style directives no longer disable all source-backed CSS editing on their layer.
+Retouch can add responsive styles for independent properties while preserving the
+authored directive expressions. Conflicting writes refuse with a property-specific
+message. Protection covers shorthands, physical/logical sizing and edges, border
+corners, line-clamp fallback effects and case-sensitive custom properties. Removing
+an existing managed override remains possible after an external directive appears.
+Whole computed style attributes and spreads still refuse because their property
+ownership is not statically known. Multi-selection conflicts remain atomic.
+
+All 2,425 unit tests passed (/tmp/retouch-svelte-independent-styles-full.log).
+Chromium and WebKit passed normal padding/font-size edits, screen-specific
+changes, resets, exact undo/redo and multi-selection alongside reactive opacity
+and custom-property directives. Toggling the authored directive after a managed
+edit and after redo changed only the main preview, retained both preview states
+and left source unchanged. Logs:
+/tmp/retouch-svelte-independent-styles-{chromium,webkit}.log.
+
+Component creation regressions also passed in both browsers with directives
+present before the managed styles were added, superseding the fixture workaround
+in the previous checkpoint. Extraction, duplication, exact history, independent
+reactive styles, bindings, drafts and local store retention passed
+(/tmp/retouch-svelte-independent-create-{chromium,webkit}.log).
+The signed desktop artifact has not been rebuilt. Full Figma parity,
+arbitrary-site authoring and trusted public macOS distribution remain incomplete.

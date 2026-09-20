@@ -2,6 +2,20 @@
 const MagicString = require('magic-string');
 const source = require('./svelte-source.cjs');
 const css = require('./css-rules.cjs');
+const { overlaps } = require('../shell/html-css-values.js');
+// Logical edges may resolve to either physical axis as writing mode changes.
+function directiveOverlap(a, b) {
+  const expand = p => {
+    let match = /^(margin|padding|inset)-(inline|block)(?:-(start|end))?$/.exec(p);
+    if (match) return match[1];
+    match = /^border-(inline|block)(?:-(start|end))?(?:-(width|style|color))?$/.exec(p);
+    if (match) return 'border' + (match[3] ? '-' + match[3] : '');
+    if (/^border-(start|end)-(start|end)-radius$/.test(p)) return 'border-radius';
+    return p;
+  };
+  a = expand(a); b = expand(b);
+  return overlaps(a, b) || overlaps(b, a);
+}
 const prefix = '\n/* retouch-responsive:';
 const suffix = '/* /retouch-responsive */\n';
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
@@ -88,14 +102,18 @@ function ownership(state) {
 function inspect(resolved, state = documentState(resolved.source, resolved.relPath)) {
   const owners = ownership(state);
   const node = resolved.element.node, inline = attribute(node, 'style');
-  if (inline.length > 1 || inline.some(a => !source.literal(a)) || node.attributes.some(a => a.type === 'StyleDirective' || a.type === 'SpreadAttribute')) throw Error('This layer computes its inline styles.');
+  if (inline.length > 1 || inline.some(a => !source.literal(a)) || node.attributes.some(a => a.type === 'SpreadAttribute')) throw Error('This layer computes its inline styles.');
   let id = value(attribute(node, 'data-rt-style')[0]);
   if (id && owners.get(id) !== 1) throw Error('This Svelte layer shares its style identity.');
   if (!id) {
     id = resolved.element.id;
     for (let attempt = 0; owners.has(id) || Object.hasOwn(state.model.layers, id); attempt++) id = source.contentHash(resolved.source + '|svelte-style|' + resolved.element.id + '|' + attempt).slice(0, 10);
   }
-  return { ...state, id, inline: value(inline[0]) || '' };
+  const directives = node.attributes.filter(a => a.type === 'StyleDirective').map(a => {
+    if (!/^(?:--[A-Za-z_][\w-]*|[A-Za-z][A-Za-z-]*)$/.test(a.name)) throw Error('This style directive has an unsupported property name.');
+    return a.name.startsWith('--') ? a.name : a.name.toLowerCase();
+  });
+  return { ...state, id, inline: value(inline[0]) || '', directives };
 }
 function plan(resolved, op) {
   try {
@@ -104,6 +122,15 @@ function plan(resolved, op) {
     const blocks = Object.entries(state.model.layers[state.id] || {}).map(([width, values]) => ({ width: Number(width), values }));
     const update = css.change({ blocks }, op, state.inline);
     if (!update.ok) return update;
+    // Keep authored reactive properties live. Check both the requested edits and
+    // generated declarations, including shorthand and layout fallback effects.
+    if (!op.resetScope) {
+      const requested = op.changes === undefined ? [[op.property, op.value]] : Object.entries(op.changes);
+      const before = state.model.layers[state.id]?.[op.width] || {}, after = update.rules?.get(op.width) || before;
+      const written = requested.concat(Object.entries(after).filter(([p, v]) => before[p] !== v));
+      const conflict = written.find(([p, v]) => v !== null && state.directives.some(d => directiveOverlap(d, p)));
+      if (conflict) throw Error('The ' + conflict[0] + ' property is controlled by an authored style directive. Edit that directive first.');
+    }
     if (!update.changed) return { ok: true, hash: resolved.hash, edits: [] };
     const layers = { ...state.model.layers };
     if (update.rules.size) layers[state.id] = Object.fromEntries([...update.rules].sort(([a], [b]) => a - b)); else delete layers[state.id];

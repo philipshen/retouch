@@ -11,6 +11,18 @@ exports.run = async ({ page, app, phone, file, original, state }) => {
   await set('Padding (CSS)', '16px');
   await wait(async () => await style(app, 'padding-top') === '16px' && await style(phone, 'padding-top') === '16px'); await state();
   const padded = read();
+  const proveDirective = async () => {
+    if (process.env.RT_SVELTE_STYLE_DIRECTIVES !== '1') return;
+    const before = read(); await page.locator('#modeBtn').click();
+    await app.getByRole('button', { name: 'Toggle directive', exact: true }).click();
+    await wait(async () => await style(app, 'opacity') === '0.4');
+    assert.equal(await style(phone, 'opacity'), '0.6');
+    await app.getByRole('button', { name: 'Toggle directive', exact: true }).click();
+    await wait(async () => await style(app, 'opacity') === '0.9');
+    await page.locator('#modeBtn').click(); assert.equal(read(), before); await state();
+  };
+  await proveDirective();
+
   await set('Font size (CSS)', '24px');
   await wait(async () => await style(app, 'font-size') === '24px' && await style(phone, 'font-size') === '24px'); await state();
   const base = read();
@@ -25,7 +37,7 @@ exports.run = async ({ page, app, phone, file, original, state }) => {
   await page.getByRole('button', { name: 'Undo', exact: true }).click(); await settled(); assert.equal(read(), base);
   await wait(async () => await style(app, 'font-size') === '24px'); await state();
   await page.getByRole('button', { name: 'Redo', exact: true }).click(); await settled(); assert.equal(read(), productionSource);
-  await wait(async () => await style(app, 'font-size') === '40px'); await state();
+  await wait(async () => await style(app, 'font-size') === '40px'); await state(); await proveDirective();
   await page.getByText('Breakpoint options', { exact: true }).click();
   await page.getByRole('button', { name: 'Reset overrides at this size', exact: true }).click(); await settled(); assert.equal(read(), base);
   await wait(async () => await style(app, 'font-size') === '24px'); await state();

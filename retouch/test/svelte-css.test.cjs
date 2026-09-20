@@ -102,3 +102,24 @@ test('Svelte adapter exposes responsive CSS and fresh descriptions for every sty
   assert.deepEqual(result.selection.map(e => e.id), ids);
   for (const info of result.selection) { assert.equal(info.hash, result.hash); assert.equal(info.cssRules[0].color, '#112233'); }
 });
+
+test('Svelte CSS edits independent properties beside reactive style directives', () => {
+  const original='<script>let color=$state("red");let size=$state(12);</script><h1 style:color style:font-size|important={size+"px"}>Hello</h1>';
+  const after=edit(original,{padding:'12px'},768),r=resolve(after),snapshot=styles.runtimeSnapshot(after,'App.svelte');
+  assert.ok(after.includes('style:color style:font-size|important={size+"px"}'));assert.deepEqual(styles.inspect(r).directives,['color','font-size']);assert.equal(styles.describe(r).cssReason,undefined);assert.ok(snapshot.ids[r.element.id]);
+  assert.equal(source.textSnapshot(original,'App.svelte').signature,source.textSnapshot(after,'App.svelte').signature);compiler.compile(source.stamp(after,'/tmp/App.svelte','/tmp',{runtime:true}).code,{filename:'App.svelte',generate:'client'});
+  const reset=styles.plan(r,{fileHash:r.hash,width:768,resetScope:true});assert.equal(reset.ok,true,reset.reason);assert.equal(reset.edits[0].after,styles.strip(after,'App.svelte'));
+});
+test('Svelte CSS preserves directive ownership across aliases, shorthands and fallback effects', () => {
+  for(const [directive,changes] of [['padding-inline','padding-left'],['inline-size','width'],['background','background-color'],['font','font-size'],['display','line-clamp'],['--tone','--tone'],['all','padding'],['border-inline-color','border-color'],['border-start-start-radius','border-top-left-radius']]){
+    const r=resolve('<h1 style:'+directive+'={value}>Hello</h1>'),values={'padding-left':'4px',width:'30px','background-color':'#112233','font-size':'16px','line-clamp':'2','--tone':'#112233',padding:'4px','border-color':'#112233','border-top-left-radius':'4px'};
+    const result=styles.plan(r,{fileHash:r.hash,width:768,changes:{[changes]:values[changes]}});assert.equal(result.ok,false,directive+' '+changes);assert.match(result.reason,/authored style directive/);assert.equal(result.edits,undefined);
+  }
+  const custom=edit('<h1 style:--Tone={value}>Hello</h1>',{'--tone':'#112233'});assert.ok(custom.includes('style:--Tone={value}'));
+  const base=edit('<h1>Hello</h1>',{color:'#112233'}),external=base.replace('>Hello',' style:color={color}>Hello'),r=resolve(external);
+  const reset=styles.plan(r,{fileHash:r.hash,width:0,changes:{color:null}});assert.equal(reset.ok,true,reset.reason);assert.ok(reset.edits[0].after.includes('style:color={color}'));
+});
+test('Svelte selection rejects a directive conflict without partially editing other layers', () => {
+ const r=resolve('<h1>Hello</h1><p style:padding={padding}>World</p>'),result=styles.planSelection(r,{fileHash:r.hash,width:0,ids:r.elements.map(e=>e.id),changes:{padding:'8px'}});
+ assert.equal(result.ok,false);assert.match(result.reason,/authored style directive/);assert.equal(result.edits,undefined);
+});
