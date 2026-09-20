@@ -26288,3 +26288,33 @@ This covers interpolating changed used dimensions, not arbitrary nonlinear layou
 reflow. Flex wrapping, intrinsic track changes, unmatched responsive siblings and
 app stylesheet edits during playback still need work. No desktop rebuild or push.
 Full Figma parity and notarized Homebrew distribution remain unfinished.
+
+### Smart Animate through layout reflow
+
+Smart Animate now records the offset-parent layout chain at both endpoint sizes.
+On each animation frame it compares live flow positions with the interpolated
+endpoint flow, converts the discrepancy through the current 2D ancestor matrices,
+and compensates with translate. Matched ancestor compensation is subtracted from
+children so nested layers do not move twice. The native animation's eased progress
+is used, including when playback is paused or sought. This removes the discrete
+jump when flex items wrap or responsive grids change track count. The initial
+browser reproduction was 63 CSS pixels away from its intended quarter-progress
+position before compensation.
+
+Validation: Chromium and WebKit passed five-point geometry checks for forward
+linear/eased and reverse eased playback, horizontal/vertical flex, min/max sizes,
+wrapping, rotated/scaled wrapping containers, resizing wrap containers, responsive
+auto-fit grids, nested children and both box-sizing modes. Tests also verify that
+concurrent app translate and dimension edits survive rendering and cancellation.
+OffsetLeft/Top have integer precision: reflow compensation has a one-CSS-pixel
+deadband and the sampled layout cases remained within one CSS pixel of expected
+geometry. Existing changing-transform tests retained their 0.1px tolerance in both
+browsers. Important-style navigation/history/Back/cleanup integration passed HTML,
+Liquid, React and Vue in both browsers. The HTML eight-transition overlay suite
+also passed both engines, including reduced motion and retained state.
+
+Changes to the offset-parent chain itself are not compensated by this mechanism;
+that case retains the existing endpoint animation. Automatic scroll clamping,
+unmatched responsive content and large-scene performance still need verification.
+No source-operation changes, full unit rerun, desktop rebuild or push. Full Figma
+parity and notarized Homebrew distribution remain unfinished.

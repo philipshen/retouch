@@ -15,8 +15,9 @@
    for(const key of group)write(key,value);
   }
   function render(){if(!el.isConnected||!names.length)return;write('transition-property','none');const css=d.defaultView.getComputedStyle(proxy);for(const name of names){const value=css.getPropertyValue(name);if((name==='width'||name==='height')&&/^[-+\d.e]+px$/i.test(value))size(name,value);else write(name,value);}}
+  function translate(x=0,y=0){const value=d.defaultView.getComputedStyle(proxy).translate,parts=value==='none'?['0px','0px']:(value.match(/calc\([^)]*\)|[^\s]+/g)||['0px']);write('transition-property','none');write('translate',x||y?`calc(${parts[0]} + ${x}px) calc(${parts[1]||'0px'} + ${y}px)${parts[2]?' '+parts[2]:''}`:value);}
   function dispose(){animation.cancel();for(const [name,change]of changes){if(name==='transition-property')continue;if(change.owned&&el.style.getPropertyValue(name)===change.last&&el.style.getPropertyPriority(name)==='important'){if(change.value)el.style.setProperty(name,change.value,change.priority);else el.style.removeProperty(name);}}void el.getBoundingClientRect();const transition=changes.get('transition-property');if(transition?.owned&&el.style.getPropertyValue('transition-property')===transition.last&&el.style.getPropertyPriority('transition-property')==='important'){if(transition.value)el.style.setProperty('transition-property',transition.value,transition.priority);else el.style.removeProperty('transition-property');}if(el.style.cssText===baseline){if(initial===null)el.removeAttribute('style');else el.setAttribute('style',initial);}host.remove();}
-  update();return {animation,update,render,dispose};
+  update();return {animation,update,render,translate,dispose};
  }
  root.RetouchPrototypeStyleMotion={create};
 })(window);
