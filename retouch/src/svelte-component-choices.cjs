@@ -9,21 +9,44 @@ function read(text,context){
  for(const statement of statements)if(statement.type==='ImportDeclaration')for(const specifier of statement.specifiers)declarations.set(specifier.local.name,null);
  const generic=ast.instance?.attributes?.some(attribute=>attribute.name==='generics');
  let modules=null,moduleError=false;try{if(context?.appRoot&&context?.file)modules=require('./component-type-modules.cjs')(context,{file:require('node:fs').realpathSync(context.file),source:text},{program:{body:statements}});}catch{moduleError=true;}
+ const utilities=new Set(['Partial','Required','Readonly','Pick','Omit']);
+ const builtin=node=>node.type==='TSTypeReference'&&node.typeName.type==='Identifier'&&utilities.has(node.typeName.name)&&(modules?modules.builtin(node,node.typeName.name):!declarations.has(node.typeName.name));
+ const argumentsOf=node=>node.typeParameters?.params||node.typeArguments?.params;
  let visits=0;
  function resolve(node,seen=new Set()){
   if(!node||++visits>2000||seen.size>20)return null;
   if(node.type==='TSParenthesizedType')return resolve(node.typeAnnotation,seen);
   if(node.type!=='TSTypeReference')return {node,seen};
+  if(builtin(node))return {node,seen};
   if((!modules&&node.typeName.type!=='Identifier')||node.typeParameters||node.typeArguments)return null;
   let def;try{def=modules?modules.lookup(node):declarations.get(node.typeName.name);}catch{return null;}if(!def||def.typeParameters||seen.has(def))return null;
   const next=new Set(seen);next.add(def);return resolve(def.type==='TSTypeAliasDeclaration'?def.typeAnnotation:def,next);
  }
+ function keys(node,seen){
+  const state=resolve(node,seen);if(!state)return null;
+  if(state.node.type==='TSTypeOperator'&&state.node.operator==='keyof'){
+   const list=members(state.node.typeAnnotation,state.seen);return validMembers(list)?[...new Set(list.map(memberName))]:null;
+  }
+  const value=primitive(node,seen);return value?.type==='string'&&value.choices?value.choices:null;
+ }
+ const memberName=field=>field.key?.name??field.key?.value;
+ const validMembers=list=>list&&list.length<=100&&list.every(field=>field.type==='TSPropertySignature'&&!field.computed&&typeof memberName(field)==='string');
  function members(node,seen){
   const state=resolve(node,seen);if(!state)return null;node=state.node;seen=state.seen;
+  if(builtin(node)){
+   const args=argumentsOf(node),utility=node.typeName.name;
+   if(!args||args.length!==(['Pick','Omit'].includes(utility)?2:1)||seen.has(node))return null;
+   const next=new Set(seen);next.add(node);const base=members(args[0],next);if(!validMembers(base))return null;
+   if(utility==='Readonly')return base;
+   if(utility==='Partial'||utility==='Required')return base.map(field=>({...field,optional:utility==='Partial'}));
+   const names=keys(args[1],next);if(!names||names.length>100)return null;
+   if(utility==='Pick'&&names.some(name=>!base.some(field=>memberName(field)===name)))return null;
+   return base.filter(field=>utility==='Pick'?names.includes(memberName(field)):!names.includes(memberName(field)));
+  }
   if(node.type==='TSTypeLiteral')return node.members;
   if(node.type==='TSIntersectionType'){const groups=node.types.map(t=>members(t,seen));return groups.every(Boolean)?groups.flat():null;}
   if(node.type!=='TSInterfaceDeclaration')return null;
-  const groups=(node.extends||[]).map(base=>{if(base.typeParameters||base.typeArguments)return null;const reference={type:'TSTypeReference',typeName:base.expression};return members(modules?modules.inherit(reference,base):reference,seen);});
+  const groups=(node.extends||[]).map(base=>{const reference={type:'TSTypeReference',typeName:base.expression,...(base.typeParameters?{typeParameters:base.typeParameters}:{}),...(base.typeArguments?{typeArguments:base.typeArguments}:{})};return members(modules?modules.inherit(reference,base):reference,seen);});
   return groups.every(Boolean)?[...groups.flat(),...node.body.body]:null;
  }
  function primitive(node,seen){

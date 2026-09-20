@@ -28252,3 +28252,24 @@ Evidence: desktop/verification/2026-09-20-imported-types-screens-developer-id.js
 Gatekeeper still reports Unnotarized Developer ID; no native launch occurred.
 Native UI, Intel execution, notarization, public distribution and cask upgrade
 remain unverified. Full Figma parity and arbitrary-site coverage remain incomplete.
+
+### Svelte utility property contracts checkpoint
+
+Svelte property controls and initial library fields now resolve built-in Partial,
+Required, Readonly, Pick and Omit contracts, including nested combinations,
+interface inheritance, imported aliases and finite keyof selections. Optionality
+and finite primitive choices are preserved. Built-in names resolve in their own
+module scope, so private names in another module do not change the contract.
+Unsupported generics, index signatures, invalid keys and recursive definitions
+remain read-only. Inspection never executes project code; imported source and
+resolution guards continue to protect pending edits and exact history.
+
+Validation: all 2,404 unit tests passed (/tmp/retouch-svelte-utility-full.log).
+Four added tests cover source guards and exact undo, required insertion fields,
+lexical shadowing, unsupported contracts and local ESTree type arguments.
+Chromium and WebKit passed the combined aliased component workflows with utility
+contracts for library insertion, swapping and shared defaults, including retained
+state, exact history, production exclusion and recovery from 96 dropped updates
+(/tmp/retouch-svelte-utility-{chromium,webkit}.log). Desktop artifacts were not
+rebuilt for this source change. Full Figma parity, arbitrary-site coverage and
+notarized public macOS distribution remain incomplete.
