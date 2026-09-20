@@ -15,6 +15,21 @@ exports.run=async({page,app,phone,file,original,state})=>{
  const field=()=>page.getByLabel('Component property amount',{exact:true});await field().waitFor();assert.equal(await field().inputValue(),'1');
  await field().fill('9');await field().press('Enter');await page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks);await verify('First|9|true');const changed=fs.readFileSync(file,'utf8');assert.notEqual(changed,original);
  for(const [action,expected,bytes]of [['Undo','First|1|true',original],['Redo','First|9|true',changed],['Undo','First|1|true',original]]){await page.getByRole('button',{name:action,exact:true}).click();await page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks);await verify(expected);assert.equal(fs.readFileSync(file,'utf8'),bytes);}
+ async function groups(expectedTag){
+  const result=await page.evaluate(async id=>{const info=await api('GET',componentUrl(id));return [doc(),...RetouchComparisons.exportFrames().map(frame=>frame.contentDocument)].map(d=>RetouchComponentInstances.group(matchingInDocument(d,id,info),info.rootGroups).map(group=>({complete:group.complete,tags:group.elements.map(el=>el.tagName)})));},instanceId);
+  assert.ok(result.length>=2);for(const frame of result)assert.deepEqual(frame,[{complete:true,tags:['SECTION',expectedTag]}]);
+  await page.getByRole('treeitem',{name:'Badge · component',exact:true}).nth(3).waitFor();assert.equal(await page.getByRole('treeitem',{name:'Badge · component',exact:true}).count(),4);
+ }
+ await groups('ASIDE');
+ const repeatedId=source.collect(original,'App.svelte').components[2].id;
+ const repeated=await page.evaluate(async id=>{const info=await api('GET',componentUrl(id));return [doc(),...RetouchComparisons.exportFrames().map(frame=>frame.contentDocument)].map(d=>RetouchComponentInstances.group(matchingInDocument(d,id,info),info.rootGroups).map(group=>({complete:group.complete,tags:group.elements.map(el=>el.tagName)})));},repeatedId);
+ for(const frame of repeated)assert.deepEqual(frame,[{complete:true,tags:['SECTION','ASIDE']},{complete:true,tags:['SECTION','FOOTER']}]);
+
+ await page.getByLabel('Component property enabled',{exact:true}).uncheck();await page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks);await verify('First|1|false');await groups('FOOTER');const disabled=fs.readFileSync(file,'utf8');
+ await app.locator('#badge-one-details').click({position:{x:500,y:5}});await page.getByLabel('Component property enabled',{exact:true}).waitFor();assert.equal(await page.getByLabel('Component property enabled',{exact:true}).isChecked(),false);
+ for(const [action,expected,bytes,tag]of [['Undo','First|1|true',original,'ASIDE'],['Redo','First|1|false',disabled,'FOOTER'],['Undo','First|1|true',original,'ASIDE']]){await page.getByRole('button',{name:action,exact:true}).click();await page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks);await verify(expected);await groups(tag);assert.equal(fs.readFileSync(file,'utf8'),bytes);}
+ await page.screenshot({path:'/tmp/retouch-svelte-component-branches-'+(process.env.RT_E2E_BROWSER||'chromium')+'.png'});
+ console.log('SVELTE CONDITIONAL COMPONENT ROOT GROUPS, BRANCH SELECTION AND BOOLEAN UI HISTORY PASS');
  console.log('SVELTE CANVAS COMPONENT SELECTION, INSPECTOR PROPERTY AND EXACT UI HISTORY PASS');
  await page.getByRole('treeitem',{name:'h1 · Hello Svelte',exact:true}).click();await page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks);
  console.log('SVELTE COMPONENT LITERAL PROPERTIES, ISOLATED INSTANCES, EXACT HISTORY AND RETAINED CHILD STATE PASS');

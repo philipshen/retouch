@@ -14,3 +14,7 @@ test('Svelte component resolution refuses aliases, shadow bindings and external 
  for(const text of ['<script>import Badge from "$lib/Badge.svelte";</script><Badge label="X"/>','<script>import Badge from "./Badge.svelte";let items=[];</script>{#each items as Badge}<Badge label="X"/>{/each}']){const {adapter,index,ids}=fixture(t,text);assert.equal(adapter.describeComponent(index.resolve(ids[0])).refused,true);}
  const {adapter,index,root,ids}=fixture(t);fs.unlinkSync(path.join(root,'Badge.svelte'));fs.symlinkSync(__filename,path.join(root,'Badge.svelte'));assert.equal(adapter.describeComponent(index.resolve(ids[0])).refused,true);
 });
+
+test('Svelte component definitions target the shared root even when a conditional root comes first',t=>{
+ const {adapter,index,root,ids}=fixture(t);fs.writeFileSync(path.join(root,'Badge.svelte'),'<script>let {label}=$props();</script>{#if label}<aside/>{:else}<footer/>{/if}<main/>');const info=adapter.describeComponent(index.resolve(ids[0]));assert.equal(info.ok,true,info.reason);const roots=source.collect(fs.readFileSync(path.join(root,'Badge.svelte'),'utf8'),'Badge.svelte').elements;assert.equal(info.definitionId,roots.find(e=>e.tag==='main').id);assert.equal(info.rootGroups.length,2);assert.ok(info.rootGroups.every(ids=>ids.includes(info.definitionId)));
+});

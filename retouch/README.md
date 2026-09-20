@@ -257,8 +257,11 @@ instances in the canvas, Layers and component library. Existing literal string,
 number and boolean properties can be edited in the inspector with exact
 undo/redo. Property updates preserve mounted child state and synchronize open
 screen previews. Native root markers are forwarded without additional DOM
-wrappers. Unconditional native roots can be grouped as an instance; conditional
-or repeated roots remain individual selection targets. Aliases, shadowed imports,
+wrappers. Native roots can be grouped as an instance, including conditional branches
+that share a root present in every branch. Repeated usages retain separate
+instance groups even when they render different branches. Component definitions
+with repeating roots, unaccounted root text/output or no common branch anchor
+remain individual selection targets. Aliases, shadowed imports,
 symlinked or external definitions, dynamic roots and spread-controlled properties
 are not supported yet. Defaults, variants, reset, detach, duplication and broader
 component authoring remain unfinished.

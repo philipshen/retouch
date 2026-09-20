@@ -10,7 +10,7 @@ function metadata(text,relative){
   for(const key of ['fragment','body','consequent','alternate','pending','then','catch','fallback'])if(node[key]?.type==='Fragment')walk(node[key]);
  }}walk(parsed.ast.fragment);
  let binding='__retouch_component_marker_'+source.contentHash(relative).slice(0,10);while(text.includes(binding))binding+='_';
- return {binding,roots,components:parsed.components.filter(element=>safe(element.node))};
+ return {binding,roots,rootGroups:require('./svelte-component-root-groups.cjs')(parsed.ast,roots),components:parsed.components.filter(element=>safe(element.node))};
 }
 function stamp(out,info,revision){
  for(const element of info.components)out.appendLeft(element.start+1+element.tag.length,' data-rt-i="'+element.id+'" data-rt-i-revision={'+revision+'}');

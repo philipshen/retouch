@@ -17,8 +17,8 @@ function definition(r){
  return {name,file,rel,text,meta};
 }
 function describeComponent(r){try{
- const def=definition(r),info=props.describe(r),roots=def.meta.roots;
- return {ok:true,name:def.name,file:def.rel,hash:source.contentHash(def.text),usageHash:r.hash,source:def.text,explicitComponent:true,definitionId:roots[0]?.id||null,definitionIds:roots.map(e=>e.id),rootGroups:roots.length&&!roots.some(e=>e.scope.conditional||e.scope.repeated)?[roots.map(e=>e.id)]:undefined,canDetach:false,canDuplicate:false,reason:'Svelte component detach and duplication are not available yet.',props:info.props.map(prop=>({name:prop.name,value:prop.value===undefined?'Expression':String(prop.value),default:'—',editor:prop}))};
+ const def=definition(r),info=props.describe(r),roots=def.meta.roots,groups=def.meta.rootGroups,anchor=groups[0]?.find(id=>groups.every(ids=>ids.includes(id)));
+ return {ok:true,name:def.name,file:def.rel,hash:source.contentHash(def.text),usageHash:r.hash,source:def.text,explicitComponent:true,definitionId:anchor||roots[0]?.id||null,definitionIds:roots.map(e=>e.id),rootGroups:def.meta.rootGroups,canDetach:false,canDuplicate:false,reason:'Svelte component detach and duplication are not available yet.',props:info.props.map(prop=>({name:prop.name,value:prop.value===undefined?'Expression':String(prop.value),default:'—',editor:prop}))};
  }catch(error){return refused(error.message);}}
 function create(base){
  const host=r=>({...r,elements:r.elements.filter(e=>e.kind==='host')});

@@ -2657,7 +2657,7 @@ function mountedComponentHost(instanceId,component,context){
 async function refreshComponentProperty(instanceId,parentId){
   const parent=parentId?await api('GET',resolveUrl(parentId)):null;
   const usage=await api('GET',resolveUrl(instanceId));
-  if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else if(usage?.ok)await refreshWrittenElement(usage.element,()=>true);else await reloadFrame();
+  if(parent?.ok)await refreshWrittenStructure(parent.element,()=>true);else if(usage?.ok)await refreshWrittenStructure(usage.element,()=>true);else await reloadFrame();
   const component=await api('GET',componentUrl(instanceId));
   if(usage?.ok&&component?.ok){sel={hostId:mountedComponentHost(instanceId,component,usage.element.context)?.getAttribute('data-rt')||component.definitionId,instanceId,scope:'instance',info:usage.element};renderPanel();}else clearSelection();
 }
@@ -4571,7 +4571,7 @@ document.getElementById('zoomSelection').onclick=async e=>{
 let layerClipboard=null;
 const layers = RetouchLayers.mount({
   canSelectWhileBusy:()=>!!inspectorTextCommit&&!panelTasks&&!undoBusy&&!historyRecoveryRequired,
-  readComponents:window.__RT_RENDERING?.componentInsertion?()=>api('GET','/rt/__api/components'):undefined,
+  readComponents:window.__RT_RENDERING?.componentLibrary?()=>api('GET','/rt/__api/components'):undefined,
   locks:layerLocks,
   onLock:setLayerLocks,
   getClipboard:()=>layerClipboard,
