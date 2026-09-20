@@ -87,7 +87,9 @@ function retouch(options={}){
    if(svelteTickets.get(file)!==ticket)return [];
    require('./svelte-component-migrations.cjs').observe(file,before.revision,next.revision);
    svelteSnapshots.set(file,next);if(before.revision!==next.revision)svelteSequences.set(file,(svelteSequences.get(file)||0)+1);
-   if(before.signature!==next.signature)return;if(before.revision===next.revision)return [];
+   // A proved reorder can have the same normalized shape. Recompile so child
+   // state follows the moved usage instead of merely swapping its live props.
+   if(before.signature!==next.signature||require('./svelte-component-migrations.cjs').read(file,next.revision).some(edge=>edge.beforeRevision===before.revision))return;if(before.revision===next.revision)return [];
    this.environment.hot.send({type:'custom',event:'retouch:svelte-source',data:{file:relative,...require('./svelte-hmr.cjs').payload(next,svelteSequences.get(file),svelteEpoch)}});return [];
   }},
   async handleHotUpdate(ctx){
