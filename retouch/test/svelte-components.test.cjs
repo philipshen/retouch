@@ -1,0 +1,16 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),source=require('../src/svelte-source.cjs'),base=require('../src/adapters/svelte.cjs'),components=require('../src/svelte-components.cjs'),{Index}=require('../src/indexer.cjs');
+function fixture(t,text='<script>import Badge from "./Badge.svelte";</script><main><h1>Title</h1><Badge label="First" amount={2}/><Badge label="Second"/></main>'){
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'rt-svelte-components-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(path.join(root,'App.svelte'),text);fs.writeFileSync(path.join(root,'Badge.svelte'),'<script>let {label,amount=1}=$props();</script><section>{label} {amount}</section>');const adapter=components.create(base),index=new Index(root,adapter);index.scanAll();return {root,adapter,index,text,ids:source.collect(text,'App.svelte').components.map(e=>e.id)};
+}
+test('Svelte component adapter indexes usages and describes shared definitions with literal editors',t=>{
+ const {adapter,index,ids}=fixture(t);const first=index.resolve(ids[0]),second=index.resolve(ids[1]),a=adapter.describeComponent(first),b=adapter.describeComponent(second);assert.equal(a.ok,true,a.reason);assert.equal(a.definitionId,b.definitionId);assert.equal(a.props.find(p=>p.name==='amount').editor.value,2);assert.equal(adapter.describe(first).kind,'instance');const usage=require('../src/component-usage.cjs').usage(index,ids[0]);assert.equal(usage.usageCount,2);assert.equal(usage.inlineComponent,false);assert.deepEqual(usage.rootGroups,[[a.definitionId]]);
+ const plan=adapter.planOp(first,{type:'setComponentProp',fileHash:first.hash,name:'label',value:'Updated'});assert.equal(plan.ok,true,plan.reason);assert.match(plan.edits[0].after,/label=\{"Updated"\}/);assert.match(plan.edits[0].after,/label="Second"/);assert.equal(adapter.planOp(first,{type:'setText',fileHash:first.hash,text:'No'}).refused,true);
+});
+test('Svelte component indexing preserves native planner inputs and source identities',t=>{
+ const {adapter,index,root,text}=fixture(t);const id=source.collect(text,'App.svelte').elements.find(e=>e.tag==='h1').id,r=index.resolve(id);assert.ok(r.elements.some(e=>e.kind==='instance'));const plan=adapter.planOp(r,{type:'setText',fileHash:r.hash,text:'Edited'});assert.equal(plan.ok,true,plan.reason);assert.match(plan.edits[0].after,/>Edited<\/h1>/);assert.equal(adapter.describe(r).kind,'host');assert.deepEqual(adapter.collect(text,'App.svelte').elements.filter(e=>e.kind==='host').map(e=>e.id),base.collect(text,'App.svelte').elements.map(e=>e.id));
+});
+test('Svelte component resolution refuses aliases, shadow bindings and external definitions',t=>{
+ for(const text of ['<script>import Badge from "$lib/Badge.svelte";</script><Badge label="X"/>','<script>import Badge from "./Badge.svelte";let items=[];</script>{#each items as Badge}<Badge label="X"/>{/each}']){const {adapter,index,ids}=fixture(t,text);assert.equal(adapter.describeComponent(index.resolve(ids[0])).refused,true);}
+ const {adapter,index,root,ids}=fixture(t);fs.unlinkSync(path.join(root,'Badge.svelte'));fs.symlinkSync(__filename,path.join(root,'Badge.svelte'));assert.equal(adapter.describeComponent(index.resolve(ids[0])).refused,true);
+});

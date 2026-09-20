@@ -9,6 +9,13 @@ exports.run=async({page,app,phone,file,original,state})=>{
   const resolved={appRoot:root,file:actual,relPath:'App.svelte',source:original,hash:source.contentHash(original),element:source.collect(original,'App.svelte').components[0]},plan=props.plan(resolved,{fileHash:resolved.hash,name,value});assert.equal(plan.ok,true,plan.reason);const saved=history.commit(root,plan);assert.equal(saved.ok,true,saved.reason);await verify(text);
   for(const [direction,expected]of [['undo','First|1|true'],['redo',text],['undo','First|1|true']]){const result=history.apply(root,direction,saved.undoId,adapter);assert.equal(result.ok,true,result.reason);await verify(expected);assert.equal(fs.readFileSync(file,'utf8'),direction==='redo'?plan.edits[0].after:original);}
  }
+ const instanceId=source.collect(original,'App.svelte').components[0].id;
+ for(const frame of [app,phone])assert.equal(await frame.locator('#badge-one').getAttribute('data-rt-i'),instanceId);
+ await app.locator('#badge-one').click({position:{x:500,y:5}});
+ const field=()=>page.getByLabel('Component property amount',{exact:true});await field().waitFor();assert.equal(await field().inputValue(),'1');
+ await field().fill('9');await field().press('Enter');await page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks);await verify('First|9|true');const changed=fs.readFileSync(file,'utf8');assert.notEqual(changed,original);
+ for(const [action,expected,bytes]of [['Undo','First|1|true',original],['Redo','First|9|true',changed],['Undo','First|1|true',original]]){await page.getByRole('button',{name:action,exact:true}).click();await page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks);await verify(expected);assert.equal(fs.readFileSync(file,'utf8'),bytes);}
+ console.log('SVELTE CANVAS COMPONENT SELECTION, INSPECTOR PROPERTY AND EXACT UI HISTORY PASS');
  await page.getByRole('treeitem',{name:'h1 · Hello Svelte',exact:true}).click();await page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks);
  console.log('SVELTE COMPONENT LITERAL PROPERTIES, ISOLATED INSTANCES, EXACT HISTORY AND RETAINED CHILD STATE PASS');
 };

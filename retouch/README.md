@@ -250,8 +250,18 @@ loop, branch, declaration, slot or namespace boundaries are refused. Consecutive
 native siblings can be grouped or framed; ungrouping preserves child styles and
 removes only wrapper styles. Groups use `display: contents`; arbitrary authored
 CSS selector behavior after adding a wrapper remains unverified. Wrappers with
-bindings, directives or local declarations cannot be removed. Component-property
-controls remain unfinished.
+bindings, directives or local declarations cannot be removed.
+
+Direct relative imports of project `.svelte` components now expose component
+instances in the canvas, Layers and component library. Existing literal string,
+number and boolean properties can be edited in the inspector with exact
+undo/redo. Property updates preserve mounted child state and synchronize open
+screen previews. Native root markers are forwarded without additional DOM
+wrappers. Unconditional native roots can be grouped as an instance; conditional
+or repeated roots remain individual selection targets. Aliases, shadowed imports,
+symlinked or external definitions, dynamic roots and spread-controlled properties
+are not supported yet. Defaults, variants, reset, detach, duplication and broader
+component authoring remain unfinished.
 
 Simple literal text, managed styles, style links, and variable bindings use development-only Svelte store
 bindings and an independent stylesheet so the component stays mounted, including
