@@ -282,6 +282,9 @@ details.advanced > summary:hover { color: var(--ink); }
 .focus-previews .compare-preview-body > .control-button { display: none; }
 .compare-header button { padding: 4px 8px; }
 .compare-header button[aria-pressed="true"] { border-color: var(--accent); }
+.compare-card[aria-current="true"] > .compare-header:first-child { background:#e5f4ff;border-radius:6px; }
+.compare-card[aria-current="true"] > .compare-header:first-child > button { background:transparent; }
+.compare-card[aria-current="true"] > .compare-header:first-child > button[aria-pressed="true"] { color:var(--accent);font-weight:600; }
 .compare-viewport { width: 100%; position: relative; z-index: 2; overflow: hidden; }
 .compare-surface { position: absolute; z-index: 1; overflow: hidden; background: white; pointer-events: none; }
 /* Keep collapsed documents laid out at their explicit iframe dimensions. */

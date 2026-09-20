@@ -636,6 +636,9 @@ and Escape-to-cancel behavior. Up/Down keys step 1 px; Shift steps 10 px.
 Height resizing updates viewport units and height media queries while keeping
 width fixed. Both edge handles operate in CSS pixels at any canvas zoom.
 
+The comparison matching the main canvas has a blue header and a Current label.
+An unpinned canvas size leaves every comparison unmarked.
+
 Switching back to a previously used main-screen size restores its page scroll
 and canvas pan at the current zoom. Positions are separate for each page URL and
 size in the current preview document; reloading the page clears them. Resizing

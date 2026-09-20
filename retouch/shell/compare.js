@@ -61,10 +61,11 @@
       const last=removed.at(-1);restore.hidden=!last;restore.disabled=!last||removals>0||sizes.length>=8||sizes.some(size=>size[1]===last.size[1]&&size[2]===last.size[2]||size[0].toLowerCase()===last.size[0].toLowerCase());
       restore.textContent=last?'Undo remove: '+last.size[0]:'Undo remove';restore.title=restore.disabled?'Finish removing views, or free the name and dimensions before restoring.':'Restore the last removed comparison in its original position.';
     }
-    for(const [index,card] of cards.entries()){card.up.disabled=index===0||removals>0;card.down.disabled=index===cards.length-1||removals>0;card.edit.setAttribute('aria-pressed',String(size.width===card.width&&size.height===card.height));card.scopeButton.disabled=!selected;}
+    for(const [index,card] of cards.entries()){card.up.disabled=index===0||removals>0;card.down.disabled=index===cards.length-1||removals>0;const active=size.width===card.width&&size.height===card.height;card.edit.setAttribute('aria-pressed',String(active));card.edit.textContent=active?'Current':'Edit';card.edit.title=active?'This size is open on the main canvas':'Open this size on the main canvas';if(active)card.card.setAttribute('aria-current','true');else card.card.removeAttribute('aria-current');card.scopeButton.disabled=!selected;}
     layoutPreviews();refreshLinkedScroll();
   }
   let cards=[],selected=null,selectedIds=[],selectionDetails=new Map(),route=null,open=false,timer=null,scope={prefix:'',label:'All sizes · base',condition:null},scopeSummary;
+  const cardLayout=new ResizeObserver(()=>{if(open)layoutPreviews();});
   let linkedScrolling=false;try{linkedScrolling=localStorage.getItem(storageKey+'.linkedScroll')==='true';}catch{}
   const linkedScroll=window.RetouchLinkedScroll();
   function refreshLinkedScroll(){
@@ -379,7 +380,7 @@
         card.inert=true;clearOrderHistory();removals++;removed.push({size,index});
         if(removed.length>8)removed.shift();sizes.splice(index,1);remember();
         const item=cards.find(c=>c.frame===frame);item?.cancelColdText?.();
-        cards=cards.filter(c=>c!==item);updateControls();
+        cardLayout.unobserve(card);cards=cards.filter(c=>c!==item);updateControls();
         await unload(frame);surface.remove();card.remove();removals--;updateControls();
         // Do not take focus back if the user moved elsewhere during unload.
         if(restoreFocus&&document.activeElement===document.body){
@@ -667,7 +668,7 @@
           scrollFrom(w,node,dx,dy);
         }catch{}
       },{passive:false});
-      cards.push({card,frame,surface,retryImageControl,previewBody,setCollapsed,attachMarquee,overlay,message,scopeMessage,scopeButton,viewport,previewFrame,resizeHandles,width,height,edit,reveal,up,down,move});
+      cards.push({card,frame,surface,retryImageControl,previewBody,setCollapsed,attachMarquee,overlay,message,scopeMessage,scopeButton,viewport,previewFrame,resizeHandles,width,height,edit,reveal,up,down,move});cardLayout.observe(card);
   }
   function unload(frame){cards.find(card=>card.frame===frame)?.cancelColdText?.();marqueeCleanup.get(frame)?.();marqueeCleanup.delete(frame);return new Promise(resolve=>{
     let timeout;
@@ -676,7 +677,7 @@
     try{frame.contentWindow.stop();frame.src='about:blank';}catch{done();}
   });}
   async function dispose(){
-    linkedScroll.clear();addScreenDialog?.close();
+    cardLayout.disconnect();linkedScroll.clear();addScreenDialog?.close();
     activeDimensionScrub?.cancel();clearOrderHistory();
     // Unload each browsing context before detaching it, including frames whose
     // framework bootstrap is still awaiting scripts or network responses.

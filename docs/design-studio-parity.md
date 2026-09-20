@@ -28171,3 +28171,33 @@ Closed shadow roots, cross-origin embedded content, arbitrary navigation/redirec
 patterns and broader site coverage remain unverified or unsupported. Native
 artifacts were not rebuilt or launched. Full Figma parity and notarized public
 macOS distribution remain incomplete.
+
+### Current screen visibility and comparison layout checkpoint
+
+The comparison matching the main canvas now has an explicit Current label and a
+light blue header, with `aria-current` on its section. Switching sizes updates
+that marker; an unpinned size leaves comparisons unmarked until it is added. This
+keeps the distinction between the main canvas and independent live previews
+visible without adding another toolbar or changing style scope.
+
+Visual inspection also exposed a layout defect: asynchronously wrapped status
+text shifted later cards while their separately positioned preview surfaces
+remained at old coordinates, covering controls. Card resize observation now
+updates preview geometry after content-height changes. Observers detach when a
+card is removed or the rail is disposed.
+
+Validation: project-screen workflows passed in Chromium and WebKit, including
+current-state switching, unpinned/custom sizes, expanded/shrunk status content,
+preview alignment, persistence and project isolation. Comparison-resize workflows
+passed in both browsers. All 2,393 unit tests passed
+(`/tmp/retouch-current-screen-full.log`). Browser logs are
+`/tmp/retouch-current-screen-{chromium,webkit}.log` and
+`/tmp/retouch-current-screen-resize{,-webkit}.log`. The final Chromium screenshot
+(`/tmp/retouch-current-screen-chromium.png`) was visually inspected; previously
+covered controls are now clear.
+
+The official [Figma properties-panel guide](https://help.figma.com/hc/en-us/articles/360039832014-Design-prototype-and-explore-layer-properties-in-the-right-sidebar)
+was checked during the UI review. This custom responsive-rail improvement is not
+proof of complete Figma visual or feature parity. Native artifacts were not
+rebuilt or launched; full parity, arbitrary-site coverage and notarized public
+macOS distribution remain incomplete.
