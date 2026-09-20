@@ -3,7 +3,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),vm=requir
 const V=require('../shell/prototype-values.js'),model=require('../src/variable-collections.cjs');
 const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
 function setup(pause){
- const library={version:1,collections:[{id:id(1),name:'Values',defaultMode:id(2),modes:[{id:id(2),name:'Default'}]}],variables:[['number',12],['number',24],['boolean',false],['boolean',true],['string',''],['string','Text'],['color','#ff0000'],['color',{alias:id(9)}]].map(([type,value],n)=>({id:id(n+3),collectionId:id(1),name:'Value '+n,type,values:{[id(2)]:value}}))},requests=[],errors=[],root={RetouchPrototypeValues:V,RetouchPresentationHost:{error:message=>errors.push(message)},RetouchVariableLibraryRequest:async()=>({...library,revision:'r'}),RetouchVariableModePreview:async request=>{requests.push(JSON.parse(JSON.stringify(request)));await pause?.(request);return {revision:'r',values:[model.resolver(library,request.modes,request.overrides).resolve(request.variableId)]};}};
+ const library={version:1,collections:[{id:id(1),name:'Values',defaultMode:id(2),modes:[{id:id(2),name:'Default'}]}],variables:[['number',12],['number',24],['boolean',false],['boolean',true],['string',''],['string','Text'],['color','#ff0000'],['color',{alias:id(9)}]].map(([type,value],n)=>({id:id(n+3),collectionId:id(1),name:'Value '+n,type,values:{[id(2)]:value}}))},requests=[],errors=[],root={RetouchPrototypeValues:V,RetouchPresentationHost:{error:message=>errors.push(message)},RetouchVariableLibraryRequest:async()=>({...library,revision:'r'}),RetouchVariableModePreview:async request=>{requests.push(JSON.parse(JSON.stringify(request)));await pause?.(request);const resolver=model.resolver(library,request.modes,request.overrides);return request.expression?{revision:'r',result:require('../shell/prototype-expressions.js').evaluate(request.expression,id=>resolver.resolve(id))}:{revision:'r',values:[resolver.resolve(request.variableId)]};}};
  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../shell/prototype-variables.js'),'utf8'),{window:root});
  return {runtime:root.RetouchPrototypeVariables,requests,errors,library};
 }
@@ -27,4 +27,17 @@ test('reset cancels a copy whose source value is still being resolved',async()=>
  let release,started;const gate=new Promise(resolve=>release=resolve),seen=new Promise(resolve=>started=resolve),{runtime,requests,errors}=setup(async request=>{if(request.variableId===id(3)){started();await gate;}});
  const pending=runtime.assign({id:id(4),type:'number',variableId:id(3)});await seen;runtime.reset();release();await pending;assert.equal(requests.length,1,'cancelled copy never validates or applies its target');assert.deepEqual(errors,[]);
  await runtime.assign({id:id(4),type:'number',value:2});assert.deepEqual(requests.at(-1).overrides,{[id(4)]:2});
+});
+
+test('expression assignments read current state in order and errors preserve the last value',async()=>{
+ const {runtime,requests,errors}=setup(),reference={kind:'variable',id:id(3),type:'number'},literal=value=>({kind:'literal',type:'number',value}),assignment={id:id(3),type:'number',expression:{kind:'operation',op:'+',args:[reference,literal(1)]}};
+ await Promise.all([runtime.assign(assignment),runtime.assign(assignment)]);assert.equal(requests.at(-1).overrides[id(3)],14);
+ await runtime.assign({...assignment,expression:{kind:'operation',op:'/',args:[reference,literal(0)]}});assert.match(errors[0],/divide by zero/);
+ await runtime.assign({id:id(4),type:'number',variableId:id(3)});assert.equal(requests.at(-1).overrides[id(4)],14);
+});
+
+test('reset cancels an expression preview before it can assign its result',async()=>{
+ let release,started;const gate=new Promise(resolve=>release=resolve),seen=new Promise(resolve=>started=resolve),{runtime,requests,errors}=setup(async request=>{if(request.expression){started();await gate;}});
+ const pending=runtime.assign({id:id(3),type:'number',expression:{kind:'literal',type:'number',value:77}});await seen;runtime.reset();release();await pending;assert.equal(requests.length,1);assert.deepEqual(errors,[]);
+ await runtime.assign({id:id(4),type:'number',variableId:id(3)});assert.equal(requests.at(-1).overrides[id(4)],12);
 });

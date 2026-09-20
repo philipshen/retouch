@@ -26978,3 +26978,26 @@ and playback integration are next; no expression UI is exposed yet. Prototype
 conditions/multiple actions/non-style bindings and the broader design parity
 matrix remain unfinished. No desktop artifact rebuild, native launch or push;
 notarized Homebrew distribution remains incomplete.
+
+### 2026-09-20 — Expression authoring and prototype playback
+
+Set variable now offers a typed Expression composer alongside literal and variable
+copy sources. Nested controls support arithmetic, comparisons, Boolean logic,
+text joining/conversion and conditional values, with default-value previews.
+Playback evaluates against current presentation values, serializes queued
+assignments, and cancels pending evaluation when the session resets. Failed
+expressions preserve the previous value. Saved interactions enforce the same
+131,072-character serialization limit used by the source reader before writing.
+
+All 2,110 unit tests passed, including expression source round trips across the
+four adapters, type/source exclusivity, queued increments, cancellation, and
+oversized interaction refusal. Chromium and WebKit passed visual authoring,
+exact undo/redo, pointer/keyboard increments, restart, division-by-zero refusal,
+and nested conditional playback. Existing literal/copy HTML browser suites also
+passed both engines. The light-theme composer screenshot was inspected.
+
+Conditional values do not implement conditional action lists. Multiple actions,
+mode-changing actions, non-style bindings and the broader design parity matrix
+remain unfinished. This increment does not establish universal site parity.
+No desktop artifact rebuild or native launch; notarized Homebrew distribution
+remains incomplete.

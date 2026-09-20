@@ -23,6 +23,7 @@
     "test:e2e:layer-export-svg": "node test/e2e/layer-export-svg.cjs",
     "test:e2e:export-browser-reuse": "node test/e2e/export-browser-reuse.cjs",
     "test:e2e:layer-export": "node test/e2e/layer-export.cjs",
+    "test:e2e:prototype-expressions": "node test/e2e/prototype-expressions.cjs",
     "test:e2e:prototype-variables-vue": "node test/e2e/prototype-variables-vue.cjs",
     "test:e2e:prototype-variables-liquid": "node test/e2e/prototype-variables-liquid.cjs",
     "test:e2e:prototype-variables-react": "node test/e2e/prototype-variables-react.cjs",

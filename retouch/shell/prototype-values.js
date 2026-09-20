@@ -2,6 +2,7 @@
  'use strict';
  const S=typeof module==='object'&&module.exports?require('./prototype-spring.js'):root.RetouchPrototypeSpring;
  const K=typeof module==='object'&&module.exports?require('./prototype-keys.js'):root.RetouchPrototypeKeys;
+ const E=typeof module==='object'&&module.exports?require('./prototype-expressions.js'):root.RetouchPrototypeExpressions;
  const palette=typeof module==='object'&&module.exports?require('./palette-values.js'):root.RetouchPaletteValues;
  const attribute='data-rt-prototype',positions=['center','top-left','top-center','top-right','center-left','center-right','bottom-left','bottom-center','bottom-right'];
  const triggers=['click','mouseenter','mouseleave','mousedown','mouseup','after-delay','keyboard'];
@@ -41,8 +42,12 @@
  function route(value){if(typeof value!=='string'||value.length>2048||!value.startsWith('/')||value.startsWith('//')||/[\u0000-\u0020\u007f\\]/.test(value))return false;try{const url=new URL(value,'http://retouch.local');return url.origin==='http://retouch.local'&&!/^\/rt(?:\/|$)/.test(decodeURIComponent(url.pathname));}catch{return false;}}
  function link(value){if(typeof value!=='string'||value.length>2048||!/^https?:\/\//i.test(value)||/[\u0000-\u0020\u007f\\]/.test(value))return false;try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)&&!!url.hostname&&!url.username&&!url.password;}catch{return false;}}
  function assignment(value){
-  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['id','type','value','variableId'].includes(key))||typeof value.id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.id))throw Error('Choose a variable.');
+  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['id','type','value','variableId','expression'].includes(key))||typeof value.id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.id))throw Error('Choose a variable.');
   if(!['color','number','boolean','string'].includes(value.type))throw Error('Choose a supported variable type.');
+  if(Object.hasOwn(value,'expression')){
+   if(Object.hasOwn(value,'value')||Object.hasOwn(value,'variableId'))throw Error('Choose one expression instead of another value source.');
+   const checked=E.analyze(value.expression);if(checked.type!==value.type)throw Error('The expression must return the target variable’s type.');return {id:value.id,type:value.type,expression:checked.expression};
+  }
   if(Object.hasOwn(value,'variableId')){
    if(Object.hasOwn(value,'value')||typeof value.variableId!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.variableId))throw Error('Choose one source variable instead of a literal value.');
    return {id:value.id,type:value.type,variableId:value.variableId};
@@ -57,7 +62,7 @@
  }
  function validate(value){
   if(!Array.isArray(value)||value.length>32)throw Error('Use at most 32 interactions per source layer.');
-  const used=new Set();return value.map(item=>{
+  const used=new Set();const result=value.map(item=>{
    if(!item||typeof item!=='object'||Array.isArray(item)||Object.keys(item).some(key=>!['trigger','action','destination','preserveScroll','overlay','transition','delay','shortcut','scrollOffset','assignment'].includes(key))||!triggers.includes(item.trigger))throw Error('Choose distinct supported interaction triggers.');const key=item.trigger==='keyboard'?'keyboard:'+K.signature(item.shortcut):item.trigger;if(used.has(key))throw Error('Use each trigger or keyboard shortcut only once per layer.');used.add(key);
    if(item.trigger!=='keyboard'&&item.shortcut!==undefined)throw Error('Shortcuts belong to keyboard triggers.');
    if(item.trigger==='after-delay'&&(!Number.isInteger(item.delay)||item.delay<1||item.delay>10000)||item.trigger!=='after-delay'&&item.delay!==undefined)throw Error('After delay needs a whole duration from 1 to 10000 ms. Other triggers do not have a delay.');
@@ -72,6 +77,8 @@
    if(item.scrollOffset!==undefined&&(item.action!=='scroll'||!item.scrollOffset||typeof item.scrollOffset!=='object'||Array.isArray(item.scrollOffset)||Object.keys(item.scrollOffset).some(key=>!['x','y'].includes(key))||!['x','y'].every(key=>Number.isFinite(item.scrollOffset[key])&&Math.abs(item.scrollOffset[key])<=100000)))throw Error('Scroll offsets must be finite X and Y values between -100000 and 100000.');
    return {trigger:item.trigger,action:item.action,...(item.action==='set-variable'?{assignment:assignment(item.assignment)}:{}),...(item.trigger==='keyboard'?{shortcut:K.validate(item.shortcut)}:{}),...(item.trigger==='after-delay'?{delay:item.delay}:{}),...(!['back','close-overlay','set-variable'].includes(item.action)?{destination:item.destination}:{}),...(item.action==='navigate'?{preserveScroll:!!item.preserveScroll}:{}),...(item.action==='open-overlay'?{overlay:overlay(item.overlay)}:{}),...(item.scrollOffset!==undefined?{scrollOffset:{...item.scrollOffset}}:{}),...(item.transition!==undefined?{transition:transition(item.transition,item.action)}:{})};
   });
+  if(JSON.stringify(result).length>131072)throw Error('Prototype interactions exceed the source size limit.');
+  return result;
  }
  function parse(value){if(value===null)return [];if(typeof value!=='string'||value.length>131072)throw Error('Invalid prototype interactions.');return validate(JSON.parse(value));}
  const api={attribute,positions,triggers,transitions,easings,curves,easing,easingCss,transition,overlay,route,link,assignment,validate,parse};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPrototypeValues=api;

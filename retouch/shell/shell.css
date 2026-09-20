@@ -1448,3 +1448,7 @@ html, body { overflow:clip; }
 .screen-export-dialog .screen-export-transparent { display:flex;align-items:center;gap:8px; }
 .screen-export-dialog .screen-export-transparent input { width:auto;margin:0; }
 .screen-export-dialog .screen-export-transparent[hidden],.screen-export-dialog .hint[hidden] { display:none; }
+
+.prototype-expression-node { min-width:0; margin:6px 0; padding:8px; border:1px solid var(--border,#e5e5e5); border-radius:6px; }
+.prototype-expression-node > legend { padding:0 4px; color:var(--muted,#767676); font-size:11px; }
+.prototype-expression-node .prototype-expression-node { margin-left:4px; }

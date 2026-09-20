@@ -47,7 +47,10 @@
    if(!library){const loaded=await root.RetouchVariableLibraryRequest();if(ticket!==epoch)return;library=loaded;revision=loaded.revision;}
    const variable=library.variables.find(v=>v.id===assignment.id);if(!variable||variable.type!==assignment.type)throw Error('The prototype variable is missing or its type changed. Edit this interaction again.');
    let value=assignment.value;
-   if(assignment.variableId!==undefined){
+   if(assignment.expression!==undefined){
+    const response=await root.RetouchVariableModePreview({revision,overrides:values,expression:assignment.expression});if(ticket!==epoch)return;
+    if(response.result?.type!==assignment.type)throw Error('The expression returned a different variable type.');value=response.result.value;
+   }else if(assignment.variableId!==undefined){
     const source=library.variables.find(v=>v.id===assignment.variableId);if(!source||source.type!==assignment.type)throw Error('The source variable is missing or has a different type. Edit this interaction again.');
     const resolved=await root.RetouchVariableModePreview({revision,overrides:values,variableId:source.id});if(ticket!==epoch)return;
     const current=resolved.values.find(v=>v.id===source.id);if(!current||current.type!==assignment.type)throw Error('The source variable could not be resolved.');value=current.value;
