@@ -1,0 +1,16 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{once}=require('node:events'),adapter=require('../src/adapters/svelte.cjs'),library=require('../src/variable-library.cjs'),{id,model}=require('./fixtures/vue-variable-model.cjs');
+test('Svelte variable API rejects stale revisions and propagates catalog/history with compiled receipts',async t=>{
+ const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'retouch-svelte-variable-api-')));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));const file=path.join(root,'App.svelte'),source='<h1>Variables</h1>';fs.writeFileSync(file,source);library.commitPlan(root,library.planChange(root,{type:'replace',revision:null,library:model()}));
+ const previous=process.env.RETOUCH_STATE_DIR;process.env.RETOUCH_STATE_DIR=path.join(root,'.history-cache');let server;
+ try{
+  server=require('../src/server.cjs').startServer({appRoot:root,adapter,port:0,quiet:true});await once(server,'listening');const base='http://127.0.0.1:'+server.address().port,markup=await fetch(base+'/rt').then(r=>r.text()),headers={'x-retouch-token':/window\.__RT_TOKEN = "([a-f0-9]+)"/.exec(markup)[1],'content-type':'application/json'};
+  const post=async(url,body)=>{const response=await fetch(base+url,{method:'POST',headers,body:JSON.stringify(body)});return {status:response.status,body:await response.json()};};
+  const element=adapter.collect(source,'App.svelte').elements[0],op={type:'applyVariable',id:element.id,fileHash:adapter.contentHash(source),width:0,property:'color',binding:{id:id(6)},libraryRevision:library.read(root).revision};
+  assert.equal((await post('/rt/__api/op',{...op,libraryRevision:null})).status,409);assert.equal((await post('/rt/__api/op',{...op,fileHash:'stale'})).status,409);assert.equal(fs.readFileSync(file,'utf8'),source);
+  const applied=await post('/rt/__api/op',op);assert.equal(applied.status,200,JSON.stringify(applied.body));assert.equal(applied.body.element.variables,true);assert.equal(applied.body.element.variableLinks[0].color.id,id(6));
+  const before=fs.readFileSync(file,'utf8'),next=model();next.variables[0].values[id(2)]='#abcdef';const changed=await post('/rt/__api/variables',{type:'replace',revision:library.read(root).revision,library:next});assert.equal(changed.status,200,JSON.stringify(changed.body));assert.equal(changed.body.updated,1);assert.equal(changed.body.renderRevisions.renderer,'svelte');assert.match(changed.body.renderRevisions.groups[0].css.selector,/data-rt-svelte-css/);
+  const undo=await post('/rt/__api/op',{type:'undo',undoId:changed.body.undoId});assert.equal(undo.status,200,JSON.stringify(undo.body));assert.equal(undo.body.renderRevisions.renderer,'svelte');assert.equal(fs.readFileSync(file,'utf8'),before);
+  assert.equal((await post('/rt/__api/op',{type:'undo',undoId:applied.body.undoId})).status,200);assert.equal(fs.readFileSync(file,'utf8'),source);
+ }finally{if(server){server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}if(previous===undefined)delete process.env.RETOUCH_STATE_DIR;else process.env.RETOUCH_STATE_DIR=previous;}
+});

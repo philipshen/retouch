@@ -220,10 +220,13 @@ are refused. Saved typography, color, and effect styles support applying,
 inheriting at another screen scope, local overrides, reset, detach, and
 multi-selection. Updating a library style also updates linked layers in unvisited
 Svelte components, with catalog and source changes in one undo transaction.
-Rich text, structural editing, shared variable bindings, and component-property
-controls for Svelte are not implemented yet.
+Shared collection variables support aliases, numeric units, responsive mode
+bindings, local overrides, reset, detach, and removal. Collection updates include
+unvisited Svelte components and restore catalog and source together through undo.
+Rich text, structural editing, and component-property controls for Svelte are not
+implemented yet.
 
-Simple literal text, managed styles, and style links use development-only Svelte store
+Simple literal text, managed styles, style links, and variable bindings use development-only Svelte store
 bindings and an independent stylesheet so the component stays mounted, including
 through undo/redo. New conditional instances read the current text and styles.
 The inline editor temporarily edits cloned child nodes and restores Svelte's

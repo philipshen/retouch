@@ -756,6 +756,7 @@
             if(!open||!cards.includes(card)||path()!==expectedRoute)return;
             if(card.frame.contentDocument!==d)throw Error('Preview navigated while waiting for the source restore.');
             stable=RetouchHistoryRender.matches(target,d)?stable+1:0;if(stable>=3)return;
+            if(!stable&&manifest.renderer==='svelte'&&attempt%20===0)RetouchRenderSync.requestSourceSync(card.frame);
             await new Promise(resolve=>setTimeout(resolve,50));
           }
           throw Error('The updated templates and styles have not reached this preview.');
