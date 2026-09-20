@@ -682,6 +682,14 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   }
   const textResize=panel.querySelector('.text-resize-controls'),textLayout=panel.querySelector(':scope > [data-section="layout"]');
   if(textResize&&textLayout){const dimensions=textLayout.querySelector('[aria-label="Width (CSS)"], [aria-label="Width (px)"]')?.closest('.property-pair');if(dimensions?.parentElement===textLayout)dimensions.after(textResize);else textLayout.append(textResize);}
+  if(screenScope){
+   const label=screenScope.querySelector(':scope > label'),status=screenScope.querySelector(':scope > .scope-status');
+   if(label){
+    const summary=document.createElement('div');summary.className='screen-scope-summary';summary.setAttribute('role','group');summary.setAttribute('aria-label','Style edit range');summary.append(label);
+    if(status){status.title=status.textContent;summary.append(status);}
+    panel.prepend(summary);
+   }
+  }
   for(const section of panel.querySelectorAll(':scope > .inspector-section'))collapsibleSection(section);
  }
  const dock=document.createElement('nav');dock.className='design-tool-dock';dock.setAttribute('aria-label','Canvas tools');

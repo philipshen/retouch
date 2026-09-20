@@ -28577,3 +28577,34 @@ Authored scoped CSS, await/key/snippet blocks, nested components and other
 unsupported context remain extraction gaps. The desktop package was not rebuilt
 or launched. Full Figma parity, arbitrary-site authoring and trusted public macOS
 distribution remain incomplete.
+
+
+### Persistent inspector screen-scope controls
+
+The Design inspector now keeps its existing screen-scope selector and range status
+in a compact sticky row beneath the Design/Prototype tabs. Scrolling to Fill,
+Effects, Export or advanced properties no longer hides the destination for later
+style edits. The original selector and listeners are moved intact; breakpoint
+options remain with the selection details. Scroll padding and the out-of-range
+notice account for the new row so neither covers the selector.
+
+Chromium and WebKit verified that the selector remains inside the panel and
+receives pointer hits after scrolling to the bottom. Switching between base and
+768px scope while scrolled preserved source and updated range status. Svelte
+responsive edits, resets, multi-selection, exact history and retained directive
+state passed (/tmp/retouch-sticky-scope-{chromium,webkit}.log).
+
+Both browsers passed breakpoint-boundary comparisons and the full preview,
+linked-edit, source-history, preview-size-history and reload/persistence flows
+(/tmp/retouch-sticky-scope-breakpoint-{chromium,webkit}.log and
+/tmp/retouch-sticky-scope-preview-{chromium,webkit}-final.log). At 1200 by 700,
+the out-of-range notice remained below the reachable selector. The full preview
+test previously attempted opacity edits outside the range despite the committed
+editor already disabling them; it now verifies that refusal, uses Preview edit
+range, checks linked edits/history, and returns via Undo preview size.
+
+Screenshots /tmp/retouch-sticky-scope-chromium.png and
+/tmp/retouch-sticky-scope-outside-chromium.png were visually inspected. JavaScript
+syntax and diff whitespace checks passed. The desktop package was not rebuilt.
+This improves screen-scope discoverability; full Figma visual/feature parity,
+arbitrary-site authoring and trusted public macOS distribution remain incomplete.

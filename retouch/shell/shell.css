@@ -1477,3 +1477,11 @@ html, body { overflow:clip; }
 .component-property-paste .paste-property-choices label { display:inline-flex; flex-direction:row; align-items:center; gap:6px; margin:0; }
 .component-property-paste .paste-property-choices input { width:auto; margin:0; }
 .component-property-paste .paste-property-excluded { opacity:.45; text-decoration:line-through; }
+
+/* Keep the edit destination visible while browsing long property panels. */
+#panel:has(.screen-scope-summary) { scroll-padding-top:112px; }
+.screen-scope-summary { position:sticky;top:48px;z-index:19;height:64px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line); }
+.screen-scope-summary > label { display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted);white-space:nowrap; }
+.screen-scope-summary select { flex:1;min-width:0;height:28px;border:1px solid transparent;border-radius:4px;background:var(--control);color:var(--ink);font:11px var(--font);padding:4px; }
+.screen-scope-summary .scope-status { margin:4px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+#panelBody:has(> .screen-scope-summary) > .shared-range-notice { top:112px; }

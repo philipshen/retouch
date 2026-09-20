@@ -33,6 +33,14 @@ exports.run = async ({ page, app, phone, file, original, state }) => {
   await wait(async () => await style(app, 'font-size') === '40px');
   assert.equal(await style(phone, 'font-size'), '24px'); await state();
   const productionSource = read();
+  const panel=page.locator('#panel'),scope=page.getByLabel('Style screen scope',{exact:true});
+  await panel.evaluate(el=>{el.scrollTop=el.scrollHeight;});
+  const scopeGeometry=await scope.evaluate(el=>{const rect=el.getBoundingClientRect(),panel=document.querySelector('#panel').getBoundingClientRect(),tabs=document.querySelector('.design-panel-tabs').getBoundingClientRect();return {inside:rect.top>=tabs.bottom&&rect.bottom<=panel.bottom,hit:document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2)===el,scrolled:document.querySelector('#panel').scrollTop>100};});
+  assert.deepEqual(scopeGeometry,{inside:true,hit:true,scrolled:true});
+  await scope.selectOption('');await settled();assert.equal(read(),productionSource);assert.equal(await page.getByLabel('Edit range status',{exact:true}).textContent(),'Base styles · all screen sizes');
+  await scope.selectOption('min-[768px]:');await settled();assert.equal(read(),productionSource);assert.equal(await page.getByLabel('Edit range status',{exact:true}).textContent(),'Preview matches edit range');
+  await page.screenshot({path:'/tmp/retouch-sticky-scope-'+(process.env.RT_E2E_BROWSER||'chromium')+'.png'});
+
   await page.screenshot({ path: '/tmp/retouch-svelte-css-' + (process.env.RT_E2E_BROWSER || 'chromium') + '.png' });
   await page.getByRole('button', { name: 'Undo', exact: true }).click(); await settled(); assert.equal(read(), base);
   await wait(async () => await style(app, 'font-size') === '24px'); await state();
