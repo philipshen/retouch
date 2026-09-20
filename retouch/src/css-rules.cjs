@@ -17,7 +17,7 @@ function change(state,op,inline=''){
   const block=state.blocks.find(b=>b.width===op.width),values={...block?.values};
   let changes=op.resetScope?Object.keys(values).map(property=>[property,null]):op.changes===undefined?[[op.property,op.value]]:Object.entries(op.changes);
   if(op.resetScope&&Number.isInteger(op.width)&&op.width>=0&&op.width<=7680&&!changes.length)return {ok:true,changed:false};
-  if(!Number.isInteger(op.width)||op.width<0||op.width>7680||!changes.length||!op.resetScope&&changes.length>32||changes.some(([property,value])=>!valid(property,value)))return refuse('Unsupported CSS property, value or screen width.');
+  if(!Number.isInteger(op.width)||op.width<0||op.width>7680||!changes.length||!op.resetScope&&changes.length>64||changes.some(([property,value])=>!valid(property,value)))return refuse('Unsupported CSS property, value or screen width.');
   // Color edits and resets must update the hidden original in the same source
   // transaction. Explicit visibility change sets already carry both properties.
   const colorChange=changes.find(([property])=>property==='background-color');

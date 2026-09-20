@@ -2,13 +2,13 @@
 // Shared source planner for resolved style paste into React and Liquid classes.
 const values=require('../shell/html-css-values.js'),responsive=require('../shell/responsive.js'),inspector=require('../shell/inspector.js'),tokens=require('./class-tokens.cjs');
 const text=require('./text-style-classes.cjs'),textProperties=require('./text-styles.cjs').properties,colors=require('./color-style-classes.cjs'),effects=require('./effect-style-classes.cjs');
-const properties=['opacity','background-color','background-image','border-color','border-width','border-style','border-radius','box-shadow','filter','backdrop-filter','mix-blend-mode','isolation','color','font-family','font-size','font-weight','font-style','line-height','letter-spacing','text-align','text-decoration-line','text-transform','display','flex-direction','flex-wrap','justify-content','align-items','gap','padding','width','height'];
+const imageFill=require('../shell/image-fill.js'),paintOrder=require('../shell/paint-order.js');
+const properties=['opacity','background-color','background-image',...paintOrder.properties,'border-color','border-width','border-style','border-radius','box-shadow','filter','backdrop-filter','mix-blend-mode','isolation','color','font-family','font-size','font-weight','font-style','line-height','letter-spacing','text-align','text-decoration-line','text-transform','display','flex-direction','flex-wrap','justify-content','align-items','gap','padding','width','height'];
 // Shorthands and utility families may own more than the requested property.
 // Keep ordinary classes beneath the explicit override; never delete a custom
 // class or an important shorthand on a guess about its other declarations.
 const overlaps={
  opacity:/^opacity-|^\[opacity:/,
- 'background-image':/^bg-(?:none|gradient-|linear-|radial|conic|\[(?:url\(|image:))|^\[background(?:-image)?:/,
  'border-width':/^border(?:-[trblxyse])?(?:$|-(?:\d|\[|\())|^\[border(?:-(?:top|right|bottom|left|inline|block|inline-start|inline-end|block-start|block-end))?(?:-width)?:/,
  'border-style':/^border(?:-[trblxyse])?-(?:solid|dashed|dotted|double|hidden|none)$|^\[border(?:-(?:top|right|bottom|left|inline|block|inline-start|inline-end|block-start|block-end))?(?:-style)?:/,
  'border-radius':/^rounded(?:-|$)|^\[border(?:-[a-z-]+)?-radius:/,
@@ -37,6 +37,14 @@ function compose(className,changes,scope=''){
  for(const [property,value]of Object.entries(changes)){
   if(textProperties.includes(property)||effects.properties.includes(property))continue;
   if(colors.properties.includes(property)){result=property==='background-color'?colors.composeBackground(result,{'background-color':value,[values.hiddenBackgroundProperty]:'none'},scope):colors.compose(result,property,value,scope);continue;}
+  if(property==='background-image'||paintOrder.properties.includes(property)){
+   const active=responsive.project(result,scope);
+   if(active.split(/\s+/).some(token=>/^!|!$/.test(token)&&/^\[background:/.test(inspector.base(token))))throw Error('Resolve the important background shorthand before pasting image fills.');
+   if(property==='background-position'&&active.split(/\s+/).some(token=>/^!|!$/.test(token)&&/^\[background-position-[xy]:/.test(inspector.base(token))))throw Error('Resolve the important image-position axis before pasting image framing.');
+   const next=property==='background-image'?paintOrder.frameClasses(imageFill.stackClasses(active,values.imageLayers(value)),{[values.paintVisibilityProperty]:'none'}):paintOrder.frameClasses(active,{[property]:value});
+   if(next.split(/\s+/).some(token=>!tokens.valid(token)))throw Error('This image fill cannot be represented as source classes.');
+   result=responsive.replaceScope(result,next,scope);continue;
+  }
   // Tailwind treats underscores as spaces. Values with literal underscores or
   // escapes need property-aware encoding; refuse rather than alter an asset URL.
   if(/[_\\]/.test(value))throw Error('This copied '+property+' value cannot yet be represented faithfully as a class.');

@@ -27576,3 +27576,21 @@ Verification:
 - HTML clipboard regression passed after sharing the history refresh path. Final fill/inline guard changes rechecked React Chromium and Liquid WebKit.
 
 Limits: class paste requires literal source classes; expression-driven classes and conditional Liquid class sources remain unsupported here. Important ambiguous utility ownership may require a source edit before pasting. Some image URL values cannot yet be represented faithfully in class syntax and are refused (including quoted URLs and literal underscores). Asset/font references and reusable style/variable links are not transferred. Tests prove local React/Liquid behavior, not a connected Shopify store or arbitrary framework behavior. Native distribution and notarization remain unchanged and incomplete. Full Figma parity remains active.
+
+### 2026-09-20 checkpoint — complete image framing in style paste
+
+Layer style paste now includes background image size, position, repeat, origin, clip, attachment, and blend mode, bringing the clipboard to 38 candidate properties. These appearance fields are selected by default alongside other appearance properties. React and Liquid reuse the image-fill stack encoder and paint-framing writer, preserving underscores in image URLs and replacing known image utilities in the chosen scope. Important background shorthands and conflicting important position axes remain refused. Pasting resolved images clears hidden target paint metadata; CSS paste also clears hidden target fill-color metadata.
+
+Same-origin absolute image URLs become root-relative source paths at paste time, preserving query strings and fragments. This avoids saving the current development-server port into authored styles. External origins remain external. Credential-bearing URLs and paths beginning with `//` are preserved to avoid changing their authority. Cross-origin asset import remains unimplemented.
+
+The shared CSS transaction limit increased from 32 to 64 properties to support selecting the complete clipboard plus paint metadata. Property/value validation and atomic writes remain in place.
+
+Verification:
+- Full suite: 2,195 tests passed (`/tmp/retouch-image-paste-full.log`). Added URL path handling, image utility/screen isolation, full clipboard group parity, metadata reset, and important position-axis coverage.
+- Image-fill clipboard E2E passed for HTML, Vue, React, and Liquid in Chromium and WebKit. Tests paste mixed gradient/image stacks and seven framing properties, decode an actual SVG with underscores in its URL, compare computed styles, verify phone isolation, exact source undo/redo, and retained preview state. WebKit runs also exercise Select all with more than 32 selected properties and exact undo.
+- Final same-origin source-path changes rechecked React/Vue Chromium and Liquid/HTML WebKit, including Select all and assertions that authored source contains the image path without a localhost port. Logs: `/tmp/retouch-image-paste-{react,vue,liquid,html}-final.log`.
+- All 38 compiled class properties match equivalent CSS in Chromium and WebKit (`/tmp/retouch-image-paste-values-{chromium,webkit}.log`).
+- Inspected the React/WebKit image-paste preview at `/tmp/retouch-style-clipboard-react-images-webkit.png`: framing labels and selected-value preview are readable, with scrolling for long multi-layer previews.
+- One simultaneous Vue/WebKit fixture startup timed out before rendering its heading. Test fixtures now use separate Vite cache directories instead of sharing the symlinked dependency cache; its rerun and final concurrent React/Vue checks passed.
+
+Remaining limits: copied values are resolved local styles, not shared style/variable links or imported assets. URLs from another origin or a previous server port are retained references. CSS escaping and source-format limits still apply beyond supported image stacks. No native artifact or notarization work changed in this checkpoint; full Figma parity remains incomplete.
