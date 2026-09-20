@@ -28637,3 +28637,32 @@ source-backed stroke alignment that preserves editable original geometry and
 paint, with transformed/curved geometry and exact history included in its
 acceptance criteria. This audit is not a complete Figma inventory or a claim of
 full parity. No desktop rebuild, native launch or public release was performed.
+
+
+### SVG stroke-alignment rendering foundation
+
+Added retouch/shell/svg-stroke-alignment.js as the rendering foundation for
+inside/center/outside strokes. It leaves its input path document unchanged,
+separates fill from stroke, and uses clipping/masking for doubled aligned strokes.
+Masks have measured local bounds including curve extrema and miter allowance;
+affine transforms remain on the containing group. Literal paint, opacity, caps,
+joins and dash settings have bounded validation and deterministic serialization.
+Ambiguous crossing/touching/collapsed boundaries and redundant nonzero contours
+refuse; vector geometry scopes are released even on failure.
+
+All 2,437 unit tests passed
+(/tmp/retouch-stroke-alignment-full-verified.log). Chromium and WebKit each passed
+684 pixel checks across rectangles, circular arcs, rounded curves, evenodd and
+oppositely wound nonzero holes, three affine transforms and two viewBox scales
+(/tmp/retouch-stroke-alignment-{chromium,webkit}-final.log). One initial test used
+a path rejected by the existing parser before the intended collapsed-contour
+check; it was corrected to a valid collinear closed contour and the suite rerun.
+
+This module is not loaded into the inspector or connected to source operations.
+The next work is a retained-original source representation, adapter transactions,
+mutation guards and normal UI/history integration. Paint references, arbitrary
+CSS, responsive/non-scaling strokes, general contour topology and exact dash
+endpoint parity remain unverified or unsupported. See
+[the stroke audit](stroke-parity.md#alignment-rendering-foundation).
+No desktop rebuild or native launch was performed. Full Figma parity,
+arbitrary-site authoring and trusted public macOS distribution remain incomplete.

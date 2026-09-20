@@ -12,7 +12,7 @@ SVG export preserves inside/outside appearance through more complex geometry.
 | Requirement | Current repository evidence | Remaining work |
 | --- | --- | --- |
 | Stroke paints | `retouch/shell/svg-paint.js` and the inspector expose single SVG paint and scoped stroke properties. | Multiple independently editable stroke fills and their order/visibility. |
-| Alignment | SVG source operations expose stroke width and geometry; no alignment model or position control was found in the current source/control inventory. | Inside/center/outside rendering while retaining editable originals. |
+| Alignment | A retained-path rendering foundation now exists in `retouch/shell/svg-stroke-alignment.js`; no source operation or inspector position control is connected yet. | Inside/center/outside rendering while retaining editable originals. |
 | Caps, joins, dashes | `svg-paint.js` parses regular/custom patterns; `inspector-ui.js` provides style, dash/gap, custom text, caps and joins. `test/e2e/svg-stroke-settings.cjs` covers source/history and scopes. | Per-point/vector-network equivalence, endpoint placement and full geometry fidelity still need proof. |
 | Width profiles | No profile model or authoring control found. | Profiles, direct width handles, serialization and rendering/export fidelity. |
 | Brush/dynamic strokes | No corresponding model or control found. | Brush source/assets, dynamic parameters, editable geometry and export. |
@@ -47,3 +47,28 @@ Chromium and WebKit each passed 36 HTML mask pixel checks and the 200% zoom,
 [the main ledger](design-studio-parity.md#appearance-and-stroke-requirements-audit).
 These checks establish that the old blanket mask/crop gaps were stale; they do
 not establish the missing stroke features above.
+
+
+## Alignment rendering foundation
+
+`svg-stroke-alignment.js` renders separate fill/stroke passes from an unchanged
+editable path document. Inside clips a doubled stroke to the filled region;
+outside uses a luminance mask to remove the interior. Center keeps its original
+width. Definitions use caller-provided validated identities, local-space bounds
+including curved extrema and miter allowance, and the original affine transform.
+The model supports literal colors, caps/joins, dash settings and opacity values.
+
+This is not yet a user-facing alignment feature. Source adapters, canonical
+retained-original structure, mutation guards, inspector controls, responsive
+scope handling, history, clipboard/duplication and export integration remain.
+Unresolved paint references, percentage dashes, non-scaling-stroke semantics and
+arbitrary authored CSS need explicit handling. Dashed/cap geometry serialization
+is tested; Figma-equivalent dash endpoints are not established. Crossing,
+touching, collapsed and redundant nonzero contours refuse rather than claim an
+incorrect inside/outside result. General topology remains part of the objective.
+
+Fresh tests: 2,437 unit tests passed; each of Chromium/WebKit passed 684 pixel
+assertions for rectangles, circles/arcs, rounded curves, evenodd/nonzero holes,
+nonuniform/rotated transforms and two viewBox scales. Pixel checks use literal
+opaque colors in a standalone SVG; they do not establish behavior in arbitrary
+authored stylesheets. See the main ledger for log paths.
