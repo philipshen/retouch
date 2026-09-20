@@ -271,8 +271,14 @@ wrappers. Native roots can be grouped as an instance, including conditional bran
 that share a root present in every branch. Repeated usages retain separate
 instance groups even when they render different branches. Component definitions
 with repeating roots, unaccounted root text/output or no common branch anchor
-remain individual selection targets. Supported local TypeScript contracts provide
-choice controls and optional properties that can be set or unset.
+remain individual selection targets. Supported local and imported TypeScript
+contracts provide choice controls and optional properties that can be set or
+unset. Project type modules can use aliases, inherited interfaces, namespace
+imports and re-export barrels. Imported contracts also drive initial library
+properties and shared-default controls. Type files, path configuration and missing
+preferred resolution targets are guarded before a source write. Unknown, recursive,
+ambiguous and unsupported generic contracts remain read-only; external package
+types are not resolved by this source editor.
 
 Use Layers to duplicate, delete, reorder or move linked usages into compatible
 native containers. Multi-selection uses one undo step. Container moves preserve

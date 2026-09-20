@@ -12,7 +12,7 @@ function read(text){
 function plan(r,op,def){try{
  if(op.fileHash!==r.hash)throw Error('The component usage changed. Re-select it.');
  const defaults=read(def.text),fallback=defaults.get(op.name),hash=def.definitionHash??source.contentHash(def.text),info=props.describe(r),existing=info.props.find(p=>p.name===op.name);
- const contracts=require('./svelte-component-choices.cjs').read(def.text),contract=contracts.get(op.name),remove=op.reset===true||op.clear===true;
+ const contracts=def.contracts||require('./svelte-component-choices.cjs').read(def.text),contract=contracts.get(op.name),remove=op.reset===true||op.clear===true;
  if(op.reset&&op.clear)throw Error('Choose reset or unset, not both.');
  if(op.definitionHash!==hash||!fallback&&!contract?.supported)throw Error('The component default or type changed. Re-select the instance.');
  if(op.reset&&!fallback)throw Error('This property has no editable literal default.');

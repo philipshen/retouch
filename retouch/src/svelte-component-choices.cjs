@@ -2,19 +2,20 @@
 const compiler=require('svelte/compiler'),props=require('./svelte-component-props.cjs');
 // Inspect authored contracts without executing code. Unknown declared types stay
 // read-only rather than becoming unrestricted inputs inferred from one usage.
-function read(text){
+function read(text,context){
  const ast=compiler.parse(text,{modern:true}),declarations=new Map(),fields=new Map(),optional=new Set(),defaulted=new Set();let contract=null,declared=false;
  const statements=[...(ast.module?.content.body||[]),...(ast.instance?.content.body||[])].map(s=>s.type==='ExportNamedDeclaration'?s.declaration:s).filter(Boolean);
  for(const s of statements)if(['TSTypeAliasDeclaration','TSInterfaceDeclaration'].includes(s.type)){const name=s.id.name;declarations.set(name,declarations.has(name)?null:s);}
  for(const statement of statements)if(statement.type==='ImportDeclaration')for(const specifier of statement.specifiers)declarations.set(specifier.local.name,null);
  const generic=ast.instance?.attributes?.some(attribute=>attribute.name==='generics');
+ let modules=null,moduleError=false;try{if(context?.appRoot&&context?.file)modules=require('./component-type-modules.cjs')(context,{file:require('node:fs').realpathSync(context.file),source:text},{program:{body:statements}});}catch{moduleError=true;}
  let visits=0;
  function resolve(node,seen=new Set()){
   if(!node||++visits>2000||seen.size>20)return null;
   if(node.type==='TSParenthesizedType')return resolve(node.typeAnnotation,seen);
   if(node.type!=='TSTypeReference')return {node,seen};
-  if(node.typeName.type!=='Identifier'||node.typeParameters||node.typeArguments)return null;
-  const def=declarations.get(node.typeName.name);if(!def||def.typeParameters||seen.has(def))return null;
+  if((!modules&&node.typeName.type!=='Identifier')||node.typeParameters||node.typeArguments)return null;
+  let def;try{def=modules?modules.lookup(node):declarations.get(node.typeName.name);}catch{return null;}if(!def||def.typeParameters||seen.has(def))return null;
   const next=new Set(seen);next.add(def);return resolve(def.type==='TSTypeAliasDeclaration'?def.typeAnnotation:def,next);
  }
  function members(node,seen){
@@ -22,13 +23,13 @@ function read(text){
   if(node.type==='TSTypeLiteral')return node.members;
   if(node.type==='TSIntersectionType'){const groups=node.types.map(t=>members(t,seen));return groups.every(Boolean)?groups.flat():null;}
   if(node.type!=='TSInterfaceDeclaration')return null;
-  const groups=(node.extends||[]).map(base=>base.typeParameters||base.typeArguments?null:members({type:'TSTypeReference',typeName:base.expression},seen));
+  const groups=(node.extends||[]).map(base=>{if(base.typeParameters||base.typeArguments)return null;const reference={type:'TSTypeReference',typeName:base.expression};return members(modules?modules.inherit(reference,base):reference,seen);});
   return groups.every(Boolean)?[...groups.flat(),...node.body.body]:null;
  }
  function primitive(node,seen){
   const state=resolve(node,seen);if(!state)return null;node=state.node;seen=state.seen;
   const type={TSStringKeyword:'string',TSNumberKeyword:'number',TSBooleanKeyword:'boolean'}[node.type];if(type)return {type};
-  if(node.type==='TSLiteralType'){const value=props.literal({type:'Attribute',value:{type:'ExpressionTag',expression:node.literal}});return value?{type:value.type,choices:[value.value]}:null;}
+  if(node.type==='TSLiteralType'){const literal=node.literal,expression=['StringLiteral','NumericLiteral','BooleanLiteral'].includes(literal.type)?{type:'Literal',value:literal.value}:literal.type==='UnaryExpression'&&literal.argument.type==='NumericLiteral'?{...literal,argument:{type:'Literal',value:literal.argument.value}}:literal;const value=props.literal({type:'Attribute',value:{type:'ExpressionTag',expression}});return value?{type:value.type,choices:[value.value]}:null;}
   if(node.type!=='TSUnionType'||node.types.length>100)return null;
   const values=node.types.map(t=>primitive(t,seen));if(values.some(v=>!v)||new Set(values.map(v=>v.type)).size!==1)return null;
   if(values.some(v=>!v.choices))return {type:values[0].type};
@@ -45,7 +46,8 @@ function read(text){
   }
  }
  if(declared){const list=members(contract);if(list&&!list.some(f=>f.type!=='TSPropertySignature'||f.computed))for(const field of list){const name=field.key.name??field.key.value;fields.set(name,fields.has(name)?null:field.typeAnnotation?.typeAnnotation);if(field.optional)optional.add(name);}else contract=null;}
- return {names:[...fields.keys()],hasDefault:name=>defaulted.has(name),get(name){visits=0;if(generic)return {supported:false};if(!fields.has(name))return declared?{supported:false}:null;const value=primitive(fields.get(name));return value?{supported:true,...value,...(optional.has(name)?{optional:true}:{})}:{supported:false};}};
+ const values=new Map();for(const [name,node]of fields){visits=0;const value=generic||moduleError?null:primitive(node);values.set(name,value?{supported:true,...value,...(optional.has(name)?{optional:true}:{})}:{supported:false});}
+ return {names:[...fields.keys()],hasDefault:name=>defaulted.has(name),get:name=>values.get(name)||(declared||generic||moduleError?{supported:false}:null),metadata:()=>modules?.metadata()||{dependencies:[],pathChecks:[],revision:require('./svelte-source.cjs').contentHash(text)}};
 }
 function accepts(contract,value){return contract?.supported&&typeof value===contract.type&&(!contract.choices||contract.choices.includes(value));}
 module.exports={read,accepts};

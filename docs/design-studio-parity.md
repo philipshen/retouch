@@ -28201,3 +28201,36 @@ was checked during the UI review. This custom responsive-rail improvement is not
 proof of complete Figma visual or feature parity. Native artifacts were not
 rebuilt or launched; full parity, arbitrary-site coverage and notarized public
 macOS distribution remain incomplete.
+
+### Svelte imported property contracts checkpoint
+
+Svelte instance properties, shared defaults and library insertion now resolve
+supported imported TypeScript contracts through the existing source-only module
+graph. This covers local project modules, inherited interfaces, aliases, namespace
+imports, re-export barrels and configured paths. Lexical module ownership is
+preserved when private type names collide. Both rune `$props` and legacy
+`export let` annotations can expose primitive/finite-choice controls.
+
+Review revisions include imported type dependencies and resolution state. Pending
+source plans guard type files, config and preferred missing targets across single
+and batched property operations, shared defaults and insertion/swap planning.
+Unknown, recursive, ambiguous, generic and unsupported contracts remain read-only;
+no project code executes during inspection. Canonical file paths prevent macOS
+`/var` versus `/private/var` aliases from breaking library type inspection.
+External package contracts and the broader TypeScript type system remain outside
+this implementation.
+
+Validation: all 2,400 unit tests passed
+(`/tmp/retouch-svelte-imported-types-full-final.log`). Seven new tests cover
+inherited and negative-number choices, exact property/default history, changed
+type/config refusal, missing preferred modules, namespace/path barrels, lexical
+private-name isolation, unsupported contracts, required library properties,
+canonical path aliases and legacy annotations. Chromium and WebKit passed the
+combined aliased-instance/default/structural workflows after moving DefaultCard,
+LibraryCard and SwapCard contracts into an imported namespace module. They passed
+shared defaults, required initial properties, swap review, exact history, retained
+repeated/nested state and drafts, all-preview synchronization, recovery from 96
+dropped broadcasts and production exclusion
+(`/tmp/retouch-svelte-imported-types-{chromium,webkit}-final.log`). Native artifacts
+were not rebuilt or launched. Full Figma parity, arbitrary-site coverage and
+notarized public macOS distribution remain unfinished.
