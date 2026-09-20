@@ -25,6 +25,7 @@
     "test:e2e:layer-export": "node test/e2e/layer-export.cjs",
     "test:e2e:prototype-nested-connections": "node test/e2e/prototype-nested-connections.cjs",
     "test:e2e:prototype-action-lists": "node test/e2e/prototype-action-lists.cjs",
+    "test:e2e:prototype-action-reorder": "node test/e2e/prototype-action-reorder.cjs",
     "test:e2e:prototype-completion": "node test/e2e/prototype-completion.cjs",
     "test:e2e:prototype-modes": "node test/e2e/prototype-modes.cjs",
     "test:e2e:prototype-expressions": "node test/e2e/prototype-expressions.cjs",

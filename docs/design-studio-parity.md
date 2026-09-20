@@ -27240,3 +27240,23 @@ pages/screens still need a broader canvas representation. Expanded-list drag
 scrolling, concurrency/press behavior, inherited modes and the remaining design
 matrix are unfinished. No native rebuild/launch or push; full parity and notarized
 Homebrew distribution remain incomplete.
+
+### 2026-09-20 — Action-list drag scrolling and retained collapse state
+
+Expanded action lists now scroll near the interaction dialog's edges during a
+reorder gesture. Drop, drag end, Escape, mouse release, focus loss, visibility
+changes and detached/closed dialogs stop the editor's scroll loop. Drop targets
+show an insertion indicator. Collapsed action cards retain their state through
+field edits, reordering, branch moves and undo/redo; identical actions retain
+positional state. Explicit canvas action reveal still expands its ancestors.
+
+All 2,156 unit tests passed. Chromium and WebKit passed expanded-list native drag
+scrolling and end-drop reordering, collapse persistence, exact undo/redo, and
+editor Escape cancellation. The cancellation test dispatches Escape directly to
+the editor before releasing the native drag: Chromium automation's native Escape
+continued browser-owned autoscroll even after event tracing confirmed the editor
+loop stopped. Physical-key native Chromium cancellation is therefore not claimed
+as verified. Existing ordered-action playback suites passed both browsers, and
+nested canvas connection/reveal/reconnect history passed Chromium. The Chromium
+screenshot was inspected. No native artifact was rebuilt or launched; full design
+parity and notarized Homebrew distribution remain incomplete.
