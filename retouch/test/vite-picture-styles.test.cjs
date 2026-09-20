@@ -15,3 +15,13 @@ test('Vite picture style discovery refuses unavailable, generated and noneditabl
 test('Vite picture style discovery refuses symlinked stylesheet files',t=>{
  const f=fixture(t),source=f.add('theme.css');f.nodes.clear();const file=path.join(f.root,'link.css');fs.symlinkSync(source.file,file);f.nodes.set(file,{id:file,file,type:'css'});assert.throws(()=>discover(f.server,f),/regular project/);
 });
+test('Vite picture coverage verifies exact compiled and managed CSS for each preview',async t=>{
+ const f=fixture(t),component=f.add('App.svelte'),css=f.add('theme.css');const text='img { color: red }';css.transformResult={code:'const __vite__id = '+JSON.stringify(css.id)+'\nconst __vite__css = '+JSON.stringify(text)+'\n'};
+ const managed=require('../src/svelte-css.cjs').runtimeSnapshot('', 'App.svelte').css,sheets=[{kind:'vite',id:css.id,text},{kind:'managed',id:managed.id,text:managed.text}],documents=[{issues:[],sheets},{issues:[],sheets}];
+ const validate=options=>require('../src/vite-picture-styles.cjs').validate(f.server,{root:f.root,...options});assert.deepEqual((await validate({documents})).files,[component.file,css.file].sort());
+ await assert.rejects(()=>validate({documents:[]}),/required/);await assert.rejects(()=>validate({documents:[{issues:['Unmapped inline style'],sheets:[]}]}),/Unmapped inline/);
+ await assert.rejects(()=>validate({documents:[{issues:[],sheets:[...sheets,sheets[0]]}]}),/duplicate/);
+ await assert.rejects(()=>validate({documents:[{issues:[],sheets:[{...sheets[0],text:'img {color:blue}'}]}]}),/differs/);
+ css.transformResult=null;await assert.rejects(()=>validate({documents}),/differs/);
+ let refreshed=0;css.url='/theme.css';f.server.environments.client.transformRequest=async url=>{assert.equal(url,css.url);refreshed++;return {code:'const __vite__id = '+JSON.stringify(css.id)+'\nconst __vite__css = '+JSON.stringify(text)+'\n'};};await validate({documents});assert.equal(refreshed,1);
+});

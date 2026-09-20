@@ -22,4 +22,36 @@ function discover(server,{root}){
  }
  return {files:[...files].sort(),fingerprint:crypto.createHash('sha256').update([...records].sort().join('\n')).digest('hex'),coverage:'loaded-client-modules'};
 }
-module.exports={discover};
+async function validate(server,{root,documents}){
+ const inventory=discover(server,{root}),graph=server.environments?server.environments.client.moduleGraph:server.moduleGraph,expected=new Map();
+ const literal=(code,name)=>{const match=code?.match(new RegExp('(?:^|\\n)const '+name+' = ("(?:[^"\\\\]|\\\\.)*")'));return match?JSON.parse(match[1]):null;};
+ for(const module of graph.idToModuleMap.values()){
+  if(!inventory.files.includes(module.file))continue;
+  let transformed=module.transformResult;
+  if(!transformed&&(/\.css(?:\?|$)/i.test(module.id||'')||/[?&]type=style(?:&|$)/.test(module.id||''))){
+   const environment=server.environments?.client||server;
+   if(typeof environment.transformRequest==='function'&&module.url)transformed=await environment.transformRequest(module.url);
+  }
+  const id=literal(transformed?.code,'__vite__id'),text=literal(transformed?.code,'__vite__css');
+  if(id!==null&&text!==null)expected.set('vite|'+id,text);
+ }
+ for(const file of inventory.files.filter(file=>/\.svelte$/i.test(file))){
+  if(fs.statSync(file).size>2*1024*1024)throw Error('A component stylesheet source is too large.');
+  const relative=path.relative(fs.realpathSync(root),file).split(path.sep).join('/');
+  try{const {css}=require('./svelte-css.cjs').runtimeSnapshot(fs.readFileSync(file,'utf8'),relative);expected.set('managed|'+css.id,css.text);}catch{/* Unmapped managed styles refuse below. */}
+ }
+ if(!Array.isArray(documents)||!documents.length||documents.length>32)throw Error('Current preview stylesheet inventories are required.');
+ let size=0;
+ for(const document of documents){
+  if(!document||!Array.isArray(document.issues)||!Array.isArray(document.sheets)||document.sheets.length>256)throw Error('The preview stylesheet inventory is invalid.');
+  if(document.issues.length)throw Error(String(document.issues[0]));
+  const seen=new Set();for(const sheet of document.sheets){
+   if(!sheet||!['vite','managed'].includes(sheet.kind)||typeof sheet.id!=='string'||sheet.id.length>4096||typeof sheet.text!=='string')throw Error('The preview stylesheet entry is invalid.');
+   size+=Buffer.byteLength(sheet.text);if(size>20*1024*1024)throw Error('The preview stylesheet inventory is too large.');
+   const key=sheet.kind+'|'+sheet.id;if(seen.has(key))throw Error('A preview stylesheet has duplicate source owners.');seen.add(key);
+   if(!expected.has(key)||expected.get(key)!==sheet.text)throw Error('A preview stylesheet differs from its current Vite source. Wait for styles to settle.');
+  }
+ }
+ return inventory;
+}
+module.exports={discover,validate};
