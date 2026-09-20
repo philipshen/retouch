@@ -27529,3 +27529,35 @@ This improves the existing React component-property clipboard; it does not add
 layer-style copying, cross-framework parity, or cross-file multi-selection.
 No native build, launch or push was performed. Full design parity and trusted
 Homebrew distribution remain incomplete.
+
+### 2026-09-20 — Layer style clipboard for HTML and Vue
+
+Ordinary CSS-backed layers now offer Copy styles and Paste styles in the inspector
+header, Actions search and the existing property-copy command slots. Captured HTML
+sites use the same path. Copy reads supported resolved styles from the current
+preview, covering appearance, typography, layout and size. Appearance and typography
+start selected; layout and dimensions are opt-in. The paste preview uses readable
+style labels, lists only checked values and states the target screen scope.
+
+The clipboard transport and selective preview are shared with component properties,
+while styles have a separate versioned, validated payload. Unsupported CSS/property
+names and mismatched clipboard formats are rejected. Paste uses existing setCSS
+or setCSSSelection source transactions, preserving responsive scopes and atomic
+undo. Main and comparison styles synchronize without replacing their documents;
+the original selection is restored after paste and history operations.
+
+All 2,182 unit tests passed. Chromium and WebKit passed the static HTML and live
+Vite/Vue workflows: copied appearance/typography/padding, opt-in dimensions,
+preview cancellation, two-target 1440px-scoped paste, untouched phone colors,
+exact source Undo/Redo and retained document/input state. The Vue fixture uses a
+model-bound input and live counter to verify actual application state through
+style changes. The Chromium component-default/property clipboard regression also
+passed after the shared transport/preview refactor. The final style preview was
+visually inspected. Test shutdown now closes the HTML index watcher explicitly.
+
+Resolved values are pasted as local overrides, not as reusable-style or variable
+links. Asset URLs and font-family names are retained as references rather than
+copied assets. React/Liquid class-based layer styling, arbitrary CSS representation,
+cross-file multi-selection and complete clipboard equivalence remain. No native
+rebuild, launch or push was performed; full Figma Design parity and trusted
+Homebrew distribution are still incomplete.

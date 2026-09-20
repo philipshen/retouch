@@ -2080,6 +2080,7 @@ function renderPanelContents(textEditing=false) {
   if(info.kind==='instance'&&sel.multiple?.length>1){panelBody.append(head,componentSelectionSection(sel.multiple));return;}
   if(!info.svgBooleanOwner&&!(sel.multiple||[]).some(i=>i.svgBooleanOwner))head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
+  mountLayerStyleClipboard();
   if(groupMovementRoots())panelBody.append(groupMovementSection(info));
   else{const roots=groupMovementRoots(true);if(roots?.every(el=>el.namespaceURI==='http://www.w3.org/1999/xhtml')&&(sel.multiple||[info]).every(item=>item.kind!=='instance'&&(item.cssAuthoring||item.classSelection&&!item.classNameDynamic))){const section=RetouchInspector.section('Scale');appendSelectionScaleControls(section,info,roots);panelBody.append(section);}}
   if(info.svgBooleanOwner||(sel.multiple||[]).some(i=>i.svgBooleanOwner)){
@@ -2518,6 +2519,30 @@ function propTable(props,instanceId,fileHash,options={}) {
     requestAnimationFrame(()=>{if(group.isConnected)group.querySelectorAll('.component-prop-text').forEach(sizeComponentText);});
   };
   search.addEventListener('input',filter);search.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();search.value='';filter();}});group.append(search,status,table);filter();return group;
+}
+function mountLayerStyleClipboard(){
+ const infos=sel.multiple||[sel.info];if(!infos.every(info=>info.kind==='host'&&info.cssAuthoring&&!info.svgBooleanOwner))return;
+ const elements=infos.map(info=>matchingEls(info.id)[0]);if(elements.some(el=>!el))return;
+ const key=panelSelectionKey(),scope=styleScope,width=scope?Number(/^min-\[(\d+)px\]:$/.exec(scope)?.[1]):0;
+ const actions=document.createElement('div');actions.className='component-actions';
+ if(infos.length===1){const copy=RetouchInspector.button('Copy styles',async()=>{try{const result=await RetouchStyleClipboard.copy(elements[0]);toast('Copied '+result.count+' styles'+(result.system?'':' within this editor'),'ok');}catch(error){toast(error.message,'err');}});copy.dataset.componentClipboard='copy';actions.append(copy);}
+ const paste=RetouchInspector.button('Paste styles',async()=>{try{
+  if(!Number.isInteger(width)||!selectionEditRangeActive())throw Error('Choose an active screen scope before pasting styles.');
+  await RetouchStyleClipboard.open({infos,elements,opener:paste,scopeLabel:width?'Applies at '+width+' px and larger.':'Applies at all sizes.',save:targets=>pasteLayerStyles(infos,key,scope,width,targets)});
+ }catch(error){toast(error.message,'err');}});paste.dataset.componentClipboard='paste';actions.append(paste);panelBody.firstElementChild.append(actions);
+}
+async function pasteLayerStyles(infos,key,scope,width,targets){
+ if(key!==panelSelectionKey()||scope!==styleScope||panelTasks||undoBusy||sourceRequests)throw Error('Re-select the target layers and review their screen scope.');
+ busyPanel(true);try{
+  const first=infos.find(info=>info.id===targets[0].id),multi=targets.length>1,changesById=Object.fromEntries(targets.map(target=>[target.id,Object.fromEntries(target.properties.map(p=>[p.name,p.value]))]));
+  const result=await api('POST','/rt/__api/op',{type:multi?'setCSSSelection':'setCSS',id:first.id,fileHash:first.hash,width,...(multi?{ids:targets.map(target=>target.id),changesById}:{changes:changesById[first.id]})});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not paste styles.');
+  const selectionIds=infos.map(info=>info.id),changedIds=targets.map(target=>target.id);if(result.undoId)editorHistory.record({type:'pasteLayerStyles',id:first.id,selectionIds,changedIds,undoId:result.undoId});
+  await refreshPastedLayerStyles(selectionIds,changedIds);toast('Styles pasted','ok');
+ }finally{busyPanel(false);}
+}
+async function refreshPastedLayerStyles(selectionIds,changedIds){
+ const resolved=await Promise.all(changedIds.map(id=>api('GET',resolveUrl(id))));if(resolved.some(result=>!result?.ok||!result.element.cssAuthoring))throw Error('The pasted styles could not be resolved.');
+ const infos=resolved.map(result=>result.element);await RetouchRenderSync.syncCSS({frame:iframe,entries:infos.map(info=>({id:info.id,rules:info.cssRules,texts:info.cssRuleTexts,rendering:info.cssRendering}))});await window.RetouchComparisons?.syncCSS(infos);await restoreLayerSelection(selectionIds);await layers.refresh();if(sel)renderPanel();
 }
 function componentClipboardActions(section,components,infos,key){
  const actions=document.createElement('div');actions.className='component-actions';
@@ -4235,6 +4260,7 @@ async function restoreHistory(direction,op) {
     if(op.type==='htmlGroupScale'){const resultInfo=await api('GET',resolveUrl(op.id));if(!resultInfo?.ok)throw Error('The scaled group no longer resolves.');try{await refreshHTMLGroupScale(resultInfo.element);}finally{await restoreLayerSelection([op.id]);if(sel)renderPanel();}return result;}
     if(op.type==='prototypeInteractions'){if(op.targetId){const target=await api('GET',resolveUrl(op.targetId,op.targetContext));if(!target?.ok)throw Error('The prototype destination no longer resolves.');await refreshPrototype(target.element,true);}const fresh=await api('GET',resolveUrl(op.id,op.context));if(!fresh?.ok)throw Error('Re-select the prototype layer to refresh it.');await refreshPrototype(fresh.element);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='pasteLayerStyles'){await refreshPastedLayerStyles(op.selectionIds,op.changedIds);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='pasteComponentProps'){await refreshChangedComponentSelection(op.selectionIds,op.refreshIds);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='resetComponentPropsSelection'){await refreshChangedComponentSelection(op.selectionIds,op.refreshIds);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentPropSelection'){await refreshComponentSelection(op.selectionIds);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
