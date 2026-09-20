@@ -1,6 +1,28 @@
 # Retouch for macOS
 
-## Latest local signed candidate — 2026-09-20
+## Latest local signed candidate — Svelte components, 2026-09-20
+
+The universal Developer ID signed app packages clean commit `3f362281`, including
+Svelte component selection, conditional instance grouping, shared property edits,
+selective property paste, inherited defaults and atomic instance property reset.
+All 384 packaged source entries and four native build inputs match the checkpoint.
+
+Artifact: `/Users/philipshen/Developer/retouch-worktrees/desktop-components-3f362281/Retouch-0.1.0-mac.zip`
+
+SHA-256: `5b1e8b7866e916d36aa039bd3edf51ff8078b6f920068afb833f4ec652834c81`
+
+The final ZIP was extracted and its test runtime passed all 2,324 unit tests plus
+Svelte component workflows in Chromium and WebKit. All 33 desktop tests, package
+tamper checks and bundled export checks passed. Final integrity verification
+confirmed 4,809 packaged files and seven symlinks remained unchanged.
+
+The local cask passes Ruby syntax validation; installation was not attempted.
+Gatekeeper reports **Unnotarized Developer ID**. No native launch occurred.
+Notarization awaits an existing notarytool Keychain profile name. Native UI launch,
+Intel execution, trusted public distribution and cask install/upgrade remain
+unverified. See the [verification receipt](verification/2026-09-20-svelte-components-developer-id.json).
+
+## Previous export candidate — 2026-09-20
 
 The universal app now packages the editor through `f7b44dfa`, including screen,
 full-page and selected-layer PNG/JPEG export, transparent/custom-scale output,

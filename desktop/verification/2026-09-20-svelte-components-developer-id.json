@@ -1,0 +1,118 @@
+{
+  "date": "2026-09-20",
+  "artifact": "/Users/philipshen/Developer/retouch-worktrees/desktop-components-3f362281/Retouch-0.1.0-mac.zip",
+  "sha256": "5b1e8b7866e916d36aa039bd3edf51ff8078b6f920068afb833f4ec652834c81",
+  "sourceCommit": "3f362281fa3bc4781f6c7c0db79113cd990176b5",
+  "sourceTreeDirty": false,
+  "sourceFilesVerifiedAgainstWorktree": 384,
+  "nativeInputsVerifiedAgainstWorktree": 4,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signing": "Developer ID Application: Philip Shen (2HN3MWMRX2); strict outer and nested signatures passed",
+  "packagedExport": {
+    "sourceCommit": "3f362281fa3bc4781f6c7c0db79113cd990176b5",
+    "sourceTreeDirty": false,
+    "sourceFilesMatched": 384,
+    "captureBrowser": "/Users/philipshen/Developer/retouch-worktrees/desktop-components-3f362281/archive-check/Retouch.app/Contents/Resources/capture-browser/arm64/chrome-headless-shell",
+    "passed": [
+      "selected PNG dimensions and alpha",
+      "fractional viewport export",
+      "separate ZIP dimensions and pixels",
+      "JPEG signature",
+      "cancellation before launch",
+      "unchanged packaged source"
+    ]
+  },
+  "testRuntimeIntegrity": {
+    "package": {
+      "captureBrowser": {
+        "playwrightVersion": "1.59.1",
+        "revision": "1217",
+        "architectures": [
+          "arm64",
+          "x64"
+        ],
+        "files": 34
+      },
+      "sourceCommit": "3f362281fa3bc4781f6c7c0db79113cd990176b5",
+      "sourceTreeDirty": false,
+      "sourceFiles": 384,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "runtime": {
+      "packagedFiles": 4809,
+      "packagedSymlinks": 7,
+      "addedDependencyRoots": [
+        "node_modules/.bin/liquid",
+        "node_modules/.bin/liquidjs",
+        "node_modules/@vue/reactivity",
+        "node_modules/@vue/runtime-core",
+        "node_modules/@vue/runtime-dom",
+        "node_modules/@vue/server-renderer",
+        "node_modules/commander",
+        "node_modules/csstype",
+        "node_modules/liquidjs",
+        "node_modules/vue"
+      ],
+      "integrity": "Packaged bytes, modes, symlink targets and inventories match"
+    }
+  },
+  "runtimeUnitTests": 2324,
+  "desktopUnitTests": 33,
+  "packagedBrowserWorkflows": {
+    "chromium": "passed; 272 dropped updates recovered; retained state and documents; production exclusion",
+    "webkit": "passed; 272 dropped updates recovered; retained state and documents; production exclusion"
+  },
+  "packageTamperVerification": "passed on disposable copy; original unchanged",
+  "localCask": "/Users/philipshen/Developer/retouch-worktrees/desktop-components-3f362281/retouch-studio.rb",
+  "localCaskSha256": "d824545fef6365879544b1db499401b1abd7897bf47475dbe838a69cf891427d",
+  "localCaskValidation": "Syntax OK; installation not attempted",
+  "gatekeeper": {
+    "exitCode": 3,
+    "result": "Unnotarized Developer ID"
+  },
+  "nativeLaunchAttempted": false,
+  "notarization": "Not submitted; awaiting existing notarytool Keychain profile name",
+  "unverified": [
+    "native UI launch for this artifact",
+    "Intel runtime execution",
+    "notarization and public distribution",
+    "new cask install and upgrade"
+  ],
+  "evidenceLogs": {
+    "build": {
+      "path": "/tmp/retouch-desktop-components-build.log",
+      "sha256": "533606dd72c2928cd029b30b57d0a6228549ecba68b5210cc557578f6a021632"
+    },
+    "runtime-tests": {
+      "path": "/tmp/retouch-desktop-components-runtime-tests.log",
+      "sha256": "5de9394308ec3999c079947ba4cfe0b9eecc2742c7bad2d7c2dbf561400eb30d"
+    },
+    "tests": {
+      "path": "/tmp/retouch-desktop-components-tests.log",
+      "sha256": "b6135e7273d8bb2daa0450f16e77a62e45ffb35d6a470b7f280eebfb44b23392"
+    },
+    "chromium": {
+      "path": "/tmp/retouch-desktop-components-chromium.log",
+      "sha256": "d6ef542e75323fc8aea934c2be55c99efae8c1e5c752f18323363bd6cf1f867e"
+    },
+    "webkit": {
+      "path": "/tmp/retouch-desktop-components-webkit.log",
+      "sha256": "ef063f1fdc288c2adfae6f3f36fc477abf1dcd20f570a8f8a20c5e90d6e99ab5"
+    },
+    "tamper": {
+      "path": "/tmp/retouch-desktop-components-tamper.log",
+      "sha256": "ee0e093762528692b73c240d1f29ca071435cf6ff09dc8004e5d36360d46904a"
+    },
+    "gatekeeper": {
+      "path": "/tmp/retouch-desktop-components-gatekeeper.log",
+      "sha256": "e202b1723390e341d779440eb15de8182d6772f19f8a34f1305522a5475596a9"
+    }
+  }
+}
