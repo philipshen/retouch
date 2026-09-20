@@ -3,7 +3,7 @@ import WebKit
 
 // The editor remains the same shell as /rt. The only page bridge samples a
 // user-selected screen color. Project startup stays in the native UI and CLI.
-final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTextFieldDelegate, WKScriptMessageHandlerWithReply {
+final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, NSTextFieldDelegate, WKScriptMessageHandlerWithReply {
     private var window: NSWindow!
     private var web: WKWebView!
     private var address: NSTextField!
@@ -380,6 +380,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         configuration.userContentController.addUserScript(WKUserScript(source: Self.colorSamplerScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         web = WKWebView(frame: .zero, configuration: configuration)
         web.navigationDelegate = self
+        web.uiDelegate = self
         web.allowsBackForwardNavigationGestures = true
         address = NSTextField(string: UserDefaults.standard.string(forKey: "editorURL") ?? "http://localhost:3000/rt")
         address.placeholderString = "Your running Retouch URL"
@@ -499,6 +500,16 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
             }
         }
         pending?.resume()
+    }
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                 for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        guard navigationAction.targetFrame == nil, navigationAction.sourceFrame.isMainFrame,
+              let editor = connectedEditor, let source = navigationAction.sourceFrame.request.url,
+              source.scheme == editor.scheme, source.host == editor.host, source.port == editor.port,
+              let url = navigationAction.request.url, ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
+              url.user == nil, url.password == nil, url.absoluteString.count <= 2048 else { return nil }
+        NSWorkspace.shared.open(url)
+        return nil
     }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         if (error as NSError).code != NSURLErrorCancelled { status.stringValue = "Could not load editor: \(error.localizedDescription)" }

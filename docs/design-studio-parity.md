@@ -26686,3 +26686,28 @@ the latest signed artifact still packages f7b44dfa. The existing 24 MiB request,
 20-item, 128 MiB archive and two-minute batch limits apply. Snapshot fidelity and
 PDF/effect-bounds limitations remain. No push; full Figma parity and trusted
 Homebrew delivery remain unfinished.
+
+
+### Prototype Open link action
+
+The Prototype action menu now includes Open link with a source-backed URL field.
+HTTP/HTTPS URLs are validated as absolute addresses without embedded credentials,
+control characters or backslashes. Project navigation keeps its existing relative
+route restrictions. Open link uses a separate target with noopener/noreferrer and
+does not replace the prototype document, clear its overlays or alter its Back
+trail. Source authoring uses the existing adapter transaction and history path.
+
+Chromium and WebKit passed pointer and Enter activation against a separate local
+origin, exact destination URL, null opener, retained prototype document and draft
+input, invalid-URL refusal and source Undo/Redo. HTML, React, Liquid and Vue source
+round-trip tests passed with the new action. All 58 focused prototype/keyboard/
+timer tests passed; existing HTML navigation/back/scroll/hover suites passed both
+browsers. The interaction popover screenshot was inspected and syntax/diff checks
+passed. A desktop WKUIDelegate now hands HTTP/HTTPS new-window requests from the
+connected editor main frame to the default browser, refusing credentials and
+unrelated source origins. Swift type checking passed arm64 and x86_64; native
+handoff behavior is unverified because no native app was launched or rebuilt.
+Hover/timer-triggered links remain subject to browser popup policy and were not
+verified. The signed artifact still predates this increment. Full prototype
+variables/conditions, multiple actions and broader Figma parity remain unfinished,
+as does notarized Homebrew distribution. No push.
