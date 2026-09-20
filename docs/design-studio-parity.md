@@ -27713,3 +27713,11 @@ Enabled Move into and layer-tree drag between native containers in the same comp
 Validation: all 2,262 tests passed after the final namespace guard (`/tmp/retouch-svelte-reparent-final.log`). Focused source tests compile accepted moves, verify responsive styles and exact undo/redo, and reject scope changes. Chromium and WebKit passed the destination picker, actual tree drag, style/lock retention, exact history, retained counter/input/document state and production exclusion. Both browser runs recovered from 88 dropped source broadcasts. Logs: `/tmp/retouch-svelte-reparent-{chromium,webkit}.log`; inspected screenshot: `/tmp/retouch-svelte-reparent-webkit.png`. Browser runs preceded the final namespace refusal guard; the final full suite includes that guard.
 
 Full Figma parity, broader component editing, universal site coverage and notarized/Homebrew desktop delivery remain incomplete. This checkpoint does not alter or launch the native artifact.
+
+### Svelte grouping and framing checkpoint
+
+Enabled Group selection, Frame selection and Ungroup for consecutive native sibling selections. Nested selected descendants are normalized to roots. Generated groups use display: contents; frame removal retains child source and responsive styles while pruning only wrapper styles. Plans return source identity and selection mappings for locks/history. Bound/directive wrappers and local snippet/declaration scopes refuse removal before writing.
+
+Validation: 2,266 unit/API tests passed (`/tmp/retouch-svelte-frame-full.log`). Compiler tests cover bound events, nested control flow, exact history, independent wrapper/child style cleanup, empty frames and refusal boundaries. Chromium and WebKit passed the actual controls, measured unchanged group geometry in the fixture, selection/lock mappings, exact undo/redo, retained state/documents and production exclusion. Both recovered from 104 dropped source broadcasts. Logs: `/tmp/retouch-svelte-frame-{chromium,webkit}.log`; inspected screenshot: `/tmp/retouch-svelte-frame-groupSelection-webkit.png`.
+
+The geometry evidence covers the fixture, not arbitrary authored selector behavior after adding a DOM wrapper. Full Figma parity, broader component editing, universal site support and notarized/Homebrew desktop distribution remain unfinished. Native artifacts were not changed or launched.
