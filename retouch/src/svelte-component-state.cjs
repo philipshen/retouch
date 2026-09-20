@@ -24,8 +24,11 @@ function transform(code,file,info){
  let binding='__retouch_component_state';while(code.includes(binding))binding+='_';const out=new MagicString(code),patched=[];
  for(const statement of target.body.body){if(statement.type!=='VariableDeclaration')continue;for(const declaration of statement.declarations){if(declaration.id.type!=='Identifier'||!info.names.includes(declaration.id.name))continue;let call=declaration.init;
   if(call?.type==='CallExpression'&&call.callee.type==='MemberExpression'&&call.callee.object.name===ns&&call.callee.property.name==='tag')call=call.arguments[0];
-  if(call?.type!=='CallExpression'||call.callee.type!=='MemberExpression'||call.callee.object.name!==ns||call.callee.property.name!=='state'||call.arguments.length!==1)continue;
-  const initial=call.arguments[0],name=JSON.stringify(declaration.id.name);out.overwrite(initial.start,initial.end,binding+'.read('+name+',()=>('+code.slice(initial.start,initial.end)+'))');out.appendLeft(statement.end,'\n'+binding+'.capture('+name+',()=>'+ns+'.get('+declaration.id.name+'));');patched.push(declaration.id.name);
+  const signal=call?.type==='CallExpression'&&call.callee.type==='MemberExpression'&&call.callee.object.name===ns&&call.callee.property.name==='state';
+  if(signal&&call.arguments.length>1||!declaration.init)continue;
+  const initial=signal?call.arguments[0]:declaration.init,name=JSON.stringify(declaration.id.name),read=binding+'.read('+name+',()=>('+(initial?code.slice(initial.start,initial.end):'undefined')+'))';
+  if(initial)out.overwrite(initial.start,initial.end,read);else out.appendLeft(call.end-1,read);
+  out.appendLeft(statement.end,'\n'+binding+'.capture('+name+',()=>'+(signal?ns+'.get('+declaration.id.name+')':declaration.id.name)+');');patched.push(declaration.id.name);
  }}
  if(!patched.length)return null;
  const props=target.params[1]?.name||binding+'_props';if(!target.params[1])out.appendLeft(target.params[0].end,','+props);

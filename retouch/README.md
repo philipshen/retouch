@@ -233,10 +233,11 @@ bindings and an independent stylesheet so the component stays mounted, including
 through undo/redo. New conditional instances read the current text and styles.
 The inline editor temporarily edits cloned child nodes and restores Svelte's
 original nodes before the source update. Rich-text changes use ordinary Svelte
-HMR with per-instance retention of top-level `$state`/`$state.raw` variables that
-the pinned compiler emits as state signals, provided the script is unchanged.
+HMR with per-instance retention of synchronous top-level `$state`/`$state.raw`
+variables, including signal values, object/array proxies and compiler-elided
+direct values, provided the script is unchanged.
 New mounts, script edits, and same-source dependency reloads initialize fresh
-state. This does not guarantee retention for nested/class state, compiler-elided
+state. This does not guarantee retention for async initializers, nested/class
 state, external stores, effects, or arbitrary component lifecycle behavior. Production builds retain the saved
 styles and their literal ownership attributes, while omitting development source
 markers and the live-update runtime. SvelteKit SSR/hydration, custom preprocessing,
