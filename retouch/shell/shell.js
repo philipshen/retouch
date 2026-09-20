@@ -2708,7 +2708,7 @@ async function editDefinition(instanceId, component) {
 async function refreshDeletedComponent(id,parentId){
  const ids=Array.isArray(id)?id:[id],absent=d=>ids.every(id=>!matchingInDocument(d,id).length);
  const parent=parentId?await api('GET',resolveUrl(parentId)):null;
- if(parent?.ok){await refreshWrittenElement(parent.element,el=>absent(el.ownerDocument));if(absent(doc()))return;}
+ if(parent?.ok){await refreshWrittenStructure(parent.element,el=>absent(el.ownerDocument));if(absent(doc()))return;}
  const location=iframe.contentWindow.location.href;
  for(let attempt=0;attempt<30;attempt++){
   if(iframe.contentWindow.location.href!==location)return;
@@ -2761,8 +2761,8 @@ async function duplicateInstance(id,context) {
     editorHistory.record({type:'duplicateComponent',id:copied.parentId||id,instanceCopyId:copied.instanceId,instanceOriginalId:id,sourceIdMap:copied.sourceIdMap,undoId:result.undoId});
     if(copied.sourceIdMap)layerLocks.remap(copied.sourceIdMap);
     const copy=await api('GET',resolveUrl(copied.instanceId)),parent=copied.parentId?await api('GET',resolveUrl(copied.parentId)):null;
-    if(parent?.ok)await refreshWrittenElement(parent.element,el=>!!el.ownerDocument.querySelector('[data-rt-i="'+copied.instanceId+'"]'));
-    else if(copy?.ok)await refreshWrittenElement(copy.element,el=>el.getAttribute('data-rt-i')===copied.instanceId);
+    if(parent?.ok)await refreshWrittenStructure(parent.element,el=>!!el.ownerDocument.querySelector('[data-rt-i="'+copied.instanceId+'"]'));
+    else if(copy?.ok)await refreshWrittenStructure(copy.element,el=>el.getAttribute('data-rt-i')===copied.instanceId);
     else await reloadFrame();
     const component=await api('GET',componentUrl(copied.instanceId));
     if(copy?.ok&&component?.ok){sel={hostId:mountedComponentHost(copied.instanceId,component,copy.element.context)?.getAttribute('data-rt')||component.definitionId,instanceId:copied.instanceId,scope:'instance',info:copy.element};renderPanel();}
@@ -2787,12 +2787,12 @@ async function detachInstance(id, component, button, context=sel?.info?.context)
   } finally { button.disabled = false; }
 }
 async function refreshSwappedComponent(instanceId,parentId){
- if(parentId){const parent=await api('GET',resolveUrl(parentId));if(parent?.ok){await refreshWrittenElement(parent.element,()=>true);return;}}
+ if(parentId){const parent=await api('GET',resolveUrl(parentId));if(parent?.ok){await refreshWrittenStructure(parent.element,()=>true);return;}}
  const usage=await api('GET',resolveUrl(instanceId)),component=await api('GET',componentUrl(instanceId));
  if(!usage?.ok||!component?.ok)throw Error('The swap was saved, but its component no longer resolves.');
  const roots=component.definitionIds?.length?component.definitionIds:[component.definitionId].filter(Boolean),matches=node=>roots.includes(node.getAttribute('data-rt'))&&node.getAttribute('data-rt-revision')===component.hash;
  const info=usage.element;
- await refreshWrittenElement(info,matches);
+ await refreshWrittenStructure(info,matches);
  if(!matchingInDocument(doc(),instanceId,info).some(node=>matches(node)&&node.getAttribute(info.renderRevisionAttribute)===info.hash))throw Error('The swap was saved, but its component has not appeared in the preview yet.');
 }
 async function selectInsertedComponent(id,parentId){
