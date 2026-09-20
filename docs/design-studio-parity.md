@@ -26780,3 +26780,42 @@ runtime parity evidence. Expressions, variable-to-variable assignment, condition
 multiple actions and non-style variable bindings remain unfinished. No desktop
 artifact was rebuilt or launched, and this increment was not pushed. Full Figma
 parity and notarized Homebrew distribution remain incomplete.
+
+### 2026-09-20 — Browser-cascade selection for prototype class bindings
+
+Replaced the prototype runtime's minimum-width-only class inheritance shortcut
+with a synchronous browser-cascade probe. Temporary non-inheriting custom-property
+markers identify the winning linked utility while retaining its real selectors,
+media/supports/container conditions, cascade layers, specificity, importance and
+stylesheet order. Ordinary competing declarations receive a blocking marker;
+source-reported local overrides remain excluded. The probe ignores only the exact
+inline declaration owned by the current presentation. It restores every CSSOM and
+DOM mutation in a finally block before returning. An unreadable stylesheet causes
+an explicit refusal because its competing declarations cannot be inspected.
+
+Presentation updates now observe bound layers and their ancestors for container
+resizes, observe stylesheet load events, and coalesce refresh requests while a
+projection is pending. Removing and remounting nodes re-discovers bindings;
+detached nodes with no remaining temporary styles are removed from the restoration
+map. Source-resolution errors retain the server's diagnostic.
+
+Chromium and WebKit passed a direct cascade browser suite with equal-color but
+different-identity variables: overlapping width ranges and orientation rules,
+container queries, important cascade-layer inversion, nested utility rules,
+ordinary important shorthand overrides, inline ownership, exact probe cleanup,
+and cleanup after an unreadable cross-origin stylesheet refusal. A separate
+actual compiled React fixture passed Set variable actions, range/orientation
+resizing, parent-container resizing, newly mounted source-bound nodes, removal and
+remount, Exit restoration, unchanged source/library bytes and no page errors in
+both browsers. The fixture uses a canonical real temporary path so stamped source
+IDs agree with the source index. The existing HTML Set variable suite also passed
+both browsers, including overlays, navigation, history and in-flight cancellation.
+All 2,088 unit tests passed; diff checks passed.
+
+This does not establish arbitrary-site parity. Unreadable cross-origin CSS,
+animation-controlled declarations, CSS changes without observed layout/DOM/load
+signals, and full Liquid/Vue variable runtime integration remain gaps. The numeric
+HTML binding path still uses managed source scopes. Variable expressions,
+conditions, multiple actions, non-style bindings and the remaining design-feature
+matrix are unfinished. No native artifact rebuild, launch or push in this increment;
+notarized Homebrew distribution remains incomplete.
