@@ -21,3 +21,7 @@ test('Svelte marker collection respects authored markers, spreads, dynamic roots
 test('Svelte forwarded instance revisions run in tracked effects across native and custom roots',()=>{
  for(const text of ['<main/>','<custom-card/>','<script>let show=$state(true);</script>{#if show}<main/>{:else}<footer/>{/if}']){const {info,transformed}=compile(text);assert.equal((transformed.code.match(/template_effect\(\(\) => \$\.set_(?:attribute|custom_element_data)\([^;]*'data-rt-i(?:-revision)?'/g)||[]).length,info.roots.length*2);}
 });
+
+test('Svelte legacy default instrumentation also reaches component-only definitions',()=>{
+ const {info,transformed}=compile('<script>import Child from "./Child.svelte";export let amount=1;</script><Child amount={amount}/>');assert.equal(info.roots.length,0);assert.ok(transformed);assert.match(transformed.code,/legacyProp as/);assert.match(transformed.code,/_legacy\(\$\.prop\(/);
+});

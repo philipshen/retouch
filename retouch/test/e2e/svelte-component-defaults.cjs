@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict');
+exports.run=async({page,app,phone,file,original,state})=>{
+ const rows=()=>page.getByRole('treeitem',{name:'Badge · component',exact:true}),settled=()=>page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks);
+ async function verify(second){const result=await page.evaluate(()=>[doc(),...RetouchComparisons.exportFrames().map(frame=>frame.contentDocument)].map(d=>['badge-one','badge-two'].map(id=>d.querySelector('#'+id+' output')?.textContent)));for(const values of result)assert.deepEqual(values,['First|1|true','Second|'+second+'|true']);for(const frame of [app,phone]){assert.equal(await frame.locator('#badge-one button').textContent(),'Hits 1');assert.equal(await frame.locator('#badge-two button').textContent(),'Hits 0');}await state();}
+ await rows().nth(1).click();await page.getByRole('button',{name:'Reset amount to default',exact:true}).click();await settled();await verify(1);const removed=fs.readFileSync(file,'utf8');assert.notEqual(removed,original);assert.equal(await page.getByRole('button',{name:'Reset amount to default',exact:true}).count(),0);
+ const field=page.getByLabel('Component property amount',{exact:true});assert.equal(await field.inputValue(),'1');await field.fill('4');await field.press('Enter');await settled();await verify(4);const added=fs.readFileSync(file,'utf8');assert.notEqual(added,removed);
+ for(const [action,value,bytes]of [['Undo',1,removed],['Undo',2,original],['Redo',1,removed],['Redo',4,added],['Undo',1,removed],['Undo',2,original]]){await page.getByRole('button',{name:action,exact:true}).click();await settled();await verify(value);assert.equal(fs.readFileSync(file,'utf8'),bytes);}
+ await rows().nth(0).click();await rows().nth(1).click({modifiers:['Meta']});await page.getByRole('button',{name:'Reset amount to defaults',exact:true}).click();await settled();await verify(1);const shared=fs.readFileSync(file,'utf8');assert.equal(/amount=/.test(shared.split('{#each')[0]),false);
+ for(const [action,value,bytes]of [['Undo',2,original],['Redo',1,shared],['Undo',2,original]]){await page.getByRole('button',{name:action,exact:true}).click();await settled();await verify(value);assert.equal(fs.readFileSync(file,'utf8'),bytes);}
+ await rows().nth(0).click();await settled();console.log('SVELTE DEFAULT RESET, INHERITED OVERRIDE, SHARED RESET, EXACT UI HISTORY AND RETAINED INSTANCE STATE PASS');
+};

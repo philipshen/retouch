@@ -31,7 +31,13 @@ function collect(source,relPath){
 }
 function textSnapshot(source,relPath){
  const parsed=collect(source,relPath),{elements,components,ast}=parsed,out=new MagicString(source),texts={},componentProps={};
- for(const element of components){const info=require('./svelte-component-props.cjs').describe({source,relPath,element},parsed);for(const prop of info.props.filter(prop=>prop.editable)){const attr=element.node.attributes.find(attr=>attr.name===prop.name);componentProps[element.id+'|'+prop.name]=Object.is(prop.value,-0)?'-0':JSON.stringify(prop.value);out.overwrite(attr.start,attr.end,prop.name+'={__RT_PROP__}');}}
+ for(const element of components){
+  const info=require('./svelte-component-props.cjs').describe({source,relPath,element},parsed),editable=new Set(info.props.filter(prop=>prop.editable).map(prop=>prop.name));
+  for(const prop of info.props.filter(prop=>prop.editable))componentProps[element.id+'|'+prop.name]=Object.is(prop.value,-0)?'-0':JSON.stringify(prop.value);
+  // Literal props are supplied by one live spread. Their presence, ordering and
+  // values do not require a new compiled parent; authored bindings still do.
+  const attrs=element.node.attributes;if(attrs.length)out.overwrite(element.start+1+element.tag.length,attrs.at(-1).end,attrs.filter(attr=>!editable.has(attr.name)).map(attr=>' '+source.slice(attr.start,attr.end)).join(''));
+ }
  for(const element of elements){const range=textRange(element,source);if(!range||range.text.trim()!==range.text||/[\r\n\t]| {2}/.test(range.text))continue;texts[element.id]=range.text;if(range.start===range.end)out.appendLeft(range.start,'__RT_TEXT__');else out.overwrite(range.start,range.end,'__RT_TEXT__');}
  let styling = null;
  try {
@@ -50,7 +56,11 @@ function stamp(source,file,root,{runtime=false,componentMarkers=false}={}){
  for(const element of elements)for(const [name,value]of [['data-rt',element.id],['data-rt-revision',revision]]){const old=element.attributes.find(a=>a.name===name),token=name==='data-rt-revision'&&runtime?name+'={$'+binding+'.revision}':name+'="'+value+'"';if(old)out.overwrite(old.start,old.end,token);else out.appendLeft(element.start+1+element.tag.length,' '+token);}
  if(runtime){
   if(componentMarkers){const markers=require('./svelte-component-markers.cjs');markers.stamp(out,markers.metadata(source,relative),'$'+binding+'.revision');}
-  for(const element of snapshot.components)for(const attribute of element.node.attributes){const key=element.id+'|'+attribute.name;if(Object.hasOwn(snapshot.componentProps,key))out.overwrite(attribute.start,attribute.end,attribute.name+'={'+binding+'_prop($'+binding+'.componentProps['+JSON.stringify(key)+'])}');}
+  for(const element of snapshot.components){
+   if(element.node.attributes.some(attr=>attr.type==='SpreadAttribute'))continue;
+   out.appendLeft(element.start+1+element.tag.length,' {...'+binding+'_props($'+binding+'.componentProps,'+JSON.stringify(element.id)+')}');
+   for(const attribute of element.node.attributes)if(Object.hasOwn(snapshot.componentProps,element.id+'|'+attribute.name))out.remove(attribute.start,attribute.end);
+  }
   if(snapshot.styling){
    require('./svelte-css.cjs').removeManaged(out,snapshot.styling.state);
    for(const element of elements)if(Object.hasOwn(snapshot.styling.ids,element.id)){
@@ -63,7 +73,7 @@ function stamp(source,file,root,{runtime=false,componentMarkers=false}={}){
    }
   }
   for(const element of elements)if(Object.hasOwn(snapshot.texts,element.id)){const range=textRange(element,source),expression='{$'+binding+'.texts['+JSON.stringify(element.id)+']}';if(range.start===range.end)out.appendLeft(range.start,expression);else out.overwrite(range.start,range.end,expression);}
-  const script='\nimport {sourceState as '+binding+'_create, literalProp as '+binding+'_prop} from "virtual:retouch-svelte-source";\nconst '+binding+' = '+binding+'_create('+JSON.stringify(relative)+','+JSON.stringify({revision,signature:contentHash(snapshot.signature),texts:snapshot.texts,componentProps:snapshot.componentProps,attributes:snapshot.styling?.attributes||{},styleIds:snapshot.styling?.ids||{},css:snapshot.styling?.css||null}).replace(/</g,'\\u003c')+');\n';
+  const script='\nimport {sourceState as '+binding+'_create, literalProps as '+binding+'_props} from "virtual:retouch-svelte-source";\nconst '+binding+' = '+binding+'_create('+JSON.stringify(relative)+','+JSON.stringify({revision,signature:contentHash(snapshot.signature),texts:snapshot.texts,componentProps:snapshot.componentProps,attributes:snapshot.styling?.attributes||{},styleIds:snapshot.styling?.ids||{},css:snapshot.styling?.css||null}).replace(/</g,'\\u003c')+');\n';
   if(ast.module)out.appendLeft(ast.module.content.start,script);else out.prepend('<script module>'+script+'</script>\n');
  }
  return {code:out.toString(),map:out.generateMap({hires:true,source:file,includeContent:true})};

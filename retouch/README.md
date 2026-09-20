@@ -257,7 +257,10 @@ instances in the canvas, Layers and component library. Existing literal string,
 number and boolean properties can be edited in the inspector with exact
 undo/redo. Select several usages in one source file to edit shared properties,
 or copy properties and choose which compatible values to paste. These batches
-validate every selected value before saving and use one undo step. Property updates preserve mounted child state and synchronize open
+validate every selected value before saving and use one undo step. Literal defaults
+from rune destructuring or legacy `export let` declarations appear as inherited
+values. Reset removes an override; editing an inherited value creates one. Shared
+property reset is supported, with definition revision checks and exact history. Property updates preserve mounted child state and synchronize open
 screen previews. Native root markers are forwarded without additional DOM
 wrappers. Native roots can be grouped as an instance, including conditional branches
 that share a root present in every branch. Repeated usages retain separate
@@ -265,8 +268,8 @@ instance groups even when they render different branches. Component definitions
 with repeating roots, unaccounted root text/output or no common branch anchor
 remain individual selection targets. Aliases, shadowed imports,
 symlinked or external definitions, dynamic roots and spread-controlled properties
-are not supported yet. Defaults, variants, reset, detach, duplication and broader
-component authoring remain unfinished.
+are not supported yet. Computed defaults, editing shared default declarations, optional unset, variants,
+detach, duplication and broader component authoring remain unfinished.
 
 Simple literal text, managed styles, style links, and variable bindings use development-only Svelte store
 bindings and an independent stylesheet so the component stays mounted, including

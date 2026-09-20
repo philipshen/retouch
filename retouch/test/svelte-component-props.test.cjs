@@ -15,6 +15,12 @@ test('Svelte literal component properties support exact source history',t=>{
 });
 test('Svelte component property stamps use live source values without changing the template signature',()=>{
  const r=resolve(),changed=props.plan(r,{fileHash:r.hash,name:'amount',value:7}).edits[0].after,before=source.textSnapshot(original,'App.svelte'),after=source.textSnapshot(changed,'App.svelte');assert.equal(before.signature,after.signature);assert.notDeepEqual(before.componentProps,after.componentProps);
- const only='<script>import Badge from "./Badge.svelte";</script><Badge label="Only" amount={-0}/>',stamped=source.stamp(only,'/tmp/App.svelte','/tmp',{runtime:true});require('svelte/compiler').compile(stamped.code,{filename:'App.svelte'});assert.match(stamped.code,/literalProp/);assert.match(stamped.code,/\.componentProps\[/);assert.ok(Object.values(source.textSnapshot(only,'App.svelte').componentProps).includes('-0'));
+ const only='<script>import Badge from "./Badge.svelte";</script><Badge label="Only" amount={-0}/>',stamped=source.stamp(only,'/tmp/App.svelte','/tmp',{runtime:true});require('svelte/compiler').compile(stamped.code,{filename:'App.svelte'});assert.match(stamped.code,/literalProp/);assert.match(stamped.code,/\.componentProps,/);assert.ok(Object.values(source.textSnapshot(only,'App.svelte').componentProps).includes('-0'));
  assert.notEqual(source.textSnapshot(original.replace('amount={-2}','amount={value}'),'App.svelte').signature,before.signature);
+});
+
+test('Svelte literal property additions and removals keep one template signature and live spread',()=>{
+ const texts=['<Badge/>','<Badge amount={3}/>','<Badge amount={3} label="Added"/>','<Badge label="Added"/>'];const snapshots=texts.map(text=>source.textSnapshot(text,'App.svelte'));assert.equal(new Set(snapshots.map(s=>s.signature)).size,1);
+ for(const text of texts){const stamped=source.stamp(text,'/tmp/App.svelte','/tmp',{runtime:true});require('svelte/compiler').compile(stamped.code,{filename:'App.svelte'});assert.match(stamped.code,/\{\.\.\.__retouch_source_.*_props\(/);}
+ const dynamic='<Badge amount={value}/>';assert.notEqual(source.textSnapshot(dynamic,'App.svelte').signature,snapshots[0].signature);const spread='<Badge {...value} amount={3}/>';assert.deepEqual(source.textSnapshot(spread,'App.svelte').componentProps,{});assert.doesNotMatch(source.stamp(spread,'/tmp/App.svelte','/tmp',{runtime:true}).code,/\{\.\.\.__retouch_source_/);
 });

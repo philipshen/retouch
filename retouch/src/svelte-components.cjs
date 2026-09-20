@@ -18,7 +18,11 @@ function definition(r){
 }
 function describeComponent(r){try{
  const def=definition(r),info=props.describe(r),roots=def.meta.roots,groups=def.meta.rootGroups,anchor=groups[0]?.find(id=>groups.every(ids=>ids.includes(id)));
- return {ok:true,name:def.name,file:def.rel,hash:source.contentHash(def.text),usageHash:r.hash,source:def.text,explicitComponent:true,definitionId:anchor||roots[0]?.id||null,definitionIds:roots.map(e=>e.id),rootGroups:def.meta.rootGroups,canDetach:false,canDuplicate:false,reason:'Svelte component detach and duplication are not available yet.',props:info.props.map(prop=>({name:prop.name,value:prop.value===undefined?'Expression':String(prop.value),default:'—',editor:prop}))};
+ const defaults=require('./svelte-component-defaults.cjs').read(def.text),definitionHash=source.contentHash(def.text),spread=info.element.node.attributes.some(a=>a.type==='SpreadAttribute');
+ const properties=info.props.map(prop=>{const fallback=defaults.get(prop.name);return {name:prop.name,value:prop.value===undefined?'Expression':String(prop.value),default:fallback?String(fallback.value):'—',editor:{...prop,...(fallback?{definitionHash,canReset:prop.editable}: {})}};});
+ for(const [name,fallback]of defaults)if(!properties.some(prop=>prop.name===name)&&/^[A-Za-z_$][\w$-]*$/.test(name)&&!/^(?:data-rt|__retouch)/.test(name)&&!['children','slot','this'].includes(name))properties.push({name,value:String(fallback.value),default:String(fallback.value),editor:{...fallback,editable:!spread,inherited:true,definitionHash,canReset:false,...(spread?{reason:'A spread controls this component usage.'}:{})}});
+
+ return {ok:true,name:def.name,file:def.rel,hash:source.contentHash(def.text),usageHash:r.hash,source:def.text,explicitComponent:true,definitionId:anchor||roots[0]?.id||null,definitionIds:roots.map(e=>e.id),rootGroups:def.meta.rootGroups,canDetach:false,canDuplicate:false,reason:'Svelte component detach and duplication are not available yet.',props:properties};
  }catch(error){return refused(error.message);}}
 function create(base){
  const host=r=>({...r,elements:r.elements.filter(e=>e.kind==='host')});
@@ -26,7 +30,7 @@ function create(base){
   collect(text,relative){const parsed=source.collect(text,relative);return {...parsed,elements:[...parsed.elements,...parsed.components].sort((a,b)=>a.start-b.start)};},
   describeComponent,
   describe(r){if(r.element.kind!=='instance')return base.describe(host(r));return {id:r.element.id,kind:'instance',tag:r.element.tag,file:r.relPath,hash:r.hash,renderRevisionAttribute:'data-rt-i-revision',context:r.context||null,canRename:false,textDynamic:true,classNameDynamic:true,structure:{},component:describeComponent(r)};},
-  planOp(r,op){if(r.element.kind!=='instance')return base.planOp(host(r),op);if(['pasteComponentProps','setComponentPropSelection'].includes(op.type))return require('./svelte-component-batch-props.cjs').plan(r,op,adapter);if(op.type!=='setComponentProp')return refused('Choose a supported component property edit.');const component=describeComponent(r);if(!component.ok)return component;return props.plan(r,op);},
+  planOp(r,op){if(r.element.kind!=='instance')return base.planOp(host(r),op);if(['pasteComponentProps','setComponentPropSelection'].includes(op.type))return require('./svelte-component-batch-props.cjs').plan(r,op,adapter);if(op.type!=='setComponentProp')return refused('Choose a supported component property edit.');const component=describeComponent(r);if(!component.ok)return component;if(op.reset||!props.describe(r).props.some(prop=>prop.name===op.name))return require('./svelte-component-defaults.cjs').plan(r,op,definition(r));return props.plan(r,op);},
   capabilities:{...base.capabilities,ops:[...base.capabilities.ops,'setComponentProp','setComponentPropSelection','pasteComponentProps']}
  };
  adapter.applyOp=(r,op)=>require('./transactions.cjs').applyPlan(r.appRoot||path.dirname(r.file),adapter.planOp(r,op));return adapter;

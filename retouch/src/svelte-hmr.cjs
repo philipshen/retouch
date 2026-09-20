@@ -4,6 +4,8 @@ function payload(snapshot, sequence, epoch) {
 }
 function runtime(){return `import {writable} from 'svelte/store';
 export function literalProp(value){return JSON.parse(value);}
+export function literalProps(values,id){const result=Object.create(null),prefix=id+'|';for(const [key,value] of Object.entries(values||{}))if(key.startsWith(prefix))result[key.slice(prefix.length)]=JSON.parse(value);return result;}
+export const legacyProp=(${require('./svelte-component-defaults.cjs').legacyProp.toString()});
 export const componentState=(${require('./svelte-component-state.cjs').createRegistry.toString()})();
 const states=new Map(),styles=new Map();let requestId=0;
 function applyCSS(file,css){
