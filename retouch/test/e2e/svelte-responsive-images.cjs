@@ -15,6 +15,9 @@ exports.run=async({page,app,phone,file,original,state})=>{
  await press('Remove image candidate');const empty=read();await current(phone,'fallback.svg');await current(app,'wide.svg');await field('New candidate source').selectOption('0');await field('New candidate image path').fill('/small.svg');await field('New resolution type').selectOption('w');await field('New resolution value').fill('640');await press('Add image candidate');const width=read();await current(phone,'small.svg');await current(app,'wide.svg');await history('Undo',empty);await current(phone,'fallback.svg');await history('Redo',width);await current(phone,'small.svg');
  // Restore every accepted operation, including the branch after the source-condition undo.
  for(let i=0;i<6;i++)await press('Undo');assert.equal(read(),original);await current(phone,'small.svg');await current(app,'wide.svg');await state();
- assert.equal(await page.getByRole('button',{name:'Add picture source',exact:true}).count(),0);
+ await open('Artwork by screen');await field('Artwork image path').fill('/new.svg');await field('Artwork maximum width (px)').fill('600');await press('Add picture source');const artwork=read();await current(phone,'new.svg');await current(app,'wide.svg');await state();
+ await press('Move source later 1');const moved=read();await current(phone,'small.svg');await history('Undo',artwork);await current(phone,'new.svg');await history('Redo',moved);await current(phone,'small.svg');
+ await press('Remove picture source 2');assert.equal(read(),original);await current(phone,'small.svg');await history('Undo',moved);await history('Redo',original);await history('Undo',moved);await history('Undo',artwork);await history('Undo',original);await current(phone,'small.svg');await current(app,'wide.svg');
+
  await page.getByRole('treeitem',{name:'h1 · Hello Svelte',exact:true}).click();await settled();console.log('SVELTE RESPONSIVE CANDIDATES, SCREEN CONDITIONS, EMPTY SOURCE RECOVERY AND EXACT HISTORY PASS');
 };

@@ -226,8 +226,10 @@ unvisited Svelte components and restore catalog and source together through undo
 Literal Svelte images expose responsive candidate URL, density/width, media,
 sizes and format controls, including candidate addition/removal and exact history.
 Picture sources must be explicit native children with literal responsive attributes;
-bindings and generated picture children remain protected. Adding/removing entire
-picture sources is not yet available for Svelte.
+bindings and generated picture children remain protected. Existing pictures support
+adding, reordering and removing sources with exact history. Creating a picture
+wrapper around a plain image still needs stylesheet adaptation; deleting a source
+with its own managed responsive styles is also unavailable.
 
 Native text containers support inline formatting and literal edits around protected
 live expressions, preserving authored events and bound link destinations. Styled

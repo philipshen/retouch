@@ -2,19 +2,19 @@
 const MagicString=require('magic-string'),responsive=require('./html-responsive-image.cjs'),{parse}=require('./capture-srcset.cjs');
 const attr=(node,name)=>node.attrs?.find(item=>item.name===name)?.value??null;
 const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-function sourceMarkup(op){
+function sourceMarkup(op,encode=escape){
  responsive.imageURL(op.src);const descriptor=op.descriptor||'1x',parsed=typeof descriptor==='string'&&parse('candidate '+descriptor);
  if(!parsed||parsed.length!==1||parsed[0].descriptors.length!==1||!/[wx]$/.test(descriptor)||descriptor.length>64)throw Error('Choose one valid width or pixel-density descriptor.');
  const attrs=[['style','display: none'],['srcset',op.src+' '+descriptor]];
  for(const name of ['media','type','sizes']){const value=op[name==='type'?'sourceType':name];if(value===undefined||value===null||value==='')continue;if(typeof value!=='string'||value.length>4096||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value))throw Error('Use source settings of at most 4,096 characters without control characters.');attrs.push([name,value]);}
- return '<source '+attrs.map(([name,value])=>name+'="'+escape(value)+'"').join(' ')+'>';
+ return '<source '+attrs.map(([name,value])=>name+'="'+encode(value)+'"').join(' ')+'>';
 }
-function plan(resolved,op){
+function plan(resolved,op,renderer){
  const refuse=reason=>({ok:false,refused:true,reason});
  try{
   if(!op.fileHash||op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the image.');
   if(!['add','remove','move'].includes(op.action))return refuse('Choose add, remove or move source.');
-  const html=require('./adapters/html.cjs'),elements=resolved.elements||html.collect(resolved.source,resolved.relPath).elements,state=responsive.inspect({...resolved,elements});
+  const html=renderer||require('./adapters/html.cjs'),elements=resolved.elements||html.collect(resolved.source,resolved.relPath).elements,state=responsive.inspect({...resolved,elements},html);
   if(!state)return refuse('Choose an HTML image.');
   const image=resolved.element,picture=state.picture?image.node.parentNode:null,sources=state.nodes.slice(1),pictureElement=picture?elements.find(element=>element.node===picture):null;
   if(picture&&(!pictureElement||!pictureElement.location.endTag))return refuse('Choose a complete, unambiguous picture element.');
@@ -25,14 +25,15 @@ function plan(resolved,op){
   const remove=node=>{removed.add(node);changes.push({start:node.sourceCodeLocation.startOffset,end:node.sourceCodeLocation.endOffset,text:''});};
   if(op.action==='add'){
    if(state.candidates.length>=256||sources.length>=255)return refuse('This image has too many responsive sources or candidates.');
-   const markup=sourceMarkup(op);sourceIndex=op.index??0;
+   if(!picture&&html.allowWrapper===false)return refuse('Choose an existing picture element. Creating a Svelte picture wrapper needs stylesheet adaptation.');
+   const markup=sourceMarkup(op,html.escapeAttribute);sourceIndex=op.index??0;
    if(!Number.isInteger(sourceIndex)||sourceIndex<0||sourceIndex>sources.length)return refuse('Choose a source position within this picture.');
    if(picture)insert(sources[sourceIndex]?.sourceCodeLocation.startOffset??image.location.startOffset,markup);
    else{wrapperAdded=true;wrapperStart=image.location.startOffset;insert(wrapperStart,'<picture data-rt-picture="" style="display: contents">'+markup);insert(image.location.endOffset,'</picture>');}
   }else if(op.action==='remove'){
    remove(sources[op.sourceIndex]);
    const children=picture.childNodes.filter(node=>node.nodeName!=='#text'||node.value.trim());
-   unwrap=sources.length===1&&picture.attrs.length===2&&attr(picture,'data-rt-picture')===''&&attr(picture,'style')==='display: contents'&&children.length===2&&children.includes(image.node)&&children.includes(sources[0]);
+   unwrap=html.allowWrapper!==false&&sources.length===1&&picture.attrs.length===2&&attr(picture,'data-rt-picture')===''&&attr(picture,'style')==='display: contents'&&children.length===2&&children.includes(image.node)&&children.includes(sources[0]);
    if(unwrap){removed.add(picture);changes.push({start:pictureElement.location.startOffset,end:pictureElement.location.startTag.endOffset,text:''},{start:pictureElement.location.endTag.startOffset,end:pictureElement.location.endOffset,text:''});}
   }else{
    sourceIndex=op.destinationIndex;
@@ -57,7 +58,7 @@ function plan(resolved,op){
   const selected=mapped.get(image.node),root=wrapperAdded||unwrap?(picture?.parentNode||image.node.parentNode):picture,rootElement=elements.find(element=>element.node===root);
   if(!rootElement&&root?.tagName!=='body')return refuse('The image has no stable preview container.');
   if(wrapperAdded){const parent=mapped.get(image.node.parentNode);if(parent?wrapper.node.parentNode!==parent.node:wrapper.node.parentNode?.tagName!==image.node.parentNode?.tagName)return refuse('The new picture changed its source parent.');}
-  const descriptor=responsive.describe({...resolved,source:after,elements:next,element:selected,hash:html.contentHash(after)});
+  const descriptor=responsive.describe({...resolved,source:after,elements:next,element:selected,hash:html.contentHash(after)},html);
   if(descriptor?.reason||!descriptor)return refuse(descriptor?.reason||'The picture source no longer resolves.');
   if(op.action==='add'&&descriptor.sources.length!==state.sources.length+1)return refuse('The added source is not part of the selected image.');
   const survivors=new Set(mapped.values());

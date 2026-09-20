@@ -9,10 +9,10 @@ function collect(text,file){
  for(const element of parsed.elements){const node=element.node,attrs={};for(const attr of node.attributes||[])if(attr.name)attrs[attr.name.toLowerCase()]={startOffset:attr.start,endOffset:attr.end};const end=text.indexOf('>',Math.max(node.start+1+node.name.length,...node.attributes.map(attr=>attr.end)))+1;
   nodes.set(node,{tagName:element.tag,attrs:element.attributes.map(attr=>({name:attr.name,value:attr.value})),sourceCodeLocation:{startOffset:element.start,endOffset:element.end,startTag:{startOffset:element.start,endOffset:end},attrs},original:node,childNodes:[]});
  }
- const elements=parsed.elements.map(element=>{const node=nodes.get(element.node);node.parentNode=nodes.get(parents.get(parents.get(element.node)))||null;node.childNodes=element.node.fragment.nodes.map(child=>nodes.get(child)||{original:child});return {...element,node,location:node.sourceCodeLocation};});
+ const elements=parsed.elements.map(element=>{const node=nodes.get(element.node);if(text.slice(element.start,element.end).endsWith('</'+element.tag+'>'))node.sourceCodeLocation.endTag={startOffset:element.end-element.tag.length-3,endOffset:element.end};node.parentNode=nodes.get(parents.get(parents.get(element.node)))||null;node.childNodes=element.node.fragment.nodes.map(child=>nodes.get(child)||{original:child});return {...element,node,location:node.sourceCodeLocation};});
  return {...parsed,elements};
 }
-const adapter={collect,contentHash:source.contentHash,escapeAttribute};
+const adapter={collect,contentHash:source.contentHash,escapeAttribute,allowWrapper:false};
 function prepare(resolved){
  const parsed=collect(resolved.source,resolved.relPath),element=parsed.elements.find(element=>element.id===resolved.element.id);
  if(!element||element.tag!=='img')throw Error('Select a Svelte image.');
@@ -25,4 +25,4 @@ function prepare(resolved){
 }
 function describe(resolved){if(resolved.element.tag!=='img')return null;try{return shared.describe(prepare(resolved),adapter);}catch(error){return {reason:error.message,candidates:[]};}}
 function run(method,resolved,op){try{return shared[method](prepare(resolved),op,adapter);}catch(error){return {ok:false,refused:true,reason:error.message};}}
-module.exports={describe,plan:(r,op)=>run('plan',r,op),planSource:(r,op)=>run('planSource',r,op),planCandidates:(r,op)=>run('planCandidates',r,op)};
+module.exports={prepare,adapter,describe,plan:(r,op)=>run('plan',r,op),planSource:(r,op)=>run('planSource',r,op),planCandidates:(r,op)=>run('planCandidates',r,op)};

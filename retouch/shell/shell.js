@@ -3191,11 +3191,13 @@ async function refreshPictureSources(imageId,scope,candidate,{sourceIdMap=[],rem
   const panelScroll=panelBody.scrollTop,anchor=panelBody.querySelector('.picture-sources')?.getBoundingClientRect().top;
   const result=await api('GET',resolveUrl(imageId));if(!result?.ok||!result.element.responsiveImage?.sources)throw Error('The edited image could not be resolved.');
   const info=result.element,descriptor=info.responsiveImage;
+  if(info.renderRevisionAttribute)await refreshResponsiveImage(info);else{
   const discarded=new Set(direction==='undo'?createdSourceIds:removedSourceIds),remapped=new WeakSet(),ids=new Map(sourceIdMap.map(([before,after])=>direction==='undo'?[after,before]:[before,after]));
   const select=d=>{if(d.defaultView&&!remapped.has(d)){for(const node of d.querySelectorAll('[data-rt]')){const before=node.getAttribute('data-rt');if(discarded.has(before)){node.removeAttribute('data-rt');continue;}const id=ids.get(before);if(id)node.setAttribute('data-rt',id);}remapped.add(d);}return scope.id?[...d.querySelectorAll('[data-rt="'+scope.id+'"]')]:[d.body];};
   const matches=root=>{const image=matchingInDocument(root.ownerDocument,info.id,info).find(node=>node.tagName==='IMG'&&root.contains(node));if(!image||descriptor.picture&&image.parentElement.tagName!=='PICTURE')return false;const nodes=[image,...(descriptor.picture?[...image.parentElement.children].slice(0,[...image.parentElement.children].indexOf(image)).filter(node=>node.tagName==='SOURCE'):[])];return nodes.length===descriptor.sources.length&&descriptor.sources.every(source=>['src','srcset','sizes','media','type'].every(name=>nodes[source.index+1]?.getAttribute(name)===source[name]));};
   await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select,matches,authorStyles,revalidate:revalidateStyles});
   const comparisons=await window.RetouchComparisons?.syncImage({select,matches,authorStyles,revalidate:revalidateStyles});if(comparisons?.failures.length)toast('Artwork saved. Retry the failed comparison previews.','err');
+  }
   info._responsiveCandidate=candidate;info._pictureSourcesOpen=true;sel={hostId:info.id,instanceId:null,scope:'host',info};await layers.refresh();renderPanel();const nextAnchor=panelBody.querySelector('.picture-sources')?.getBoundingClientRect().top;panelBody.scrollTop=panelScroll;if(Number.isFinite(anchor)&&Number.isFinite(nextAnchor))panelBody.scrollTop+=panelBody.querySelector('.picture-sources').getBoundingClientRect().top-anchor;
 }
 function pictureSourceControls(info){
