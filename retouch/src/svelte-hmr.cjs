@@ -3,10 +3,17 @@ function payload(snapshot, sequence, epoch) {
  return { revision:snapshot.revision, signature:require('./svelte-source.cjs').contentHash(snapshot.signature), sequence, epoch, texts:snapshot.texts, componentProps:snapshot.componentProps||{}, attributes:snapshot.styling?.attributes||{}, styleIds:snapshot.styling?.ids||{}, css:snapshot.styling?.css||null };
 }
 function runtime(){return `import {writable} from 'svelte/store';
+import {getContext,setContext,untrack} from 'svelte';
 export function literalProp(value){return JSON.parse(value);}
 export function literalProps(values,id){const result=Object.create(null),prefix=id+'|';for(const [key,value] of Object.entries(values||{}))if(key.startsWith(prefix))result[key.slice(prefix.length)]=JSON.parse(value);return result;}
 export const legacyProp=(${require('./svelte-component-defaults.cjs').legacyProp.toString()});
-export const componentState=(${require('./svelte-component-state.cjs').createRegistry.toString()})();
+const componentRegistry=(${require('./svelte-component-state.cjs').createRegistry.toString()})();
+const componentScope=Symbol('retouch component scope');
+export function componentState(file,script,revision,props,anchor,options){
+ const state=componentRegistry(file,script,revision,props,{...options,anchor,parent:getContext(componentScope),readValue:untrack});
+ setContext(componentScope,state.scope);return state;
+}
+if(import.meta.hot){import.meta.hot.on('vite:beforeUpdate',()=>componentRegistry.begin());import.meta.hot.on('vite:afterUpdate',()=>queueMicrotask(()=>componentRegistry.end()));}
 const states=new Map(),styles=new Map();let requestId=0;
 function applyCSS(file,css){
  if(!css){styles.get(file)?.remove();styles.delete(file);return;}

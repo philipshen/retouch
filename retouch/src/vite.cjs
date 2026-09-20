@@ -73,7 +73,7 @@ function retouch(options={}){
    if(id.split(path.sep).includes('node_modules'))return null;
    try{
     const real=fs.realpathSync(id),realRelative=path.relative(config.root,real);if(real.split(path.sep).includes('node_modules')||realRelative.startsWith('..'+path.sep)||path.isAbsolute(realRelative))return null;
-    if(sourceAdapter.name==='svelte'){svelteComponentMarkers.set(id,require('./svelte-component-markers.cjs').metadata(source,realRelative.split(path.sep).join('/')));svelteComponentStates.set(id,require('./svelte-component-state.cjs').metadata(source,realRelative));svelteFiles.set(realRelative.split(path.sep).join('/'),real);if(!svelteSnapshots.has(real))svelteSnapshots.set(real,require('./svelte-source.cjs').textSnapshot(source,realRelative.split(path.sep).join('/')));return sourceAdapter.stamp(source,real,config.root,{runtime:true,componentMarkers:true});}
+    if(sourceAdapter.name==='svelte'){svelteComponentMarkers.set(id,require('./svelte-component-markers.cjs').metadata(source,realRelative.split(path.sep).join('/')));svelteComponentStates.set(id,{...require('./svelte-component-state.cjs').metadata(source,realRelative),migrations:require('./svelte-component-migrations.cjs').read(real,sourceAdapter.contentHash(source))});svelteFiles.set(realRelative.split(path.sep).join('/'),real);if(!svelteSnapshots.has(real))svelteSnapshots.set(real,require('./svelte-source.cjs').textSnapshot(source,realRelative.split(path.sep).join('/')));return sourceAdapter.stamp(source,real,config.root,{runtime:true,componentMarkers:true});}
     if(sourceAdapter.name==='vue'){vueSourceRevisions.set(id,{revision:sourceAdapter.contentHash(source),scriptRevision:require('./vue-hmr.cjs').scriptHash(source,real)});return sourceAdapter.stamp(source,real,config.root);}
     const helper=path.join(path.dirname(real),'.retouch-group-scale.jsx'),runtime=require('./react-group-scale-runtime.cjs');if(fs.existsSync(helper))this.addWatchFile(helper);
     return require('./stamp.cjs').stamp(source,real,config.root,{groupScaleRuntime:virtual,redirectGroupScaleRuntime:fs.existsSync(helper)&&fs.readFileSync(helper,'utf8')===runtime.component()});
@@ -85,6 +85,7 @@ function retouch(options={}){
    const ticket=(svelteTickets.get(file)||0)+1;svelteTickets.set(file,ticket);
    const relative=path.relative(config.root,file).split(path.sep).join('/');let next;try{next=require('./svelte-source.cjs').textSnapshot(await ctx.read(),relative);}catch{return;}
    if(svelteTickets.get(file)!==ticket)return [];
+   require('./svelte-component-migrations.cjs').observe(file,before.revision,next.revision);
    svelteSnapshots.set(file,next);if(before.revision!==next.revision)svelteSequences.set(file,(svelteSequences.get(file)||0)+1);
    if(before.signature!==next.signature)return;if(before.revision===next.revision)return [];
    this.environment.hot.send({type:'custom',event:'retouch:svelte-source',data:{file:relative,...require('./svelte-hmr.cjs').payload(next,svelteSequences.get(file),svelteEpoch)}});return [];

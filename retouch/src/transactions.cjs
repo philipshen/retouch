@@ -36,6 +36,7 @@ function applyPlan(root, plan) {
       if (edit.before===edit.after) continue;
       replace(edit); done.push(edit);
     }
+    try { if(done.some(edit=>edit.file.endsWith('.svelte')))require('./svelte-component-migrations.cjs').record(realRoot,plan); } catch { /* Runtime retention must not change source transaction success. */ }
     return {...plan,edits:done};
   } catch(err) {
     const failures=[];
