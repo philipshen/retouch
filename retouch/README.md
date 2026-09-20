@@ -225,14 +225,18 @@ bindings, local overrides, reset, detach, and removal. Collection updates includ
 unvisited Svelte components and restore catalog and source together through undo.
 Native text containers support inline formatting and literal edits around protected
 live expressions, preserving authored events and bound link destinations. Styled
-runs can be split with independent responsive style ownership. General structural
-editing and component-property controls for Svelte are not implemented yet.
+runs can be split with independent responsive style ownership. Native sibling
+layers support reorder, duplicate, delete, and copy/paste within the same source
+parent, with independent copied styles and exact history. Operations across mixed
+text, control-flow or component siblings remain unavailable; copies containing
+IDs, refs, spread attributes or computed style identities are refused. General
+reparenting, insertion, grouping and component-property controls remain unfinished.
 
 Simple literal text, managed styles, style links, and variable bindings use development-only Svelte store
 bindings and an independent stylesheet so the component stays mounted, including
 through undo/redo. New conditional instances read the current text and styles.
 The inline editor temporarily edits cloned child nodes and restores Svelte's
-original nodes before the source update. Rich-text changes use ordinary Svelte
+original nodes before the source update. Rich-text and layer changes use ordinary Svelte
 HMR with per-instance retention of synchronous top-level `$state`/`$state.raw`
 variables, including signal values, object/array proxies and compiler-elided
 direct values, provided the script is unchanged.
