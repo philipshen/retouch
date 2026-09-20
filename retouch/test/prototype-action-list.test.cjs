@@ -33,3 +33,10 @@ test('queued external cancellation and trigger-time snapshots prevent later unwa
  const first=runner.run([{action:'back'}]);await entered.promise;const controller=new AbortController(),second=runner.run([go],{signal:controller.signal});controller.abort();assert.equal((await second).completed,false);
  const input=[{action:'close-overlay'}],third=runner.run(input);input[0].action='back';release.resolve();await first;await third;assert.deepEqual(events,['back','close-overlay']);
 });
+
+test('canvas entries retain unique nested branch paths and reject malformed action locations',()=>{
+ const tree=[assign(2),conditional(literal(true),[{action:'scroll',destination:'a'},conditional(literal(false),[go],[{action:'back'}])],[{action:'scroll',destination:'b'}])],entries=A.entries(tree);
+ assert.deepEqual(entries.map(x=>x.path),[[0],[1,'then',0],[1,'then',1,'then',0],[1,'then',1,'else',0],[1,'else',0]]);
+ for(const entry of entries)assert.equal(A.locate(tree,entry.path).action,entry.item.action);entries[1].item.destination='changed';assert.equal(tree[1].then[0].destination,'a');
+ for(const path of [null,[],[0,'then'],[-1],[1,'constructor',0],[0,'then',0],[1,'then',99],['1'],Array(35).fill(0)])assert.throws(()=>A.locate(tree,path));
+});

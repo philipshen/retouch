@@ -27211,3 +27211,32 @@ all trigger concurrency/press semantics, external links after asynchronous actio
 inherited object modes, separate design pages and universal framework/site
 playback remain unverified or unfinished. The broader design matrix and notarized
 Homebrew distribution remain incomplete. No native rebuild, launch or push.
+
+### 2026-09-20 — Canvas connections for nested scroll actions
+
+The canvas now enumerates scroll actions throughout ordered lists and conditional
+branches, preserving each exact action path. Independent endpoints reconnect only
+the selected branch. Opening a connection expands its enclosing action cards,
+scrolls the action into view and focuses its controls. Keyboard reconnect returns
+to the correct nested picker control. Branch descriptions appear in connection
+titles and accessibility descriptions; badges remain compact.
+
+Traversal snapshots validated action lists and caches them per metadata array so
+canvas animation frames do not repeatedly validate the same tree. Reconnects carry
+the displayed source revision as well as the action path, rejecting stale source
+state. Single-action connections retain their existing keyboard/drag behavior.
+
+All 2,153 unit tests passed, including nested traversal, independent path identity,
+snapshot isolation and malformed path refusal. Chromium and WebKit passed exact
+branch reveal from the canvas, keyboard reconnect with generated source anchors,
+drag reconnect, untouched sibling branches, atomic undo/redo, and retained preview
+document/input state. Existing connection geometry/zoom/clipping/duplicate/hidden
+and selection/presentation tests passed Chromium, as did endpoint cancellation,
+zoomed reconnection, keyboard picking and source-history regressions. The nested
+connection screenshot was inspected. Syntax/diff checks passed.
+
+This extends same-page scroll connections; navigation destinations across separate
+pages/screens still need a broader canvas representation. Expanded-list drag
+scrolling, concurrency/press behavior, inherited modes and the remaining design
+matrix are unfinished. No native rebuild/launch or push; full parity and notarized
+Homebrew distribution remain incomplete.

@@ -63,5 +63,8 @@
   for(let i=0;i<path.length;i+=2){if(!Number.isInteger(path[i])||path[i]<0||!Array.isArray(list)||!list[path[i]])throw Error('The action changed.');node=list[path[i]];if(i+1<path.length){if(node.action!=='conditional'||!['then','else'].includes(path[i+1]))throw Error('Choose a conditional branch.');list=node[path[i+1]];}}
   return node;
  }
- return {validate,create,locate};
+ function entries(input){
+  const result=[];function visit(items,path){items.forEach((item,index)=>{const current=[...path,index];if(item.action==='conditional'){visit(item.then,[...current,'then']);visit(item.else,[...current,'else']);}else result.push({item,path:current});});}visit(validate(input),[]);return result;
+ }
+ return {validate,create,locate,entries};
 });
