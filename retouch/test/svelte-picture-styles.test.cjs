@@ -14,7 +14,7 @@ test('Svelte component picture adaptation compiles after wrapping and preserves 
  const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{SourceHistory}=require('../src/history.cjs'),root=fs.mkdtempSync(path.join(os.tmpdir(),'rt-svelte-picture-css-')),file=path.join(root,'App.svelte');t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(file,original);const history=new SourceHistory(),saved=history.commit(root,{ok:true,edits:[{file,before:original,after:result.source}]});assert.equal(saved.ok,true,saved.reason);assert.equal(history.apply(root,'undo',saved.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),original);assert.equal(history.apply(root,'redo',saved.undoId,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),result.source);
 });
 test('Svelte picture stylesheet plans refuse unsupported compiler scopes and preserve absent or generated-only styles',()=>{
- for(const text of ['.frame :global(img){width:40px}','@import "other.css";.frame>img{width:40px}','@scope (.frame){img{width:40px}}'])assert.throws(()=>styles.plan(resolve(original.replace(/<style>[\s\S]*<\/style>/,'<style>'+text+'</style>'))));
+ for(const text of [':global(.frame) > img{width:40px}','@import "other.css";.frame>img{width:40px}','@scope (.frame){img{width:40px}}'])assert.throws(()=>styles.plan(resolve(original.replace(/<style>[\s\S]*<\/style>/,'<style>'+text+'</style>'))));
  const bare=original.replace(/<style>[\s\S]*<\/style>/,'');assert.deepEqual(styles.plan(resolve(bare)),{source:bare,changed:false});const r=resolve(bare),managed=adapter.planOp(r,{type:'setCSS',fileHash:r.hash,width:0,property:'padding',value:'13px'}).edits[0].after;assert.equal(styles.plan(resolve(managed)).source,managed);
 });
 
@@ -26,7 +26,7 @@ test('Svelte whole-selector globals retain global scope across picture alternati
  const rules=[];postcss.parse(compiled.css.code).walkRules(rule=>{if(rule.nodes.some(node=>node.type==='decl'&&node.prop==='margin-left'))rules.push(rule.selector);});
  assert.equal(rules.length,1);assert.match(rules[0],/data-rt-picture/);assert.doesNotMatch(rules[0],/svelte-scope-test/);assert.match(result.source,/keep global/);
  assert.equal(styles.plan(resolve(result.source)).source,result.source);
- for(const selector of ['.frame > :global(img)', ':global(.frame) > img', ':global(:global(img))'])assert.throws(()=>styles.plan(resolve(original.replace('.frame > img',selector))));
+ for(const selector of ['.frame + :global(img)', ':global(.frame) > img', ':global(:global(img))'])assert.throws(()=>styles.plan(resolve(original.replace('.frame > img',selector))));
 });
 
 test('Svelte global blocks retain keyframe scope, media rules and nested selector order',()=>{
@@ -39,4 +39,15 @@ test('Svelte global blocks retain keyframe scope, media rules and nested selecto
  assert.match(compiled.css.code,/@keyframes pulse/);assert.match(compiled.css.code,/animation:pulse 1s/);assert.doesNotMatch(compiled.css.code,/svelte-scope-test/);assert.match(compiled.css.code,/data-rt-picture/);assert.match(compiled.css.code,/@media/);
  assert.equal(styles.plan(resolve(result.source)).source,result.source);
  assert.throws(()=>styles.plan(resolve(text.replace(':global {','.frame { :global {').replace('/* after */','} /* after */'))),/Nested global/);
+});
+
+test('Svelte scoped ancestors keep global suffixes free of component scope classes',()=>{
+ const text=original.replace('img + button {margin-left:8px}', '.frame > :global(img + button) {margin-left:8px}');
+ const wrapped=text.replace('<img','<picture data-rt-picture="" style="display:contents"><img').replace('/><button','/></picture><button');
+ const result=styles.plan(resolve(wrapped));
+ const compiled=require('svelte/compiler').compile(result.source,{filename:'App.svelte',cssHash:()=> 'svelte-scope-test'});
+ const rules=[];postcss.parse(compiled.css.code).walkRules(rule=>{if(rule.nodes.some(node=>node.type==='decl'&&node.prop==='margin-left'))rules.push(rule.selector);});
+ assert.equal(rules.length,1);assert.match(rules[0],/data-rt-picture/);assert.doesNotMatch(result.source,/rt-scope-anchor/);
+ for(const selector of require('postcss-selector-parser')().astSync(rules[0]).nodes){const scopes=[];selector.walkClasses(node=>{if(node.value==='svelte-scope-test')scopes.push(node);});assert.equal(scopes.length,1);assert.equal(selector.first.value,'frame');}
+ assert.equal(styles.plan(resolve(result.source)).source,result.source);
 });

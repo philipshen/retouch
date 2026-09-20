@@ -10,6 +10,21 @@ function transformSelector(text){
   const meaningful=entry.nodes.filter(node=>node.type!=='comment');
   // A whole-selector global directive has no scoped boundary to move. Keep
   // every expanded alternative global so Svelte never inserts a scope class.
+  if(globals.length===1&&globals[0]===entry.last&&entry.nodes.length>1&&globals[0].prev()?.type==='combinator'&&['','>'].includes(globals[0].prev().value.trim())){
+   const boundary=globals[0].prev(),prefix=entry.clone();prefix.last.remove();prefix.last.remove();
+   if(!prefix.nodes.length)throw Error('A global suffix needs a scoped ancestor.');
+   const parents=selectorParser().astSync(pictureSelector.transform(prefix.toString()));
+   const inner=globals[0].nodes.map(node=>node.toString()).join(',');
+   // A synthetic ancestor exposes the child boundary to the shared planner.
+   // Remove it again before wrapping the entire suffix in :global, so generated
+   // picture nodes never acquire the ancestor component's scope class.
+   const suffixes=selectorParser().astSync(pictureSelector.transform('rt-scope-anchor'+boundary.toString()+inner));
+   for(const suffix of suffixes.nodes){const split=suffix.nodes.findIndex(node=>node.type==='combinator');if(split<0)throw Error('The global selector boundary could not be preserved.');for(let i=0;i<=split;i++)suffix.first.remove();
+    for(const parent of parents.nodes)result.push(parent.toString()+boundary.toString()+':global('+suffix.toString()+')');
+   }
+   if(result.length>256||result.join(',').length>65536)throw Error('A stylesheet selector creates too many picture alternatives.');
+   continue;
+  }
   if(globals.length!==1||meaningful.length!==1||meaningful[0]!==globals[0]||!globals[0].nodes?.length)throw Error('Mixed or block global Svelte selectors need a separate scope-preserving picture adaptation.');
   const inner=globals[0].nodes.map(node=>node.toString()).join(',');
   const expanded=selectorParser().astSync(pictureSelector.transform(inner));
