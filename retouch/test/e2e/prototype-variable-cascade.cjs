@@ -4,7 +4,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,engine=process.env.RT_E2E_BROWSER
 (async()=>{const browser=await require(path.join(fixture,'node_modules/playwright'))[engine].launch();try{
  const page=await browser.newPage({viewport:{width:600,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.setContent('<html><head></head><body><div id="container"><div id="target">Bound</div></div></body></html>');
- for(const file of ['html-css-values.js','prototype-binding-cascade.js'])await page.addScriptTag({path:path.resolve(__dirname,'../../shell',file)});
+ for(const file of ['html-css-values.js','prototype-binding-cascade.js','prototype-variable-watch.js'])await page.addScriptTag({path:path.resolve(__dirname,'../../shell',file)});
  await page.evaluate(()=>{
   window.info={classVariables:true,variableLinks:{},variableOverrides:{}};
   window.token=scope=>scope+'![background-color:#ffffff]';window.selector=scope=>'.'+CSS.escape(token(scope));
@@ -25,6 +25,9 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,engine=process.env.RT_E2E_BROWSER
  assert.equal(await page.evaluate(()=>pick()),'0','important cascade layers use reverse precedence');
  await page.evaluate(()=>{styles.textContent=selector('')+'{background-color:white!important}'+selector('range:')+'{@media (min-width: 600px){&{background-color:white!important}}}';});assert.equal(await page.evaluate(()=>pick()),'1','nested Tailwind rule retains its class identity');
  await page.evaluate(()=>{info.variableOverrides['range:']=['background-color'];});assert.equal(await page.evaluate(()=>RetouchPrototypeBindingCascade.classLink(info,document.querySelector('#target'),'background-color').override),true);
+ await page.evaluate(async()=>{window.watchChanges=0;window.stopWatch=RetouchPrototypeVariableWatch.mount(document,()=>watchChanges++,()=>false);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));watchChanges=0;for(let i=0;i<10;i++)pick();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));if(watchChanges)throw Error('Probe mutations retriggered the watcher: '+watchChanges);});
+ await page.evaluate(async()=>{document.querySelector('#target').style.setProperty('background-color','purple','important');await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));watchChanges=0;for(let i=0;i<10;i++)pick();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));if(watchChanges)throw Error('Inline probe mutations retriggered the watcher: '+watchChanges);stopWatch();watchChanges=0;document.querySelector('#target').removeAttribute('style');styles.textContent+='@media (prefers-color-scheme:dark){.unrelated{color:red}}';await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));if(watchChanges)throw Error('Watcher continued after release');});
+ await page.setViewportSize({width:400,height:500});await page.evaluate(async()=>{await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));if(watchChanges)throw Error('Resize or media listener continued after release');});
  await page.route('https://styles.invalid/probe.css',route=>route.fulfill({contentType:'text/css',body:'.unrelated{color:red}'}));
  await page.addStyleTag({url:'https://styles.invalid/probe.css'});
  assert.match(await page.evaluate(()=>{const before=styles.sheet.cssRules&&[...styles.sheet.cssRules].map(r=>r.cssText).join('\n'),heads=document.head.childNodes.length;let message='';try{pick();}catch(error){message=error.message;}if(before!==[...styles.sheet.cssRules].map(r=>r.cssText).join('\n')||heads!==document.head.childNodes.length)throw Error('Failed probe did not restore styles');return message;}),/unreadable/);

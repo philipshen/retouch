@@ -26819,3 +26819,35 @@ HTML binding path still uses managed source scopes. Variable expressions,
 conditions, multiple actions, non-style bindings and the remaining design-feature
 matrix are unfinished. No native artifact rebuild, launch or push in this increment;
 notarized Homebrew distribution remains incomplete.
+
+### 2026-09-20 — Live theme and stylesheet observation during variable playback
+
+Presentation variables now subscribe to stylesheet media-query changes, including
+conditions nested inside imported/grouped rules, rather than relying on window
+resize alone. The document watcher also observes head stylesheet text, stylesheet
+attributes, arbitrary theme attributes, and application inline-style changes. It
+reconciles media listeners and observed container ancestors as the document changes.
+All listeners and observers are removed when the preview document is released.
+
+Cascade-probe registration nodes and temporary custom-property mutations are
+identified and excluded from refresh triggers. Runtime-owned inline snapshots
+exclude presentation's own writes without suppressing later application changes.
+This avoids turning each projection into another self-triggered projection.
+
+Chromium and WebKit passed the expanded actual React suite with dark/light media
+changes at a fixed viewport, head stylesheet insertion, media disabling, stylesheet
+text edits, a document theme attribute, important application inline overrides and
+restoration after removing those overrides. Existing range/orientation/container,
+late-mount, removal/remount and source-preservation cases still passed. Both
+browsers also passed direct watcher tests: repeated probes (including inline-marker
+probes) cause zero refreshes; after release, DOM mutations, media changes and
+resizes cause zero callbacks. The HTML variable authoring/overlay/navigation/
+cancellation suite passed both browsers. All 2,088 unit tests passed; syntax and
+diff checks passed.
+
+Direct CSSOM/adopted-stylesheet replacements that emit no observed DOM, load,
+layout or existing media signal remain unhandled. Unreadable cross-origin CSS,
+animation-controlled declarations, the numeric HTML cascade path, complete
+Liquid/Vue playback and broader Figma feature parity remain unfinished. No desktop
+artifact rebuild, native launch or push in this increment; notarized Homebrew
+installation remains incomplete.

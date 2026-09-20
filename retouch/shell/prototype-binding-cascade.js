@@ -16,6 +16,7 @@
   }
   if(!tokens.size)return null;
   const changed=[],seen=new Set(),registration=d.createElement('style');
+  registration.setAttribute('data-rt-prototype-probe','');
   registration.textContent='@property '+name+' { syntax: "*"; inherits: false; initial-value: none; }';
   const inlineBefore={value:el.style.getPropertyValue(name),priority:el.style.getPropertyPriority(name),hadStyle:el.hasAttribute('style')};
   function mark(style,marker){
@@ -51,5 +52,5 @@
    if(!inlineBefore.hadStyle&&!el.getAttribute('style'))el.removeAttribute('style');registration.remove();
   }
  }
- root.RetouchPrototypeBindingCascade={classLink};
+ root.RetouchPrototypeBindingCascade={classLink,isProbeProperty:name=>name.startsWith('--rt-prototype-probe-'+namespace+'-')};
 })(window);
