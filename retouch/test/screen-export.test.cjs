@@ -14,3 +14,5 @@ test('screen export serializes requests per server and releases its slot after c
 });
 
 test('screen export validates the image format and JPEG quality without applying quality to PNG',()=>{assert.doesNotThrow(()=>validate({...valid(),format:'jpeg'}));for(const quality of [1,90,100])assert.doesNotThrow(()=>validate({...valid(),format:'jpeg',quality}));for(const patch of [{format:'pdf'},{quality:90},{format:'png',quality:90},...[-1,0,101,90.5,'90',null].map(quality=>({format:'jpeg',quality}))])assert.throws(()=>validate({...valid(),...patch}));});
+
+test('PNG transparency is boolean and never applies to JPEG',()=>{assert.doesNotThrow(()=>validate({...valid(),transparent:true}));assert.doesNotThrow(()=>validate({...valid(),format:'jpeg',transparent:false}));for(const patch of [{transparent:'true'},{transparent:1},{transparent:null},{format:'jpeg',transparent:true}])assert.throws(()=>validate({...valid(),...patch}));});

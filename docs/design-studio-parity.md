@@ -26444,3 +26444,24 @@ screenshot was inspected; syntax and diff checks passed. No full unit-suite reru
 The inherited frozen-snapshot/resource limitations still apply. Arbitrary-layer,
 PDF, transparent background and batch export remain incomplete. No desktop rebuild
 or push; full Figma parity and notarized Homebrew distribution remain unfinished.
+
+
+### Transparent PNG screen export
+
+PNG export now offers an optional Transparent background checkbox for viewport and
+full-page images at either scale. It removes the renderer default background;
+backgrounds and fills authored by the page remain visible. JPEG hides this option
+and stays opaque, while switching back to PNG retains the checkbox preference
+within the dialog. The backend rejects non-boolean transparency values and JPEG
+requests for transparency.
+
+Chromium and WebKit editor checks passed decoded fully transparent and half-alpha
+pixels, opaque authored fills/backgrounds, 1× full-page and 2× viewport images,
+format switching, retained document identity and unchanged source files. Existing
+viewport/full-page/comparison export regressions passed both engines. All six
+focused export validation/concurrency/cancellation tests passed. The light dialog
+screenshot was inspected; syntax and diff checks passed. Export rendering still
+uses Chromium, including when the editor is tested in WebKit. No full unit-suite
+rerun or desktop rebuild. Snapshot/resource limitations and arbitrary-layer/PDF/
+batch export gaps remain. Full Figma parity and notarized Homebrew distribution
+remain unfinished. This increment is committed locally without pushing.

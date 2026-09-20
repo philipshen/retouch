@@ -1444,3 +1444,7 @@ html, body { overflow:clip; }
 
 .screen-export-dialog input { box-sizing:border-box;width:100%;margin-top:6px;padding:7px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);font:12px var(--font); }
 .screen-export-dialog label[hidden] { display:none; }
+
+.screen-export-dialog .screen-export-transparent { display:flex;align-items:center;gap:8px; }
+.screen-export-dialog .screen-export-transparent input { width:auto;margin:0; }
+.screen-export-dialog .screen-export-transparent[hidden],.screen-export-dialog .hint[hidden] { display:none; }
