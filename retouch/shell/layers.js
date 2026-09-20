@@ -189,6 +189,8 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
           b.ondrop=e=>{const position=dropPosition(e);if(position){e.preventDefault();const source=dragged,component=draggedItem?.componentId?{id:draggedItem.componentId,ids:draggedGroup?.ids,fileHash:draggedItem.movement.fileHash,destinationId:item.componentId||item.el.getAttribute('data-rt')}:null;endDrag();if(component)onMoveComponent?.(source,item.el,position,component);else onMove?.(source,item.el,position);}};
           b.ondragend=endDrag;
           b.onkeydown=async e=>{
+            // Property clipboard shortcuts belong to the shared Actions handler.
+            if(e.altKey&&(e.metaKey||e.ctrlKey)&&['KeyC','KeyV'].includes(e.code))return;
             if(onContextMenu&&(e.key==='ContextMenu'||e.key==='F10'&&e.shiftKey)){await onContextMenu({event:e,select:()=>choose(item),selected:isSelected(item),opener:b,keyboard:true});return;}
             if(item.componentId&&selectedInfo?.selectionIds?.length>1&&['Delete','Backspace'].includes(e.key)){e.preventDefault();e.stopPropagation();if(!isBusy&&!e.repeat)await onAction('deleteElement');return;}
             if(item.componentId&&selectedInfo?.selectionIds?.length>1&&(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'){e.preventDefault();e.stopPropagation();if(!isBusy&&!e.repeat)await onAction('duplicateElement');return;}

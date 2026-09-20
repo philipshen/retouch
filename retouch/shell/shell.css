@@ -1465,3 +1465,8 @@ html, body { overflow:clip; }
 .prototype-action-dragging, .prototype-action-dragging * { user-select:none; cursor:grabbing !important; }
 
 .component-default input[type="checkbox"] { width:auto; align-self:flex-start; }
+.component-property-paste > ul { list-style:none; padding:0; margin:12px 0; max-height:42vh; overflow:auto; display:grid; gap:12px; }
+.component-property-paste > ul > li { padding:10px; border:1px solid var(--border, #e5e5e5); border-radius:6px; }
+.component-property-paste dl { display:grid; grid-template-columns:minmax(70px, 1fr) minmax(0, 2fr); gap:6px 12px; margin:10px 0 0; }
+.component-property-paste dt { color:var(--muted, #777); overflow-wrap:anywhere; }
+.component-property-paste dd { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }

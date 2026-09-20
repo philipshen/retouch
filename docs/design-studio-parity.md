@@ -27463,3 +27463,43 @@ The current component multi-selection model is confined to one source file. This
 does not reset nested style overrides or arbitrary component state, and does not
 establish cross-framework equivalence. No native rebuild, launch or push was
 performed. Full design parity and trusted Homebrew distribution remain incomplete.
+
+### 2026-09-20 — Component property clipboard
+
+React instances now provide Copy properties and Paste properties in the inspector,
+canvas context menu and Actions search. Property-copy shortcuts follow Figma's
+[documented commands](https://help.figma.com/hc/en-us/articles/4412765442967-Copy-and-paste-properties-between-layers):
+Option-Command-C/V on macOS, Ctrl-Alt-C/V elsewhere. The Layers keyboard handler
+now lets these modified commands reach Actions instead of intercepting them as
+ordinary layer copy/paste.
+
+Copy captures supported literal string, number and boolean values, including
+inherited values and optional-property unset states. The versioned clipboard
+payload contains values, never executable source expressions. Paste previews the
+compatible values for each target in readable property rows and lists skipped
+properties. Cancelling writes nothing. Applying creates instance overrides or
+unsets compatible optional properties; incompatible fields, expression bindings
+and unlisted properties remain intact. Multiple targets use one atomic source
+transaction and one exact Undo/Redo history entry, retaining the full selection.
+
+Source, declared choices and definition/type/import dependencies are checked at
+commit. Equal explicit values retain their bytes; copied inherited values become
+explicit overrides. Malformed, oversized or unsupported clipboard payloads are
+rejected. System clipboard access is used when available; denied writes use an
+editor-local clipboard, with a clear copy status. Clipboard permission waits are
+bounded so unresolved permission promises can also fall back locally. Unit tests
+cover successful/denied/pending clipboard calls and replacement by unrelated text.
+
+All 2,180 unit tests passed. Chromium and WebKit passed keyboard copy/paste, canvas
+menu availability, Actions-search paste, preview cancellation, mixed source values,
+optional unsets, multi-target exact Undo/Redo and retained main/tablet selection,
+input state and document identity. Chromium exercised editor-local fallback;
+WebKit's system clipboard write succeeded. The existing Chromium Actions suite
+also passed, including ordinary layer copy/paste and keyboard behavior. The final
+light-theme paste preview was visually inspected after improving its value layout.
+
+This clipboard currently covers React component properties, not arbitrary layer
+styles, geometry, Figma's clipboard format or executable bindings. Multi-target
+source transactions remain limited to one source file. Cross-application/native
+clipboard operation and equivalent workflows in other adapters remain unverified.
+No native rebuild, launch or push was performed; the full goal remains incomplete.
