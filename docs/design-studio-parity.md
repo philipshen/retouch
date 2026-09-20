@@ -28123,3 +28123,26 @@ iterations corrected an input label, enabled Interact mode for the page counter,
 and closed the fixture's source watcher during teardown. Native artifacts were
 not rebuilt or launched. Full Figma parity, arbitrary-site coverage and notarized
 public macOS distribution remain incomplete.
+
+### Nested screen-view restoration checkpoint
+
+Main-screen view memory now includes independently scrolling elements and open
+shadow roots. Returning to a size restores horizontal/vertical offsets, including
+zero and negative RTL offsets, with immediate scrolling even when the page uses
+smooth-scroll CSS. This recovers a region's previous position after another size
+expands its viewport and clamps its scroll range.
+
+Snapshots use weak element identities. Restoration visits only current elements;
+removed widgets are not touched, and replacement/new widgets retain their own
+position rather than inheriting a stale selector match. Page-root scroll remains
+separate. Closed shadow roots and embedded child documents are not captured yet.
+
+Validation: Chromium and WebKit passed the expanded screen-view workflow, including
+responsive scroll-range clamping, separate per-size positions, zero reset, open
+shadow roots, RTL, mixed HTML/SVG content, replacement-widget isolation, retained
+form/counter state and document identity, route separation, reload isolation and
+canvas zoom/pan (`/tmp/retouch-screen-nested-{chromium,webkit}.log`). Comparison
+nested-scroll forwarding and main-screen resize regressions passed in Chromium.
+All 2,393 unit tests passed (`/tmp/retouch-screen-nested-full.log`). Native artifacts
+were not rebuilt or launched. Full Figma parity, arbitrary-site coverage and
+notarized public macOS distribution remain incomplete.

@@ -14,6 +14,24 @@
       return {views,route:d.location.href};
     }catch{return null;}
   }
+  function nestedScrollElements(d){
+    const elements=[];
+    function scan(root){for(const node of root.querySelectorAll('*')){if(node!==d.documentElement&&node!==d.body&&typeof node.scrollTo==='function')elements.push(node);if(node.shadowRoot)scan(node.shadowRoot);}}
+    scan(d);return elements;
+  }
+  function captureNestedScroll(d){
+    const elements=nestedScrollElements(d),known=new WeakSet(elements),positions=new WeakMap();
+    for(const node of elements)if(node.scrollLeft||node.scrollTop)positions.set(node,{x:node.scrollLeft,y:node.scrollTop});
+    return {known,positions};
+  }
+  function restoreNestedScroll(d,saved){
+    if(!saved)return;
+    // Node identity prevents an old view from scrolling a replacement widget.
+    for(const node of nestedScrollElements(d))if(saved.known.has(node)){
+      const point=saved.positions.get(node),x=point?.x||0,y=point?.y||0;
+      if(node.scrollLeft!==x||node.scrollTop!==y)node.scrollTo({left:x,top:y,behavior:'instant'});
+    }
+  }
   for(const event of ['retouch:before-zoom','retouch:screen'])window.addEventListener(event,()=>viewRevision++);
   function layout(){
     if(!width||!height)return;
@@ -162,11 +180,12 @@
     if(page){
       const previous=page.route+'|'+screenKey(screen),next=page.route+'|'+screenKey(e.detail),w=frame.contentWindow;
       restore=page.views.get(next);
-      page.views.delete(previous);page.views.set(previous,{x:w.scrollX,y:w.scrollY,panX:(canvas.scrollLeft-stage.offsetLeft)/scale,panY:(canvas.scrollTop-endPadding)/scale});
+      page.views.delete(previous);page.views.set(previous,{x:w.scrollX,y:w.scrollY,panX:(canvas.scrollLeft-stage.offsetLeft)/scale,panY:(canvas.scrollTop-endPadding)/scale,nested:captureNestedScroll(frame.contentDocument)});
       if(page.views.size>100)page.views.delete(page.views.keys().next().value);
     }
     screen=e.detail;measure();
     if(restore){
+      restoreNestedScroll(frame.contentDocument,restore.nested);
       frame.contentWindow.scrollTo({left:restore.x,top:restore.y,behavior:'instant'});
       canvas.scrollLeft=stage.offsetLeft+restore.panX*scale;canvas.scrollTop=endPadding+restore.panY*scale;
     }else if(!e.preservePan&&changed)canvas.scrollLeft=0;

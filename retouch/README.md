@@ -640,7 +640,9 @@ Switching back to a previously used main-screen size restores its page scroll
 and canvas pan at the current zoom. Positions are separate for each page URL and
 size in the current preview document; reloading the page clears them. Resizing
 gestures and screen-size undo keep their existing pan behavior. This remembers
-the page scroll, not independently scrolling containers inside the page.
+the page scroll and nested scroll regions, including open shadow roots and RTL
+horizontal positions. Replaced widgets keep their own state. Closed shadow roots
+and documents embedded inside the page are not captured.
 
 Click a layer in a comparison preview to open that screen size on the main
 canvas and select the matching layer. Links in comparison previews select
