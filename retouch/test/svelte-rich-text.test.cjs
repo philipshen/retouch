@@ -11,7 +11,7 @@ test('Svelte rich text preserves live expressions, bound attributes and authored
  assert.equal(rich.plan(r,{fileHash:'stale',children:[]}).refused,true);
 });
 test('Svelte rich text preserves comments and adjacent expression groups exactly once',()=>{
- const r=resolve('<script>let a="A",b="B";</script><p>Hi <!--note--> {a} / {b}!</p>'),info=rich.describe(r);assert.equal(info.canSetChildren,true,info.richTextReason);const token=info.richText.children[0].parts.find(p=>p.t==='token');const after=apply(r,[text('Hello '),keep(token.id),text('?')]);assert.match(after,/<!--note--> \{a\} \/ \{b\}\?/);
+ const r=resolve('<script>let a="A",b="B";</script><p>Hi <!--note--> {a} / {b}!</p>'),info=rich.describe(r);assert.equal(info.canSetChildren,true,info.richTextReason);const tokens=info.richText.children[0].parts.filter(p=>p.t==='token');const after=apply(r,[text('Hello '),keep(tokens[0].id),text(' '),keep(tokens[1].id),text('?')]);assert.match(after,/<!--note--> \{a\} \/ \{b\}\?/);
  const comment=rich.describe(resolve('<p>A<!--keep-->B</p>'));assert.equal(comment.richText.children[0].parts.find(p=>p.t==='token').empty,true);
 });
 test('Svelte rich text retains surviving styles, clones independent style owners and supports exact history',t=>{
@@ -33,4 +33,14 @@ test('Svelte rich text protects bound link destinations and generated literal va
 test('Svelte split text copies bound appearance without duplicating event behavior',()=>{
  const r=resolve('<script>let theme="accent";function click(){}</script><p><span class={theme} onclick={click}>First</span></p>'),node=rich.describe(r).richText.children[0];
  const after=apply(r,[keep(node.id),{t:'copy',id:node.id,children:[text('Second')]}]);assert.equal(after.split('class={theme}').length,3);assert.equal(after.split('onclick={click}').length,2);assert.match(after,/<span class=\{theme\}>Second<\/span>/);
+});
+test('Svelte rendered descriptors normalize compiler whitespace while preserving comments and nonbreaking spaces',()=>{
+ const r=resolve('<p>\n <!--before-->\n Hello<!--middle--> <em> world </em>!\n</p>'),info=rich.describe(r);assert.equal(info.canSetChildren,true,info.richTextReason);const first=info.richText.children[0];assert.equal(first.parts.filter(p=>p.t==='text').map(p=>p.value).join(''),'Hello ');assert.equal(first.parts.filter(p=>p.t==='token'&&p.empty).length,2);assert.equal(info.richText.children[1].children[0].value,'world');assert.equal(info.richText.children[2].value,'!');
+ const preserved=rich.describe(resolve('<svelte:options preserveWhitespace/><p>  Hello <em> world </em> </p>'));assert.equal(preserved.richText.children[0].value,'  Hello ');assert.equal(preserved.richText.children[1].children[0].value,' world ');
+ assert.equal(rich.describe(resolve('<p>&nbsp;Hello&nbsp;</p>')).richText.children[0].value,'\u00a0Hello\u00a0');
+ assert.equal(rich.describe(resolve('<p>A\r\nB</p>')).richText.children[0].value,'A\nB');
+ const dynamic=rich.describe(resolve('<p>A\r\n{count} C</p>'));assert.equal(dynamic.richText.children[0].parts[0].value,'A\r\n');
+});
+test('Svelte rich text edits retain computed styles on the container',()=>{
+ const r=resolve('<script>let color="red";</script><p style:color={color}><em>Text</em></p>'),info=rich.describe(r);assert.equal(info.canSetChildren,true,info.richTextReason);const after=apply(r,[keep(info.richText.children[0].id,[text('Edited')])]);assert.match(after,/<p style:color=\{color\}><em>Edited<\/em><\/p>/);
 });

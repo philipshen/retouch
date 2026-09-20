@@ -4,7 +4,7 @@ const virtual='virtual:retouch-group-scale.jsx',resolvedVirtual='\0retouch-group
 const vueStylePrefix='virtual:retouch-vue-css/';
 function retouch(options={}){
  if(options.adapter!==undefined&&!['react','vue','svelte'].includes(options.adapter))throw Error('[retouch] Choose the react, vue, or svelte source adapter.');
- let config,sidecar,sourceAdapter,svelteChannel,svelteSyncHandler;const vueStyleModules=new Map(),vueSourceRevisions=new Map(),svelteSnapshots=new Map(),svelteSequences=new Map(),svelteTickets=new Map(),svelteFiles=new Map();
+ let config,sidecar,sourceAdapter,svelteChannel,svelteSyncHandler;const vueStyleModules=new Map(),vueSourceRevisions=new Map(),svelteSnapshots=new Map(),svelteSequences=new Map(),svelteTickets=new Map(),svelteFiles=new Map(),svelteComponentStates=new Map();
  const svelteEpoch=require('node:crypto').randomUUID();
  function vueStyleFile(id){
   const key=id.replace(/^\0/,'').split('?')[0];if(!key.startsWith(vueStylePrefix)||!key.endsWith('.css'))return null;
@@ -72,7 +72,7 @@ function retouch(options={}){
    if(id.split(path.sep).includes('node_modules'))return null;
    try{
     const real=fs.realpathSync(id),realRelative=path.relative(config.root,real);if(real.split(path.sep).includes('node_modules')||realRelative.startsWith('..'+path.sep)||path.isAbsolute(realRelative))return null;
-    if(sourceAdapter.name==='svelte'){svelteFiles.set(realRelative.split(path.sep).join('/'),real);if(!svelteSnapshots.has(real))svelteSnapshots.set(real,require('./svelte-source.cjs').textSnapshot(source,realRelative.split(path.sep).join('/')));return sourceAdapter.stamp(source,real,config.root,{runtime:true});}
+    if(sourceAdapter.name==='svelte'){svelteComponentStates.set(id,require('./svelte-component-state.cjs').metadata(source,realRelative));svelteFiles.set(realRelative.split(path.sep).join('/'),real);if(!svelteSnapshots.has(real))svelteSnapshots.set(real,require('./svelte-source.cjs').textSnapshot(source,realRelative.split(path.sep).join('/')));return sourceAdapter.stamp(source,real,config.root,{runtime:true});}
     if(sourceAdapter.name==='vue'){vueSourceRevisions.set(id,{revision:sourceAdapter.contentHash(source),scriptRevision:require('./vue-hmr.cjs').scriptHash(source,real)});return sourceAdapter.stamp(source,real,config.root);}
     const helper=path.join(path.dirname(real),'.retouch-group-scale.jsx'),runtime=require('./react-group-scale-runtime.cjs');if(fs.existsSync(helper))this.addWatchFile(helper);
     return require('./stamp.cjs').stamp(source,real,config.root,{groupScaleRuntime:virtual,redirectGroupScaleRuntime:fs.existsSync(helper)&&fs.readFileSync(helper,'utf8')===runtime.component()});
@@ -105,6 +105,7 @@ function retouch(options={}){
   closeBundle:closeSidecar
  };
  return [plugin,{name:'retouch-vue-source-hmr',apply:'serve',enforce:'post',transform(code,id,options){
+  if(config?.command==='serve'&&sourceAdapter?.name==='svelte'&&!options?.ssr&&!id.includes('?')&&svelteComponentStates.has(id))return require('./svelte-component-state.cjs').transform(code,id,svelteComponentStates.get(id));
   if(config?.command!=='serve'||sourceAdapter?.name!=='vue'||options?.ssr||id.includes('?')||!id.endsWith('.vue'))return null;
   const revision=vueSourceRevisions.get(id);if(!revision)return null;
   return require('./vue-hmr.cjs').transform(code,fs.realpathSync(id),revision.revision,revision.scriptRevision);

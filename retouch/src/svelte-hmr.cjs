@@ -3,6 +3,7 @@ function payload(snapshot, sequence, epoch) {
  return { revision:snapshot.revision, signature:require('./svelte-source.cjs').contentHash(snapshot.signature), sequence, epoch, texts:snapshot.texts, attributes:snapshot.styling?.attributes||{}, styleIds:snapshot.styling?.ids||{}, css:snapshot.styling?.css||null };
 }
 function runtime(){return `import {writable} from 'svelte/store';
+export const componentState=(${require('./svelte-component-state.cjs').createRegistry.toString()})();
 const states=new Map(),styles=new Map();let requestId=0;
 function applyCSS(file,css){
  if(!css){styles.get(file)?.remove();styles.delete(file);return;}

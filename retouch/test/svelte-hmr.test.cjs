@@ -9,7 +9,7 @@ function fixture() {
   const document = { ...target, visibilityState: 'visible', querySelector: () => styles.find(s => !s.removed), createElement: () => ({ setAttribute() {}, textContent: '', remove() { this.removed = true; } }), head: { append: element => styles.push(element) } };
   const hot = { on: (type, fn) => listeners.set(type, fn), send: (type, value) => sent.push({ type, ...value }), invalidate: message => invalidations.push(message), dispose: fn => hot.cleanup = fn };
   const context = vm.createContext({ hot, document, window: target, Date: { now: () => clock }, writable: value => ({ value, sets: 0, set(next) { this.value = next; this.sets++; } }) });
-  vm.runInContext(runtime().replace("import {writable} from 'svelte/store';", '').replace('export function sourceState', 'function sourceState').replaceAll('import.meta.hot', 'hot'), context);
+  vm.runInContext(runtime().replace("import {writable} from 'svelte/store';", '').replace('export function sourceState', 'function sourceState').replace('export const componentState', 'const componentState').replaceAll('import.meta.hot', 'hot'), context);
   const store = context.sourceState(file, data(0));
   const emit = (value, snapshot = false) => listeners.get(snapshot ? 'retouch:svelte-snapshot' : 'retouch:svelte-source')(value);
   const reply = value => emit({ ...value, request: sent.at(-1).request }, true);

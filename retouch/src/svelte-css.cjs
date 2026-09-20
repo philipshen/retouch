@@ -175,4 +175,4 @@ function runtimeSnapshot(text, relative) {
 function removeManaged(out, state) {
   if (state.range) out.remove(state.model.created ? state.style.start : state.range.start, state.model.created ? state.style.end : state.range.end);
 }
-module.exports = { documentState, replaceModel, strip, inspect, plan, planSelection, stylesheet, describe, runtimeSnapshot, removeManaged };
+module.exports = { ownership, documentState, replaceModel, strip, inspect, plan, planSelection, stylesheet, describe, runtimeSnapshot, removeManaged };
