@@ -26564,3 +26564,25 @@ External SVG documents, all SVG filter/marker combinations and complete inherite
 compositing parity remain unverified; inherited snapshot and effect-bounds limits
 still apply. No desktop rebuild or push. Full Figma parity and notarized Homebrew
 distribution remain unfinished.
+
+
+### Export bounds for display-contents selections
+
+Selected-layer export now measures the rendered children of display:contents
+wrappers recursively, including text nodes through their rendered range fragments.
+Ordinary elements retain their existing principal-box export bounds. Empty and
+display:none fragments do not expand the output. Bounds aggregation avoids passing
+all text fragments as function arguments, so long fragmented text does not hit a
+JavaScript argument-count limit.
+
+A real selected grid-wrapper export failed before this change. Chromium and
+WebKit now pass its 2× dimensions, exact child colors and transparent gap, nested
+boxless wrappers and a hidden oversized child. Both also pass a selected boxless
+text span with visible text pixels and bounds (allowing a small cross-engine font
+height difference). Existing selected-layer/action and SVG-reference export suites
+passed both engines. Eight focused unit tests, syntax and diff checks passed;
+Chromium contents export was rerun after bounds aggregation cleanup. No full unit
+suite rerun. Generated pseudo-elements directly on display:contents wrappers are
+not measured separately yet; the prior effect-bounds and snapshot limitations
+remain. No desktop rebuild or push. Full Figma parity and notarized Homebrew
+distribution remain unfinished.

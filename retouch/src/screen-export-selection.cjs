@@ -2,8 +2,20 @@
 // Evaluated only in the disposable export document.
 module.exports=function isolateSelection(ids){
     const selected=ids.map(id=>document.querySelector('[data-capture-node="'+id+'"]'));if(selected.some(el=>!el))throw Error('A selected layer is unavailable in the snapshot.');
-    const boxes=selected.map(el=>el.getBoundingClientRect()).filter(box=>box.width>0&&box.height>0);if(!boxes.length)throw Error('The selected layers have no visible bounds.');
-    const left=Math.floor(Math.min(...boxes.map(b=>b.left))+scrollX),top=Math.floor(Math.min(...boxes.map(b=>b.top))+scrollY),right=Math.ceil(Math.max(...boxes.map(b=>b.right))+scrollX),bottom=Math.ceil(Math.max(...boxes.map(b=>b.bottom))+scrollY);
+    // display:contents wrappers have no principal box. Their rendered children
+    // still form a meaningful selection, including anonymous text fragments.
+    const boxes=[];
+    const measure=node=>{
+     if(node.nodeType===Node.TEXT_NODE){const range=document.createRange();range.selectNodeContents(node);for(const box of range.getClientRects())boxes.push(box);return;}
+     if(node.nodeType!==Node.ELEMENT_NODE)return;
+     if(getComputedStyle(node).display==='contents'){for(const child of node.childNodes)measure(child);return;}
+     boxes.push(node.getBoundingClientRect());
+    };
+    for(const node of selected)measure(node);
+    const visibleBoxes=boxes.filter(box=>box.width>0&&box.height>0);
+    if(!visibleBoxes.length)throw Error('The selected layers have no visible bounds.');
+    const bounds=visibleBoxes.reduce((all,box)=>({left:Math.min(all.left,box.left),top:Math.min(all.top,box.top),right:Math.max(all.right,box.right),bottom:Math.max(all.bottom,box.bottom)}),{left:Infinity,top:Infinity,right:-Infinity,bottom:-Infinity});
+    const left=Math.floor(bounds.left+scrollX),top=Math.floor(bounds.top+scrollY),right=Math.ceil(bounds.right+scrollX),bottom=Math.ceil(bounds.bottom+scrollY);
     if(left<0||top<0)throw Error('The selected layers extend outside the page. Move them inside the page before exporting.');
     // Definitions do not paint by themselves. Keep them available to symbols,
     // masks, paint servers and other selected SVG content.
