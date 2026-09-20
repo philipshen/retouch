@@ -5,7 +5,7 @@ function plan(resolved,op,style,adapter,family='text'){
  try{
   const color=family==='color',effect=family==='effect';
   const liquid=adapter.name==='liquid',classBased=liquid||adapter.name==='react';
-  if(!['html','react','liquid','vue'].includes(adapter.name))return refuse('These layers do not support this shared style family.');
+  if(!['html','react','liquid','vue','svelte'].includes(adapter.name))return refuse('These layers do not support this shared style family.');
   if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the layers.');
   const type={applyEffectStyleSelection:'applyEffectStyle',resetEffectStyleSelection:'resetEffectStyle',detachEffectStyleSelection:'detachEffectStyle',applyColorStyleSelection:'applyColorStyle',resetColorStyleSelection:'resetColorStyle',detachColorStyleSelection:'detachColorStyle',applyTextStyleSelection:'applyTextStyle',resetTextStyleSelection:'resetTextStyle',detachTextStyleSelection:'detachTextStyle'}[op.type||'applyTextStyleSelection'];
   if(!type||type.includes('Color')!==color||type.includes('Effect')!==effect)return refuse('Unsupported selection style operation.');
@@ -18,7 +18,7 @@ function plan(resolved,op,style,adapter,family='text'){
   if(liquid&&(!op.contexts||typeof op.contexts!=='object'||Array.isArray(op.contexts)||Object.keys(op.contexts).length!==ids.length||ids.some(id=>!Object.hasOwn(op.contexts,id))))return refuse('Re-select every Liquid layer to capture its rendered context.');
   const initial=adapter.collect(resolved.source,resolved.relPath).elements;
   if(ids.some(id=>initial.find(element=>element.id===id)?.kind!=='host'))return refuse('Every selected layer must belong to the same source file.');
-  const renderer=liquid?'liquid':adapter.name==='react'?'jsx':'html',linked=adapter.name==='vue'?(family==='text'?require('./vue-text-styles.cjs').create(adapter):require('./vue-linked-styles.cjs').create(family,adapter)):require('./'+renderer+'-'+(effect?'effect':color?'color':'text')+'-styles.cjs');let source=resolved.source;
+  const renderer=liquid?'liquid':adapter.name==='react'?'jsx':'html',linked=adapter.name==='svelte'?require('./svelte-linked-styles.cjs').create(family,adapter):adapter.name==='vue'?(family==='text'?require('./vue-text-styles.cjs').create(adapter):require('./vue-linked-styles.cjs').create(family,adapter)):require('./'+renderer+'-'+(effect?'effect':color?'color':'text')+'-styles.cjs');let source=resolved.source;
   for(const id of ids){
    const elements=adapter.collect(source,resolved.relPath).elements,element=elements.find(item=>item.id===id),hash=adapter.contentHash(source);
    if(!element)return refuse('A selected layer no longer resolves.');

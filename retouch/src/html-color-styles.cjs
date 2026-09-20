@@ -42,7 +42,7 @@ function plan(resolved,op,style){try{
  if(Object.keys(state).length>32)return refuse('A layer supports up to 32 color style scopes.');
  const element=html.collect(source,resolved.relPath).elements.find(e=>e.id===resolved.element.id);if(!element)return refuse('The linked layer changed.');
  const out=new MagicString(source),old=element.location.attrs?.[attribute];
- if(Object.keys(state).length){const value=JSON.stringify(state);if(value.length>128*1024)return refuse('Color style links are too large.');const token=attribute+'="'+value.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'"';if(old)out.overwrite(old.startOffset,old.endOffset,token);else out.appendLeft(element.location.startTag.startOffset+1+element.tag.length,' '+token);}else if(old)out.remove(old.startOffset,old.endOffset);
+ if(Object.keys(state).length){const value=JSON.stringify(state);if(value.length>128*1024)return refuse('Color style links are too large.');const token=attribute+'="'+(html.escapeAttribute?html.escapeAttribute(value):value.replace(/&/g,'&amp;').replace(/"/g,'&quot;'))+'"';if(old)out.overwrite(old.startOffset,old.endOffset,token);else out.appendLeft(element.location.startTag.startOffset+1+element.tag.length,' '+token);}else if(old)out.remove(html.attributeRemovalStart?.(source,old.startOffset)??old.startOffset,old.endOffset);
  const after=out.toString();return {ok:true,hash:html.contentHash(after),edits:after===resolved.source?[]:[{file:resolved.file,before:resolved.source,after}]};
 }catch(error){return refuse(error.message);}}
 function planFile(file,relPath,before,style){try{

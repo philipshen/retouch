@@ -216,10 +216,14 @@ responsive CSS into the component's existing stylesheet (or create one when
 absent). Single and multiple selections support base styles, minimum-width
 overrides, screen-scope reset, and exact undo/redo. Computed inline styles,
 important inline conflicts, ambiguous style identities, and non-CSS preprocessors
-are refused. Rich text, structural editing, linked style libraries, and
-component-property controls for Svelte are not implemented yet.
+are refused. Saved typography, color, and effect styles support applying,
+inheriting at another screen scope, local overrides, reset, detach, and
+multi-selection. Updating a library style also updates linked layers in unvisited
+Svelte components, with catalog and source changes in one undo transaction.
+Rich text, structural editing, shared variable bindings, and component-property
+controls for Svelte are not implemented yet.
 
-Simple literal text and managed style updates use development-only Svelte store
+Simple literal text, managed styles, and style links use development-only Svelte store
 bindings and an independent stylesheet so the component stays mounted, including
 through undo/redo. New conditional instances read the current text and styles.
 The inline editor temporarily edits cloned child nodes and restores Svelte's

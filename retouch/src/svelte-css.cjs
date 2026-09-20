@@ -152,14 +152,25 @@ function describe(resolved) {
   } catch (error) { return { cssAuthoring: true, cssReason: error.message, cssRules: {} }; }
 }
 function runtimeSnapshot(text, relative) {
-  const state = documentState(text, relative), ids = {};
+  const state = documentState(text, relative), ids = {}, attributes = {}, attributeHosts = {};
+  const linked = require('./svelte-linked-styles.cjs'), families = linked.families.map(family => linked.create(family));
   for (const element of state.parsed.elements) {
     try { ids[element.id] = inspect({ source: text, relPath: relative, element }, state).id; } catch { /* Leave computed or ambiguous identities untouched. */ }
+  }
+  for (const element of state.parsed.elements) if (Object.hasOwn(ids, element.id)) {
+    attributeHosts[element.id] = [];
+    for (const family of families) {
+      try {
+        family.links({ element }); attributeHosts[element.id].push(family.attribute);
+        const marker = element.attributes.find(a => a.name === family.attribute);
+        if (marker) attributes[element.id + '|' + family.attribute] = marker.value;
+      } catch { /* Computed metadata keeps its original compiler behavior. */ }
+    }
   }
   // A managed model must have valid owners before its compiled CSS is replaced.
   const supported = new Set(Object.values(ids));
   if (Object.keys(state.model.layers).some(id => !supported.has(id))) throw Error('A managed Svelte stylesheet has an unsupported source owner.');
-  return { state, ids, css: { id: identity(relative), text: stylesheet(state.model) + '\n' + selector(relative) + '{--retouch-css-revision:' + revision(state.model) + ';}' } };
+  return { state, ids, attributes, attributeHosts, css: { id: identity(relative), text: stylesheet(state.model) + '\n' + selector(relative) + '{--retouch-css-revision:' + revision(state.model) + ';}' } };
 }
 function removeManaged(out, state) {
   if (state.range) out.remove(state.model.created ? state.style.start : state.range.start, state.model.created ? state.style.end : state.range.end);

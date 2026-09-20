@@ -37,6 +37,7 @@ function textSnapshot(source,relPath){
   for(const element of elements)if(Object.hasOwn(styling.ids,element.id)){
    const marker=element.attributes.find(a=>a.name==='data-rt-style');
    if(marker&&source.slice(marker.start-1,marker.end)===' data-rt-style="'+marker.value+'"')out.remove(marker.start-1,marker.end);
+   for(const name of styling.attributeHosts[element.id]||[]){const attribute=element.attributes.find(a=>a.name===name);if(attribute)out.remove(require('./svelte-linked-styles.cjs').attributeRemovalStart(source,attribute.start),attribute.end);}
   }
  }catch{/* Unsupported authored CSS still uses ordinary Svelte compilation. */}
  return {elements,ast,texts,styling,signature:out.toString(),revision:contentHash(source)};
@@ -51,10 +52,14 @@ function stamp(source,file,root,{runtime=false}={}){
    for(const element of elements)if(Object.hasOwn(snapshot.styling.ids,element.id)){
     const old=element.attributes.find(a=>a.name==='data-rt-style'),token='data-rt-style={$'+binding+'.styleIds['+JSON.stringify(element.id)+']}';
     if(old)out.overwrite(old.start,old.end,token);else out.appendLeft(element.start+1+element.tag.length,' '+token);
+    for(const name of snapshot.styling.attributeHosts[element.id]||[]){
+     const attribute=element.attributes.find(a=>a.name===name),bindingToken=name+'={$'+binding+'.attributes['+JSON.stringify(element.id+'|'+name)+']}';
+     if(attribute)out.overwrite(attribute.start,attribute.end,bindingToken);else out.appendLeft(element.start+1+element.tag.length,' '+bindingToken);
+    }
    }
   }
   for(const element of elements)if(Object.hasOwn(snapshot.texts,element.id)){const range=textRange(element,source),expression='{$'+binding+'.texts['+JSON.stringify(element.id)+']}';if(range.start===range.end)out.appendLeft(range.start,expression);else out.overwrite(range.start,range.end,expression);}
-  const script='\nimport {sourceState as '+binding+'_create} from "virtual:retouch-svelte-source";\nconst '+binding+' = '+binding+'_create('+JSON.stringify(relative)+','+JSON.stringify({revision,signature:contentHash(snapshot.signature),texts:snapshot.texts,styleIds:snapshot.styling?.ids||{},css:snapshot.styling?.css||null}).replace(/</g,'\\u003c')+');\n';
+  const script='\nimport {sourceState as '+binding+'_create} from "virtual:retouch-svelte-source";\nconst '+binding+' = '+binding+'_create('+JSON.stringify(relative)+','+JSON.stringify({revision,signature:contentHash(snapshot.signature),texts:snapshot.texts,attributes:snapshot.styling?.attributes||{},styleIds:snapshot.styling?.ids||{},css:snapshot.styling?.css||null}).replace(/</g,'\\u003c')+');\n';
   if(ast.module)out.appendLeft(ast.module.content.start,script);else out.prepend('<script module>'+script+'</script>\n');
  }
  return {code:out.toString(),map:out.generateMap({hires:true,source:file,includeContent:true})};

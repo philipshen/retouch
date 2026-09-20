@@ -18,3 +18,15 @@ test('Vue HMR preserves the compiler decision for script/style changes and rejec
  assert.equal(transform(head+flag+accept,file,'invalid'),null);
  const transformed=transform(head+flag+accept,file,revision('b'));assert.equal(transform(transformed.code,file,revision('c')),null);assert.ok(transformed.map.toString().includes('sourcesContent'));
 });
+test('Vue script fingerprints prevent template-only classification from retaining old script state',()=>{
+ const {scriptHash}=require('../src/vue-hmr.cjs'),zero='<script setup>const count=ref(0)</script><template><h1>Hello</h1></template>',four=zero.replace('ref(0)','ref(4)'),a=scriptHash(zero,file),b=scriptHash(four,file),hot={data:{},accept(){}};
+ assert.notEqual(a,b);assert.equal(scriptHash(zero.replace('Hello','Edited'),file),a);
+ assert.equal(scriptHash(zero+'<style>h1{color:red}</style>',file),a);
+ evaluate(transform(head+accept,file,revision('a'),a).code,hot);
+ assert.equal(evaluate(transform(head+flag+accept,file,revision('b'),a).code,hot),true,'template-only edits retain state');
+ assert.equal(evaluate(transform(head+flag+accept,file,revision('c'),b).code,hot),false,'script changes override a stale template-only decision');
+ assert.equal(evaluate(transform(head+flag+accept,file,revision('a'),a).code,hot),false,'exact script restores must recreate state too');
+ assert.notEqual(scriptHash(zero.replace('<script setup>','<script setup lang="ts">'),file),a);
+ assert.notEqual(scriptHash(zero.replace('const count=ref(0)','const count=ref(0);defineProps(["value"])'),file),a);
+ assert.equal(transform(head+flag+accept,file,revision('a'),'invalid'),null);
+});

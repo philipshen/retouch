@@ -73,7 +73,7 @@ function retouch(options={}){
    try{
     const real=fs.realpathSync(id),realRelative=path.relative(config.root,real);if(real.split(path.sep).includes('node_modules')||realRelative.startsWith('..'+path.sep)||path.isAbsolute(realRelative))return null;
     if(sourceAdapter.name==='svelte'){svelteFiles.set(realRelative.split(path.sep).join('/'),real);if(!svelteSnapshots.has(real))svelteSnapshots.set(real,require('./svelte-source.cjs').textSnapshot(source,realRelative.split(path.sep).join('/')));return sourceAdapter.stamp(source,real,config.root,{runtime:true});}
-    if(sourceAdapter.name==='vue'){vueSourceRevisions.set(id,sourceAdapter.contentHash(source));return sourceAdapter.stamp(source,real,config.root);}
+    if(sourceAdapter.name==='vue'){vueSourceRevisions.set(id,{revision:sourceAdapter.contentHash(source),scriptRevision:require('./vue-hmr.cjs').scriptHash(source,real)});return sourceAdapter.stamp(source,real,config.root);}
     const helper=path.join(path.dirname(real),'.retouch-group-scale.jsx'),runtime=require('./react-group-scale-runtime.cjs');if(fs.existsSync(helper))this.addWatchFile(helper);
     return require('./stamp.cjs').stamp(source,real,config.root,{groupScaleRuntime:virtual,redirectGroupScaleRuntime:fs.existsSync(helper)&&fs.readFileSync(helper,'utf8')===runtime.component()});
    }catch(error){this.warn('[retouch] Stamping skipped for '+id+': '+error.message);return null;}
@@ -107,7 +107,7 @@ function retouch(options={}){
  return [plugin,{name:'retouch-vue-source-hmr',apply:'serve',enforce:'post',transform(code,id,options){
   if(config?.command!=='serve'||sourceAdapter?.name!=='vue'||options?.ssr||id.includes('?')||!id.endsWith('.vue'))return null;
   const revision=vueSourceRevisions.get(id);if(!revision)return null;
-  return require('./vue-hmr.cjs').transform(code,fs.realpathSync(id),revision);
+  return require('./vue-hmr.cjs').transform(code,fs.realpathSync(id),revision.revision,revision.scriptRevision);
  }}];
 }
 module.exports={retouch};module.exports.default=retouch;

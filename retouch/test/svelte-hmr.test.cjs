@@ -2,7 +2,7 @@
 const { test } = require('node:test'), assert = require('node:assert/strict'), vm = require('node:vm');
 const { runtime } = require('../src/svelte-hmr.cjs');
 const hash = number => String(number).repeat(40), signature = hash(9), file = 'App.svelte';
-const data = (sequence, text = String(sequence), extra = {}) => ({ file, epoch: 'test-server', sequence, revision: hash(sequence), signature, texts: { heading: text }, styleIds: { heading: 'aaaaaaaaaa' }, css: { id: 'bbbbbbbbbb', text: 'h1{opacity:' + sequence / 10 + '}' }, ...extra });
+const data = (sequence, text = String(sequence), extra = {}) => ({ file, epoch: 'test-server', sequence, revision: hash(sequence), signature, texts: { heading: text }, attributes: {}, styleIds: { heading: 'aaaaaaaaaa' }, css: { id: 'bbbbbbbbbb', text: 'h1{opacity:' + sequence / 10 + '}' }, ...extra });
 function fixture() {
   const listeners = new Map(), dom = new Map(), sent = [], invalidations = [], styles = []; let clock = 0;
   const target = { addEventListener: (type, fn) => dom.set(type, fn), removeEventListener: type => dom.delete(type) };

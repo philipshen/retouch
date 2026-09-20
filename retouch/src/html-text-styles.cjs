@@ -1,5 +1,6 @@
 'use strict';
-const MagicString=require('magic-string'),html=require('./adapters/html.cjs'),css=require('./html-css.cjs'),catalog=require('./text-styles.cjs');
+const MagicString=require('magic-string'),catalog=require('./text-styles.cjs');
+function create(html=require('./adapters/html.cjs'),css=require('./html-css.cjs')){
 const attribute='data-rt-text-styles';
 const refuse=reason=>({ok:false,refused:true,reason});
 const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
@@ -49,8 +50,8 @@ function plan(resolved,op,style){
   }else if(op.type==='detachTextStyle')delete current[op.width];else return refuse('Unsupported text style operation.');
   const element=html.collect(source,resolved.relPath).elements.find(e=>e.id===resolved.element.id);if(!element)return refuse('The layer changed during text style application.');
   const out=new MagicString(source),old=element.location.attrs?.[attribute];
-  if(Object.keys(current).length){const serialized=JSON.stringify(current);if(serialized.length>128*1024)return refuse('The layer text style links are too large.');const token=attribute+'="'+escape(serialized)+'"';if(old)out.overwrite(old.startOffset,old.endOffset,token);else out.appendLeft(element.location.startTag.startOffset+1+element.tag.length,' '+token);}
-  else if(old)out.remove(old.startOffset,old.endOffset);
+  if(Object.keys(current).length){const serialized=JSON.stringify(current);if(serialized.length>128*1024)return refuse('The layer text style links are too large.');const token=attribute+'="'+(html.escapeAttribute||escape)(serialized)+'"';if(old)out.overwrite(old.startOffset,old.endOffset,token);else out.appendLeft(element.location.startTag.startOffset+1+element.tag.length,' '+token);}
+  else if(old)out.remove(html.attributeRemovalStart?.(source,old.startOffset)??old.startOffset,old.endOffset);
   const after=out.toString();return {ok:true,hash:html.contentHash(after),edits:after===resolved.source?[]:[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return refuse(error.message);}
 }
@@ -78,4 +79,6 @@ function planFile(file,relPath,before,style){
   return {ok:true,updated,edits:source===before?[]:[{file,before,after:source}]};
  }catch(error){return refuse(error.message);}
 }
-module.exports={links,describe,plan,planFile};
+return {links,describe,plan,planFile};
+}
+module.exports={...create(),create};
