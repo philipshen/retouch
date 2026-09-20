@@ -1,6 +1,7 @@
 'use strict';
 const sanitize=require('./capture-sanitize.cjs').sanitize,rewrite=require('./capture-css-urls.cjs').rewrite;
 function validate(body){
+ if(body?.combined!==undefined&&(typeof body.combined!=='boolean'||body.combined&&(body.format!=='pdf'||!body.screens&&!body.separate)))throw Error('Combined output requires PDF and multiple screens or separate layers.');
  if(body?.screens!==undefined){
   if(!Array.isArray(body.screens)||!body.screens.length||body.screens.length>20||body.separate||!['viewport','page'].includes(body.area||'viewport'))throw Error('Choose up to 20 screens and viewport or full-page export.');
   for(const screen of body.screens){if(!screen||typeof screen!=='object'||screen.screens!==undefined||screen.separate||typeof screen.name!=='string'||screen.name.length>200)throw Error('Invalid screen export snapshot.');validate(require('./screen-export-batch.cjs').screenRequest(body,screen));}
