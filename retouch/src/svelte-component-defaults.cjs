@@ -12,15 +12,21 @@ function read(text){
 function plan(r,op,def){try{
  if(op.fileHash!==r.hash)throw Error('The component usage changed. Re-select it.');
  const defaults=read(def.text),fallback=defaults.get(op.name),hash=source.contentHash(def.text),info=props.describe(r),existing=info.props.find(p=>p.name===op.name);
- if(!fallback||op.definitionHash!==hash)throw Error('The component default changed. Re-select the instance.');
+ const contracts=require('./svelte-component-choices.cjs').read(def.text),contract=contracts.get(op.name),remove=op.reset===true||op.clear===true;
+ if(op.reset&&op.clear)throw Error('Choose reset or unset, not both.');
+ if(op.definitionHash!==hash||!fallback&&!contract?.supported)throw Error('The component default or type changed. Re-select the instance.');
+ if(op.reset&&!fallback)throw Error('This property has no editable literal default.');
+ if(op.clear&&(!contract?.optional||contracts.hasDefault(op.name)))throw Error('Only an optional property without a default can be unset.');
+ if(!remove&&!fallback&&contracts.hasDefault(op.name))throw Error('This property uses a computed default.');
  if(existing&&!existing.editable||info.element.node.attributes.some(a=>a.type==='SpreadAttribute'))throw Error('This property is controlled by a binding or spread.');
  if(!/^[A-Za-z_$][\w$-]*$/.test(op.name)||/^(?:data-rt|__retouch)/.test(op.name)||['children','slot','this'].includes(op.name))throw Error('This property has special component behavior.');
- if(!op.reset&&(typeof op.value!==fallback.type||fallback.type==='number'&&!Number.isFinite(op.value)||fallback.type==='string'&&(op.value.length>100000||op.value.includes('\0'))))throw Error('Use a valid '+fallback.type+' property value.');
+ const type=contract?.supported?contract.type:fallback?.type;
+ if(!remove&&(typeof op.value!==type||type==='number'&&!Number.isFinite(op.value)||type==='string'&&(op.value.length>100000||op.value.includes('\0'))))throw Error('Use a valid '+type+' property value.');
  const out=new MagicString(r.source),attribute=info.element.node.attributes.find(a=>a.name===op.name);
- if(op.reset){if(attribute){let start=attribute.start;while(start>info.element.start+1+info.element.tag.length&&/\s/.test(r.source[start-1]))start--;out.remove(start,attribute.end);}}
+ if(remove){if(attribute){let start=attribute.start;while(start>info.element.start+1+info.element.tag.length&&/\s/.test(r.source[start-1]))start--;out.remove(start,attribute.end);}}
  else{if(attribute)throw Error('Edit the existing property through its literal editor.');const value=Object.is(op.value,-0)?'-0':JSON.stringify(op.value).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');out.appendLeft(info.element.start+1+info.element.tag.length,' '+op.name+'={'+value+'}');}
  const after=out.toString(),next=source.collect(after,r.relPath);for(const key of ['elements','components'])if(info.parsed[key].length!==next[key].length||info.parsed[key].some((e,i)=>e.id!==next[key][i].id||e.tag!==next[key][i].tag))throw Error('The default edit would change source identities.');compiler.compile(after,{filename:r.relPath,generate:false});
- const saved=props.describe({...r,source:after},next).props.find(p=>p.name===op.name);if(op.reset?saved!==undefined:!Object.is(saved?.value,op.value))throw Error('The component property was not preserved.');
+ const saved=props.describe({...r,source:after},next).props.find(p=>p.name===op.name);if(remove?saved!==undefined:!Object.is(saved?.value,op.value))throw Error('The component property was not preserved.');
  const parent=info.parsed.elements.filter(e=>e.start<info.element.start&&e.end>=info.element.end).sort((a,b)=>b.start-a.start)[0];
  return {ok:true,hash:source.contentHash(after),componentProp:{instanceId:r.element.id,parentId:parent?.id||null},edits:after===r.source?[]:[{file:r.file,before:r.source,after},...(def.file!==r.file?[{file:def.file,before:def.text,after:def.text}]:[])]};
  }catch(error){return {ok:false,refused:true,reason:error.message};}}

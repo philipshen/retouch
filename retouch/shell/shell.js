@@ -2504,7 +2504,7 @@ function propTable(props,instanceId,fileHash,options={}) {
       if(meta.unset&&meta.type==='string'){emptyButton=RetouchInspector.button('Set empty text',()=>{window.RetouchPanelFocus.queueControl(emptyButton,'Component property '+prop.name);setComponentProperty(instanceId,prop.name,'',fileHash,{definitionHash:meta.definitionHash});});emptyButton.setAttribute('aria-label','Set '+prop.name+' to empty text');input.addEventListener('input',()=>{emptyButton.hidden=input.value!=='';});value.append(emptyButton);}
     }else{value.textContent=prop.value;value.title=prop.editor?.reason||'';}
     if(instanceId&&prop.editor?.canReset){const reset=RetouchInspector.button('Reset',()=>{window.RetouchPanelFocus.queueControl(reset,'Component property '+prop.name);setComponentProperty(instanceId,prop.name,undefined,fileHash,{reset:true,definitionHash:prop.editor.definitionHash});});reset.setAttribute('aria-label','Reset '+prop.name+' to default');reset.title='Remove this instance override and use the component default.';reset.textContent='↺';value.append(reset);}
-    if(instanceId&&prop.editor?.canClear&&!prop.editor.choices){const clear=RetouchInspector.button('Unset',()=>{window.RetouchPanelFocus.queueControl(clear,'Component property '+prop.name);setComponentProperty(instanceId,prop.name,undefined,fileHash,{clear:true,definitionHash:prop.editor.definitionHash});});clear.setAttribute('aria-label','Unset property '+prop.name);value.append(clear);}
+    if(instanceId&&prop.editor?.canClear&&!prop.editor.unset&&!prop.editor.choices){const clear=RetouchInspector.button('Unset',()=>{window.RetouchPanelFocus.queueControl(clear,'Component property '+prop.name);setComponentProperty(instanceId,prop.name,undefined,fileHash,{clear:true,definitionHash:prop.editor.definitionHash});});clear.setAttribute('aria-label','Unset property '+prop.name);value.append(clear);}
     if(instanceId&&prop.defaultEditor){const edit=RetouchInspector.button('Default…',()=>RetouchComponentDefault.open({name:prop.name,meta:prop.defaultEditor,opener:edit,save:next=>setComponentDefault(instanceId,prop.name,next,fileHash,prop.defaultEditor.revision)}));edit.setAttribute('aria-label','Edit default for '+prop.name);edit.title='Edit the shared component default';value.append(edit);}
     if(prop.editor?.inherited){const note=document.createElement('small');note.textContent='Default';value.append(note);}
     if(instanceId){name.title='Default: '+prop.default;for(const control of value.querySelectorAll('input,textarea,select'))control.setAttribute('aria-description','Default: '+prop.default);}
@@ -2588,7 +2588,7 @@ function componentSelectionSection(infos){
    const row=document.createElement('div');row.className='field';const label=document.createElement('label');label.textContent=prop.name;
    const input=document.createElement(choices&&!booleanToggle?'select':type==='string'?'textarea':'input');input.setAttribute('aria-label','Shared component property '+prop.name);input.disabled=!editable||choices?.length===0;
    if(choices&&!booleanToggle){if(mixed||metas[0].unset){const option=new Option(mixed?'Mixed':'Not set','');option.disabled=true;input.append(option);}choices.forEach((value,i)=>input.append(new Option(String(value),String(i))));input.value=mixed||metas[0].unset?'':String(choices.indexOf(metas[0].value));}
-   else if(type==='boolean'){input.type='checkbox';input.checked=!mixed&&!!metas[0].value;input.indeterminate=mixed;}
+   else if(type==='boolean'){input.type='checkbox';input.checked=!mixed&&!!metas[0].value;input.indeterminate=mixed||!!metas[0].unset;}
    else{if(type!=='string'){input.type='number';input.step='any';}else{input.rows=1;input.className='component-prop-text';}input.value=mixed||metas[0].unset?'':String(metas[0].value??'');input.placeholder=mixed?'Mixed':metas[0].unset?'Not set':'';}
    const save=(value,options={})=>setComponentPropertySelection(infos,key,prop.name,value,hashes,options);
    const initial={value:input.value,checked:input.checked,indeterminate:input.indeterminate};let canceled=false;
@@ -2606,7 +2606,7 @@ function componentSelectionSection(infos){
    if(!editable)RetouchInspector.note(row,metas.find(meta=>!meta.editable)?.reason||'These properties have different types.');
    if(choices?.length===0)RetouchInspector.note(row,'These properties have no allowed value in common.');
    if(metas.every(meta=>meta.canReset))row.append(RetouchInspector.button('Reset '+prop.name+' to defaults',()=>save(undefined,{reset:true})));
-   if(metas.every(meta=>meta.canClear))row.append(RetouchInspector.button('Unset '+prop.name,()=>save(undefined,{clear:true})));
+   if(metas.every(meta=>meta.canClear)&&metas.some(meta=>!meta.unset))row.append(RetouchInspector.button('Unset '+prop.name,()=>save(undefined,{clear:true})));
    section.append(row);
   }
  }).catch(error=>{if(section.isConnected)RetouchInspector.note(section,'Could not load shared properties: '+error.message);});

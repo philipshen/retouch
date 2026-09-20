@@ -3,7 +3,7 @@ const compiler=require('svelte/compiler'),props=require('./svelte-component-prop
 // Inspect authored contracts without executing code. Unknown declared types stay
 // read-only rather than becoming unrestricted inputs inferred from one usage.
 function read(text){
- const ast=compiler.parse(text,{modern:true}),declarations=new Map(),fields=new Map();let contract=null,declared=false;
+ const ast=compiler.parse(text,{modern:true}),declarations=new Map(),fields=new Map(),optional=new Set(),defaulted=new Set();let contract=null,declared=false;
  const statements=[...(ast.module?.content.body||[]),...(ast.instance?.content.body||[])].map(s=>s.type==='ExportNamedDeclaration'?s.declaration:s).filter(Boolean);
  for(const s of statements)if(['TSTypeAliasDeclaration','TSInterfaceDeclaration'].includes(s.type)){const name=s.id.name;declarations.set(name,declarations.has(name)?null:s);}
  for(const statement of statements)if(statement.type==='ImportDeclaration')for(const specifier of statement.specifiers)declarations.set(specifier.local.name,null);
@@ -38,12 +38,14 @@ function read(text){
   const s=statement.type==='ExportNamedDeclaration'?statement.declaration:statement;
   if(s?.type!=='VariableDeclaration')continue;
   for(const item of s.declarations){
+   if(statement.type==='ExportNamedDeclaration'&&s.kind==='let'&&item.id.type==='Identifier'&&item.init)defaulted.add(item.id.name);
+   if(item.init?.type==='CallExpression'&&item.init.callee.name==='$props'&&item.id.type==='ObjectPattern')for(const property of item.id.properties)if(property.type==='Property'&&!property.computed&&property.value.type==='AssignmentPattern')defaulted.add(property.key.name??property.key.value);
    if(statement.type==='ExportNamedDeclaration'&&s.kind==='let'&&item.id.type==='Identifier'&&item.id.typeAnnotation)fields.set(item.id.name,item.id.typeAnnotation.typeAnnotation);
    if(item.init?.type==='CallExpression'&&item.init.callee.name==='$props'&&item.id.typeAnnotation){declared=true;contract=item.id.typeAnnotation.typeAnnotation;}
   }
  }
- if(declared){const list=members(contract);if(list&&!list.some(f=>f.type!=='TSPropertySignature'||f.computed))for(const field of list){const name=field.key.name??field.key.value;fields.set(name,fields.has(name)?null:field.typeAnnotation?.typeAnnotation);}else contract=null;}
- return {get(name){visits=0;if(generic)return {supported:false};if(!fields.has(name))return declared?{supported:false}:null;const value=primitive(fields.get(name));return value?{supported:true,...value}:{supported:false};}};
+ if(declared){const list=members(contract);if(list&&!list.some(f=>f.type!=='TSPropertySignature'||f.computed))for(const field of list){const name=field.key.name??field.key.value;fields.set(name,fields.has(name)?null:field.typeAnnotation?.typeAnnotation);if(field.optional)optional.add(name);}else contract=null;}
+ return {names:[...fields.keys()],hasDefault:name=>defaulted.has(name),get(name){visits=0;if(generic)return {supported:false};if(!fields.has(name))return declared?{supported:false}:null;const value=primitive(fields.get(name));return value?{supported:true,...value,...(optional.has(name)?{optional:true}:{})}:{supported:false};}};
 }
 function accepts(contract,value){return contract?.supported&&typeof value===contract.type&&(!contract.choices||contract.choices.includes(value));}
 module.exports={read,accepts};

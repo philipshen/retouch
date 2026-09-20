@@ -31,6 +31,7 @@ exports.run=async({page,app,phone,file,original,state})=>{
  await require('./svelte-component-batch-props.cjs').run({page,app,phone,file,original,state});
  await require('./svelte-component-defaults.cjs').run({page,app,phone,file,original,state});
  if(process.env.RT_SVELTE_COMPONENT_CHOICES==='1')await require('./svelte-component-choices.cjs').run({page,app,phone,file,original,state});
+ if(process.env.RT_SVELTE_COMPONENT_OPTIONAL==='1')await require('./svelte-component-optional.cjs').run({page,app,phone,file,original,state});
  await page.screenshot({path:'/tmp/retouch-svelte-component-branches-'+(process.env.RT_E2E_BROWSER||'chromium')+'.png'});
  console.log('SVELTE CONDITIONAL COMPONENT ROOT GROUPS, BRANCH SELECTION AND BOOLEAN UI HISTORY PASS');
  console.log('SVELTE CANVAS COMPONENT SELECTION, INSPECTOR PROPERTY AND EXACT UI HISTORY PASS');
