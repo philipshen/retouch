@@ -31,3 +31,37 @@ test('Svelte utility names resolve lexically and unsupported contracts stay read
 test('Svelte local utility contracts support ESTree arguments without project context',()=>{
  const read=require('../src/svelte-component-choices.cjs').read;const c=read('<script lang="ts">type Base={tone:"quiet"|"bold";amount:number};let {tone="quiet"}:Readonly<Partial<Pick<Base,"tone">>>=$props();</script>');assert.deepEqual(c.get('tone'),{supported:true,type:'string',choices:['quiet','bold'],optional:true});
 });
+test('Svelte filtered finite contracts expose only permitted choices',()=>{
+ const read=require('../src/svelte-component-choices.cjs').read;
+ for(const [type,expected]of [
+  ['Exclude<"quiet"|"bold"|"hidden","hidden">',['quiet','bold']],
+  ['Extract<"quiet"|"bold"|1,string>',['quiet','bold']],
+  ['Exclude<Extract<"quiet"|"bold"|1,string>,"quiet">',['bold']],
+  ['Exclude<boolean,false>',[true]],['Extract<-1|2,number>',[-1,2]],
+  ['Exclude<"quiet"|"bold",never>',['quiet','bold']],
+  ['Extract<"quiet"|"bold",unknown>',['quiet','bold']]
+ ]){const result=read('<script lang="ts">let {tone}:{tone:'+type+'}=$props();</script>').get('tone');assert.equal(result.supported,true,type);assert.deepEqual(result.choices,expected,type);}
+});
+test('Svelte indexed contracts preserve module ownership and source history',t=>{
+ const f=fixture(t);fs.writeFileSync(f.types,'type Tone="quiet"|"bold"|"hidden";interface Base{tone:Exclude<Tone,"hidden">;amount:Extract<-1|2|"other",number>}interface Registry{props:Base}export type Props=Registry["props"];');
+ const info=adapter.describeComponent(f.r);assert.deepEqual(info.props.find(p=>p.name==='tone').editor.choices,['quiet','bold']);assert.deepEqual(info.props.find(p=>p.name==='amount').editor.choices,[-1,2]);assert.equal(property(f,{value:'hidden'}).refused,true);
+ const plan=property(f);assert.equal(plan.ok,true,plan.reason);assert.ok(plan.edits.some(e=>e.file===f.types));const h=new SourceHistory(),saved=h.commit(f.root,plan);assert.equal(saved.ok,true,saved.reason);assert.equal(h.apply(f.root,'undo',saved.undoId,adapter).ok,true);assert.equal(fs.readFileSync(f.file,'utf8'),f.text);
+ const defaults=adapter.planOp(f.r,{type:'setComponentDefault',fileHash:f.r.hash,name:'tone',value:'bold',revision:info.props.find(p=>p.name==='tone').defaultEditor.revision});assert.equal(defaults.ok,true,defaults.reason);fs.appendFileSync(f.types,'\n// changed');assert.equal(h.commit(f.root,defaults).ok,false);
+});
+test('Svelte indexed primitive choices support inherited keys and filtered key selections',()=>{
+ const read=require('../src/svelte-component-choices.cjs').read;
+ const c=read('<script lang="ts">interface Base{quiet:"quiet"}interface Values extends Base{bold:"bold";hidden:"hidden"}type Keys=Exclude<keyof Values,"hidden">;let {tone}:{tone:Values[Keys]}=$props();</script>');assert.deepEqual(c.get('tone').choices,['quiet','bold']);
+ const d=read('<script lang="ts">interface Values{quiet:"quiet";bold:"bold";hidden:"hidden"}type Keys=Exclude<"quiet"|"bold"|"hidden","hidden">;let {tone}:{tone:Values[Keys]}=$props();</script>');assert.deepEqual(d.get('tone').choices,['quiet','bold']);
+});
+test('Svelte unsupported indexed and filtered types remain read-only without guessing',()=>{
+ const read=require('../src/svelte-component-choices.cjs').read;
+ for(const type of ['Extract<"quiet",never>','Exclude<"quiet",unknown>','Exclude<"quiet",Missing>','Extract<string,"quiet">','Extract<"quiet"|string[],string>','Extract<"quiet"|1,unknown>','Values["missing"]','Values["optional"]','Values[string]','Loop','Exclude<Loop,"quiet">']){
+  const c=read('<script lang="ts">interface Values{optional?:"quiet";tone:"quiet"}type Loop=Values["tone"]|Loop;let {tone}:{tone:'+type+'}=$props();</script>');assert.equal(c.get('tone').supported,false,type);
+ }
+ const shadow=read('<script lang="ts">type Exclude<T,U>="other";let {tone}:{tone:Exclude<"quiet","bold">}=$props();</script>');assert.equal(shadow.get('tone').supported,false);
+});
+test('Svelte insertion validates filtered required choices and dependency revisions',t=>{
+ const f=fixture(t),definitions=require('../src/svelte-component-definitions.cjs');const text=f.definition.replace('tone="quiet"','tone');fs.writeFileSync(f.def,text);fs.writeFileSync(f.types,'interface Values{tone:Exclude<"quiet"|"bold"|"hidden","hidden">}export interface Props{tone:Values["tone"];amount?:number}');
+ const schema=definitions.schema(text,{file:f.def,appRoot:f.root}),meta=definitions.definitions(text,'Badge.svelte')[0],r=f.index.resolve(adapter.collect(f.text,'App.svelte').elements.find(e=>e.tag==='main').id);assert.deepEqual(schema.properties.find(p=>p.name==='tone').choices,['quiet','bold']);assert.equal(schema.properties.find(p=>p.name==='tone').required,true);
+ const op={type:'insertComponent',fileHash:r.hash,definitionFile:'Badge.svelte',definitionId:meta.definitionId,definitionHash:adapter.contentHash(text),contractHash:schema.revision,props:{tone:'hidden'}};assert.equal(adapter.planOp(r,op).refused,true);op.props.tone='bold';const plan=adapter.planOp(r,op);assert.equal(plan.ok,true,plan.reason);fs.appendFileSync(f.types,' ');assert.equal(new SourceHistory().commit(f.root,plan).ok,false);
+});

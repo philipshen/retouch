@@ -28273,3 +28273,27 @@ state, exact history, production exclusion and recovery from 96 dropped updates
 (/tmp/retouch-svelte-utility-{chromium,webkit}.log). Desktop artifacts were not
 rebuilt for this source change. Full Figma parity, arbitrary-site coverage and
 notarized public macOS distribution remain incomplete.
+
+### Svelte indexed and filtered property contracts checkpoint
+
+Svelte property inspection now resolves indexed object contracts and primitive
+fields, including inherited named keys, finite key unions and filtered keyof
+selections. Extract and Exclude narrow finite string, number and boolean unions
+before controls are exposed. Imported module ownership and source guards remain
+intact for instance edits, defaults and initial library properties.
+
+Five added tests cover filtered choices, indexed module contracts and exact undo,
+inherited/filtered keys, unsupported and recursive contracts, required insertion
+choices and pending-plan invalidation after a dependency changes. Empty or mixed
+result types, broad unknown choices, optional indexed fields, index signatures
+and unsupported type constructs remain read-only; this is not a full TypeScript
+interpreter and does not execute project code.
+
+All 2,409 unit tests passed (/tmp/retouch-svelte-indexed-full.log). Chromium and
+WebKit passed the combined aliased Svelte component workflows after the fixture's
+library, swap and shared-default contracts were expressed through indexed types,
+Extract and Exclude. They verified required controls, exact history, retained
+state, production exclusion and recovery from 96 dropped update notifications
+(/tmp/retouch-svelte-indexed-{chromium,webkit}.log). Desktop artifacts were not
+rebuilt for this change. Full Figma parity, arbitrary-site coverage and trusted
+public macOS distribution remain incomplete.
