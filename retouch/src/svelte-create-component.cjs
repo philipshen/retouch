@@ -12,26 +12,51 @@ function plan(r,op,adapter){try{
  function walk(node,visit){if(!node||typeof node!=='object')return;visit(node);for(const [key,value]of Object.entries(node)){if(['loc','metadata'].includes(key))continue;if(Array.isArray(value))value.forEach(n=>walk(n,visit));else if(value&&typeof value==='object')walk(value,visit);}}
  let collision=false;walk(parsed.ast,n=>{if(n.name===op.name)collision=true;});if(collision)throw Error('That name is already used in this file.');
  const captures=[],fragment=new MagicString(r.source.slice(selected.start,selected.end)),used=new Set();walk(selected.node,n=>{if(typeof n.name==='string')used.add(n.name);});
- function capture(expression,bindable=false,lazy=false){
+ let runeMode;
+ function checkLocalWrite(target,locals){
+  if(!target)return;
+  if(target.type==='ObjectPattern'){for(const property of target.properties)checkLocalWrite(property.type==='RestElement'?property.argument:property.value,locals);return;}
+  if(target.type==='ArrayPattern'){for(const element of target.elements)checkLocalWrite(element,locals);return;}
+  if(target.type==='AssignmentPattern'||target.type==='RestElement'){checkLocalWrite(target.left||target.argument,locals);return;}
+  let base=target;while(base?.type==='MemberExpression')base=base.object;
+  if(base?.type==='Identifier'&&locals.includes(base.name)){
+   if(target.type==='Identifier')throw Error('Replacing a loop item needs its original collection context.');
+   runeMode??=compiler.compile(r.source,{filename:r.relPath,generate:false}).metadata.runes;
+   if(!runeMode)throw Error('Mutating legacy loop items needs its original collection context.');
+  }
+ }
+ function capture(expression,bindable=false,lazy=false,locals=[]){
+  if(bindable)checkLocalWrite(expression,locals);
+  walk(expression,n=>{if(n.type==='AssignmentExpression')checkLocalWrite(n.left,locals);if(n.type==='UpdateExpression')checkLocalWrite(n.argument,locals);if(['ForInStatement','ForOfStatement'].includes(n.type)&&n.left.type!=='VariableDeclaration')checkLocalWrite(n.left,locals);});
   let unsafe=false;walk(expression,n=>{if(['AssignmentExpression','UpdateExpression','AwaitExpression','YieldExpression','CallExpression','NewExpression','ThisExpression','Super','MetaProperty'].includes(n.type))unsafe=true;});
   // A callback remains an expression at the original call site, retaining its
   // closure, mutations and event arguments. Other evaluated side effects stay put.
   if(unsafe&&!['ArrowFunctionExpression','FunctionExpression'].includes(expression.type))throw Error('Move side effects into a callback before creating this component.');
   const named=!lazy&&expression.type==='Identifier'&&/^[A-Za-z_][\w$]*$/.test(expression.name)&&!['children','__proto__'].includes(expression.name);
   let name=named?expression.name:'value'+(captures.length+1);
-  const raw=r.source.slice(expression.start,expression.end),existing=expression.type==='Identifier'&&captures.find(c=>c.raw===raw&&c.lazy===lazy);if(existing){if(bindable)existing.bindable=true;return existing.name+(lazy?'()':'');}
+  const raw=r.source.slice(expression.start,expression.end),parameters=locals.join(', '),call=lazy?'('+parameters+')':'',existing=expression.type==='Identifier'&&captures.find(c=>c.raw===raw&&c.lazy===lazy&&c.parameters===parameters);if(existing){if(bindable)existing.bindable=true;return existing.name+call;}
   if(!named)while(used.has(name))name+='Value';used.add(name);
-  captures.push({name,raw,lazy,expression:lazy?'()=>('+raw+')':raw,bindable});return name+(lazy?'()':'');
+  captures.push({name,raw,lazy,parameters,expression:lazy?'('+parameters+')=>('+raw+')':raw,bindable});return name+call;
  }
- function template(node,lazy=false){
+ function template(node,lazy=false,locals=[]){
   if(node.type==='Text'||node.type==='Comment')return;
-  if(node.type==='ExpressionTag'){fragment.overwrite(node.expression.start-selected.start,node.expression.end-selected.start,capture(node.expression,false,lazy));return;}
+  if(node.type==='ExpressionTag'){fragment.overwrite(node.expression.start-selected.start,node.expression.end-selected.start,capture(node.expression,false,lazy,locals));return;}
   // Getter props keep branch reads in their original evaluation context; eager
   // props would read null members even while their branch is hidden.
   if(node.type==='IfBlock'){
-   fragment.overwrite(node.test.start-selected.start,node.test.end-selected.start,capture(node.test,false,true));
-   for(const child of node.consequent.nodes)template(child,true);
-   for(const child of node.alternate?.nodes||[])template(child,true);
+   fragment.overwrite(node.test.start-selected.start,node.test.end-selected.start,capture(node.test,false,true,locals));
+   for(const child of node.consequent.nodes)template(child,true,locals);
+   for(const child of node.alternate?.nodes||[])template(child,true,locals);
+   return;
+  }
+  if(node.type==='EachBlock'){
+   if(node.context?.type!=='Identifier')throw Error('Use a named loop item before extracting this component.');
+   fragment.overwrite(node.expression.start-selected.start,node.expression.end-selected.start,capture(node.expression,false,true,locals));
+   const names=[node.context.name,...(node.index?[node.index]:[])],scope=[...locals.filter(n=>!names.includes(n)),...names];
+   for(const name of names)used.add(name);
+   if(node.key)fragment.overwrite(node.key.start-selected.start,node.key.end-selected.start,capture(node.key,false,true,scope));
+   for(const child of node.body.nodes)template(child,true,scope);
+   for(const child of node.fallback?.nodes||[])template(child,true,locals);
    return;
   }
   if(node.type!=='RegularElement'||['script','style','slot'].includes(node.name))throw Error('Extract native markup first; this subtree contains unsupported template control flow or component context.');
@@ -39,33 +64,35 @@ function plan(r,op,adapter){try{
    if(a.type==='BindDirective'&&((a.name==='value'&&['input','textarea','select'].includes(node.name))||(a.name==='checked'&&node.name==='input'))){
     if(a.modifiers?.length||!['Identifier','MemberExpression'].includes(a.expression?.type))throw Error('This form binding needs a directly assignable parent value.');
     if(lazy){
-     const getter=capture(a.expression,false,true).slice(0,-2),raw=r.source.slice(a.expression.start,a.expression.end);
+     checkLocalWrite(a.expression,locals);
+     const read=capture(a.expression,false,true,locals),getter=read.slice(0,read.indexOf('(')),raw=r.source.slice(a.expression.start,a.expression.end);
      let argument='nextValue';while(used.has(argument))argument+='Value';
      let setter='value'+(captures.length+1);while(used.has(setter))setter+='Value';used.add(setter);
-     captures.push({name:setter,expression:argument+'=>('+raw+'='+argument+')',bindable:false});
-     fragment.overwrite(a.start-selected.start,a.end-selected.start,'bind:'+a.name+'={'+getter+', '+setter+'}');continue;
+     captures.push({name:setter,expression:(locals.length?'('+locals.join(', ')+', '+argument+')':argument)+'=>('+raw+'='+argument+')',bindable:false});
+     const binding=locals.length?'()=>'+read+', '+argument+'=>'+setter+'('+locals.join(', ')+', '+argument+')':getter+', '+setter;
+     fragment.overwrite(a.start-selected.start,a.end-selected.start,'bind:'+a.name+'={'+binding+'}');continue;
     }
     const name=capture(a.expression,true);fragment.overwrite(a.start-selected.start,a.end-selected.start,'bind:'+a.name+'={'+name+'}');continue;
    }
    if(a.type==='ClassDirective'){
     if(a.modifiers?.length)throw Error('This class directive needs its original component context.');
-    const name=capture(a.expression,false,lazy);fragment.overwrite(a.start-selected.start,a.end-selected.start,'class:'+a.name+'={'+name+'}');continue;
+    const name=capture(a.expression,false,lazy,locals);fragment.overwrite(a.start-selected.start,a.end-selected.start,'class:'+a.name+'={'+name+'}');continue;
    }
    if(a.type==='StyleDirective'){
     if(a.modifiers?.some(m=>m!=='important'))throw Error('This style directive needs its original component context.');
     if(a.value===true){
      if(!/^[A-Za-z_$][\w$]*$/.test(a.name))throw Error('Use an explicit expression for this style directive.');
-     const name=capture({type:'Identifier',name:a.name,start:a.start+6,end:a.start+6+a.name.length},false,lazy);
+     const name=capture({type:'Identifier',name:a.name,start:a.start+6,end:a.start+6+a.name.length},false,lazy,locals);
      fragment.overwrite(a.start-selected.start,a.end-selected.start,'style:'+a.name+(a.modifiers?.length?'|important':'')+'={'+name+'}');
-    }else if(a.value?.type==='ExpressionTag')template(a.value,lazy);else for(const part of a.value||[])if(part.type==='ExpressionTag')template(part,lazy);
+    }else if(a.value?.type==='ExpressionTag')template(a.value,lazy,locals);else for(const part of a.value||[])if(part.type==='ExpressionTag')template(part,lazy,locals);
     continue;
    }
    if(a.type!=='Attribute')throw Error('This subtree uses a binding, directive or spread that needs its original component context.');
    if(/^(?:data-rt(?:$|-revision)|__retouch)/.test(a.name))throw Error('This subtree contains reserved source markers.');
    if(a.value===true)continue;
-   if(a.value?.type==='ExpressionTag')template(a.value,lazy);else for(const part of a.value||[])if(part.type==='ExpressionTag')template(part,lazy);
+   if(a.value?.type==='ExpressionTag')template(a.value,lazy,locals);else for(const part of a.value||[])if(part.type==='ExpressionTag')template(part,lazy,locals);
   }
-  for(const child of node.fragment.nodes)template(child,lazy);
+  for(const child of node.fragment.nodes)template(child,lazy,locals);
  }
  template(selected.node);
  const moved=parsed.elements.filter(e=>e.start>=selected.start&&e.end<=selected.end),owners=css.ownership(state),layers={},remaining={...state.model.layers};

@@ -28546,3 +28546,34 @@ other unsupported directives still prevent extraction. Evaluated side-effect
 expressions retain their existing refusal. The desktop package was not rebuilt
 or launched. Full Figma parity, arbitrary-site authoring and trusted public macOS
 distribution remain incomplete.
+
+
+### Svelte extraction with keyed and nested lists
+
+Create component now preserves each blocks with named item contexts, optional
+indices, keys, nested loops and empty-list fallbacks. Parent-owned getter props
+accept the currently scoped items/indices, including shadowed nested indices.
+Per-item member bindings use parameterized parent setters, and callbacks retain
+both the current item and original parent scope. Conditional branches inside
+loops continue to evaluate lazily.
+
+Direct loop-item replacement, replacement through destructuring/iteration
+targets, destructured loop contexts and legacy loop-local mutation still refuse.
+These require collection-specific write-back or invalidation that parameterized
+closures alone do not provide. Rune mode is verified before accepting loop-local
+member assignments; failed planning leaves both source files untouched.
+
+All 2,432 unit tests passed
+(/tmp/retouch-svelte-create-loops-full-final.log). Chromium and WebKit passed
+normal creation, duplication and exact two-file undo/redo with initially edited
+list values and independent main/phone state. Bound field edits and per-item
+callbacks updated the original parent output; reversing keyed rows retained the
+same row DOM and updated indices. Nested indices, clearing to the fallback and
+restoring rows worked after creation, undo and redo. Existing conditional,
+style, draft and store-retention checks also passed
+(/tmp/retouch-svelte-create-loops-{chromium,webkit}.log).
+
+Authored scoped CSS, await/key/snippet blocks, nested components and other
+unsupported context remain extraction gaps. The desktop package was not rebuilt
+or launched. Full Figma parity, arbitrary-site authoring and trusted public macOS
+distribution remain incomplete.
