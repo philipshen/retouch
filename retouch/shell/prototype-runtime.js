@@ -7,16 +7,28 @@
  document.addEventListener('click',consumeClick,true);document.addEventListener('pointerdown',event=>{if(event.isPrimary!==false)clickBlock=null;},true);
  function current(target=frame){try{const w=target.contentWindow;if(w.location.origin!==location.origin)return null;return {url:w.location.pathname+w.location.search+w.location.hash,x:w.scrollX,y:w.scrollY};}catch{return null;}}
  function navigate(destination,scroll,transition){cancelNavigation();navigationCompletion=root.RetouchPrototypeCompletion.create();navigationFinished=navigationCompletion.finished;root.RetouchPrototypeNavigation.begin(transition,scroll);main.release?.();main.release=null;const url=new URL(destination,location.href);main.pendingScroll={...scroll,url:url.href};frame.src=url.pathname+url.search+url.hash;}
- function perform(item,context,opener){const before=current();if(!before)return;context.scrollMotion?.cancel();context.scrollMotion=null;
-  if(item.action==='set-variable-mode'){root.RetouchPrototypeVariables.setMode(item.modeChange);return;}
-  if(item.action==='set-variable'){root.RetouchPrototypeVariables.assign(item.assignment);return;}
+ function performOne(item,context,opener){const before=current();if(!before)return;context.scrollMotion?.cancel();context.scrollMotion=null;
+  if(item.action==='set-variable-mode'){return root.RetouchPrototypeVariables.setMode(item.modeChange);}
+  if(item.action==='set-variable'){return root.RetouchPrototypeVariables.assign(item.assignment);}
   if(item.action==='open-link'){if(!V.link(item.destination))return;const link=document.createElement('a');link.href=item.destination;link.target='_blank';link.rel='noopener noreferrer';document.body.append(link);link.click();link.remove();return;}
-  if(item.action==='open-overlay'){overlays.open(item.destination,item.overlay,opener,item.transition);return;}
-  if(item.action==='close-overlay'){overlays.close(true,item.transition);return;}
-  if(item.action==='swap-overlay'&&overlays.swap(item.destination,opener,item.transition))return;
-  if(item.action==='navigate'||item.action==='swap-overlay'){if(!V.route(item.destination))return;trail.push(before);if(trail.length>100)trail.shift();overlays.clear();navigate(item.destination,item.preserveScroll?before:{x:0,y:0},item.transition);}
-  else if(item.action==='back'){if(overlays.close())return;const previous=trail.pop();if(previous)navigate(previous.url,previous,item.transition);}
-  else if(item.action==='scroll'){const d=context.frame.contentDocument,targets=[...d.querySelectorAll('[id]')].filter(el=>el.id===item.destination);if(targets.length!==1){root.RetouchPresentationHost.error('The scroll destination is missing or duplicated.');return;}try{context.scrollMotion=root.RetouchPrototypeScroll.play(targets[0],item.transition,item.scrollOffset);}catch(error){root.RetouchPresentationHost.error(error.message);}}
+  if(item.action==='open-overlay'){if(!overlays.open(item.destination,item.overlay,opener,item.transition))return {ok:false,reason:'The overlay could not open.',reported:true};return overlays.finished;}
+  if(item.action==='close-overlay'){return overlays.close(true,item.transition)?overlays.finished:true;}
+  if(item.action==='swap-overlay'&&overlays.swap(item.destination,opener,item.transition))return overlays.finished;
+  if(item.action==='navigate'||item.action==='swap-overlay'){if(!V.route(item.destination))return;trail.push(before);if(trail.length>100)trail.shift();overlays.clear();navigate(item.destination,item.preserveScroll?before:{x:0,y:0},item.transition);return navigationFinished;}
+  else if(item.action==='back'){if(overlays.close())return overlays.finished;const previous=trail.pop();if(previous){navigate(previous.url,previous,item.transition);return navigationFinished;}}
+  else if(item.action==='scroll'){const d=context.frame.contentDocument,targets=[...d.querySelectorAll('[id]')].filter(el=>el.id===item.destination);if(targets.length!==1){root.RetouchPresentationHost.error('The scroll destination is missing or duplicated.');return {ok:false,reported:true};}try{context.scrollMotion=root.RetouchPrototypeScroll.play(targets[0],item.transition,item.scrollOffset);return context.scrollMotion.finished;}catch(error){root.RetouchPresentationHost.error(error.message);return {ok:false,reason:error.message,reported:true};}}
+ }
+ const sequence=root.RetouchPrototypeActionList.create({
+  evaluate:expression=>root.RetouchPrototypeVariables.evaluate(expression),
+  perform:async(item,{signal,context:state})=>{
+   if(!running||signal.aborted||state.context.frame.contentDocument!==state.document)return false;
+   const result=performOne(item,state.context,state.opener),motion=state.context.scrollMotion,abort=()=>motion?.cancel();signal.addEventListener('abort',abort,{once:true});
+   try{const completed=await result;if(signal.aborted)return false;state.context=contexts.get(overlays.topFrame)||main;state.document=state.context.frame.contentDocument;return completed;}finally{signal.removeEventListener('abort',abort);}
+  }
+ });
+ function perform(item,context,opener){
+  if(!item.actions){sequence.reset();return performOne(item,context,opener);}
+  void sequence.run(item.actions,{context:{context,opener,document:context.frame.contentDocument}}).catch(error=>{if(!error.reported)root.RetouchPresentationHost.error(error.message);});
  }
  // WebKit can crash if touch-release navigation removes the dispatching iframe.
  // Defer until input dispatch finishes and cancel work when its context closes.
@@ -75,12 +87,12 @@
   }}
   return true;
  }
- frame.addEventListener('load',async()=>{const ticket=++loadSerial,completion=navigationCompletion;if(running)overlays.clear();try{await root.RetouchPrototypeNavigation.loaded();if(ticket===loadSerial){const mounted=mount(main);if(completion&&completion===navigationCompletion){completion.finish(mounted===true);navigationCompletion=null;}}}catch(error){completion?.finish(false);if(ticket===loadSerial)root.RetouchPresentationHost.error(error.message);}});
+ frame.addEventListener('load',async()=>{const ticket=++loadSerial,completion=navigationCompletion;if(running)overlays.clear();try{let mounted=false;await root.RetouchPrototypeNavigation.loaded(async()=>{if(ticket!==loadSerial)return;mounted=mount(main);await root.RetouchPrototypeVariables.settled();});if(ticket===loadSerial){if(completion&&completion===navigationCompletion){completion.finish(mounted===true);navigationCompletion=null;}}}catch(error){completion?.finish(false);if(ticket===loadSerial)root.RetouchPresentationHost.error(error.message);}});
  root.RetouchPrototypeRuntime={
   get navigationFinished(){return navigationFinished;},
-  start(){cancelNavigation();root.RetouchPrototypeVariables.reset();running=true;trail=[];main.pendingScroll=null;mount(main);},
-  stop(){cancelNavigation();root.RetouchPrototypeVariables.reset();++loadSerial;root.RetouchPrototypeNavigation.clear();held=null;clickBlock=null;overlays.clear();running=false;main.release?.();main.release=null;trail=[];main.pendingScroll=null;},
-  restart(){cancelNavigation();root.RetouchPrototypeVariables.reset();++loadSerial;root.RetouchPrototypeNavigation.clear();overlays.clear();main.release?.();main.release=null;trail=[];main.pendingScroll=null;},
+  start(){sequence.reset();cancelNavigation();root.RetouchPrototypeVariables.reset();running=true;trail=[];main.pendingScroll=null;mount(main);},
+  stop(){sequence.reset();cancelNavigation();root.RetouchPrototypeVariables.reset();++loadSerial;root.RetouchPrototypeNavigation.clear();held=null;clickBlock=null;overlays.clear();running=false;main.release?.();main.release=null;trail=[];main.pendingScroll=null;},
+  restart(){sequence.reset();cancelNavigation();root.RetouchPrototypeVariables.reset();++loadSerial;root.RetouchPrototypeNavigation.clear();overlays.clear();main.release?.();main.release=null;trail=[];main.pendingScroll=null;},
   dismissOverlay:()=>overlays.close(),
   attachFrame(frame){const context={frame,release:null,pendingScroll:null};context.loaded=()=>mount(context);contexts.set(frame,context);frame.addEventListener('load',context.loaded);},
   detachFrame(frame){const context=contexts.get(frame);if(!context||context===main)return;context.release?.();frame.removeEventListener('load',context.loaded);contexts.delete(frame);},

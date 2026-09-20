@@ -27,19 +27,19 @@
  }
  async function reveal(entry,frame,transition,old=null){
   const serial=entry.serial,controller=new AbortController();entry.controller=controller;
-  const ready=await M.ready(frame,controller.signal);if(entry.serial!==serial||!stack.includes(entry))return;if(!ready){entry.completion.finish(false);return;}
+  const ready=await M.ready(frame,controller.signal);if(entry.serial!==serial||!stack.includes(entry))return;if(!ready){entry.completion.finish(false);return;}await root.RetouchPrototypeVariables.settled();if(entry.serial!==serial||!stack.includes(entry))return;
   entry.pending=null;entry.frame=frame;entry.phase='animating';entry.status.hidden=true;entry.card.style.visibility='';frame.style.visibility='';if(!old)entry.backdrop.style.opacity='';title(entry);
   entry.motion=old&&transition.type==='smart-animate'?root.RetouchPrototypeSmart.play({old,next:frame,config:transition}):M.play({old:old||null,next:old?frame:entry.card,backdrop:old?null:entry.backdrop,config:transition,vector:vector(entry,transition,!!old)});
   const ok=await entry.motion.finished;if(entry.serial!==serial||!stack.includes(entry))return;if(!ok){entry.completion.finish(false);return;}
   if(old)removeFrame(entry,old);entry.card.inert=false;entry.phase='idle';entry.card.removeAttribute('aria-busy');if(stack.at(-1)===entry)frame.focus({preventScroll:true});entry.completion.finish(true);
  }
  function open(destination,options,opener,transition={type:'instant'}){
-  if(!root.RetouchPresentation?.active||!V.route(destination))return;if(stack.length>=16){root.RetouchPresentationHost.error('Close an overlay before opening another.');return;}
+  if(!root.RetouchPresentation?.active||!V.route(destination))return false;if(stack.length>=16){root.RetouchPresentationHost.error('Close an overlay before opening another.');return false;}
   const config=V.overlay(options),surface=document.createElement('div'),backdrop=document.createElement('div'),card=document.createElement('section'),status=document.createElement('div'),blocked=stack.at(-1)?.surface||base;
   surface.className='prototype-overlay-surface';surface.style.zIndex=String(10+stack.length);backdrop.className='prototype-overlay-backdrop';backdrop.style.background=config.background;backdrop.style.opacity='0';card.className='prototype-overlay-card';card.style.visibility='hidden';card.inert=true;card.setAttribute('role','dialog');card.setAttribute('aria-label','Prototype overlay');card.setAttribute('aria-busy','true');status.className='prototype-overlay-loading';status.textContent='Loading overlay…';status.setAttribute('role','status');
   const entry={surface,backdrop,card,status,config,opener,blocked,previousInert:blocked.inert,frames:new Set(),serial:0,phase:'loading',transition};begin(entry);blocked.inert=true;stack.push(entry);surface.append(backdrop,card,status);stage.append(surface);
   surface.addEventListener('click',event=>{if(event.target===surface||event.target===backdrop){event.preventDefault();event.stopPropagation();if(config.closeOutside&&stack.at(-1)===entry)close();}});
-  entry.frame=newFrame(entry,destination,frame=>reveal(entry,frame,transition));closeButton.hidden=false;
+  entry.frame=newFrame(entry,destination,frame=>reveal(entry,frame,transition));closeButton.hidden=false;return true;
  }
  function swap(destination,opener,transition={type:'instant'}){
   const entry=stack.at(-1);if(!entry)return false;if(!V.route(destination)||entry.phase==='closing')return true;

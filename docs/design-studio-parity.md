@@ -27171,3 +27171,43 @@ This supplies a required lifecycle dependency for multiple-action playback. The
 source list codec, action-list editor and dispatcher integration still remain to
 be connected; full sequences are not exposed yet. No native rebuild, launch or
 push. Full Figma parity and notarized Homebrew distribution remain unfinished.
+
+### 2026-09-20 — Multiple-action editor, conditional branches and playback
+
+Connected the action-list foundation to source storage, the interaction editor
+and presentation dispatch. Existing single-action source remains compatible.
+Interactions can now contain ordered actions and nested if/else branches. The
+editor reuses the established action fields, adds/collapses/removes actions,
+reorders with buttons or header dragging, and edits conditions with the typed
+expression composer. Collapsed cards identify action types and target variables.
+Nested scroll actions retain the visual source-aware destination picker via a
+validated action path, including atomic anchor/source history across files.
+
+Playback waits for variable/mode changes, scroll completion, navigation and overlay
+transitions before the next action. Conditions read the preceding state; failures
+stop later actions and preserve the original error without duplicate reporting.
+Restart/exit cancels remaining list work. An existing single-action trigger
+interrupts active list execution; full concurrent-trigger equivalence is not
+claimed. Separate list triggers are serialized and retain their starting context.
+
+The browser test found incoming pages initially showed saved variable values until
+navigation animation ended. Runtime mounting and variable projection now finish
+before navigation/overlay reveal begins, so the transition shows current state.
+A picker callback shadowing issue was also fixed during nested-picker testing.
+
+All 2,152 unit tests passed, including list codec/history across HTML, React, Vue
+and Liquid, mixed-schema refusal and nested atomic scroll connections across four
+adapters. Chromium and WebKit passed real list/condition authoring, exact undo/redo,
+button and collapsed-header drag reordering, nested scroll picking, both branches,
+variable-before-condition ordering, projection before animation, subsequent writes
+after navigation, overlay open/write/close sequencing, failure-before-navigation
+and restart cancellation. Source/library bytes were preserved by playback.
+Existing expression tests and full overlay flows passed Chromium; the full mode,
+copy and cross-mode expression flow passed WebKit. The collapsed light-theme
+interaction screenshot was inspected. Syntax/diff checks passed.
+
+Nested canvas connection-line editing, drag autoscroll for expanded long lists,
+all trigger concurrency/press semantics, external links after asynchronous actions,
+inherited object modes, separate design pages and universal framework/site
+playback remain unverified or unfinished. The broader design matrix and notarized
+Homebrew distribution remain incomplete. No native rebuild, launch or push.

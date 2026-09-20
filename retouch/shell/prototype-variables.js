@@ -39,9 +39,10 @@
   for(const [el,props]of desired){let entries=styles.get(el);if(!entries)styles.set(el,entries=new Map());for(const [property,value]of props){let entry=entries.get(property);if(!entry||el.style.getPropertyValue(property)!==entry.applied||el.style.getPropertyPriority(property)!=='important')entry={value:el.style.getPropertyValue(property),priority:el.style.getPropertyPriority(property),hadStyle:el.hasAttribute('style')};el.style.setProperty(property,value,'important');entry.applied=el.style.getPropertyValue(property);entries.set(property,entry);ownedInline.set(el,el.getAttribute('style'));}}
   return true;
  }
- function enqueue(work){const ticket=epoch;queue=queue.then(()=>ticket===epoch?work(ticket):undefined).catch(error=>{if(ticket===epoch)report(error);return {ok:false,reason:error.message};});return queue;}
+ function enqueue(work){const ticket=epoch;queue=queue.then(()=>ticket===epoch?work(ticket):undefined).catch(error=>{if(ticket===epoch)report(error);return {ok:false,reason:error.message,reported:ticket===epoch};});return queue;}
  function refresh(){if(!Object.keys(values).length&&!Object.keys(modes).length)return;dirty=true;if(scheduled)return;scheduled=true;const generation=epoch;enqueue(ticket=>{dirty=false;return project(values,ticket);}).finally(()=>{if(generation!==epoch)return;scheduled=false;if(dirty)refresh();});}
  root.RetouchPrototypeVariables={
+  settled:()=>queue,
   evaluate(expression){return enqueue(async ticket=>{
    if(!library){const loaded=await root.RetouchVariableLibraryRequest();if(ticket!==epoch)return;library=loaded;revision=loaded.revision;}
    const response=await root.RetouchVariableModePreview({revision,modes,modeOverrides:values,expression});if(ticket!==epoch)return;return response.result;

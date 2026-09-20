@@ -23,6 +23,7 @@
     "test:e2e:layer-export-svg": "node test/e2e/layer-export-svg.cjs",
     "test:e2e:export-browser-reuse": "node test/e2e/export-browser-reuse.cjs",
     "test:e2e:layer-export": "node test/e2e/layer-export.cjs",
+    "test:e2e:prototype-action-lists": "node test/e2e/prototype-action-lists.cjs",
     "test:e2e:prototype-completion": "node test/e2e/prototype-completion.cjs",
     "test:e2e:prototype-modes": "node test/e2e/prototype-modes.cjs",
     "test:e2e:prototype-expressions": "node test/e2e/prototype-expressions.cjs",

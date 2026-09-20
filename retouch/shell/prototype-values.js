@@ -69,9 +69,14 @@
  function validate(value){
   if(!Array.isArray(value)||value.length>32)throw Error('Use at most 32 interactions per source layer.');
   const used=new Set();const result=value.map(item=>{
-   if(!item||typeof item!=='object'||Array.isArray(item)||Object.keys(item).some(key=>!['trigger','action','destination','preserveScroll','overlay','transition','delay','shortcut','scrollOffset','assignment','modeChange'].includes(key))||!triggers.includes(item.trigger))throw Error('Choose distinct supported interaction triggers.');const key=item.trigger==='keyboard'?'keyboard:'+K.signature(item.shortcut):item.trigger;if(used.has(key))throw Error('Use each trigger or keyboard shortcut only once per layer.');used.add(key);
+   if(!item||typeof item!=='object'||Array.isArray(item)||Object.keys(item).some(key=>!['trigger','action','destination','preserveScroll','overlay','transition','delay','shortcut','scrollOffset','assignment','modeChange','actions'].includes(key))||!triggers.includes(item.trigger))throw Error('Choose distinct supported interaction triggers.');const key=item.trigger==='keyboard'?'keyboard:'+K.signature(item.shortcut):item.trigger;if(used.has(key))throw Error('Use each trigger or keyboard shortcut only once per layer.');used.add(key);
    if(item.trigger!=='keyboard'&&item.shortcut!==undefined)throw Error('Shortcuts belong to keyboard triggers.');
    if(item.trigger==='after-delay'&&(!Number.isInteger(item.delay)||item.delay<1||item.delay>10000)||item.trigger!=='after-delay'&&item.delay!==undefined)throw Error('After delay needs a whole duration from 1 to 10000 ms. Other triggers do not have a delay.');
+   if(Object.hasOwn(item,'actions')){
+    if(Object.keys(item).some(key=>!['trigger','shortcut','delay','actions'].includes(key)))throw Error('Choose an action list instead of a single action.');
+    const A=typeof module==='object'&&module.exports?require('./prototype-action-list.js'):root.RetouchPrototypeActionList;
+    return {trigger:item.trigger,...(item.trigger==='keyboard'?{shortcut:K.validate(item.shortcut)}:{}),...(item.trigger==='after-delay'?{delay:item.delay}:{}),actions:A.validate(item.actions)};
+   }
    if(!['navigate','back','scroll','open-overlay','swap-overlay','close-overlay','open-link','set-variable','set-variable-mode'].includes(item.action))throw Error('Choose a supported navigation or overlay action.');
    if(['navigate','open-overlay','swap-overlay'].includes(item.action)&&!route(item.destination))throw Error('Choose a project page URL beginning with /.');
    if(item.action==='open-link'&&!link(item.destination))throw Error('Enter a complete HTTP or HTTPS URL without embedded credentials.');

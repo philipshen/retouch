@@ -13,7 +13,7 @@
      const checked=E.analyze(item.condition);if(checked.type!=='boolean')throw Error('A condition must return true or false.');
      return {action:'conditional',condition:checked.expression,then:list(item.then,depth+1),else:list(item.else,depth+1)};
     }
-    if(['trigger','shortcut','delay'].some(key=>Object.hasOwn(item,key)))throw Error('Actions share their interaction’s trigger.');
+    if(['trigger','shortcut','delay','actions'].some(key=>Object.hasOwn(item,key)))throw Error('Actions share their interaction’s trigger.');
     const {trigger,...action}=V.validate([{trigger:'click',...item}])[0];return action;
    });
   }
@@ -33,7 +33,7 @@
  function create({perform,evaluate}){
   if(typeof perform!=='function'||typeof evaluate!=='function')throw Error('Provide action and condition handlers.');
   let generation=new AbortController(),queue=Promise.resolve();
-  function run(input,{signal:external}={}){
+  function run(input,{signal:external,context}={}){
    // Validate and snapshot at trigger time, before joining another action run.
    const actions=validate(input),controller=new AbortController(),signal=controller.signal,current=generation.signal;
    const abort=()=>controller.abort();current.addEventListener('abort',abort,{once:true});external?.addEventListener('abort',abort,{once:true});if(current.aborted||external?.aborted)abort();
@@ -42,12 +42,13 @@
     for(const item of items){
      if(signal.aborted)return false;
      if(item.action==='conditional'){
-      const result=await pending(()=>evaluate(item.condition,{signal}),signal);if(result===cancelled)return false;
+      const result=await pending(()=>evaluate(item.condition,{signal,context}),signal);if(result===cancelled)return false;
+      if(result?.ok===false)throw Object.assign(Error(result.reason||'The condition failed.'),{reported:result.reported});
       if(!result||result.type!=='boolean'||typeof result.value!=='boolean')throw Error('A prototype condition did not return true or false.');
       completed++;if(!await execute(result.value?item.then:item.else))return false;
      }else{
-      const result=await pending(()=>perform(item,{signal}),signal);if(result===cancelled)return false;
-      if(result===false||result?.ok===false)throw Error(result?.reason||'The prototype action could not complete.');completed++;
+      const result=await pending(()=>perform(item,{signal,context}),signal);if(result===cancelled)return false;
+      if(result===false||result?.ok===false)throw Object.assign(Error(result?.reason||'The prototype action could not complete.'),{reported:result?.reported});completed++;
      }
     }
     return true;
@@ -57,5 +58,10 @@
   }
   return {run,reset(){generation.abort();generation=new AbortController();queue=Promise.resolve();}};
  }
- return {validate,create};
+ function locate(list,path){
+  if(!Array.isArray(path)||!path.length||path.length>33||path.length%2!==1)throw Error('Choose an action in the list.');let node;
+  for(let i=0;i<path.length;i+=2){if(!Number.isInteger(path[i])||path[i]<0||!Array.isArray(list)||!list[path[i]])throw Error('The action changed.');node=list[path[i]];if(i+1<path.length){if(node.action!=='conditional'||!['then','else'].includes(path[i+1]))throw Error('Choose a conditional branch.');list=node[path[i+1]];}}
+  return node;
+ }
+ return {validate,create,locate};
 });

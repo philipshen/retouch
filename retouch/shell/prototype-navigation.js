@@ -27,7 +27,7 @@
   }catch(error){copy.remove();throw error;}
  }
  function begin(config,scroll){clear();if(!config||config.type==='instant'||root.matchMedia('(prefers-reduced-motion: reduce)').matches)return;try{const copy=snapshot(),status=document.createElement('div');status.className='prototype-navigation-loading';status.setAttribute('role','status');status.textContent='Loading page…';stage.append(status);current={copy,status,config,scroll,controller:new AbortController(),motion:null,inert:frame.inert,visibility:frame.style.visibility,overflow:stage.style.overflow};frame.inert=true;frame.style.visibility='hidden';stage.style.overflow='hidden';}catch{clear();}}
- async function loaded(){const entry=current;if(!entry)return;const ready=await M.ready(frame,entry.controller.signal);if(!ready||current!==entry)return;
+ async function loaded(prepare){const entry=current;if(!entry){await prepare?.();return;}const ready=await M.ready(frame,entry.controller.signal);if(!ready||current!==entry)return;await prepare?.();if(current!==entry)return;
   try{frame.contentWindow.scrollTo({left:entry.scroll?.x||0,top:entry.scroll?.y||0,behavior:'instant'});}catch{}
   entry.status.hidden=true;frame.style.visibility=entry.visibility;const direction=entry.config.direction,vector=direction==='left'?[-stage.clientWidth,0]:direction==='top'?[0,-stage.clientHeight]:direction==='bottom'?[0,stage.clientHeight]:[stage.clientWidth,0];
   entry.motion=entry.config.type==='smart-animate'?root.RetouchPrototypeSmart.play({old:entry.copy,next:frame,config:entry.config}):M.play({old:entry.copy,next:frame,config:entry.config,vector});await entry.motion.finished;if(current===entry){clear();frame.focus({preventScroll:true});}
