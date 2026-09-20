@@ -18,3 +18,5 @@ test('screen export validates the image format and JPEG quality without applying
 test('PNG transparency is boolean and never applies to JPEG',()=>{assert.doesNotThrow(()=>validate({...valid(),transparent:true}));assert.doesNotThrow(()=>validate({...valid(),format:'jpeg',transparent:false}));for(const patch of [{transparent:'true'},{transparent:1},{transparent:null},{format:'jpeg',transparent:true}])assert.throws(()=>validate({...valid(),...patch}));});
 
  test('custom export scales enforce finite scale and actual output bounds',()=>{for(const scale of [0.01,0.5,1.25,3,4,8])assert.doesNotThrow(()=>validate({...valid(),scale}));for(const patch of [{scale:0},{scale:0.009},{scale:8.01},{scale:'2'},{scale:NaN},{scale:Infinity},{width:1,scale:0.5},{width:7680,height:1,scale:8},{width:7680,height:7680,scale:1.067}])assert.throws(()=>validate({...valid(),...patch}));});
+
+test('layer export requires bounded numeric snapshot identities',()=>{assert.doesNotThrow(()=>validate({...valid(),area:'selection',selectionIds:['3']}));for(const selectionIds of [undefined,[],['x'],[3],['1] img']])assert.throws(()=>validate({...valid(),area:'selection',selectionIds}));});

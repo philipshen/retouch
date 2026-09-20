@@ -26486,3 +26486,34 @@ custom-scale dialog screenshot was inspected; syntax and diff checks passed.
 Output rendering remains Chromium-based. No full unit-suite rerun, desktop rebuild
 or push. Arbitrary-layer, PDF and batch exports remain incomplete alongside the
 broader Figma parity and notarized Homebrew distribution work.
+
+
+### Selected-layer raster export
+
+Export screen now offers Selected layers when the canvas has a selection. The
+shared serializer maps the selected live elements to snapshot identities without
+modifying the live DOM. The renderer keeps the original document layout and
+ancestor transforms/clipping, hides non-selected content and its pseudo-elements,
+removes unselected root backgrounds, and exports the union of selected bounds.
+PNG transparency, JPEG quality and custom scales apply to the selection. Files
+use a `-selection` suffix. Selection from another document or removed elements is
+refused; the backend validates selection identities and measured output limits.
+Renderer evaluation errors now return their readable first-line message.
+
+Chromium and WebKit editor checks passed single and multi-layer bounds, half-alpha
+PNG pixels, opaque JPEG pixels, pseudo-elements, exclusion of overlapping siblings
+and parent backgrounds, scrolled document selection, nested scroll retention and
+out-of-page refusal. The live document identity and source file stayed unchanged.
+Both existing PNG and JPEG/custom-scale/alpha regression suites passed in both
+editors. All 2,067 unit tests passed; eight focused export tests also passed after
+error-message cleanup. The selected-layer dialog screenshot was inspected, and
+syntax/diff checks passed.
+
+This is bounded raster selection export, not complete export parity. Bounds round
+outward to CSS pixels; shadows, filters and overflowing content outside them are
+clipped. Negative page coordinates are refused. Ancestor clipping/compositing is
+retained; complex blend/backdrop behavior, repeated framework instances and all
+adapter-specific selections are not yet verified. Unrelated unavailable resources
+can still block a snapshot. SVG vector export remains the existing containing-SVG
+workflow; PDF and batch screen exports remain incomplete. No desktop rebuild or
+push. Full Figma parity and notarized Homebrew distribution remain unfinished.

@@ -19,6 +19,7 @@
     "test:e2e:shadow-picker": "RT_E2E_SHADOW_PICKER=1 node test/e2e/page-fonts.cjs",
     "test:e2e:svg-export": "node test/e2e/svg-export.cjs",
     "test:e2e:screen-export-jpeg": "node test/e2e/screen-export-jpeg.cjs",
+    "test:e2e:layer-export": "node test/e2e/layer-export.cjs",
     "test:e2e:screen-export": "node test/e2e/screen-export.cjs",
     "test:e2e:compare-resize": "node test/e2e/compare-resize.cjs",
     "test:e2e:compare-scroll": "node test/e2e/compare-scroll.cjs",

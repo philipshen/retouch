@@ -115,6 +115,7 @@ function groupSelectionTarget(target,{enter=false}={}){
  const closed=[];for(let group=target.closest('[data-rt-group][data-rt]');group;group=group.parentElement?.closest('[data-rt-group][data-rt]')){if(selected&&selected!==group&&group.contains(selected))continue;if(!layerLocks.locked(group))closed.push(group);}
  if(enter)closed.pop();return closed.at(-1)||target;
 }
+window.RetouchExportSelection=()=>{if(!sel||editing||panelTasks||undoBusy||sourceRequests)return [];return (sel.multiple?sel.multiple.flatMap(info=>matchingEls(info.id)):sel.info.kind==='instance'?selectedComponentGroups(doc(),activeId(),sel.info)[0]?.elements||[]:[renderedSelection?.id===activeId()?renderedSelection.element:matchingEls(activeId())[0]]).filter(el=>el?.isConnected);};
 window.RetouchCanvasSelection={marqueeTargets:resolveMarqueeTargets,pick:(node,x,y,options)=>pickLayer(node,x,y,options),selectable:node=>!layerLocks.locked(node),canMarquee:()=>window.__RT_RENDERING?.selectionStyling===true&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests};
 const historyRoutes = new Map();
 function currentPageRoute(){try{const loc=iframe.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
