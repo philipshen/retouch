@@ -3898,6 +3898,7 @@ window.RetouchPrototypeHost={
  async pages(){const result=await api('GET','/rt/__api/pages');return result?.pages||[];},
  async prepare(){if(panelTasks||sourceRequests||undoBusy||stopDrawing)throw Error('Finish the current edit first.');await commitInlineEdit();},
  async save(info,interactions){
+  await this.prepare();
   if(sel?.info.id!==info.id||sel.info.hash!==info.hash||editing||panelTasks||sourceRequests||undoBusy||stopDrawing||historyRecoveryRequired)throw Error('The selection changed. Re-select the layer.');
   busyPanel(true);try{const result=await api('POST','/rt/__api/op',{type:'setPrototypeInteractions',id:info.id,fileHash:info.hash,context:info.context,interactions});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save the interaction.');if(result.undoId)editorHistory.record({type:'prototypeInteractions',id:info.id,context:info.context,undoId:result.undoId});await refreshPrototype(result.element);return result;}finally{busyPanel(false);}
  }

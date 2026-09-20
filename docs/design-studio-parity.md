@@ -26912,3 +26912,34 @@ stylesheets, animation-controlled properties, expressions/conditions/multiple
 actions and non-style variable bindings remain gaps. Broader Figma design parity
 and notarized Homebrew distribution remain incomplete. No desktop rebuild,
 native launch or push in this increment.
+
+### 2026-09-20 — Copy another variable in a prototype action
+
+Set variable now offers a Value source choice between a literal and another
+variable. The source picker lists only variables matching the target type.
+Assignments store a source variable ID instead of a literal; shared validation
+rejects ambiguous requests containing both. During presentation, the queued action
+resolves the source using the current temporary state, follows aliases, and copies
+the resulting literal into the target. This is a snapshot at trigger time, not a
+new persistent alias. A source without a temporary assignment resolves in its
+collection's default mode, as described in the panel. Self-copy is supported.
+
+Source round-trip and exact history tests passed HTML, React, Liquid and Vue with
+the copy action. Runtime unit tests cover all four types, false/zero/empty values,
+aliases, default values, queued trigger order, snapshot independence, self-copy,
+missing/incompatible sources, reset and cancellation during source resolution.
+All 2,096 unit tests passed. Chromium and WebKit passed UI authoring, the compatible
+source picker, exact Undo/Redo, copying a live alias, preserving the copied value
+when its source later changes, responsive playback, overlays/navigation, reset,
+Exit and unchanged source/library bytes. Both browser screenshots were inspected;
+existing HTML prototype navigation/back/scroll/hover regressions also passed both.
+
+The browser test exposed an active inline-text editor blocking a new prototype
+write in Chromium. Prototype save now uses its existing preparation step to finish
+inline editing first, while retaining the stale-source guard. Syntax/diff checks
+passed. No desktop artifact rebuild, native launch or push in this increment.
+
+Mode-changing prototype actions, expressions, conditions, multiple actions,
+non-style variable bindings and the remaining design-feature matrix are still
+unfinished. This increment does not establish universal framework/runtime parity.
+Notarized Homebrew distribution remains incomplete.

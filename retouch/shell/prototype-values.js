@@ -41,7 +41,12 @@
  function route(value){if(typeof value!=='string'||value.length>2048||!value.startsWith('/')||value.startsWith('//')||/[\u0000-\u0020\u007f\\]/.test(value))return false;try{const url=new URL(value,'http://retouch.local');return url.origin==='http://retouch.local'&&!/^\/rt(?:\/|$)/.test(decodeURIComponent(url.pathname));}catch{return false;}}
  function link(value){if(typeof value!=='string'||value.length>2048||!/^https?:\/\//i.test(value)||/[\u0000-\u0020\u007f\\]/.test(value))return false;try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)&&!!url.hostname&&!url.username&&!url.password;}catch{return false;}}
  function assignment(value){
-  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['id','type','value'].includes(key))||typeof value.id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.id))throw Error('Choose a variable.');
+  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['id','type','value','variableId'].includes(key))||typeof value.id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.id))throw Error('Choose a variable.');
+  if(!['color','number','boolean','string'].includes(value.type))throw Error('Choose a supported variable type.');
+  if(Object.hasOwn(value,'variableId')){
+   if(Object.hasOwn(value,'value')||typeof value.variableId!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.variableId))throw Error('Choose one source variable instead of a literal value.');
+   return {id:value.id,type:value.type,variableId:value.variableId};
+  }
   let literal=value.value;
   if(value.type==='color')literal=palette.parse(literal).value;
   else if(value.type==='number'){if(typeof literal!=='number'||!Number.isFinite(literal)||Math.abs(literal)>1000000)throw Error('Enter a number between -1000000 and 1000000.');}
