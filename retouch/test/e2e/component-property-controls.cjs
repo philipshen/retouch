@@ -1,9 +1,9 @@
 'use strict';
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
-const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE for Next.js and Playwright');
+const fixture=process.env.RT_INSPECTOR_FIXTURE,build=process.env.RT_BUILD_FIXTURE||fixture;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE for Next.js and Playwright');
 const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
 (async()=>{
- const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-component-controls-')),file=path.join(root,'app/page.jsx');fs.mkdirSync(path.dirname(file));fs.symlinkSync(path.join(fixture,'node_modules'),path.join(root,'node_modules'),'dir');
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-component-controls-')),file=path.join(root,'app/page.jsx');fs.mkdirSync(path.dirname(file));fs.symlinkSync(path.join(build,'node_modules'),path.join(root,'node_modules'),'dir');
  fs.writeFileSync(path.join(root,'package.json'),JSON.stringify({private:true,dependencies:{next:'16.2.5',react:'19.2.0','react-dom':'19.2.0'}}));fs.writeFileSync(path.join(root,'app/layout.jsx'),'export default function Layout({children}){return <html><body>{children}</body></html>}');
  fs.writeFileSync(path.join(root,'app/Card.tsx'),'export default function Card({count=0,enabled=false,size="small",note}:{count?:number;enabled?:boolean;size?:"small"|"large";note?:string}){return <output data-count={count} data-enabled={String(enabled)} data-size={size} data-note={note}>{count}</output>}');
  if(process.env.RT_E2E_INDEXED_PROPS==='1'){
@@ -12,7 +12,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
  }
  fs.writeFileSync(path.join(root,'tsconfig.json'),JSON.stringify({compilerOptions:{jsx:'preserve',strict:true,noEmit:true,moduleResolution:'bundler',module:'esnext',target:'es2017',esModuleInterop:true,skipLibCheck:true},include:['**/*.ts','**/*.tsx']}));
  const original='"use client";import Card from "./Card";export default function Page(){return <main><Card count={1} enabled={true} size="small" note="A"/><Card count={2} enabled={false} size="large" note="B"/></main>}';fs.writeFileSync(file,original);
- let logs='',url,browser,page;const child=spawn(process.execPath,[path.resolve(__dirname,'../../bin/retouch.cjs'),'--',process.execPath,path.join(fixture,'node_modules/next/dist/bin/next'),'dev','--webpack','-p','0'],{cwd:root,env:{...process.env,NEXT_TELEMETRY_DISABLED:'1'},stdio:['ignore','pipe','pipe']});let exited=false;const stopped=new Promise(resolve=>child.once('exit',()=>{exited=true;resolve();}));for(const stream of [child.stdout,child.stderr])stream.on('data',chunk=>{logs+=chunk;url=logs.match(/http:\/\/localhost:(\d+)/)?.[0];});
+ let logs='',url,browser,page;const child=spawn(process.execPath,[path.resolve(__dirname,'../../bin/retouch.cjs'),'--',process.execPath,path.join(build,'node_modules/next/dist/bin/next'),'dev','--webpack','-p','0'],{cwd:root,env:{...process.env,NEXT_TELEMETRY_DISABLED:'1'},stdio:['ignore','pipe','pipe']});let exited=false;const stopped=new Promise(resolve=>child.once('exit',()=>{exited=true;resolve();}));for(const stream of [child.stdout,child.stderr])stream.on('data',chunk=>{logs+=chunk;url=logs.match(/http:\/\/localhost:(\d+)/)?.[0];});
  const wait=async fn=>{for(let i=0;i<240;i++){try{if(await fn())return;}catch(error){if(!/Execution context was destroyed|ECONNREFUSED|fetch failed/.test(error.message))throw error;}if(exited)throw Error(logs);await new Promise(resolve=>setTimeout(resolve,100));}throw Error('Timed out: '+logs.slice(-2000));};
  try{
   await wait(()=>url);await wait(async()=>(await fetch(url+'/rt/__api/health')).ok);browser=await browserType.launch();page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));await page.goto(url+'/rt',{timeout:90000});const app=page.frameLocator('#app');await app.locator('output').first().waitFor({timeout:90000});

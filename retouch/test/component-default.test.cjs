@@ -1,0 +1,18 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{makeApp,cleanup,Index}=require('./helpers.cjs'),defaults=require('../src/component-default.cjs'),transactions=require('../src/transactions.cjs');
+function fixture(files){const root=fs.realpathSync(makeApp(files)),index=new Index(root);index.scanAll();const resolve=()=>[...index.idToFile.keys()].map(id=>index.resolve(id)).find(item=>item.element.kind==='instance');return {root,index,resolve,close(){index.close();cleanup(root);}};}
+const definition='export function Card({label="Original",count=2,enabled=true,size="small"}:{label?:string;count?:number;enabled?:boolean;size?:"small"|"large"}){return <output>{label}{count}{String(enabled)}{size}</output>}';
+test('shared defaults update only the definition atomically',()=>{
+ const source='import {Card} from "./Card";export default function Page(){return <main><Card/><Card label="Override"/></main>}',f=fixture({'page.tsx':source,'Card.tsx':definition});try{
+  const resolved=f.resolve();for(const [name,value]of [['label','Quotes " & <text>\nNew'],['count',-12.5],['enabled',false],['size','large']]){
+   const meta=defaults.describe(resolved,name),plan=defaults.plan(resolved,{name,value,fileHash:resolved.hash,revision:meta.revision});assert.equal(plan.ok,true,plan.reason);assert.equal(plan.edits.filter(edit=>edit.before!==edit.after).length,1);assert.ok(plan.componentDefault.definitionId);const applied=transactions.applyPlan(f.root,plan);assert.equal(applied.ok,true,applied.reason);assert.equal(fs.readFileSync(resolved.file,'utf8'),source);f.index.scanAll();assert.equal(defaults.describe(f.resolve(),name).value,value);fs.writeFileSync(path.join(f.root,'Card.tsx'),definition);f.index.scanAll();
+  }
+ }finally{f.close();}
+});
+test('default edits reject wrong types, unsupported defaults, declared choices and stale revisions',()=>{
+ const f=fixture({'page.tsx':'import {Card} from "./Card";const X=()=> <Card/>','Card.tsx':definition});try{const resolved=f.resolve();for(const [name,value]of [['count','3'],['count',Infinity],['size','huge'],['enabled',0],['children','x'],['missing','x']]){const meta=defaults.describe(resolved,name);assert.equal(defaults.plan(resolved,{name,value,fileHash:resolved.hash,revision:meta?.revision}).ok,false);}const meta=defaults.describe(resolved,'label');assert.equal(defaults.plan(resolved,{name:'label',value:'New',fileHash:'stale',revision:meta.revision}).ok,false);fs.appendFileSync(path.join(f.root,'Card.tsx'),'\n// changed');assert.equal(defaults.plan(resolved,{name:'label',value:'New',fileHash:resolved.hash,revision:meta.revision}).ok,false);}finally{f.close();}
+ for(const params of ['{label=buildLabel()}','{label=1}: {label: Unknown}','props']){const f=fixture({'page.tsx':'function Card('+params+'){return <p/>}const X=()=> <Card/>'});try{assert.equal(defaults.describe(f.resolve(),'label'),null);}finally{f.close();}}
+});
+test('definition imports and type dependencies are guarded until the default transaction commits',()=>{
+ const f=fixture({'page.tsx':'import {Card} from "./barrel";const X=()=> <Card/>','barrel.ts':'export {Card} from "./Card"','Card.tsx':definition});try{const resolved=f.resolve(),meta=defaults.describe(resolved,'label'),plan=defaults.plan(resolved,{name:'label',value:'New',fileHash:resolved.hash,revision:meta.revision});assert.equal(plan.ok,true,plan.reason);fs.appendFileSync(path.join(f.root,'barrel.ts'),'\n// changed');assert.equal(transactions.applyPlan(f.root,plan).ok,false);assert.equal(fs.readFileSync(path.join(f.root,'Card.tsx'),'utf8'),definition);}finally{f.close();}
+});

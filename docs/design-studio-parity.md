@@ -27379,3 +27379,33 @@ Cross-page website links remain web URLs rather than being remapped to another
 exported PDF page. Accessibility tagging and page naming/navigation remain, along
 with the earlier print-fidelity and retained off-crop-content limits. No native
 rebuild, launch or push; the full design and trusted Homebrew goals remain active.
+
+### 2026-09-20 — Shared React component defaults
+
+The component inspector now offers a shared-default editor for existing literal
+string, number and boolean defaults in destructured React component parameters.
+Declared choice types use a select control. Saving updates the definition, so
+instances that inherit the default update together while explicit overrides stay
+unchanged. The dialog explains this scope and supports cancellation before saving.
+Undo/redo restores exact source bytes, and resetting an instance override inherits
+the latest shared default. Focus returns to the current inspector control.
+
+Definition source, import resolution and supported type-contract dependencies are
+checked before the atomic write. Stale revisions, invalid types/choices, computed
+defaults and unresolved declared types are refused. Conditional rendered roots
+are refreshed using the current component definition roots and revision; open
+comparison screens receive the same refresh.
+
+All 2,167 unit tests passed. Chromium and WebKit browser checks cover shared text,
+number, boolean and choice changes, conditional root changes, explicit override
+preservation, cancellation, exact undo/redo and reset-to-default behavior. Main
+and tablet comparison document identity and input state are retained. Comparison
+inputs are seeded after React mounts; seeding before hydration caused a WebKit
+test setup failure. The existing Chromium component-property controls regression
+also passes. The light-theme default dialog was visually inspected.
+
+This supports existing literal defaults, not creating property schemas, computed
+or object defaults, arbitrary component wrappers, or non-React shared defaults.
+It does not establish universal HMR/state retention or full component parity.
+No native rebuild or launch was performed; notarized Homebrew distribution and
+full Figma Design parity remain incomplete.

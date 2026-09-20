@@ -2500,6 +2500,7 @@ function propTable(props,instanceId,fileHash,options={}) {
     }else{value.textContent=prop.value;value.title=prop.editor?.reason||'';}
     if(instanceId&&prop.editor?.canReset){const reset=RetouchInspector.button('Reset',()=>{window.RetouchPanelFocus.queueControl(reset,'Component property '+prop.name);setComponentProperty(instanceId,prop.name,undefined,fileHash,{reset:true,definitionHash:prop.editor.definitionHash});});reset.setAttribute('aria-label','Reset '+prop.name+' to default');reset.title='Remove this instance override and use the component default.';reset.textContent='↺';value.append(reset);}
     if(instanceId&&prop.editor?.canClear&&!prop.editor.choices){const clear=RetouchInspector.button('Unset',()=>{window.RetouchPanelFocus.queueControl(clear,'Component property '+prop.name);setComponentProperty(instanceId,prop.name,undefined,fileHash,{clear:true,definitionHash:prop.editor.definitionHash});});clear.setAttribute('aria-label','Unset property '+prop.name);value.append(clear);}
+    if(instanceId&&prop.defaultEditor){const edit=RetouchInspector.button('Default…',()=>RetouchComponentDefault.open({name:prop.name,meta:prop.defaultEditor,opener:edit,save:next=>setComponentDefault(instanceId,prop.name,next,fileHash,prop.defaultEditor.revision)}));edit.setAttribute('aria-label','Edit default for '+prop.name);edit.title='Edit the shared component default';value.append(edit);}
     if(prop.editor?.inherited){const note=document.createElement('small');note.textContent='Default';value.append(note);}
     if(instanceId){name.title='Default: '+prop.default;for(const control of value.querySelectorAll('input,textarea,select'))control.setAttribute('aria-description','Default: '+prop.default);}
     row.append(name,value,fallback);body.append(row);
@@ -2590,6 +2591,22 @@ async function refreshComponentProperty(instanceId,parentId){
   if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else if(usage?.ok)await refreshWrittenElement(usage.element,()=>true);else await reloadFrame();
   const component=await api('GET',componentUrl(instanceId));
   if(usage?.ok&&component?.ok){sel={hostId:mountedComponentHost(instanceId,component,usage.element.context)?.getAttribute('data-rt')||component.definitionId,instanceId,scope:'instance',info:usage.element};renderPanel();}else clearSelection();
+}
+async function refreshComponentDefault(instanceId){
+ await refreshSwappedComponent(instanceId,null);
+ const usage=await api('GET',resolveUrl(instanceId)),component=await api('GET',componentUrl(instanceId));
+ if(!usage?.ok||!component?.ok)throw Error('The component default could not be refreshed.');
+ const info=usage.element,roots=component.definitionIds?.length?component.definitionIds:[component.definitionId],matches=node=>roots.includes(node.getAttribute('data-rt'))&&node.getAttribute('data-rt-revision')===component.hash;
+ const comparisons=await window.RetouchComparisons?.syncSource({select:d=>matchingInDocument(d,instanceId,info),matches,revisionAttribute:info.renderRevisionAttribute,hash:info.hash});
+ if(comparisons?.failures.length)throw Error('Default saved. Retry the failed comparison previews.');
+ await refreshComponentProperty(instanceId,null);
+}
+async function setComponentDefault(instanceId,name,value,fileHash,revision){
+ busyPanel(true);try{
+  const result=await api('POST','/rt/__api/op',{type:'setComponentDefault',id:instanceId,name,value,fileHash,revision});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update the default.');
+  if(result.undoId)editorHistory.record({type:'setComponentDefault',id:instanceId,undoId:result.undoId});
+  await refreshComponentDefault(instanceId);toast('Shared default updated','ok');
+ }finally{busyPanel(false);}
 }
 async function setComponentProperty(instanceId,name,value,fileHash,options={}){
   busyPanel(true);try{
@@ -4160,6 +4177,7 @@ async function restoreHistory(direction,op) {
     if(op.type==='reparentComponentSelection'){await refreshComponentSelection(direction==='undo'?op.selectionBefore:op.selectionAfter);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponentSelection'){await refreshComponentSelection(direction==='undo'?op.selectionBefore:op.selectionAfter);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='setComponentDefault'){await refreshComponentDefault(op.id);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='htmlGroupScale'){const resultInfo=await api('GET',resolveUrl(op.id));if(!resultInfo?.ok)throw Error('The scaled group no longer resolves.');try{await refreshHTMLGroupScale(resultInfo.element);}finally{await restoreLayerSelection([op.id]);if(sel)renderPanel();}return result;}
     if(op.type==='prototypeInteractions'){if(op.targetId){const target=await api('GET',resolveUrl(op.targetId,op.targetContext));if(!target?.ok)throw Error('The prototype destination no longer resolves.');await refreshPrototype(target.element,true);}const fresh=await api('GET',resolveUrl(op.id,op.context));if(!fresh?.ok)throw Error('Re-select the prototype layer to refresh it.');await refreshPrototype(fresh.element);toast(direction==='undo'?'Undone':'Redone','ok');return result;}

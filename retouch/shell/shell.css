@@ -1463,3 +1463,5 @@ html, body { overflow:clip; }
 
 .prototype-action > summary { touch-action:none; }
 .prototype-action-dragging, .prototype-action-dragging * { user-select:none; cursor:grabbing !important; }
+
+.component-default input[type="checkbox"] { width:auto; align-self:flex-start; }
