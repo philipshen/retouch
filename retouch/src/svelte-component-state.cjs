@@ -7,7 +7,8 @@ function metadata(text,file){
 }
 // Own-module captures use the HMR-stable props object. Committed source-ID
 // proofs additionally migrate surviving child scopes during parent remounts.
-// Script changes and ordinary runtime mounts still initialize anew.
+// Only exact editor-proved script transitions can retain state across script
+// changes. Ordinary runtime mounts and external script edits initialize anew.
 function createRegistry(){
  const files=new Map(),active=new Set();let updating=false,generation=0,ordinal=0;
  function componentState(file,script,revision,props,options={}){
@@ -19,8 +20,8 @@ function createRegistry(){
    const candidates=parent.resume.get(id),candidate=candidates?.shift();
    if(candidate?.file===file&&candidate.script===script){old=candidate;transferred=true;}
   }
-  const provedImport=updating&&old&&(options.migrations||[]).some(edge=>edge.from===old.shape&&edge.to===options.shape&&edge.fromScript===old.script&&edge.toScript===script);
-  const retain=old&&(old.script===script||provedImport)&&(transferred||old.revision!==revision);
+  const provedScript=updating&&old&&(options.migrations||[]).some(edge=>edge.from===old.shape&&edge.to===options.shape&&edge.fromScript===old.script&&edge.toScript===script);
+  const retain=old&&(old.script===script||provedScript)&&(transferred||old.revision!==revision);
   const record={file,script,revision,shape:options.shape,id,anchor:options.anchor,ordinal:++ordinal,values:new Map(),children:new Set(),resume:null,snapshot:null,lineage:transferred?[...(parent?.lineage||[])]:[]};
   if(retain&&updating&&old.snapshot?.generation===generation){
    const edge=(options.migrations||[]).find(edge=>edge.from===old.shape&&edge.to===options.shape);

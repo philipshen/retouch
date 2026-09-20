@@ -22,6 +22,6 @@ function plan(r,op,definition){try{
  const code=Object.is(op.value,-0)?'-0':JSON.stringify(op.value).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029'),after=Object.is(op.value,state.editor.value)?def.text:new MagicString(def.text).overwrite(state.node.start,state.node.end,code).toString();
  compiler.compile(after,{filename:def.rel,generate:false});const beforeIds=source.collect(def.text,def.rel),afterIds=source.collect(after,def.rel);for(const key of ['elements','components'])if(beforeIds[key].length!==afterIds[key].length||beforeIds[key].some((e,i)=>e.id!==afterIds[key][i].id||e.tag!==afterIds[key][i].tag))throw Error('The default edit would change layer identities.');
  const root=def.meta.roots[0]?.id;if(!root)throw Error('This component has no source layer to refresh.');
- return {ok:true,hash:r.hash,componentDefault:{instanceId:r.element.id,definitionId:root},edits:[{file:r.file,before:r.source,after:r.source},{file:def.file,before:def.text,after}]};
+ return {ok:true,hash:r.hash,componentDefault:{instanceId:r.element.id,definitionId:root,preserveScriptState:true},edits:[{file:r.file,before:r.source,after:r.source},{file:def.file,before:def.text,after}]};
  }catch(error){return {ok:false,refused:true,reason:error.message};}}
 module.exports={describe,plan};

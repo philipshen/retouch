@@ -305,8 +305,10 @@ Use Default… beside a property to edit its shared literal default. Rune `$prop
 destructuring and legacy `export let` defaults support strings, finite numbers and
 booleans, with supported local TypeScript choices enforced. All inheriting usages
 update; explicit overrides stay unchanged. The definition edit is one undo step,
-and comparison previews synchronize. This script edit uses normal Svelte HMR;
-local state in affected component definitions can reinitialize. Computed defaults,
+and comparison previews synchronize. Exact editor default changes preserve supported
+synchronous rune state in each surviving instance and nested component, including
+through undo/redo. Ordinary runtime mounts and external script edits still initialize
+fresh; legacy local state and asynchronous rune initialization are not covered. Computed defaults,
 `$bindable` defaults and unsupported declared types are not editable here.
 Variants and broader component authoring remain unfinished.
 
