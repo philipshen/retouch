@@ -2527,6 +2527,10 @@ function componentSelectionSection(infos){
   if(!section.isConnected||key!==panelSelectionKey())return;
   pending.remove();
   if(components.some((component,i)=>!component?.ok||component.usageHash!==infos[i].hash)){RetouchInspector.note(section,'The component source changed. Select the instances again.');return;}
+  if(components.some(component=>component.resetProperties)){
+   const revisions=Object.fromEntries(ids.map((id,i)=>[id,components[i].resetProperties?.revision||null]));
+   const reset=RetouchInspector.button('Reset properties',()=>resetComponentPropertiesSelection(infos,key,revisions));reset.title='Restore supported defaults and unset optional properties for each selected usage. Instances already using defaults stay unchanged.';section.append(reset);
+  }
   const shared=components[0].props.filter(prop=>components.every(component=>component.props.some(other=>other.name===prop.name)));
   if(!shared.length){RetouchInspector.note(section,'These components have no shared properties.');return;}
   for(const prop of shared){
@@ -2567,6 +2571,24 @@ async function refreshComponentSelection(ids){
  if(sel?.info.kind==='instance')await refreshWrittenElement(sel.info,el=>(sel.multiple||[sel.info]).every(info=>matchingInDocument(el.ownerDocument,info.id,info).some(root=>root.getAttribute(info.renderRevisionAttribute)===info.hash)));
  else await reloadFrame();
  await layers.refresh();if(sel)renderPanel();
+}
+async function refreshResetComponentSelection(ids,refreshIds){
+ for(const id of refreshIds){
+  const result=await api('GET',resolveUrl(id));if(!result?.ok)throw Error('The reset selection could not be refreshed.');
+  const info=result.element;await refreshWrittenElement(info,()=>true);
+  const comparisons=await window.RetouchComparisons?.syncSource({select:d=>matchingInDocument(d,id,info),matches:()=>true,revisionAttribute:info.renderRevisionAttribute||'data-rt-revision',hash:info.hash});
+  if(comparisons?.failures.length)throw Error('Properties reset. Retry the failed comparison previews.');
+ }
+ await restoreLayerSelection(ids);await layers.refresh();if(sel)renderPanel();
+}
+async function resetComponentPropertiesSelection(infos,key,revisions){
+ if(key!==panelSelectionKey()||panelTasks||undoBusy||sourceRequests)return;
+ const ids=infos.map(info=>info.id);busyPanel(true);
+ try{
+  const result=await api('POST','/rt/__api/op',{type:'resetComponentPropsSelection',id:ids[0],ids,fileHash:infos[0].hash,revisions});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not reset selected properties.');
+  const refreshIds=result.componentReset.refreshIds;if(result.undoId)editorHistory.record({type:'resetComponentPropsSelection',id:ids[0],selectionIds:ids,refreshIds,undoId:result.undoId});
+  await refreshResetComponentSelection(ids,refreshIds);toast('Properties reset','ok');
+ }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
 async function setComponentPropertySelection(infos,key,name,value,definitionHashes,options={}){
  if(key!==panelSelectionKey()||panelTasks||undoBusy||sourceRequests)return;
@@ -4198,6 +4220,7 @@ async function restoreHistory(direction,op) {
     if(op.type==='htmlGroupScale'){const resultInfo=await api('GET',resolveUrl(op.id));if(!resultInfo?.ok)throw Error('The scaled group no longer resolves.');try{await refreshHTMLGroupScale(resultInfo.element);}finally{await restoreLayerSelection([op.id]);if(sel)renderPanel();}return result;}
     if(op.type==='prototypeInteractions'){if(op.targetId){const target=await api('GET',resolveUrl(op.targetId,op.targetContext));if(!target?.ok)throw Error('The prototype destination no longer resolves.');await refreshPrototype(target.element,true);}const fresh=await api('GET',resolveUrl(op.id,op.context));if(!fresh?.ok)throw Error('Re-select the prototype layer to refresh it.');await refreshPrototype(fresh.element);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='resetComponentPropsSelection'){await refreshResetComponentSelection(op.selectionIds,op.refreshIds);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentPropSelection'){await refreshComponentSelection(op.selectionIds);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='moveGroup'){const results=await Promise.all(op.childIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(r=>r?.ok))throw Error('The group contents no longer resolve.');try{await refreshGroupMove(results.map(r=>r.element),direction==='undo'?op.classesAfter:op.classesBefore);}finally{await restoreLayerSelection(op.selectionIds||[op.groupId]);if(sel)renderPanel();}return result;}
     if(op.type==='setLiquidClassesSelection'){const results=await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(item=>item?.ok&&item.element.classSourceLiteral))throw Error('The literal class selection no longer resolves.');await refreshLiteralLiquidClasses(results.map(item=>item.element),direction==='undo'?op.classesAfter:op.classesBefore);await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}

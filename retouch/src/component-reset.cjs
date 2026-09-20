@@ -1,5 +1,5 @@
 'use strict';
-const MagicString=require('magic-string'),props=require('./component-props.cjs'),{contentHash}=require('./id.cjs');
+const MagicString=require('magic-string'),props=require('./component-props.cjs'),{contentHash,collectElements}=require('./id.cjs');
 const refuse=reason=>({ok:false,refused:true,reason});
 function entries(resolved,definition){
  if(resolved.element.kind!=='instance')return [];
@@ -32,4 +32,30 @@ function plan(resolved,op){
   const after=ms.toString();return {ok:true,hash:contentHash(after),componentProp:{instanceId:resolved.element.id,parentId},edits:[{file:resolved.file,before:resolved.source,after},...dependencies.values()],pathChecks:[...checks.values()]};
  }catch(error){return refuse('Could not reset component properties: '+error.message);}
 }
-module.exports={describe,plan};
+function planSelection(resolved,op){
+ if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the instances.');
+ try{
+  const {ids,revisions}=op;
+  if(!Array.isArray(ids)||ids.length<2||ids.length>100||new Set(ids).size!==ids.length||!ids.includes(resolved.element.id)||ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))return refuse('Choose between 2 and 100 distinct component usages in one source file.');
+  if(!revisions||typeof revisions!=='object'||Array.isArray(revisions)||Object.keys(revisions).length!==ids.length||Object.keys(revisions).some(id=>!ids.includes(id)||revisions[id]!==null&&typeof revisions[id]!=='string'))return refuse('Provide the current reset revision for every selected instance.');
+  const elements=collectElements(resolved.source,resolved.relPath).elements,members=ids.map(id=>elements.find(element=>element.id===id));
+  if(members.some(element=>element?.kind!=='instance'))return refuse('Select component usages from the same source file.');
+  const dependencies=new Map(),checks=new Map(),ms=new MagicString(resolved.source),refreshIds=new Set();let changed=0;
+  for(const element of members){
+   const current={...resolved,elements,element},meta=describe(current);
+   if((meta?.revision||null)!==revisions[element.id])return refuse('The selected properties or defaults changed. Re-select the instances.');
+   if(!meta)continue;
+   const result=plan(current,{fileHash:resolved.hash,revision:meta.revision});if(!result.ok)return result;
+   for(const edit of result.edits){if(edit.file===resolved.file)continue;const old=dependencies.get(edit.file);if(old&&old.before!==edit.before)throw Error('A component dependency changed.');dependencies.set(edit.file,edit);}
+   for(const check of result.pathChecks||[]){const old=checks.get(check.file);if(old&&JSON.stringify(old)!==JSON.stringify(check))throw Error('Component resolution changed.');checks.set(check.file,check);}
+   // Remove only the validated attributes, keeping nested usages and intervening source intact.
+   for(const name of meta.names){const attr=element.node.openingElement.attributes.find(attr=>attr.type==='JSXAttribute'&&attr.name.name===name);ms.remove(attr.start,attr.end);}
+   refreshIds.add(result.componentProp.parentId||element.id);changed++;
+  }
+  if(!changed)return refuse('The selected instances have no properties that can be reset.');
+  const after=ms.toString(),hash=contentHash(after),fresh=collectElements(after,resolved.relPath).elements;
+  const selection=ids.map(id=>{const element=fresh.find(element=>element.id===id);if(element?.kind!=='instance')throw Error('A component usage lost its source identity.');return require('./adapters/react.cjs').describe({...resolved,source:after,hash,elements:fresh,element});});
+  return {ok:true,hash,selection,componentReset:{refreshIds:[...refreshIds]},edits:[{file:resolved.file,before:resolved.source,after},...dependencies.values()],pathChecks:[...checks.values()]};
+ }catch(error){return refuse('Could not reset selected component properties: '+error.message);}
+}
+module.exports={describe,plan,planSelection};

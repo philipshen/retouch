@@ -21,3 +21,18 @@ test('untyped defaults also guard barrel resolution until reset commits',()=>{
   const meta=reset.describe(f.resolved),plan=reset.plan(f.resolved,{fileHash:f.resolved.hash,revision:meta.revision});assert.equal(plan.ok,true,plan.reason);fs.writeFileSync(path.join(f.root,'Card.tsx'),'export {Card} from "./Other"');assert.equal(transactions.applyPlan(f.root,plan).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source);
  }finally{f.close();}
 });
+function selectionOp(resolved){const elements=require('../src/id.cjs').collectElements(resolved.source,resolved.relPath).elements.filter(e=>e.kind==='instance'),ids=elements.map(e=>e.id);return {fileHash:resolved.hash,ids,revisions:Object.fromEntries(elements.map(element=>[element.id,reset.describe({...resolved,element})?.revision||null]))};}
+test('selection reset applies each component default and preserves already inherited usages',()=>{
+ const f=fixture('<Card label="First" count={7}/><Card/><Other amount={9} note="Optional"/>',{'page.tsx':'import {Card} from "./Card";function Other({amount=4,note}:{amount?:number;note?:string}){return <p>{amount}{note}</p>}export default function Page(){return <main><Card label="First" count={7}/><Card/><Other amount={9} note="Optional"/></main>}'});try{
+  const op=selectionOp(f.resolved),plan=reset.planSelection(f.resolved,op);assert.equal(plan.ok,true,plan.reason);assert.equal(plan.selection.length,3);assert.deepEqual(plan.selection.map(e=>e.id),op.ids);assert.equal(plan.edits[0].after,f.resolved.source.replace('label="First"','').replace('count={7}','').replace('amount={9}','').replace('note="Optional"',''));assert.equal(plan.componentReset.refreshIds.length,1);assert.equal(transactions.applyPlan(f.root,plan).ok,true);
+ }finally{f.close();}
+});
+test('selection reset rejects stale members, duplicate ids and host ids atomically',()=>{
+ const f=fixture('<Card label="First"/><Card count={7}/>');try{
+  const op=selectionOp(f.resolved);for(const bad of [{...op,ids:[op.ids[0],op.ids[0]]},{...op,revisions:{...op.revisions,[op.ids[1]]:'stale'}},{...op,revisions:{...op.revisions,[op.ids[1]]:null}},{...op,ids:[...op.ids,'0000000000'],revisions:{...op.revisions,'0000000000':null}},{...op,fileHash:'stale'}])assert.equal(reset.planSelection(f.resolved,bad).ok,false);
+  assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source);
+ }finally{f.close();}
+});
+test('selection reset guards shared external dependencies until commit',()=>{
+ const f=fixture('<Card label="First"/><Card count={7}/>');try{const plan=reset.planSelection(f.resolved,selectionOp(f.resolved));assert.equal(plan.ok,true,plan.reason);assert.equal(plan.edits.filter(edit=>edit.file.endsWith('Card.tsx')).length,1);fs.appendFileSync(path.join(f.root,'Card.tsx'),'\n// changed');assert.equal(transactions.applyPlan(f.root,plan).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source);}finally{f.close();}
+});

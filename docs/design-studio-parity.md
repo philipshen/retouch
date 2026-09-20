@@ -27435,3 +27435,31 @@ This resets supported properties of one source usage, not nested style overrides
 multiple selected usages, or all component state. No native build, launch or push
 was performed. Full Figma Design parity and trusted Homebrew distribution remain
 incomplete.
+
+### 2026-09-20 — Reset properties across selected instances
+
+The shared component inspector now offers Reset properties for a multi-selection.
+Each selected usage resets its own supported properties, including properties that
+are not shared by all selected component types. Already inherited usages remain
+unchanged. The action remains available when components have no properties in
+common, and disappears when no selected usage has supported overrides to reset.
+
+The planner validates every selected usage against the same source snapshot and
+reset revision, merges definition/type/import dependency guards, removes only
+validated attributes and returns the preserved source selection. One history entry
+restores the whole reset with exact Undo/Redo. Parent revision checks refresh the
+main and open comparison previews before restoring the multi-selection.
+
+All 2,174 unit tests passed. New source coverage includes different component types
+and defaults, a same-file definition, inherited usages, stale or malformed
+selection refusal and atomic dependency protection. Chromium and WebKit passed the
+expanded component-property controls suite: grouped reset of numeric, boolean,
+choice and optional text properties, retained two-instance selection, action
+visibility, exact source Undo/Redo, compiled main/tablet values and retained input
+state/document identity. Existing shared property editing checks also pass. The
+light-theme multi-selection inspector was visually inspected.
+
+The current component multi-selection model is confined to one source file. This
+does not reset nested style overrides or arbitrary component state, and does not
+establish cross-framework equivalence. No native rebuild, launch or push was
+performed. Full design parity and trusted Homebrew distribution remain incomplete.

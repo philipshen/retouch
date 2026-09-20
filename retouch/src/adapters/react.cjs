@@ -55,6 +55,7 @@ module.exports = {
     if(op.type==='renameElement')return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../jsx-layer-name.cjs').plan(resolved,op));
     if(['insertComponent','swapComponent'].includes(op.type))return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../insert-component.cjs').plan(resolved,op));
     if(op.type==='setComponentPropSelection')return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../component-props.cjs').planSelection(resolved,op));
+    if(op.type==='resetComponentPropsSelection')return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../component-reset.cjs').planSelection(resolved,op));
     if(op.type==='resetComponentProps')return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../component-reset.cjs').plan(resolved,op));
     if(op.type==='setComponentDefault')return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../component-default.cjs').plan(resolved,op));
     if(op.type==='setComponentProp')return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../component-props.cjs').plan(resolved,op));
@@ -77,6 +78,7 @@ module.exports = {
     if(['duplicateSelection','deleteSelection','moveSelection'].includes(op.type))return require('../native-structure-selection.cjs').plan(resolved,op,'react');
     if(op.type==='insertElement')return require('../native-insert.cjs').plan(resolved,op,'react');
     if(op.type==='setComponentPropSelection')return require('../component-props.cjs').planSelection(resolved,op);
+    if(op.type==='resetComponentPropsSelection')return require('../component-reset.cjs').planSelection(resolved,op);
     if(op.type==='resetComponentProps')return require('../component-reset.cjs').plan(resolved,op);
     if(op.type==='setComponentDefault')return require('../component-default.cjs').plan(resolved,op);
     const svg=svgPlanner(resolved,op);
