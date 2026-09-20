@@ -2780,7 +2780,7 @@ async function detachInstance(id, component, button, context=sel?.info?.context)
     editorHistory.record({ type: 'detachComponent', id, undoId: result.undoId, context:usage.element.context });
     const detached = await api('GET', componentUrl(id,usage.element.context));
     if (detached?.ok) {
-      await refreshWrittenElement(result.element || {...usage.element,hash:result.hash}, el => (detached.definitionIds || [detached.definitionId]).includes(el.getAttribute('data-rt')));
+      await refreshWrittenStructure(result.element || {...usage.element,hash:result.hash}, el => (detached.definitionIds || [detached.definitionId]).includes(el.getAttribute('data-rt')));
       await editDefinition(id, detached);
     }
     toast('Detached to ' + result.detachedFile, 'ok');
@@ -4314,7 +4314,7 @@ async function restoreHistory(direction,op) {
       const info = fresh.element;
       const selectionResult=(['setClassesSelection','setSVGTransforms'].includes(op.type)||op.type==='setCSSSelection'&&op.managedCSS)?await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id)))):null;
       const component = op.type === 'detachComponent'||op.type==='createComponent'&&direction==='redo' ? await api('GET', componentUrl(op.id,op.context)) : null;
-      const refresh=()=>(['structure','structureSelection'].includes(op.type)?refreshWrittenStructure:refreshWrittenElement)(info, el => {
+      const refresh=()=>(['structure','structureSelection','detachComponent'].includes(op.type)?refreshWrittenStructure:refreshWrittenElement)(info, el => {
         if(selectionResult)return selectionResult.every(result=>result?.ok)&&(op.type==='setSVGTransforms'?svgSelectionMatches:classSelectionMatches)(selectionResult.map(result=>result.element),el.ownerDocument);
         if(op.svgCreatedId){const found=matchingInDocument(el.ownerDocument,op.svgCreatedId,null).length>0;return direction==='undo'?!found:found;}
         if(op.type==='createComponent'&&direction==='undo')return el.getAttribute('data-rt')===op.id;

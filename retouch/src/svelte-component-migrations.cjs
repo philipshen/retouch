@@ -5,7 +5,7 @@ const fs=require('node:fs'),path=require('node:path'),source=require('./svelte-s
 const records=new Map(),pending=new Map(),limit=200;
 function record(root,plan){
  if(!plan?.ok)return;
- const structural=!!(plan.duplicatedComponent||plan.deletedComponent||plan.copiedComponents||plan.deletedComponentIds||plan.movedComponent||plan.movedComponentIds||plan.insertedComponent),mapping=new Map(plan.insertedComponent?.sourceIdMap||plan.movedComponent?.sourceIdMap||plan.duplicatedComponent?.sourceIdMap||plan.sourceIdMap||[]),removed=new Set([...(plan.deletedComponent?.removedSourceIds||plan.removedSourceIds||[]),...(plan.insertedComponent?.previousInstanceId?[plan.insertedComponent.previousInstanceId]:[])]);
+ const structural=!!(plan.duplicatedComponent||plan.deletedComponent||plan.copiedComponents||plan.deletedComponentIds||plan.movedComponent||plan.movedComponentIds||plan.insertedComponent||plan.detachedComponent),mapping=new Map(plan.detachedComponent?.sourceIdMap||plan.insertedComponent?.sourceIdMap||plan.movedComponent?.sourceIdMap||plan.duplicatedComponent?.sourceIdMap||plan.sourceIdMap||[]),removed=new Set([...(plan.deletedComponent?.removedSourceIds||plan.removedSourceIds||[]),...((plan.detachedComponent||plan.insertedComponent)?.previousInstanceId?[(plan.detachedComponent||plan.insertedComponent).previousInstanceId]:[])]);
  for(const edit of plan.edits||[]){
   if(!edit.file.endsWith('.svelte')||typeof edit.before!=='string'||typeof edit.after!=='string'||edit.before===edit.after)continue;
   let file;
@@ -16,7 +16,7 @@ function record(root,plan){
     const relative=path.relative(fs.realpathSync(root),file).split(path.sep).join('/'),before=source.textSnapshot(edit.before,relative),after=source.textSnapshot(edit.after,relative),pairs=[];
     for(const old of before.components){if(removed.has(old.id))continue;const id=mapping.get(old.id)||old.id,next=after.components.find(e=>e.id===id&&e.tag===old.tag);if(!next)throw Error('Incomplete component mapping');pairs.push([old.id,id]);}
     if(new Set(pairs.map(pair=>pair[1])).size!==pairs.length)continue;
-    const from=source.contentHash(before.signature),to=source.contentHash(after.signature),scriptProof=plan.insertedComponent?.preserveScriptState?{fromScript:require('./svelte-component-state.cjs').metadata(edit.before,relative).script,toScript:require('./svelte-component-state.cjs').metadata(edit.after,relative).script}:{};
+    const from=source.contentHash(before.signature),to=source.contentHash(after.signature),scriptProof=(plan.detachedComponent||plan.insertedComponent)?.preserveScriptState?{fromScript:require('./svelte-component-state.cjs').metadata(edit.before,relative).script,toScript:require('./svelte-component-state.cjs').metadata(edit.after,relative).script}:{};
     for(const [revision,edge]of [[afterRevision,{beforeRevision,from,to,pairs,...scriptProof,ids:before.components.map(e=>e.id)}],[beforeRevision,{beforeRevision:afterRevision,from:to,to:from,...(scriptProof.fromScript?{fromScript:scriptProof.toScript,toScript:scriptProof.fromScript}:{}),pairs:pairs.map(([a,b])=>[b,a]),ids:after.components.map(e=>e.id)}]]){const key=file+'|'+revision,prior=records.get(key)||[];records.delete(key);records.set(key,[...prior.filter(item=>item.beforeRevision!==edge.beforeRevision),edge].slice(-20));}
     while(records.size>limit)records.delete(records.keys().next().value);
    }

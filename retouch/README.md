@@ -291,7 +291,15 @@ new required properties before applying. The replacement initializes fresh;
 unaffected instances and supported parent state remain retained. Undo restores
 the exact source, with the restored instance initialized anew. Bound properties,
 spreads, directives and child content must be preserved before such a swap.
-Editing shared default declarations, variants, detach and broader component
+Detach instance creates an independent sibling Svelte module and preserves the
+usage's properties, bindings and child content. Managed responsive styles receive
+independent identities; relative imports and assets retain their paths. The shared
+definition is unchanged, and undo/redo restores both files exactly. Undo refuses
+to delete a detached module referenced by another source file. Detachment applies
+to the authored usage, including all of its repeated runtime occurrences. The
+detached instance and an instance restored by undo initialize fresh; supported
+parent and unaffected instance state remain retained. Nested component imports
+stay shared. Editing shared default declarations, variants and broader component
 authoring remain unfinished.
 
 Simple literal text, managed styles, style links, and variable bindings use development-only Svelte store
