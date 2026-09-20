@@ -318,7 +318,7 @@ function handle(req, res, ctx) {
         for (const edit of result.edits) if (ctx.adapter.matches(edit.file)) ctx.index.indexFile(edit.file);
         ctx.sourceMonitor?.acknowledge(result.edits);
         delete result.edits; delete result.createdFile; delete result.createdHash;
-        const fresh = ctx.index.resolve(op.id);
+        const fresh = ctx.index.resolve(result.createdComponent?.instanceId||op.id);
         if (fresh) { fresh.context = resolved.context; result.element = require('./component-usage.cjs').describe(ctx.index,fresh); }
         if(op.type==='connectPrototypeScroll'){const target=ctx.index.resolve(op.targetId);if(target){target.context=renderContext(op.targetContext);result.target=require('./component-usage.cjs').describe(ctx.index,target);}}
       }

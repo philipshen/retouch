@@ -28344,3 +28344,42 @@ All 2,409 unit tests passed. Final logs are
 /tmp/retouch-embed-scroll-full-final.log. Desktop artifacts were not rebuilt.
 Full Figma parity, arbitrary-site authoring and trusted public macOS distribution
 remain incomplete.
+
+### Svelte component creation and live drafts checkpoint
+
+The existing Create component inspector control is now available for native
+Svelte subtrees. It creates a named sibling .svelte module, imports it and replaces
+the selected subtree with an instance as one two-file transaction. Expression
+values and callbacks remain evaluated in the original parent scope and become
+explicit props. Distinct callback expressions remain distinct. Retouch-managed
+responsive styles move with their source owners; surrounding identities are
+mapped explicitly. The API and history UI now handle creation that changes the
+selected source ID, and exact creation migrations preserve eligible parent and
+surviving sibling rune state.
+
+Authored scoped CSS, bindings/directives/spreads, nested component/control-flow
+constructs, namespace options and evaluated side effects still receive explicit
+refusals. This checkpoint does not provide unrestricted Svelte extraction.
+
+Browser verification exposed uncontrolled drafts being lost when the extracted
+subtree remounted. Creation and single-instance duplication now snapshot live
+source-connected controls in each open preview and restore matching remounted
+controls with unchanged defaults. Source and instance mappings distinguish
+surviving instances from fresh copies; navigation or ambiguous occurrence counts
+skip restoration. Snapshots stay operation-local, do not enter history storage,
+and dispatch no application input events. Source-authored new values and retained
+DOM nodes take precedence. Root control IDs are mapped for both React and Svelte.
+
+All 2,413 unit tests passed (/tmp/retouch-svelte-create-full-final.log). Four added
+source tests cover two-file exact history, captured values/callbacks, managed-style
+transfer, identity preservation, stale sources, filename races and contextual
+refusals. Chromium and WebKit passed normal creation/duplicate/undo/redo controls,
+retained parent and sibling counters, unchanged document identities, moved CSS,
+and text-input/textarea/checkbox/select drafts inside the extracted subtree
+(/tmp/retouch-svelte-create-drafts-{chromium,webkit}-final.log). The creation panel
+screenshot /tmp/retouch-svelte-create-chromium.png was visually inspected.
+React creation and three-comparison dropped-update recovery also passed in both
+browsers after the shared history/draft changes
+(/tmp/retouch-svelte-create-react-{chromium,webkit}-final.log). Desktop artifacts
+were not rebuilt or launched. Full Figma parity, arbitrary-site authoring and
+trusted public macOS distribution remain incomplete.

@@ -2414,18 +2414,20 @@ function createComponentSection(info) {
   const body=document.createElement('div');body.style.padding='0 12px 12px';details.append(body);
   const input=document.createElement('input');input.type='text';input.value=draft.name;input.oninput=input.onchange=()=>{draft.name=input.value;draft.error=null;};input.required=true;input.maxLength=80;input.pattern='[A-Z][A-Za-z0-9_$]{0,79}';
   RetouchInspector.field(body,'Component name',input);
-  RetouchInspector.note(body,'Creates a reusable component in this source file and replaces the selected subtree with an instance. This changes all screen sizes. JavaScript local values become props automatically.');
+  RetouchInspector.note(body,info.componentCreationDescription||'Creates a reusable component in this source file and replaces the selected subtree with an instance. This changes all screen sizes. JavaScript local values become props automatically.');
   const button=RetouchInspector.button('Create component from layer',async()=>{
     if(!input.reportValidity())return;
+    const restoreDrafts=window.RetouchComponentDrafts?.();
     busyPanel(true);
     try{
       const result=await api('POST','/rt/__api/op',{type:'createComponent',id:info.id,fileHash:info.hash,name:input.value});
       if(!result?.ok){draft.error=result?.reason||result?.error||'Could not create the component.';if(sel?.info?.id===info.id)renderPanel();return;}draft.error=null;
-      editorHistory.record({type:'createComponent',id:info.id,sourceIdMap:result.createdComponent.sourceIdMap,undoId:result.undoId});
+      editorHistory.record({type:'createComponent',id:info.id,createdInstanceId:result.createdComponent.instanceId,formSourceIdMap:result.createdComponent.formSourceIdMap,sourceIdMap:result.createdComponent.sourceIdMap,undoId:result.undoId});
       layerLocks.remap(result.createdComponent.sourceIdMap);
       const created=result.createdComponent;
       await refreshWrittenStructure(result.element,el=>el.getAttribute('data-rt')===created.definitionId);
       sel={hostId:created.definitionId,instanceId:created.instanceId,scope:'instance',info:result.element};
+      restoreDrafts?.(created.formSourceIdMap||created.sourceIdMap,[created.instanceId]);
       await layers.refresh();renderPanel();toast('Created '+created.name,'ok');
     }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
   });body.append(button);if(draft.error)RetouchInspector.note(body,draft.error,'refused');return details;
@@ -2755,6 +2757,7 @@ async function duplicateComponentSelection(){
  }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
 async function duplicateInstance(id,context) {
+  const restoreDrafts=window.RetouchComponentDrafts?.();
   busyPanel(true);
   try{
     const usage=await api('GET',resolveUrl(id,context));if(!usage?.ok)throw Error('Re-select the component before duplicating.');
@@ -2768,6 +2771,7 @@ async function duplicateInstance(id,context) {
     else await reloadFrame();
     const component=await api('GET',componentUrl(copied.instanceId));
     if(copy?.ok&&component?.ok){sel={hostId:mountedComponentHost(copied.instanceId,component,copy.element.context)?.getAttribute('data-rt')||component.definitionId,instanceId:copied.instanceId,scope:'instance',info:copy.element};renderPanel();}
+    restoreDrafts?.(copied.sourceIdMap);
     toast('Instance duplicated; definition remains shared','ok');
   }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
@@ -4276,6 +4280,7 @@ async function restoreHistory(direction,op) {
     if(result.ok){clearSelection();hoverEl=null;layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');}
     return result;
   }
+  const restoreDrafts=['createComponent','duplicateComponent'].includes(op.type)?window.RetouchComponentDrafts?.():null;
   const result=await api('POST','/rt/__api/op',{type:direction,undoId:op.undoId});
   if(!result?.ok)return result;
   // Source history has already moved. A renderer failure must not leave the
@@ -4308,14 +4313,15 @@ async function restoreHistory(direction,op) {
     if(op.type==='moveGroup'){const results=await Promise.all(op.childIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(r=>r?.ok))throw Error('The group contents no longer resolve.');try{await refreshGroupMove(results.map(r=>r.element),direction==='undo'?op.classesAfter:op.classesBefore);}finally{await restoreLayerSelection(op.selectionIds||[op.groupId]);if(sel)renderPanel();}return result;}
     if(op.type==='setLiquidClassesSelection'){const results=await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(item=>item?.ok&&item.element.classSourceLiteral))throw Error('The literal class selection no longer resolves.');await refreshLiteralLiquidClasses(results.map(item=>item.element),direction==='undo'?op.classesAfter:op.classesBefore);await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='collectionSelection'){await reloadFrame();await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
-    const fresh = await api('GET', resolveUrl(op.id, op.context));
+    const restoredId=op.type==='createComponent'&&direction==='redo'?(op.createdInstanceId||op.id):op.id;
+    const fresh = await api('GET', resolveUrl(restoredId, op.context));
     if(fresh?.ok&&['setResponsiveImage','setResponsiveImageSource','setResponsiveImageCandidates'].includes(op.type)){fresh.element._responsiveCandidate=op.type==='setResponsiveImageCandidates'?(direction==='undo'?op.candidateBefore:op.candidateAfter):op.candidate;fresh.element._responsiveSourceOpen=op.type==='setResponsiveImageSource';fresh.element._responsiveCandidateOptionsOpen=op.type==='setResponsiveImageCandidates';}
-    if (fresh?.ok) { sel = { hostId: op.id, instanceId: null, scope: 'host', info: fresh.element }; renderPanel(); }
+    if (fresh?.ok) { sel = { hostId: restoredId, instanceId: null, scope: 'host', info: fresh.element }; renderPanel(); }
     else clearSelection();
     if (fresh?.ok) {
       const info = fresh.element;
       const selectionResult=(['setClassesSelection','setSVGTransforms'].includes(op.type)||op.type==='setCSSSelection'&&op.managedCSS)?await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id)))):null;
-      const component = op.type === 'detachComponent'||op.type==='createComponent'&&direction==='redo' ? await api('GET', componentUrl(op.id,op.context)) : null;
+      const component = op.type === 'detachComponent'||op.type==='createComponent'&&direction==='redo' ? await api('GET', componentUrl(restoredId,op.context)) : null;
       const refresh=()=>(['structure','structureSelection','detachComponent','createComponent'].includes(op.type)?refreshWrittenStructure:refreshWrittenElement)(info, el => {
         if(selectionResult)return selectionResult.every(result=>result?.ok)&&(op.type==='setSVGTransforms'?svgSelectionMatches:classSelectionMatches)(selectionResult.map(result=>result.element),el.ownerDocument);
         if(op.svgCreatedId){const found=matchingInDocument(el.ownerDocument,op.svgCreatedId,null).length>0;return direction==='undo'?!found:found;}
@@ -4342,7 +4348,7 @@ async function restoreHistory(direction,op) {
       }else if(op.type==='setCSSSelection'&&op.managedCSS){if(!selectionResult?.every(item=>item?.ok&&item.element.cssAuthoring))throw Error('The restored CSS selection could not be resolved.');const infos=selectionResult.map(item=>item.element);await RetouchRenderSync.syncCSS({frame:iframe,entries:infos.map(item=>({id:item.id,rules:item.cssRules,texts:item.cssRuleTexts,rendering:item.cssRendering}))});await window.RetouchComparisons?.syncCSS(infos);}else if(op.type==='setCSS'&&op.managedCSS&&info.cssAuthoring)await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:info.cssRules,texts:info.cssRuleTexts,rendering:info.cssRendering});else await refresh();
       if(op.type==='setText')await window.RetouchComparisons?.syncText(info);
       if(op.type==='setCSS'&&op.managedCSS&&info.cssAuthoring)await window.RetouchComparisons?.syncCSS(info);
-      if(op.type==='createComponent'&&component?.ok)sel={hostId:component.definitionId,instanceId:op.id,scope:'instance',info};
+      if(op.type==='createComponent'&&component?.ok)sel={hostId:component.definitionId,instanceId:restoredId,scope:'instance',info};
     } else await reloadFrame();
 
     const selectionIds=direction==='undo'?op.selectionBefore||op.selectionIds:op.selectionAfter||op.selectionIds;
@@ -4352,6 +4358,7 @@ async function restoreHistory(direction,op) {
     if (sel) renderPanel();
 
   } catch(error){toast('Source restored; preview refresh failed: '+error.message,'err');}
+  finally{const pairs=op.formSourceIdMap||op.sourceIdMap||[];restoreDrafts?.(direction==='undo'?pairs.map(([a,b])=>[b,a]):pairs,op.type==='createComponent'?[op.createdInstanceId]:[]);}
   toast(direction==='undo'?'Undone':'Redone','ok');
   return result;
 }

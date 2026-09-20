@@ -120,7 +120,7 @@ function plan(resolved,op) {
       if(!target||mapped.has(target.id))return refuse('The extracted layer identities could not be mapped back to source.');
       mapped.add(target.id);sourceIdMap.push([element.id,target.id]);
     }
-    return {ok:true,hash:contentHash(after),createdComponent:{name:op.name,props:props.map(({name,prop})=>({name:prop,local:name})),instanceId:instance.id,definitionId:definition.id,sourceIdMap},edits:[{file:resolved.file,before:resolved.source,after}]};
+    return {ok:true,hash:contentHash(after),createdComponent:{name:op.name,props:props.map(({name,prop})=>({name:prop,local:name})),instanceId:instance.id,definitionId:definition.id,formSourceIdMap:sourceIdMap.map(([a,b])=>[a,a===resolved.element.id?definition.id:b]),sourceIdMap},edits:[{file:resolved.file,before:resolved.source,after}]};
   }catch(error){return refuse('Could not create the component: '+error.message);}
 }
 module.exports={plan};
