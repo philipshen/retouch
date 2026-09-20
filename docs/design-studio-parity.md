@@ -27260,3 +27260,24 @@ as verified. Existing ordered-action playback suites passed both browsers, and
 nested canvas connection/reveal/reconnect history passed Chromium. The Chromium
 screenshot was inspected. No native artifact was rebuilt or launched; full design
 parity and notarized Homebrew distribution remain incomplete.
+
+### 2026-09-20 — Pointer-controlled action reordering and keyboard cancellation
+
+Action-card reordering now uses pointer capture and a movement threshold instead
+of native HTML drag-and-drop. Retouch owns edge scrolling and target hit testing,
+including after scrolling moves the targets. Escape, pointer cancellation, focus
+loss, closed/detached dialogs and release outside a valid target cancel without
+source changes. Releases after cancelled gestures cannot toggle the original
+card, while subsequent ordinary clicks still work. Branch append buttons now
+show insertion feedback; self-containing destinations are excluded. Existing
+move buttons remain available for keyboard use.
+
+The previous Chromium native-drag cancellation limitation is superseded for
+these action cards: Chromium and WebKit both passed real keyboard Escape during
+pointer reordering with stable scroll afterward. Both browsers also passed end
+reordering, retained collapse states, exact undo/redo, cancelled-click protection,
+outside release, focus-loss cancellation, moving into an empty conditional branch,
+and refusing a conditional's own branch. Existing ordered-action authoring and
+playback regressions passed both engines. All 2,156 unit tests passed. Physical
+touch/pen input was not tested. No native rebuild or launch; the broader design
+parity and notarized Homebrew distribution work remain incomplete.
