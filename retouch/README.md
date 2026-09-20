@@ -223,6 +223,12 @@ Svelte components, with catalog and source changes in one undo transaction.
 Shared collection variables support aliases, numeric units, responsive mode
 bindings, local overrides, reset, detach, and removal. Collection updates include
 unvisited Svelte components and restore catalog and source together through undo.
+Literal Svelte images expose responsive candidate URL, density/width, media,
+sizes and format controls, including candidate addition/removal and exact history.
+Picture sources must be explicit native children with literal responsive attributes;
+bindings and generated picture children remain protected. Adding/removing entire
+picture sources is not yet available for Svelte.
+
 Native text containers support inline formatting and literal edits around protected
 live expressions, preserving authored events and bound link destinations. Styled
 runs can be split with independent responsive style ownership. Native sibling

@@ -3199,6 +3199,7 @@ async function refreshPictureSources(imageId,scope,candidate,{sourceIdMap=[],rem
   info._responsiveCandidate=candidate;info._pictureSourcesOpen=true;sel={hostId:info.id,instanceId:null,scope:'host',info};await layers.refresh();renderPanel();const nextAnchor=panelBody.querySelector('.picture-sources')?.getBoundingClientRect().top;panelBody.scrollTop=panelScroll;if(Number.isFinite(anchor)&&Number.isFinite(nextAnchor))panelBody.scrollTop+=panelBody.querySelector('.picture-sources').getBoundingClientRect().top-anchor;
 }
 function pictureSourceControls(info){
+  if(info.pictureSourceAuthoring===false)return document.createDocumentFragment();
   return RetouchPictureSources.mount(info,async change=>{
     if(sel?.info!==info||panelTasks||sourceRequests||undoBusy)throw Error('Wait for the current edit, then re-select the image.');
     const image=matchingEls(info.id)[0],picture=image?.parentElement,source=picture?.tagName==='PICTURE'?[...picture.children].slice(0,[...picture.children].indexOf(image)).filter(node=>node.tagName==='SOURCE')[change.sourceIndex]:null;
@@ -3215,9 +3216,10 @@ function pictureSourceControls(info){
 async function refreshResponsiveImage(info) {
   const descriptor=info.responsiveImage;if(!descriptor?.sources)throw Error('Responsive image source is unavailable.');
   const select=d=>matchingInDocument(d,info.id,info).map(image=>descriptor.picture?image.parentElement:image);
-  const matches=root=>{const image=root.tagName==='IMG'?root:root.querySelector('img');if(!image)return false;const nodes=[image,...(descriptor.picture?[...root.children].slice(0,[...root.children].indexOf(image)).filter(node=>node.tagName==='SOURCE'):[])];return descriptor.sources.every(source=>{const node=nodes[source.index+1];return node&&['src','srcset','sizes','media','type'].every(name=>node.getAttribute(name)===source[name]);});};
-  await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select,matches});
-  const previews=await window.RetouchComparisons?.syncImage({select,matches});if(previews?.failures.length)toast('Image saved. Retry the failed comparison previews.','err');
+  const matches=root=>{const image=root.tagName==='IMG'?root:root.querySelector('img');if(!image||info.renderRevisionAttribute&&image.getAttribute(info.renderRevisionAttribute)!==info.hash)return false;const nodes=[image,...(descriptor.picture?[...root.children].slice(0,[...root.children].indexOf(image)).filter(node=>node.tagName==='SOURCE'):[])];return descriptor.sources.every(source=>{const node=nodes[source.index+1];return node&&['src','srcset','sizes','media','type'].every(name=>node.getAttribute(name)===source[name]);});};
+  const serverRendered=!info.renderRevisionAttribute;
+  await RetouchRenderSync.sync({frame:iframe,serverRendered,select,matches});
+  const previews=await window.RetouchComparisons?.syncImage({select,matches,serverRendered});if(previews?.failures.length)toast('Image saved. Retry the failed comparison previews.','err');
 }
 async function saveResponsiveImageCandidates(info,change,before){
   if(sel?.info!==info)throw Error('Re-select the image before editing its candidates.');
