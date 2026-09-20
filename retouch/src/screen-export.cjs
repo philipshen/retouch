@@ -1,6 +1,12 @@
 'use strict';
 const sanitize=require('./capture-sanitize.cjs').sanitize,rewrite=require('./capture-css-urls.cjs').rewrite;
 function validate(body){
+ if(body?.screens!==undefined){
+  if(!Array.isArray(body.screens)||!body.screens.length||body.screens.length>20||body.separate||!['viewport','page'].includes(body.area||'viewport'))throw Error('Choose up to 20 screens and viewport or full-page export.');
+  for(const screen of body.screens){if(!screen||typeof screen!=='object'||screen.screens!==undefined||screen.separate||typeof screen.name!=='string'||screen.name.length>200)throw Error('Invalid screen export snapshot.');validate(require('./screen-export-batch.cjs').screenRequest(body,screen));}
+  return body;
+ }
+
  if(!body||typeof body.html!=='string'||Buffer.byteLength(body.html)>20*1024*1024)throw Error('The screen snapshot must be at most 20 MiB.');
  if(![body.width,body.height].every(n=>Number.isInteger(n)&&n>=1&&n<=7680)||!Number.isFinite(body.scale)||body.scale<0.01||body.scale>8||Math.min(body.width,body.height)*body.scale<1||Math.max(body.width,body.height)*body.scale>32768||Math.ceil(body.width*body.scale)*Math.ceil(body.height*body.scale)>64*1024*1024)throw Error('Choose a scale from 0.01× to 8×, with output dimensions from 1 to 32,768 pixels and at most 64 megapixels.');
  if(body.area!==undefined&&!['viewport','page','selection'].includes(body.area))throw Error('Choose visible viewport, full page or selected layers.');
@@ -19,7 +25,7 @@ async function render(body,{browserType,signal}={}){
  validate(body);let browser;const cancel=()=>browser?.close().catch(()=>{});signal?.throwIfAborted();signal?.addEventListener('abort',cancel,{once:true});
  try{
   browser=await (browserType||require('playwright').chromium).launch(browserType?{}:require('./capture-browser.cjs').launchOptions());signal?.throwIfAborted();
-  if(body.separate)return await require('./screen-export-batch.cjs').renderBatch(body,{signal,render:(item,options)=>renderInBrowser(item,{browser,signal:options.signal})});
+  if(body.separate||body.screens)return await require('./screen-export-batch.cjs').renderBatch(body,{signal,render:(item,options)=>renderInBrowser(item,{browser,signal:options.signal})});
   return await renderInBrowser(body,{browser,signal});
  }finally{signal?.removeEventListener('abort',cancel);await browser?.close();}
 }

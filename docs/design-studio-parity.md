@@ -26660,3 +26660,29 @@ validation. Gatekeeper assessment returned exit 3, Unnotarized Developer ID; no
 native app launch, cask installation or security override was attempted. Native
 UI, Intel execution, notarization, public distribution and upgrades remain
 unverified. No push; full Figma parity and trusted Homebrew delivery are unfinished.
+
+
+### Export all open responsive screens
+
+The export Screen chooser now offers All open screens (ZIP) when comparisons are
+open. It snapshots the canvas and each open comparison with its own current DOM,
+viewport and scroll state, using common viewport/full-page, scale, PNG/JPEG,
+quality and transparency settings. Selected-layer export is disabled in this mode.
+Switching back to an individual screen restores the ordinary image action. A
+still-loading or closed screen causes a refusal instead of silently omitting it.
+The backend validates every snapshot and rejects nested or mixed selection/screen
+batches. Each screen uses a fresh context in the shared browser; archive names use
+numbered screen names, optional full-page suffixes and the chosen scale.
+
+Chromium and WebKit passed actual full-page PNG archives with per-screen widths,
+heights and current colors, fractional-scale JPEG archives with signature and
+exact dimensions, ZIP MIME/filename and returning to individual image export.
+The existing viewport/full-page/comparison checks also passed both browsers.
+Chromium selected-layer ZIP, renderer lifecycle and JPEG/custom-scale/alpha
+regressions passed. All 14 focused export tests passed, including independent
+snapshot validation and common-setting application. The dialog screenshot was
+inspected; syntax/diff checks passed. No full unit-suite rerun or desktop rebuild;
+the latest signed artifact still packages f7b44dfa. The existing 24 MiB request,
+20-item, 128 MiB archive and two-minute batch limits apply. Snapshot fidelity and
+PDF/effect-bounds limitations remain. No push; full Figma parity and trusted
+Homebrew delivery remain unfinished.
