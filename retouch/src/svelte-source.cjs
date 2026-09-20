@@ -44,11 +44,12 @@ function textSnapshot(source,relPath){
  }catch{/* Unsupported authored CSS still uses ordinary Svelte compilation. */}
  return {elements,components,ast,texts,componentProps,styling,signature:out.toString(),revision:contentHash(source)};
 }
-function stamp(source,file,root,{runtime=false}={}){
+function stamp(source,file,root,{runtime=false,componentMarkers=false}={}){
  const relative=root?path.relative(root,file).split(path.sep).join('/'):file,snapshot=textSnapshot(source,relative),{elements,ast}=snapshot;if(!elements.length&&!snapshot.components.length)return null;
  const out=new MagicString(source),revision=contentHash(source);let binding='__retouch_source_'+contentHash(relative).slice(0,10);while(source.includes(binding))binding+='_';
  for(const element of elements)for(const [name,value]of [['data-rt',element.id],['data-rt-revision',revision]]){const old=element.attributes.find(a=>a.name===name),token=name==='data-rt-revision'&&runtime?name+'={$'+binding+'.revision}':name+'="'+value+'"';if(old)out.overwrite(old.start,old.end,token);else out.appendLeft(element.start+1+element.tag.length,' '+token);}
  if(runtime){
+  if(componentMarkers){const markers=require('./svelte-component-markers.cjs');markers.stamp(out,markers.metadata(source,relative),'$'+binding+'.revision');}
   for(const element of snapshot.components)for(const attribute of element.node.attributes){const key=element.id+'|'+attribute.name;if(Object.hasOwn(snapshot.componentProps,key))out.overwrite(attribute.start,attribute.end,attribute.name+'={'+binding+'_prop($'+binding+'.componentProps['+JSON.stringify(key)+'])}');}
   if(snapshot.styling){
    require('./svelte-css.cjs').removeManaged(out,snapshot.styling.state);
