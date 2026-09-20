@@ -5,8 +5,8 @@ function context(r){
  function walk(node){if(!node||typeof node!=='object')return;if(node.type==='Fragment'&&node.nodes.some(n=>n.start===r.element.start)){siblings=node.nodes.filter(n=>n.type!=='Comment'&&!(n.type==='Text'&&!n.data.trim()));return;}for(const [key,value]of Object.entries(node)){if(['metadata','loc'].includes(key))continue;if(Array.isArray(value))value.forEach(walk);else if(value&&typeof value==='object')walk(value);}}
  walk(ast.fragment);if(!siblings)throw Error('This component has no source siblings to reorder.');return {siblings,index:siblings.findIndex(n=>n.start===r.element.start)};
 }
-function describe(r){try{const {siblings,index}=context(r),ids=siblings.map(n=>r.elements.find(e=>e.start===n.start)?.id||null);return {ok:true,fileHash:r.hash,siblingIds:ids,targets:ids.filter(id=>id&&id!==r.element.id),canMoveBefore:index>0,canMoveAfter:index<siblings.length-1,canMoveFirst:index>0,canMoveLast:index<siblings.length-1};}catch(error){return {ok:false,reason:error.message,fileHash:r.hash,targets:[]};}}
-function plan(r,op,adapter){try{
+function describe(r){const movement=require('./svelte-component-reparent.cjs').describe(r);try{const {siblings,index}=context(r),ids=siblings.map(n=>r.elements.find(e=>e.start===n.start)?.id||null);return {...movement,ok:true,fileHash:r.hash,siblingIds:ids,targets:ids.filter(id=>id&&id!==r.element.id),canMoveBefore:index>0,canMoveAfter:index<siblings.length-1,canMoveFirst:index>0,canMoveLast:index<siblings.length-1};}catch(error){return {...movement,ok:false,reason:error.message,fileHash:r.hash,targets:[]};}}
+function order(r,op,adapter){try{
  if(op.fileHash!==r.hash)throw Error('The source changed. Re-select the component.');
  if(!['before','after','first','last'].includes(op.direction))throw Error('Choose an earlier or later sibling position.');
  const selection=['moveComponentSelection','reparentComponentSelection'].includes(op.type),ids=selection?op.ids:[r.element.id];
@@ -26,4 +26,5 @@ function plan(r,op,adapter){try{
  if(mapped.size!==next.length)throw Error('Moving changed the number of source layers.');const sourceIdMap=[...mapping].filter(([a,b])=>a!==b);
  return {ok:true,hash:source.contentHash(after),...(selection?{movedComponentIds:roots.map(e=>e.id),selectionIds:roots.map(e=>mapping.get(e.id)),sourceIdMap,rootCount:roots.length}:{movedComponent:{instanceId:mapping.get(r.element.id),previousInstanceId:r.element.id,sourceIdMap}}),edits:[{file:r.file,before:r.source,after}]};
  }catch(error){return {ok:false,refused:true,reason:error.message};}}
+function plan(r,op,adapter){const result=order(r,op,adapter);if(result.ok)return result;if(op.direction==='inside'||op.type==='reparentComponentSelection'&&op.direction===undefined||['before','after'].includes(op.direction)&&op.destinationId!==undefined)return require('./svelte-component-reparent.cjs').plan(r,op,adapter);return result;}
 module.exports={describe,plan};
