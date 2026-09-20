@@ -2816,7 +2816,7 @@ async function insertLibraryComponent(item,target,isActive){
   const inserted=result.insertedComponent;editorHistory.record({type:target.swap?'swapComponent':'insertComponent',previousInstanceId:inserted.previousInstanceId,sourceIdMap:inserted.sourceIdMap,id:inserted.parentId,instanceId:inserted.instanceId,previousParentId:inserted.previousParentId,undoId:result.undoId});
   if(inserted.sourceIdMap)layerLocks.remap(inserted.sourceIdMap);
   if(target.swap)await refreshSwappedComponent(inserted.instanceId,inserted.parentId);
-  else{const parent=await api('GET',resolveUrl(inserted.parentId));if(parent?.ok)await refreshWrittenElement(parent.element,el=>!!el.ownerDocument.querySelector('[data-rt-i="'+inserted.instanceId+'"]'));else await reloadFrame();}
+  else{const parent=await api('GET',resolveUrl(inserted.parentId));if(parent?.ok)await refreshWrittenStructure(parent.element,el=>!!el.ownerDocument.querySelector('[data-rt-i="'+inserted.instanceId+'"]'));else await reloadFrame();}
   await selectInsertedComponent(inserted.instanceId,inserted.parentId);toast(target.swap?'Component swapped':'Component inserted','ok');
  }finally{busyPanel(false);}
  };
@@ -2829,7 +2829,7 @@ componentLibraryButton.addEventListener('click',()=>RetouchComponentLibrary.open
  read:()=>api('GET','/rt/__api/components'),
  insertTarget:sel?.info.canInsertComponent?{id:sel.info.id,hash:sel.info.hash,context:sel.info.context,label:'<'+sel.info.tag+'> · '+sel.info.file}:null,
  insert:window.__RT_RENDERING?.componentInsertion?insertLibraryComponent:undefined,
- swapTarget:sel?.info.kind==='instance'?{swap:true,id:sel.info.id,hash:sel.info.hash,definitionId:sel.info.definitionId,context:sel.info.context}:null,
+ swapTarget:sel?.info.kind==='instance'&&window.__RT_RENDERING?.componentSwap?{swap:true,id:sel.info.id,hash:sel.info.hash,definitionId:sel.info.definitionId,context:sel.info.context}:null,
 
  instances:item=>item.usages.length?item.usages.flatMap(usage=>RetouchComponentInstances.group(matchingInDocument(doc(),usage.id),item.rootGroups).map(group=>({...group,id:usage.id,layerName:usage.layerName,label:(usage.layerName?usage.layerName+' · ':'')+usage.file+(usage.line?':'+usage.line:'')+(group.elements.length>1?' · '+group.elements.length+' layers':'')}))):matchingInDocument(doc(),item.definitionId).map(element=>({id:item.definitionId,definition:true,element,label:item.file})),
  select:async(instance,isActive)=>{
@@ -4280,7 +4280,7 @@ async function restoreHistory(direction,op) {
   // client stack on the old side of a successful transaction.
   try {
     await showHistoryPage(op.route);
-    if(['insertComponent','swapComponent'].includes(op.type)){if(op.sourceIdMap)layerLocks.remap(op.sourceIdMap,direction);const parentId=direction==='redo'?op.id:op.previousParentId,parent=parentId?await api('GET',resolveUrl(parentId)):null;if(op.type==='swapComponent')await refreshSwappedComponent(direction==='redo'?op.instanceId:op.previousInstanceId,parentId);else if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();if(direction==='redo')await selectInsertedComponent(op.instanceId,op.id);else if(op.type==='swapComponent')await selectInsertedComponent(op.previousInstanceId,op.previousParentId);else if(parent?.ok){sel={hostId:parentId,instanceId:null,scope:'host',info:parent.element};renderPanel();}else clearSelection();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(['insertComponent','swapComponent'].includes(op.type)){if(op.sourceIdMap)layerLocks.remap(op.sourceIdMap,direction);const parentId=direction==='redo'?op.id:op.previousParentId,parent=parentId?await api('GET',resolveUrl(parentId)):null;if(op.type==='swapComponent')await refreshSwappedComponent(direction==='redo'?op.instanceId:op.previousInstanceId,parentId);else if(parent?.ok)await refreshWrittenStructure(parent.element,()=>true);else await reloadFrame();if(direction==='redo')await selectInsertedComponent(op.instanceId,op.id);else if(op.type==='swapComponent')await selectInsertedComponent(op.previousInstanceId,op.previousParentId);else if(parent?.ok){sel={hostId:parentId,instanceId:null,scope:'host',info:parent.element};renderPanel();}else clearSelection();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='moveComponent'){layerLocks.remap(op.sourceIdMap,direction);const id=direction==='undo'?op.previousInstanceId:op.id;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.removedSourceIds&&direction==='redo')layerLocks.removeSourceIds(op.removedSourceIds);
     if(op.sourceIdMap)layerLocks.remap(op.sourceIdMap,direction);

@@ -268,10 +268,25 @@ wrappers. Native roots can be grouped as an instance, including conditional bran
 that share a root present in every branch. Repeated usages retain separate
 instance groups even when they render different branches. Component definitions
 with repeating roots, unaccounted root text/output or no common branch anchor
-remain individual selection targets. Aliases, shadowed imports,
-symlinked or external definitions, dynamic roots and spread-controlled properties
-are not supported yet. Computed defaults, editing shared default declarations, optional unset, variants,
-detach, duplication and broader component authoring remain unfinished.
+remain individual selection targets. Supported local TypeScript contracts provide
+choice controls and optional properties that can be set or unset.
+
+Use Layers to duplicate, delete, reorder or move linked usages into compatible
+native containers. Multi-selection uses one undo step. Container moves preserve
+Svelte lexical scopes and runtime branches. Supported surviving rune state stays
+with its instance; new copies initialize independently. Deleted instances restored
+by undo initialize fresh.
+
+The Components panel also discovers unused definitions with identifiable native
+roots. Select a frame and choose Insert into frame to create a linked usage.
+Required supported primitive properties have initial-value controls; optional
+properties keep their defaults. Insertion reuses accessible imports or adds a
+collision-free local name, with exact undo/redo and synchronized previews. Project
+component dependencies are checked for cycles and fixed DOM IDs. Aliased module
+paths, symlinked/external definitions, unsupported required contracts, dynamic
+roots and spread-controlled properties remain outside this insertion workflow.
+Editing shared default declarations, variants, detach and broader component
+authoring remain unfinished.
 
 Simple literal text, managed styles, style links, and variable bindings use development-only Svelte store
 bindings and an independent stylesheet so the component stays mounted, including
@@ -280,8 +295,9 @@ The inline editor temporarily edits cloned child nodes and restores Svelte's
 original nodes before the source update. Rich-text and layer changes use ordinary Svelte
 HMR with per-instance retention of synchronous top-level `$state`/`$state.raw`
 variables, including signal values, object/array proxies and compiler-elided
-direct values, provided the script is unchanged.
-New mounts, script edits, and same-source dependency reloads initialize fresh
+direct values, provided the script is unchanged. A committed component insertion
+can also preserve parent state across its proved import-only script addition or
+removal. New mounts, other script edits, and same-source dependency reloads initialize fresh
 state. This does not guarantee retention for async initializers, nested/class
 state, external stores, effects, or arbitrary component lifecycle behavior. Production builds retain the saved
 styles and their literal ownership attributes, while omitting development source

@@ -19,7 +19,8 @@ function createRegistry(){
    const candidates=parent.resume.get(id),candidate=candidates?.shift();
    if(candidate?.file===file&&candidate.script===script){old=candidate;transferred=true;}
   }
-  const retain=old&&old.script===script&&(transferred||old.revision!==revision);
+  const provedImport=updating&&old&&(options.migrations||[]).some(edge=>edge.from===old.shape&&edge.to===options.shape&&edge.fromScript===old.script&&edge.toScript===script);
+  const retain=old&&(old.script===script||provedImport)&&(transferred||old.revision!==revision);
   const record={file,script,revision,shape:options.shape,id,anchor:options.anchor,ordinal:++ordinal,values:new Map(),children:new Set(),resume:null,snapshot:null,lineage:transferred?[...(parent?.lineage||[])]:[]};
   if(retain&&updating&&old.snapshot?.generation===generation){
    const edge=(options.migrations||[]).find(edge=>edge.from===old.shape&&edge.to===options.shape);

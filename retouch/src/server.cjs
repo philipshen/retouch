@@ -203,9 +203,9 @@ function handle(req, res, ctx) {
   if(p==='/rt/__api/component-definition'&&req.method==='GET'){
     requireToken(req,ctx.token);const id=url.searchParams.get('id')||'';
     if(!/^[0-9a-f]{10}$/.test(id))return json(res,400,{ok:false,reason:'Invalid component definition id.'});
-    if(ctx.adapter.name!=='react')return json(res,409,{ok:false,reason:'Unused component definitions are not supported by this renderer yet.'});
+    if(!['react','svelte'].includes(ctx.adapter.name))return json(res,409,{ok:false,reason:'Unused component definitions are not supported by this renderer yet.'});
     const resolved=ctx.index.resolve(id);if(!resolved)return json(res,409,{ok:false,reason:'This definition no longer resolves. Refresh the library.'});
-    const result=require('./component-definitions.cjs').describe(resolved);return json(res,result.ok?200:409,result);
+    const result=(ctx.adapter.name==='svelte'?require('./svelte-component-definitions.cjs'):require('./component-definitions.cjs')).describe(resolved);return json(res,result.ok?200:409,result);
   }
 
   if (p === '/rt/__api/component' && req.method === 'GET') {
@@ -352,7 +352,7 @@ function handle(req, res, ctx) {
     const html = fs
       .readFileSync(path.join(SHELL_DIR, 'index.html'), 'utf8')
       .replace('__RETOUCH_TOKEN__', ctx.token)
-      .replace('__RETOUCH_RENDERING__', JSON.stringify({componentInsertion:ctx.adapter.name==='react',componentLibrary:!!ctx.adapter.describeComponent,history:ctx.history.snapshot(),historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired,stateScope:ctx.stateScope,captureViewport:ctx.rendering.captureViewport||null,reloadOnServerRestart:ctx.rendering.reloadOnServerRestart===true,selectionStyling:ctx.adapter.capabilities?.collectionSelection===true||ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}).replace(/</g,'\\u003c'));
+      .replace('__RETOUCH_RENDERING__', JSON.stringify({componentSwap:ctx.adapter.name==='react'||ctx.adapter.capabilities?.ops?.includes('swapComponent')===true,componentInsertion:ctx.adapter.name==='react'||ctx.adapter.capabilities?.ops?.includes('insertComponent')===true,componentLibrary:!!ctx.adapter.describeComponent,history:ctx.history.snapshot(),historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired,stateScope:ctx.stateScope,captureViewport:ctx.rendering.captureViewport||null,reloadOnServerRestart:ctx.rendering.reloadOnServerRestart===true,selectionStyling:ctx.adapter.capabilities?.collectionSelection===true||ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}).replace(/</g,'\\u003c'));
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(html);
   }

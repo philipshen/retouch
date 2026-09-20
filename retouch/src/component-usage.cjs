@@ -53,6 +53,9 @@ function library(index){
    }
   }catch{}
  }
+ if(index.adapter.name==='svelte')for(const file of index.fileIds.keys()){
+  try{const text=fs.readFileSync(file,'utf8'),relative=path.relative(index.appRoot,file).split(path.sep).join('/');for(const definition of require('./svelte-component-definitions.cjs').definitions(text,relative)){const key=relative+'#'+definition.definitionId,group=groups.get(key);if(group){if(!group.names.includes(definition.name))group.names.push(definition.name);}else groups.set(key,{...definition,key,usages:[],definitionOnly:true});}}catch{}
+ }
  const components=[...groups.values()].map(group=>({...group,name:group.names.sort()[0],usageCount:group.usages.length,usages:group.usages.sort((a,b)=>a.file.localeCompare(b.file)||(a.line||0)-(b.line||0))})).sort((a,b)=>a.name.localeCompare(b.name)||a.file.localeCompare(b.file));
  return {components:components.slice(0,2000),total:components.length,truncated:components.length>2000,unreadableFiles:index.errors.size};
 }
