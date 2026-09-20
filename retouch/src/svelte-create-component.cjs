@@ -12,21 +12,26 @@ function plan(r,op,adapter){try{
  function walk(node,visit){if(!node||typeof node!=='object')return;visit(node);for(const [key,value]of Object.entries(node)){if(['loc','metadata'].includes(key))continue;if(Array.isArray(value))value.forEach(n=>walk(n,visit));else if(value&&typeof value==='object')walk(value,visit);}}
  let collision=false;walk(parsed.ast,n=>{if(n.name===op.name)collision=true;});if(collision)throw Error('That name is already used in this file.');
  const captures=[],fragment=new MagicString(r.source.slice(selected.start,selected.end)),used=new Set();walk(selected.node,n=>{if(typeof n.name==='string')used.add(n.name);});
- function capture(expression){
+ function capture(expression,bindable=false){
   let unsafe=false;walk(expression,n=>{if(['AssignmentExpression','UpdateExpression','AwaitExpression','YieldExpression','CallExpression','NewExpression','ThisExpression','Super','MetaProperty'].includes(n.type))unsafe=true;});
   // A callback remains an expression at the original call site, retaining its
   // closure, mutations and event arguments. Other evaluated side effects stay put.
   if(unsafe&&!['ArrowFunctionExpression','FunctionExpression'].includes(expression.type))throw Error('Move side effects into a callback before creating this component.');
-  let name=expression.type==='Identifier'&&/^[A-Za-z_$][\w$]*$/.test(expression.name)&&!['children','__proto__'].includes(expression.name)?expression.name:'value'+(captures.length+1);
-  const existing=expression.type==='Identifier'&&captures.find(c=>c.expression===expression.name);if(existing)return existing.name;
-  if(expression.type!=='Identifier')while(used.has(name))name+='Value';used.add(name);
-  captures.push({name,expression:r.source.slice(expression.start,expression.end)});return name;
+  const named=expression.type==='Identifier'&&/^[A-Za-z_][\w$]*$/.test(expression.name)&&!['children','__proto__'].includes(expression.name);
+  let name=named?expression.name:'value'+(captures.length+1);
+  const existing=expression.type==='Identifier'&&captures.find(c=>c.expression===expression.name);if(existing){if(bindable)existing.bindable=true;return existing.name;}
+  if(!named)while(used.has(name))name+='Value';used.add(name);
+  captures.push({name,expression:r.source.slice(expression.start,expression.end),bindable});return name;
  }
  function template(node){
   if(node.type==='Text'||node.type==='Comment')return;
   if(node.type==='ExpressionTag'){fragment.overwrite(node.expression.start-selected.start,node.expression.end-selected.start,capture(node.expression));return;}
   if(node.type!=='RegularElement'||['script','style','slot'].includes(node.name))throw Error('Extract native markup first; this subtree contains template control flow or component context.');
   for(const a of node.attributes){
+   if(a.type==='BindDirective'&&((a.name==='value'&&['input','textarea','select'].includes(node.name))||(a.name==='checked'&&node.name==='input'))){
+    if(a.modifiers?.length||!['Identifier','MemberExpression'].includes(a.expression?.type))throw Error('This form binding needs a directly assignable parent value.');
+    const name=capture(a.expression,true);fragment.overwrite(a.start-selected.start,a.end-selected.start,'bind:'+a.name+'={'+name+'}');continue;
+   }
    if(a.type!=='Attribute')throw Error('This subtree uses a binding, directive or spread that needs its original component context.');
    if(/^(?:data-rt(?:$|-revision)|__retouch)/.test(a.name))throw Error('This subtree contains reserved source markers.');
    if(a.value===true)continue;
@@ -37,8 +42,8 @@ function plan(r,op,adapter){try{
  template(selected.node);
  const moved=parsed.elements.filter(e=>e.start>=selected.start&&e.end<=selected.end),owners=css.ownership(state),layers={},remaining={...state.model.layers};
  for(const e of moved){const id=e.attributes?.find(a=>a.name==='data-rt-style')?.value;if(!id)continue;if(owners.get(id)!==1)throw Error('A managed style identity has multiple owners.');if(remaining[id]){layers[id]=remaining[id];delete remaining[id];}}
- let moduleSource=(captures.length?'<script>let { '+captures.map(c=>c.name).join(', ')+' } = $props();</script>\n':'')+fragment.toString()+'\n';moduleSource=css.replaceModel(moduleSource,relative,{...state.model,layers});
- const replacement='<'+op.name+captures.map(c=>' '+c.name+'={'+c.expression+'}').join('')+'/>',declaration='import '+op.name+' from '+JSON.stringify('./'+op.name+'.svelte')+';',out=new MagicString(r.source);
+ let moduleSource=(captures.length?'<script>let { '+captures.map(c=>c.name+(c.bindable?' = $bindable()':'')).join(', ')+' } = $props();</script>\n':'')+fragment.toString()+'\n';moduleSource=css.replaceModel(moduleSource,relative,{...state.model,layers});
+ const replacement='<'+op.name+captures.map(c=>' '+(c.bindable?'bind:':'')+c.name+'={'+c.expression+'}').join('')+'/>',declaration='import '+op.name+' from '+JSON.stringify('./'+op.name+'.svelte')+';',out=new MagicString(r.source);
  out.overwrite(selected.start,selected.end,replacement);if(parsed.ast.instance)out.appendLeft(parsed.ast.instance.content.start,'\n'+declaration+'\n');else out.prepend('<script>'+declaration+'</script>\n');
  const after=css.replaceModel(out.toString(),r.relPath,{...state.model,layers:remaining});compiler.compile(moduleSource,{filename:relative,generate:false});compiler.compile(after,{filename:r.relPath,generate:false});
  const next=adapter.collect(after,r.relPath),definition=adapter.collect(moduleSource,relative).elements,instance=next.elements.find(e=>e.kind==='instance'&&e.tag===op.name);if(!instance||!definition.length)throw Error('The created component could not be mapped.');

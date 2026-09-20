@@ -28383,3 +28383,29 @@ browsers after the shared history/draft changes
 (/tmp/retouch-svelte-create-react-{chromium,webkit}-final.log). Desktop artifacts
 were not rebuilt or launched. Full Figma parity, arbitrary-site authoring and
 trusted public macOS distribution remain incomplete.
+
+### Svelte component extraction with form bindings checkpoint
+
+Create component now moves input/textarea/select bind:value and input bind:checked
+through explicit bindable props. Parent identifiers and assignable member paths
+retain two-way updates; repeated identifier references share one prop even when
+text inspection discovers the value before its binding. Store references receive
+legal local aliases while the subscription and assignment remain in the parent.
+The original binding expression stays at the call site, including shorthand
+bindings expanded into explicit component bindings.
+
+Three new source tests cover identifier/member bindings, exact two-file history,
+store aliases and refusal of side-effectful binding paths, group bindings and
+element references. All 2,416 unit tests passed
+(/tmp/retouch-svelte-create-bindings-full.log). Chromium and WebKit passed creation,
+duplication and exact undo/redo with retained parent/sibling state and styles.
+Real input/textarea/select/checkbox edits in the extracted component updated the
+parent output after creation, after undo and after redo; an imported writable
+store retained its value and updated through the extracted field. Browser logs:
+/tmp/retouch-svelte-create-bindings-{chromium,webkit}.log.
+
+This does not establish preservation of arbitrary component-local store factories
+across HMR, nor support group bindings, element references, arbitrary directives,
+authored scoped CSS or template control-flow extraction. Desktop artifacts were
+not rebuilt. Full Figma parity, arbitrary-site authoring and trusted public macOS
+distribution remain incomplete.
