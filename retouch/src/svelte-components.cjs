@@ -26,8 +26,8 @@ function create(base){
   collect(text,relative){const parsed=source.collect(text,relative);return {...parsed,elements:[...parsed.elements,...parsed.components].sort((a,b)=>a.start-b.start)};},
   describeComponent,
   describe(r){if(r.element.kind!=='instance')return base.describe(host(r));return {id:r.element.id,kind:'instance',tag:r.element.tag,file:r.relPath,hash:r.hash,renderRevisionAttribute:'data-rt-i-revision',context:r.context||null,canRename:false,textDynamic:true,classNameDynamic:true,structure:{},component:describeComponent(r)};},
-  planOp(r,op){if(r.element.kind!=='instance')return base.planOp(host(r),op);if(op.type!=='setComponentProp')return refused('Choose a supported component property edit.');const component=describeComponent(r);if(!component.ok)return component;return props.plan(r,op);},
-  capabilities:{...base.capabilities,ops:[...base.capabilities.ops,'setComponentProp']}
+  planOp(r,op){if(r.element.kind!=='instance')return base.planOp(host(r),op);if(['pasteComponentProps','setComponentPropSelection'].includes(op.type))return require('./svelte-component-batch-props.cjs').plan(r,op,adapter);if(op.type!=='setComponentProp')return refused('Choose a supported component property edit.');const component=describeComponent(r);if(!component.ok)return component;return props.plan(r,op);},
+  capabilities:{...base.capabilities,ops:[...base.capabilities.ops,'setComponentProp','setComponentPropSelection','pasteComponentProps']}
  };
  adapter.applyOp=(r,op)=>require('./transactions.cjs').applyPlan(r.appRoot||path.dirname(r.file),adapter.planOp(r,op));return adapter;
 }

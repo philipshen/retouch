@@ -27,6 +27,17 @@ function transform(code,file,info){
  const props=target.params[1]?.name||info.binding+'_props',out=new MagicString(code);
  if(!target.params[1])out.appendLeft(target.params[0].end,','+props);
  out.appendLeft(target.body.start+1,'\nconst '+info.binding+' = name => '+props+'?.[name];\n');
+ // The authored template sees an external helper, so Svelte emits these
+ // attributes as static assignments. Run them in tracked effects: the props
+ // getters read the parent's source store and must update without a remount.
+ function track(node,inEffect=false){
+  if(!node||typeof node!=='object')return;
+  const call=node.type==='ExpressionStatement'&&node.expression;
+  if(call?.type==='CallExpression'&&call.callee.type==='MemberExpression'&&call.callee.object.name===ns&&['set_attribute','set_custom_element_data'].includes(call.callee.property.name)&&names.includes(call.arguments[1]?.value)&&call.arguments[2]?.callee?.name===info.binding&&!inEffect){out.appendLeft(call.start,ns+'.template_effect(() => ');out.appendLeft(call.end,')');return;}
+  const effect=inEffect||node.type==='CallExpression'&&node.callee.type==='MemberExpression'&&node.callee.object.name===ns&&['template_effect','render_effect'].includes(node.callee.property.name);
+  for(const value of Object.values(node)){if(Array.isArray(value))value.forEach(child=>track(child,effect));else if(value&&typeof value==='object')track(value,effect);}
+ }track(target.body);
+
  return {code:out.toString(),map:out.generateMap({hires:true,source:file,includeContent:true})};
 }
 module.exports={metadata,stamp,transform};

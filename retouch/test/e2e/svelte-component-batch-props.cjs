@@ -1,0 +1,13 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict');
+exports.run=async({page,app,phone,file,original,state})=>{
+ const rows=()=>page.getByRole('treeitem',{name:'Badge · component',exact:true}),settled=()=>page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks);
+ async function verify(first,second){const values=await page.evaluate(()=>[doc(),...RetouchComparisons.exportFrames().map(frame=>frame.contentDocument)].map(d=>['badge-one','badge-two'].map(id=>d.querySelector('#'+id+' output')?.textContent)));for(const pair of values)assert.deepEqual(pair,[first,second]);for(const frame of [app,phone]){assert.equal(await frame.locator('#badge-one button').textContent(),'Hits 1');assert.equal(await frame.locator('#badge-two button').textContent(),'Hits 0');}await state();}
+ await rows().nth(0).click();await rows().nth(1).click({modifiers:['Meta']});
+ const shared=page.getByLabel('Shared component property amount',{exact:true});await shared.waitFor();assert.equal(await shared.getAttribute('placeholder'),'Mixed');await shared.fill('6');await shared.press('Enter');await settled();await verify('First|6|true','Second|6|true');const changed=fs.readFileSync(file,'utf8');assert.notEqual(changed,original);
+ for(const [action,first,second,bytes]of [['Undo','First|1|true','Second|2|true',original],['Redo','First|6|true','Second|6|true',changed],['Undo','First|1|true','Second|2|true',original]]){await page.getByRole('button',{name:action,exact:true}).click();await settled();await verify(first,second);assert.equal(fs.readFileSync(file,'utf8'),bytes);}
+ await rows().nth(0).click();await page.getByRole('button',{name:'Copy properties',exact:true}).click();await rows().nth(1).click();await page.getByRole('button',{name:'Paste properties',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Paste component properties',exact:true});await dialog.waitFor();await dialog.getByLabel('Paste id',{exact:true}).uncheck();await dialog.getByRole('button',{name:'Paste properties',exact:true}).click();await dialog.waitFor({state:'hidden'});await settled();await verify('First|1|true','First|1|true');const pasted=fs.readFileSync(file,'utf8');assert.notEqual(pasted,original);
+ for(const [action,second,bytes]of [['Undo','Second|2|true',original],['Redo','First|1|true',pasted],['Undo','Second|2|true',original]]){await page.getByRole('button',{name:action,exact:true}).click();await settled();await verify('First|1|true',second);assert.equal(fs.readFileSync(file,'utf8'),bytes);}
+ await rows().nth(0).click();await settled();console.log('SVELTE SHARED COMPONENT PROPERTIES, SELECTIVE PROPERTY PASTE, ALL-PREVIEW SYNC AND EXACT UI HISTORY PASS');
+};

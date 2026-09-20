@@ -255,7 +255,9 @@ bindings, directives or local declarations cannot be removed.
 Direct relative imports of project `.svelte` components now expose component
 instances in the canvas, Layers and component library. Existing literal string,
 number and boolean properties can be edited in the inspector with exact
-undo/redo. Property updates preserve mounted child state and synchronize open
+undo/redo. Select several usages in one source file to edit shared properties,
+or copy properties and choose which compatible values to paste. These batches
+validate every selected value before saving and use one undo step. Property updates preserve mounted child state and synchronize open
 screen previews. Native root markers are forwarded without additional DOM
 wrappers. Native roots can be grouped as an instance, including conditional branches
 that share a root present in every branch. Repeated usages retain separate

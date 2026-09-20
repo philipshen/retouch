@@ -28,6 +28,7 @@ exports.run=async({page,app,phone,file,original,state})=>{
  await page.getByLabel('Component property enabled',{exact:true}).uncheck();await page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks);await verify('First|1|false');await groups('FOOTER');const disabled=fs.readFileSync(file,'utf8');
  await app.locator('#badge-one-details').click({position:{x:500,y:5}});await page.getByLabel('Component property enabled',{exact:true}).waitFor();assert.equal(await page.getByLabel('Component property enabled',{exact:true}).isChecked(),false);
  for(const [action,expected,bytes,tag]of [['Undo','First|1|true',original,'ASIDE'],['Redo','First|1|false',disabled,'FOOTER'],['Undo','First|1|true',original,'ASIDE']]){await page.getByRole('button',{name:action,exact:true}).click();await page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks);await verify(expected);await groups(tag);assert.equal(fs.readFileSync(file,'utf8'),bytes);}
+ await require('./svelte-component-batch-props.cjs').run({page,app,phone,file,original,state});
  await page.screenshot({path:'/tmp/retouch-svelte-component-branches-'+(process.env.RT_E2E_BROWSER||'chromium')+'.png'});
  console.log('SVELTE CONDITIONAL COMPONENT ROOT GROUPS, BRANCH SELECTION AND BOOLEAN UI HISTORY PASS');
  console.log('SVELTE CANVAS COMPONENT SELECTION, INSPECTOR PROPERTY AND EXACT UI HISTORY PASS');

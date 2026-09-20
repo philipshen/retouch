@@ -2614,7 +2614,7 @@ function componentSelectionSection(infos){
 }
 async function refreshComponentSelection(ids){
  await restoreLayerSelection(ids);
- if(sel?.info.kind==='instance')await refreshWrittenElement(sel.info,el=>(sel.multiple||[sel.info]).every(info=>matchingInDocument(el.ownerDocument,info.id,info).some(root=>root.getAttribute(info.renderRevisionAttribute)===info.hash)));
+ if(sel?.info.kind==='instance')await refreshWrittenStructure(sel.info,el=>(sel.multiple||[sel.info]).every(info=>matchingInDocument(el.ownerDocument,info.id,info).some(root=>root.getAttribute(info.renderRevisionAttribute)===info.hash)));
  else await reloadFrame();
  await layers.refresh();if(sel)renderPanel();
 }
