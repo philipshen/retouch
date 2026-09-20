@@ -27145,3 +27145,29 @@ storage, editor controls, navigation/overlay/animation completion adapters and
 browser verification of full sequences are next. No user-facing multiple-action
 or conditional feature is claimed by this increment. Full design parity and
 notarized Homebrew distribution remain unfinished; no native rebuild/launch/push.
+
+### 2026-09-20 — Completion signals for sequential prototype motion
+
+The existing overlay/runtime dispatchers previously returned before loading and
+animation ended. Added one-shot operation completion signals so future ordered
+actions can wait for real completion. Overlay open, swap and close now expose the
+latest `finished` promise; replacement or clearing resolves the old operation as
+cancelled. Closing resolves success after its animation and synchronous cleanup.
+Navigation exposes `navigationFinished`, resolving only after the load/transition
+and runtime mounting; restart/stop/replacement cancels its pending operation.
+An inaccessible/unmounted destination cannot report successful runtime mounting.
+
+All 2,139 unit tests passed. Chromium and WebKit browser checks pause real overlay
+and navigation animations and verify completion remains pending until they are
+finished. They cover open/swap/close, clearing a pending load and restarting during
+navigation. WebKit additionally verifies replacement cancels the old overlay
+operation while the new one completes. Existing overlay authoring, nesting,
+retained state, navigation, restart and dismissal passed Chromium. One initial
+WebKit run timed out entering presentation; the fixture now waits for stamped
+preview readiness and settled source work before pressing Present. Subsequent
+WebKit completion checks passed. Syntax/diff checks passed.
+
+This supplies a required lifecycle dependency for multiple-action playback. The
+source list codec, action-list editor and dispatcher integration still remain to
+be connected; full sequences are not exposed yet. No native rebuild, launch or
+push. Full Figma parity and notarized Homebrew distribution remain unfinished.
