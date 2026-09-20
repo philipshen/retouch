@@ -28297,3 +28297,24 @@ state, production exclusion and recovery from 96 dropped update notifications
 (/tmp/retouch-svelte-indexed-{chromium,webkit}.log). Desktop artifacts were not
 rebuilt for this change. Full Figma parity, arbitrary-site coverage and trusted
 public macOS distribution remain incomplete.
+
+### Comparison scrolling through SVG and web components checkpoint
+
+Comparison previews now descend through nested open shadow roots when targeting
+wheel and keyboard scrolling. SVG descendants without scrollBy no longer abort
+scroll handling; scrolling reaches the containing element and follows existing
+ancestor/overscroll rules. Keyboard page distances and Home/End use the actual
+nested scroller. F2 is now included in the preview's advertised accessible
+shortcuts alongside its existing text-edit action.
+
+Chromium and WebKit passed real wheel input over SVG artwork inside nested open
+shadow roots, both axes at resized preview scale, arrow/PageDown/Home/End input,
+overscroll containment and boundary handoff to the page. Expanded comparison
+workflows also passed panel resizing/cancellation, reorder/undo, persistence,
+retained preview state, main-canvas isolation and unchanged source. All 2,409
+unit tests passed. Logs: /tmp/retouch-shadow-scroll-{chromium,webkit}.log,
+/tmp/retouch-shadow-scroll-controls-{chromium,webkit}.log and
+/tmp/retouch-shadow-scroll-full.log. Closed shadow roots and scrolling through
+embedded browsing contexts remain unverified. This change does not establish
+full visual parity; desktop artifacts were not rebuilt or launched. Full Figma
+parity, arbitrary-site authoring and trusted public distribution remain open.

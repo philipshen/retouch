@@ -63,6 +63,19 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await wait(async()=>Math.abs((await viewport.boundingBox()).height-(box.width/650)*844)<1);
   const resized=await viewport.boundingBox(),newScale=resized.width/650;await page.mouse.move(resized.x+30*newScale,resized.y+30*newScale);await page.mouse.wheel(20,10);await wait(async()=>(await positions()).inner[1]>0);
   pos=await positions();near(pos.inner[0],20/newScale);near(pos.inner[1],10/newScale);assert.deepEqual(pos.outer,[0,0]);assert.deepEqual(pos.page,[0,0]);
+  // SVG descendants have no scrollBy in either engine. Input must still reach
+  // their containing scroller, including inside nested open shadow roots.
+  await frame.locator('body').evaluate(()=>{
+   scrollTo(0,0);const host=document.createElement('div');host.id='shadowScroll';host.style.cssText='position:fixed;inset:0;z-index:1000';document.body.append(host);
+   const first=host.attachShadow({mode:'open'}),innerHost=document.createElement('div');first.append(innerHost);
+   innerHost.attachShadow({mode:'open'}).innerHTML='<style>#scroller{width:600px;height:800px;overflow:auto;overscroll-behavior:contain}svg{display:block;width:1200px;height:1600px}</style><div id="scroller"><svg viewBox="0 0 1200 1600"><rect width="1200" height="1600" fill="cornflowerblue"/></svg></div>';
+  });
+  const shadowPosition=()=>frame.locator('#shadowScroll').evaluate(host=>{const node=host.shadowRoot.firstChild.shadowRoot.getElementById('scroller');return [node.scrollLeft,node.scrollTop];});
+  const resetShadow=()=>frame.locator('#shadowScroll').evaluate(host=>host.shadowRoot.firstChild.shadowRoot.getElementById('scroller').scrollTo(0,0));
+  await page.mouse.move(resized.x+30*newScale,resized.y+30*newScale);await page.mouse.wheel(20,30);await wait(async()=>(await shadowPosition())[1]>0);near((await shadowPosition())[0],20/newScale);near((await shadowPosition())[1],30/newScale);assert.deepEqual(await frame.locator('body').evaluate(()=>[scrollX,scrollY]),[0,0]);
+  await resetShadow();await viewport.press('ArrowDown');assert.deepEqual(await shadowPosition(),[0,40]);await viewport.press('ArrowRight');assert.deepEqual(await shadowPosition(),[40,40]);await viewport.press('PageDown');assert.deepEqual(await shadowPosition(),[40,760]);await viewport.press('End');assert.deepEqual(await shadowPosition(),[40,800]);await viewport.press('ArrowDown');assert.deepEqual(await frame.locator('body').evaluate(()=>[scrollX,scrollY]),[0,0]);await viewport.press('Home');assert.deepEqual(await shadowPosition(),[40,0]);
+  await frame.locator('#shadowScroll').evaluate(host=>{const node=host.shadowRoot.firstChild.shadowRoot.getElementById('scroller');node.style.overscrollBehavior='auto';node.scrollTop=800;});await viewport.press('ArrowDown');assert.equal(await frame.locator('body').evaluate(()=>scrollY),40,'shadow scroller boundary hands off to the page');
+  await frame.locator('#shadowScroll').evaluate(host=>host.remove());await frame.locator('body').evaluate(()=>scrollTo(0,0));
   assert.deepEqual(await page.frameLocator('#app').locator('body').evaluate(()=>[scrollX,scrollY]),[0,0]);assert.equal(fs.readFileSync(file,'utf8'),source);assert.deepEqual(errors,[]);
   await page.getByRole('button',{name:'Compare screens',exact:true}).click();await wait(async()=>await page.locator('#screenComparisons iframe').count()===0);
   console.log(engine+': PASS nested comparison scroll, both scaled axes after resizing, line/page deltas, ancestor handoff, overscroll containment, main-canvas isolation and unchanged source');

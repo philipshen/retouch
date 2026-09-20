@@ -83,9 +83,17 @@
     w.scrollBy({left:/hidden|clip/.test(overflow('X'))?0:dx,top:/hidden|clip/.test(overflow('Y'))?0:dy,behavior:'instant'});
   }
   const scrollParent=node=>node.assignedSlot||node.parentElement||node.getRootNode()?.host;
+  function scrollTarget(d,x,y){
+    let node=d.elementFromPoint(x,y)||d.body;
+    // Document hit testing stops at a shadow host. Follow open roots so wheel
+    // and keyboard input reaches the same nested scroller as native input.
+    const seen=new Set();while(node?.shadowRoot&&!seen.has(node)){seen.add(node);const next=node.shadowRoot.elementFromPoint?.(x,y);if(!next||next===node)break;node=next;}
+    return node;
+  }
   function scrollFrom(w,node,dx,dy){
     const root=w.document.scrollingElement;
     while(node&&node!==root&&(dx||dy)){
+      if(typeof node.scrollBy!=='function'){node=scrollParent(node);continue;}
       const style=w.getComputedStyle(node),x=/auto|scroll/.test(style.overflowX),y=/auto|scroll/.test(style.overflowY),beforeX=node.scrollLeft,beforeY=node.scrollTop;
       node.scrollBy({left:x?dx:0,top:y?dy:0,behavior:'instant'});
       dx-=node.scrollLeft-beforeX;dy-=node.scrollTop-beforeY;
@@ -389,7 +397,7 @@
           target.focus({preventScroll:true});target.scrollIntoView({block:'nearest',inline:'nearest'});
         }
       };
-      const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';viewport.setAttribute('aria-describedby','comparisonNavigationHint');viewport.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight PageUp PageDown Home End Enter Space Shift+F10');
+      const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';viewport.setAttribute('aria-describedby','comparisonNavigationHint');viewport.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight PageUp PageDown Home End Enter Space F2 Shift+F10');
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const surface=document.createElement('div');surface.className='compare-surface';surface.setAttribute('aria-hidden','true');surface.append(frame);rail.append(surface);
       const overlay=document.createElement('div');overlay.className='compare-overlay';
@@ -643,11 +651,11 @@
         try{
           const d=frame.contentDocument,w=frame.contentWindow,loc=w.location,root=d?.scrollingElement;
           if(!root||loc.origin!==location.origin||loc.pathname+loc.search+loc.hash!==path())return;
-          const node=d.elementFromPoint(width/2,height/2)||d.body;
+          const node=scrollTarget(d,width/2,height/2);
           let target=node;
           while(target&&target!==root){
             const style=w.getComputedStyle(target);
-            if(/auto|scroll/.test(style.overflowY)&&(target.scrollHeight>target.clientHeight||/contain|none/.test(style.overscrollBehaviorY)))break;
+            if(typeof target.scrollBy==='function'&&/auto|scroll/.test(style.overflowY)&&(target.scrollHeight>target.clientHeight||/contain|none/.test(style.overscrollBehaviorY)))break;
             target=scrollParent(target);
           }
           const nested=target&&target!==root,page=Math.floor((nested?target.clientHeight:height)*.9),top=nested?target.scrollTop:w.scrollY;
@@ -662,7 +670,7 @@
         try{
           const d=frame.contentDocument,w=frame.contentWindow,bounds=viewport.getBoundingClientRect(),scale=viewport.clientWidth/width;
           if(!d?.body||!Number.isFinite(scale)||scale<=0)return;
-          let node=d.elementFromPoint((e.clientX-bounds.left)/scale,(e.clientY-bounds.top)/scale)||d.body;
+          let node=scrollTarget(d,(e.clientX-bounds.left)/scale,(e.clientY-bounds.top)/scale);
           const css=w.getComputedStyle(node),line=parseFloat(css.lineHeight)||16;
           let dx=e.deltaX*(e.deltaMode===1?line:e.deltaMode===2?width:1/scale),dy=e.deltaY*(e.deltaMode===1?line:e.deltaMode===2?height:1/scale);
           scrollFrom(w,node,dx,dy);
