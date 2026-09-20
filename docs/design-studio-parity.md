@@ -26401,3 +26401,25 @@ not serialized. Exports currently cover a viewport, not arbitrary selected layer
 full-page output, PDF/JPEG, transparent backgrounds or batches. No desktop artifact
 was rebuilt or branch pushed; packaged export/native launch remains unverified.
 Full Figma parity and notarized Homebrew distribution remain unfinished.
+
+### Full-page PNG export
+
+Export screen now offers Visible viewport or Full page for either the canvas or a
+comparison. Full page starts at the document top and keeps the chosen screen width,
+including when content overflows horizontally. Nested panels retain their captured
+scroll positions. The live document is never scrolled to perform the export. Files
+use a `-full-page` suffix; changing export options clears the previous success or
+error message. Actual rendered page height is measured before taking the image,
+with the existing 64-megapixel budget and a 32,768-output-pixel height limit.
+
+Chromium and WebKit editor checks passed viewport/full-page downloads, long main
+and comparison screens, 2× dimensions, decoded top/bottom/nested-panel pixels,
+horizontal-overflow cropping, live root/nested scroll retention, height/pixel-limit
+refusal, and the prior authorization/script-isolation/resource-failure checks.
+The four export validation/concurrency/cancellation tests passed. The full-page
+modal screenshot was inspected; syntax and diff checks passed. No full unit-suite
+rerun was needed for this scoped change. Full-page capture does not generate
+virtualized or not-yet-loaded application content, expand nested scroll panels,
+or supply the remaining arbitrary-layer/PDF/JPEG export features. No desktop
+rebuild or push; full Figma parity and notarized Homebrew distribution remain
+unfinished.
