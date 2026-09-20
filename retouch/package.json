@@ -21,6 +21,7 @@
     "test:e2e:screen-export-jpeg": "node test/e2e/screen-export-jpeg.cjs",
     "test:e2e:layer-export-contents": "node test/e2e/layer-export-contents.cjs",
     "test:e2e:layer-export-svg": "node test/e2e/layer-export-svg.cjs",
+    "test:e2e:export-browser-reuse": "node test/e2e/export-browser-reuse.cjs",
     "test:e2e:layer-export": "node test/e2e/layer-export.cjs",
     "test:e2e:screen-export": "node test/e2e/screen-export.cjs",
     "test:e2e:compare-resize": "node test/e2e/compare-resize.cjs",

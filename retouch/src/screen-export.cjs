@@ -16,10 +16,19 @@ function validate(body){
  return body;
 }
 async function render(body,{browserType,signal}={}){
- validate(body);if(body.separate)return require('./screen-export-batch.cjs').renderBatch(body,{signal,render:(item,options)=>render(item,{...options,browserType})});let browser,timer,timedOut=false;const cancel=()=>browser?.close().catch(()=>{});signal?.throwIfAborted();signal?.addEventListener('abort',cancel,{once:true});
+ validate(body);let browser;const cancel=()=>browser?.close().catch(()=>{});signal?.throwIfAborted();signal?.addEventListener('abort',cancel,{once:true});
  try{
-  browser=await (browserType||require('playwright').chromium).launch(browserType?{}:require('./capture-browser.cjs').launchOptions());signal?.throwIfAborted();timer=setTimeout(()=>{timedOut=true;cancel();},30000);
-  const context=await browser.newContext({viewport:{width:body.width,height:body.height},deviceScaleFactor:body.scale,serviceWorkers:'block',acceptDownloads:false}),page=await context.newPage();const failed=new Set();let requests=0;
+  browser=await (browserType||require('playwright').chromium).launch(browserType?{}:require('./capture-browser.cjs').launchOptions());signal?.throwIfAborted();
+  if(body.separate)return await require('./screen-export-batch.cjs').renderBatch(body,{signal,render:(item,options)=>renderInBrowser(item,{browser,signal:options.signal})});
+  return await renderInBrowser(body,{browser,signal});
+ }finally{signal?.removeEventListener('abort',cancel);await browser?.close();}
+}
+async function renderInBrowser(body,{browser,signal}){
+ let context,timer,timedOut=false;const cancel=()=> (context||browser).close().catch(()=>{});signal?.throwIfAborted();signal?.addEventListener('abort',cancel,{once:true});
+ try{
+  timer=setTimeout(()=>{timedOut=true;cancel();},30000);
+  context=await browser.newContext({viewport:{width:body.width,height:body.height},deviceScaleFactor:body.scale,serviceWorkers:'block',acceptDownloads:false});signal?.throwIfAborted();if(timedOut)throw Error('Screen export timed out.');
+  const page=await context.newPage(),failed=new Set();let requests=0;
   await context.route('**/*',route=>{const req=route.request(),url=new URL(req.url());if(!['http:','https:','data:'].includes(url.protocol)||req.method()!=='GET'||!['image','font','stylesheet','media'].includes(req.resourceType())||url.pathname.startsWith('/rt/')||++requests>256){failed.add('blocked');return route.abort();}return route.continue();});
   page.on('requestfailed',()=>failed.add('unavailable'));page.on('response',r=>{if(!r.ok())failed.add('unavailable');});
   const html=sanitize(body.html,{baseURL:body.baseURL});await page.setContent('<!doctype html><meta http-equiv="Content-Security-Policy" content="script-src \'none\'; object-src \'none\'; frame-src \'none\'; connect-src \'none\'">'+html,{waitUntil:'load',timeout:20000});
@@ -32,6 +41,6 @@ async function render(body,{browserType,signal}={}){
    if(Math.min(clip.width,clip.height)*body.scale<1||Math.max(clip.width,clip.height)*body.scale>32768||Math.ceil(clip.width*body.scale)*Math.ceil(clip.height*body.scale)>64*1024*1024)throw Error('Selected layers exceed the export dimension or 64-megapixel limit. Try a smaller scale.');
   }
   return await page.screenshot({type:body.format||'png',omitBackground:body.transparent===true,...(body.format==='jpeg'?{quality:body.quality??90}:{}),timeout:15000,...(clip?{fullPage:true,clip}:{})});
- }catch(error){if(timedOut)throw Error('Screen export timed out after 30 seconds. Try a smaller screen or 1×.');if(error.message?.startsWith('page.evaluate: '))throw Error(error.message.split('\n')[0].replace(/^page\.evaluate: (?:Error: )?/,''));throw error;}finally{clearTimeout(timer);signal?.removeEventListener('abort',cancel);await browser?.close();}
+ }catch(error){if(timedOut)throw Error('Screen export timed out after 30 seconds. Try a smaller screen or 1×.');if(error.message?.startsWith('page.evaluate: '))throw Error(error.message.split('\n')[0].replace(/^page\.evaluate: (?:Error: )?/,''));throw error;}finally{clearTimeout(timer);signal?.removeEventListener('abort',cancel);await context?.close();}
 }
 module.exports={validate,render};

@@ -26616,3 +26616,27 @@ label cleanup. The ZIP dialog screenshot was inspected; syntax/diff checks passe
 No desktop rebuild or push. Batch screen/size presets and PDF exports remain
 incomplete, alongside inherited snapshot/effect limits, full Figma parity and
 notarized Homebrew distribution.
+
+
+### One browser per layer-export batch
+
+A ZIP batch now launches one renderer browser and creates a fresh browser context
+for each layer, closing that context before the next layer starts. The outer
+render owns the browser lifetime; the inner render owns its context, request
+filtering and 30-second timer. Cancellation during context creation closes the
+browser when no context is available yet, and checks the signal again after the
+context arrives. Batch timeout, archive-size and per-server concurrency limits
+remain in effect. Independent contexts keep cookies and document state isolated.
+
+A real Chromium lifecycle test verified one launch for three layers, a maximum
+of one active context, exact per-file pixels/dimensions, no cookie carryover and
+complete context/browser cleanup. Injected failure on layer two, cancellation
+during capture, and cancellation while opening a context all stopped later layers
+and closed the browser. The small three-layer fixture completed in roughly 0.3 s
+on this machine; this is a smoke measurement, not a broad performance benchmark.
+Chromium and WebKit UI layer/ZIP export suites passed. Chromium viewport/full-page/
+comparison PNG and JPEG/custom-scale/alpha regressions passed. All 12 focused
+export tests, syntax and diff checks passed. No full unit-suite rerun or desktop
+rebuild. Assets are still loaded independently per layer, and existing snapshot
+fidelity/export bounds limitations remain. No push; full Figma parity and notarized
+Homebrew distribution remain unfinished.
