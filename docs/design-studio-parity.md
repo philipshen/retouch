@@ -27561,3 +27561,18 @@ copied assets. React/Liquid class-based layer styling, arbitrary CSS representat
 cross-file multi-selection and complete clipboard equivalence remain. No native
 rebuild, launch or push was performed; full Figma Design parity and trusted
 Homebrew distribution are still incomplete.
+
+### 2026-09-20 checkpoint — scoped class style paste for React and Liquid
+
+Extended the layer style clipboard to literal React and Liquid host classes. The existing preview selects individual resolved properties; layout/dimensions remain unchecked initially. Source paste supports all 31 clipboard properties through shared color, typography, and effect composers plus explicit class overrides for appearance and layout. Named and custom screen ranges use the existing responsive scope validation. Paste preserves other screen scopes and unrelated source classes. Important ambiguous shorthands are refused rather than discarded; important inline subproperties disable their corresponding paste field and are checked again at submission.
+
+`layer-style-paste.cjs` delegates single and multi-target writes to existing adapter class writers. Multi-target writes are one transaction, retain selected source IDs, and reject every edit if any target is unsupported or stale. Class history records before/after values for Liquid preview reconciliation. React uses the existing compiled-class refresh path. Resolved pasted fills clear target hidden-fill metadata; pasted effects clear hidden-effect metadata.
+
+Verification:
+- Full unit suite: 2,192 passed (`/tmp/retouch-class-style-paste-full.log`). New coverage includes both adapters, atomic refusal, repeat/no-op behavior, combined font-size/leading preservation, hidden paints/effects, and inline shorthand priority.
+- React with real Vite React and Tailwind plugins: Chromium and WebKit passed the clipboard UI, cancellation, selected appearance/typography/layout paste, phone scope isolation, exact source undo/redo, retained selection, and retained counter/input/document state.
+- Local Liquid renderer with real Tailwind compilation: Chromium and WebKit passed the same clipboard flow, exact history, scope isolation, and retained preview documents/input state. The test server must enable `reloadAfterWrite` as well as `revalidateStyles` to capture the inline stylesheet baseline; an initial fixture omitted the former and correctly failed refresh. Both final fixture runs passed.
+- Browser compilation check: all 31 source-generated properties match equivalent CSS values in Chromium and WebKit, with smaller-screen isolation.
+- HTML clipboard regression passed after sharing the history refresh path. Final fill/inline guard changes rechecked React Chromium and Liquid WebKit.
+
+Limits: class paste requires literal source classes; expression-driven classes and conditional Liquid class sources remain unsupported here. Important ambiguous utility ownership may require a source edit before pasting. Some image URL values cannot yet be represented faithfully in class syntax and are refused (including quoted URLs and literal underscores). Asset/font references and reusable style/variable links are not transferred. Tests prove local React/Liquid behavior, not a connected Shopify store or arbitrary framework behavior. Native distribution and notarization remain unchanged and incomplete. Full Figma parity remains active.

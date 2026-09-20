@@ -10,6 +10,12 @@
  function snapshot(element){const computed=element.ownerDocument.defaultView.getComputedStyle(element);return validate({format,properties:names.map(name=>({name,value:computed.getPropertyValue(name).trim()})).filter(p=>p.value&&css().valid(p.name,p.value,false))});}
  const labels=Object.fromEntries(names.map(name=>[name,name.charAt(0).toUpperCase()+name.slice(1).replace(/-/g,' ')]));Object.assign(labels,{color:'Text color','background-color':'Fill color','background-image':'Fill image','border-radius':'Corner radius','mix-blend-mode':'Blend mode'});
  const transport=root.RetouchComponentClipboard.createTransport(validate);
- function target(info,element){return {name:info.layerName||info.tag||'Layer',props:names.map(name=>({name,editor:{type:'string',editable:!element.style.getPropertyPriority(name)}}))};}
+ function inlineKeys(name){
+  const keys=[name,'all'];if(/^border-(color|width|style)$/.test(name)){const part=name.slice(7);for(const edge of ['top','right','bottom','left','inline-start','inline-end','block-start','block-end'])keys.push('border-'+edge+'-'+part);}
+  if(name==='border-radius')for(const corner of ['top-left','top-right','bottom-left','bottom-right','start-start','start-end','end-start','end-end'])keys.push('border-'+corner+'-radius');
+  if(name==='padding')for(const edge of ['top','right','bottom','left','inline-start','inline-end','block-start','block-end'])keys.push('padding-'+edge);
+  if(name==='gap')keys.push('row-gap','column-gap');if(['width','height'].includes(name))keys.push('inline-size','block-size');if(name==='backdrop-filter')keys.push('-webkit-backdrop-filter');return keys;
+ }
+ function target(info,element){return {name:info.layerName||info.tag||'Layer',props:names.map(name=>({name,editor:{type:'string',editable:!inlineKeys(name).some(key=>element.style.getPropertyPriority(key)==='important')}}))};}
  root.RetouchStyleClipboard={groups,validate,snapshot,target,copy:element=>transport.copy(snapshot(element)),open:({infos,elements,save,opener,scopeLabel})=>root.RetouchComponentClipboard.open({infos,components:infos.map((info,i)=>target(info,elements[i])),save,opener,readClipboard:()=>transport.read(),labels,hideExcluded:true,targetLabel:'layer',initialProperties:[...groups.Appearance,...groups.Typography],dialogLabel:'Paste layer styles',actionLabel:'Paste styles',hintText:'Only checked styles are pasted as local overrides. Other properties stay unchanged.',scopeLabel})};
 })(typeof window==='undefined'?globalThis:window);
