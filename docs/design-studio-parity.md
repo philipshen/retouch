@@ -28017,3 +28017,32 @@ Swaps reuse the exact history and import-change state proofs introduced for inse
 Validation: all 2,371 unit tests passed (`/tmp/retouch-svelte-swap-full-final.log`). Six Svelte swap tests cover compatible overrides, exact removal review, required fields, complete mapping, fresh replacement proofs, exact history, roots/control flow, import reuse, same-definition/stale/dependency refusal and preservation of unsupported authored content. A React matcher regression checks unsupported-contract removal. Chromium and WebKit passed actual library swap review, retained labels, removed incompatible choices, required width input, default values, fresh replacement/restored state, exact undo/redo, unaffected state and main/comparison synchronization. The broader insertion/order/move/duplicate/delete flow also passed; both recovered 88 dropped Retouch source broadcasts and passed production exclusion (`/tmp/retouch-svelte-swap-{chromium,webkit}-final.log`). An early WebKit run exposed a multi-selection readiness race in the test; the helper now waits for both resolved selections before moving. The React component-library/property suite passed after the shared matching change (`/tmp/retouch-svelte-swap-react.log`). The Chromium swap dialog screenshot was visually inspected (`/tmp/retouch-svelte-swap-dialog-chromium.png`).
 
 Swapping usages with authored child content, bindings/directives/spreads, unsupported target contracts, broader definition resolution, Svelte detach and shared default authoring remain unfinished. Full Figma parity, arbitrary-site coverage and notarized/Homebrew distribution remain incomplete. Native artifacts were not rebuilt or launched.
+
+### Svelte library dependency path mappings checkpoint
+
+Library insertion and swapping now traverse nested `.svelte` imports through
+project `tsconfig.json` / `jsconfig.json` paths, including relative config
+inheritance and ordered fallback targets. Resolution reuses the existing static
+configuration reader; project configuration is never executed. The planner keeps
+cycle, fixed DOM ID, project containment and symlink checks, and guards config
+snapshots plus every attempted resolution path before applying source changes.
+Creating a preferred target or changing config after planning refuses the whole
+transaction without modifying the usage source.
+
+The browser fixture uses matching TypeScript and Vite aliases and verifies the
+nested child actually renders after insertion. These mappings must agree in the
+user's bundler; executable-only aliases, arbitrary package graphs and direct
+inspection of aliased component usages remain unfinished. This change does not
+claim full alias or arbitrary-site support. Native artifacts were not rebuilt or
+launched; full Figma parity and notarized public cask distribution remain open.
+
+Validation: all 2,387 unit tests passed (`/tmp/retouch-svelte-alias-full.log`).
+The insertion suite covers inherited configuration, preferred-path creation,
+config precedence changes, exact history, aliased cycles, fixed IDs, symlink and
+containment refusals. Chromium and WebKit passed the nested alias rendering
+assertion plus insertion, swapping, ordering, reparenting, detach, duplicate/delete,
+exact source history and retained state. Both recovered 96 dropped broadcasts and
+passed production instrumentation exclusion (`/tmp/retouch-svelte-alias-chromium-final.log`,
+`/tmp/retouch-svelte-alias-webkit.log`). The first Chromium attempt exposed a fixture
+construction mistake (the child was appended to a nonexistent closing tag); the
+fixture was corrected before the successful final browser runs.

@@ -282,9 +282,14 @@ roots. Select a frame and choose Insert into frame to create a linked usage.
 Required supported primitive properties have initial-value controls; optional
 properties keep their defaults. Insertion reuses accessible imports or adds a
 collision-free local name, with exact undo/redo and synchronized previews. Project
-component dependencies are checked for cycles and fixed DOM IDs. Aliased module
-paths, symlinked/external definitions, unsupported required contracts, dynamic
-roots and spread-controlled properties remain outside this insertion workflow.
+component dependencies are checked for cycles and fixed DOM IDs. Nested imports
+ending in `.svelte` can use project `tsconfig.json` / `jsconfig.json` path mappings,
+including relative config inheritance and ordered fallback paths. The app bundler
+must resolve those aliases to the same files. Changes to config, resolved sources,
+or previously missing preferred paths invalidate the pending source transaction.
+Aliases defined only by executable bundler config, symlinked/external definitions,
+unsupported required contracts, dynamic roots and spread-controlled properties
+remain outside this insertion workflow.
 For literal usages without authored child content, Swap selected instance keeps
 compatible overrides and lists the overrides that will be removed. Supply any
 new required properties before applying. The replacement initializes fresh;
