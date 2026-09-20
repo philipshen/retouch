@@ -28409,3 +28409,28 @@ across HMR, nor support group bindings, element references, arbitrary directives
 authored scoped CSS or template control-flow extraction. Desktop artifacts were
 not rebuilt. Full Figma parity, arbitrary-site authoring and trusted public macOS
 distribution remain incomplete.
+
+### Svelte local writable-store retention checkpoint
+
+The existing compiler state transform now captures direct const writable stores
+imported from svelte/store, including named aliases and namespace imports. Eligible
+store objects reuse the same exact-script and editor-proved script-transition
+rules as rune state, so component extraction no longer resets these local stores.
+Fresh mounts and ordinary external script changes still initialize new state.
+Factories with start/stop callbacks, spread arguments, mutable bindings, lookalike
+imports and other store factories are not treated as eligible writable state.
+
+Three added tests cover development compiler output, production exclusion,
+factory eligibility, retained object identity and external-script invalidation.
+All 2,419 unit tests passed (/tmp/retouch-svelte-local-store-full.log).
+Chromium and WebKit passed component creation, duplication and exact undo/redo
+with a local aliased writable store in the parent and namespace-imported writable
+stores in surviving siblings. Parent store identity, independent preview values,
+bindings, drafts, styles and sibling state survived. A subsequent external source
+edit created a fresh parent store in both previews and applied its new initial
+value (/tmp/retouch-svelte-local-store-{chromium,webkit}-final.log).
+
+This is bounded retention for supported store declarations, not arbitrary store
+factory/lifecycle or external-dependency preservation. Desktop artifacts were not
+rebuilt. Full Figma parity, arbitrary-site authoring and trusted public macOS
+distribution remain incomplete.

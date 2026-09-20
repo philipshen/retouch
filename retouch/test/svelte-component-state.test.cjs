@@ -52,3 +52,18 @@ test('Svelte committed import-only insertion proofs retain state without accepti
  const {createRegistry}=require('../src/svelte-component-state.cjs'),registry=createRegistry(),props={},old=registry('App.svelte','before-script','before',props,{shape:'before-shape'});old.capture('count',()=>7);registry.begin();const edge={from:'before-shape',to:'after-shape',fromScript:'before-script',toScript:'after-script',pairs:[]},next=registry('App.svelte','after-script','after',props,{shape:'after-shape',migrations:[edge]});assert.equal(next.read('count',()=>0),7);next.capture('count',()=>9);registry.end();registry.begin();const unrelated=registry('App.svelte','external-script','external',props,{shape:'after-shape',migrations:[edge]});assert.equal(unrelated.read('count',()=>0),0);registry.end();
  const fresh=registry('App.svelte','before-script','before',{}, {shape:'before-shape'});fresh.capture('count',()=>11);registry.begin();const other=registry('App.svelte','after-script','after',{}, {shape:'after-shape',migrations:[edge]});assert.equal(other.read('count',()=>0),0);registry.end();
 });
+test('Svelte compiler retains stable local writable stores including import aliases',()=>{
+ for(const [imp,call]of [['import {writable} from "svelte/store"','writable'],['import {writable as makeStore} from "svelte/store"','makeStore'],['import * as stores from "svelte/store"','stores.writable']]){
+  const input='<script>'+imp+';const title='+call+'("Initial");</script><input bind:value={$title}/>',info=state.metadata(input,'Store.svelte');assert.deepEqual(info.names,['title']);
+  for(const dev of [true,false]){const compiled=compiler.compile(input,{filename:'Store.svelte',dev,hmr:true}).js.code,result=state.transform(compiled,'Store.svelte',info);assert.ok(result);require('@babel/parser').parse(result.code,{sourceType:'module'});assert.match(result.code,/read\("title",\(\)=>\(/);assert.match(result.code,/capture\("title",\(\)=>title\)/);}
+  assert.equal(state.transform(compiler.compile(input,{filename:'Store.svelte',dev:false,hmr:false}).js.code,'Store.svelte',info),null);
+ }
+});
+test('Svelte store capture excludes lifecycle factories, mutable references and lookalikes',()=>{
+ for(const script of ['import {writable} from "other-library";const title=writable(0);','import {writable} from "svelte/store";let title=writable(0);','import {writable} from "svelte/store";const title=writable(0,()=>()=>{});','import {writable} from "svelte/store";const title=writable(...args);','const stores={writable:()=>0};const title=stores.writable(0);','import {readable} from "svelte/store";const title=readable(0);'])assert.deepEqual(state.metadata('<script>'+script+'</script><p>Store</p>','Store.svelte').names,[],script);
+});
+test('Svelte exact editor script proof retains store identity but external scripts initialize anew',()=>{
+ const registry=state.createRegistry(),props={},store={value:'Edited'},first=registry('Store','old-script','before',props,{shape:'old-shape'});first.capture('title',()=>store);
+ registry.begin();first.dispose();const second=registry('Store','new-script','after',props,{shape:'new-shape',migrations:[{from:'old-shape',to:'new-shape',fromScript:'old-script',toScript:'new-script',pairs:[],ids:[]}]});assert.equal(second.read('title',()=>({value:'Reset'})),store);second.capture('title',()=>store);registry.end();
+ const external=registry('Store','external-script','external',props,{shape:'external'});assert.notEqual(external.read('title',()=>({value:'Fresh'})),store);
+});

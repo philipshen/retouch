@@ -1,8 +1,20 @@
 'use strict';
 const parser=require('@babel/parser'),MagicString=require('magic-string'),source=require('./svelte-source.cjs');
 function metadata(text,file){
- const ast=source.collect(text,file).ast,names=[];
- for(const statement of ast.instance?.content.body||[])if(statement.type==='VariableDeclaration')for(const declaration of statement.declarations){const call=declaration.init,callee=call?.callee;if(declaration.id.type==='Identifier'&&call?.type==='CallExpression'&&(callee?.type==='Identifier'&&callee.name==='$state'||callee?.type==='MemberExpression'&&callee.object.name==='$state'&&callee.property.name==='raw'))names.push(declaration.id.name);}
+ const ast=source.collect(text,file).ast,names=[],statements=ast.instance?.content.body||[],writable=new Set(),namespaces=new Set();
+ for(const statement of statements)if(statement.type==='ImportDeclaration'&&statement.source.value==='svelte/store'&&statement.importKind!=='type')for(const specifier of statement.specifiers){
+  if(specifier.importKind==='type')continue;
+  if(specifier.type==='ImportSpecifier'&&(specifier.imported.name??specifier.imported.value)==='writable')writable.add(specifier.local.name);
+  if(specifier.type==='ImportNamespaceSpecifier')namespaces.add(specifier.local.name);
+ }
+ for(const statement of statements)if(statement.type==='VariableDeclaration')for(const declaration of statement.declarations){
+  const call=declaration.init,callee=call?.callee;if(declaration.id.type!=='Identifier'||call?.type!=='CallExpression')continue;
+  const rune=callee?.type==='Identifier'&&callee.name==='$state'||callee?.type==='MemberExpression'&&callee.object.name==='$state'&&callee.property.name==='raw';
+  // Preserve stable store references, not factories with lifecycle callbacks or
+  // mutable bindings whose compiler-owned signal would belong to the old scope.
+  const store=statement.kind==='const'&&call.arguments.length<=1&&!call.arguments.some(argument=>argument.type==='SpreadElement')&&(callee?.type==='Identifier'&&writable.has(callee.name)||callee?.type==='MemberExpression'&&!callee.computed&&namespaces.has(callee.object.name)&&callee.property.name==='writable');
+  if(rune||store)names.push(declaration.id.name);
+ }
  return {shape:source.contentHash(source.textSnapshot(text,file).signature),revision:source.contentHash(text),script:source.contentHash(JSON.stringify([ast.instance,ast.module].map(node=>node?text.slice(node.start,node.end):null))),names};
 }
 // Own-module captures use the HMR-stable props object. Committed source-ID
