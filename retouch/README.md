@@ -229,8 +229,11 @@ runs can be split with independent responsive style ownership. Native sibling
 layers support reorder, duplicate, delete, and copy/paste within the same source
 parent, with independent copied styles and exact history. Operations across mixed
 text, control-flow or component siblings remain unavailable; copies containing
-IDs, refs, spread attributes or computed style identities are refused. General
-reparenting, insertion, grouping and component-property controls remain unfinished.
+IDs, refs, spread attributes or computed style identities are refused. Content
+containers support new text and frame layers, including expanding empty tags,
+click-to-place text and dragged text boxes. Containers with bound generated
+content refuse insertion. General reparenting, grouping and component-property
+controls remain unfinished.
 
 Simple literal text, managed styles, style links, and variable bindings use development-only Svelte store
 bindings and an independent stylesheet so the component stays mounted, including
