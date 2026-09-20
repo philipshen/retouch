@@ -227,7 +227,11 @@ Native text containers support inline formatting and literal edits around protec
 live expressions, preserving authored events and bound link destinations. Styled
 runs can be split with independent responsive style ownership. Native sibling
 layers support reorder, duplicate, delete, and copy/paste within the same source
-parent, with independent copied styles and exact history. Operations across mixed
+parent, with independent copied styles and exact history. Multi-selection supports
+duplicate/delete across native parents in one component, reorder within one
+parent, and moving selected roots into another compatible container. Each action
+is one source transaction and undo step; invalid roots refuse the whole edit.
+Operations across mixed
 text, control-flow or component siblings remain unavailable; copies containing
 IDs, refs, spread attributes or computed style identities are refused. Content
 containers support new text and frame layers, including expanding empty tags,
