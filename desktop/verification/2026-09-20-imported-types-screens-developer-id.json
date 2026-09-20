@@ -1,0 +1,233 @@
+{
+  "date": "2026-09-20",
+  "artifact": "/Users/philipshen/Developer/retouch-worktrees/desktop-types-cf4ca734/Retouch-0.1.0-mac.zip",
+  "sha256": "5aa811859ef1442b8ad87fda0009556a709a58ca4fc9708890f9c44261588564",
+  "sourceCommit": "cf4ca73425bedc02f356f04b1ea7ee80bd61cc33",
+  "sourceTreeDirty": false,
+  "sourceFilesMatched": 395,
+  "nativeInputsMatched": 4,
+  "packageVerification": {
+    "captureBrowser": {
+      "playwrightVersion": "1.59.1",
+      "revision": "1217",
+      "architectures": [
+        "arm64",
+        "x64"
+      ],
+      "files": 34
+    },
+    "sourceCommit": "cf4ca73425bedc02f356f04b1ea7ee80bd61cc33",
+    "sourceTreeDirty": false,
+    "sourceFiles": 395,
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "signature": "strict verification passed; trust and notarization are separate checks"
+  },
+  "testRuntimeIntegrity": {
+    "package": {
+      "captureBrowser": {
+        "playwrightVersion": "1.59.1",
+        "revision": "1217",
+        "architectures": [
+          "arm64",
+          "x64"
+        ],
+        "files": 34
+      },
+      "sourceCommit": "cf4ca73425bedc02f356f04b1ea7ee80bd61cc33",
+      "sourceTreeDirty": false,
+      "sourceFiles": 395,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "runtime": {
+      "packagedFiles": 4820,
+      "packagedSymlinks": 7,
+      "addedDependencyRoots": [
+        "node_modules/.bin/liquid",
+        "node_modules/.bin/liquidjs",
+        "node_modules/@vue/reactivity",
+        "node_modules/@vue/runtime-core",
+        "node_modules/@vue/runtime-dom",
+        "node_modules/@vue/server-renderer",
+        "node_modules/commander",
+        "node_modules/csstype",
+        "node_modules/liquidjs",
+        "node_modules/vue"
+      ],
+      "integrity": "Packaged bytes, modes, symlink targets and inventories match"
+    }
+  },
+  "runtimeUnitTests": 2400,
+  "desktopUnitTests": 33,
+  "packagedExport": {
+    "sourceCommit": "cf4ca73425bedc02f356f04b1ea7ee80bd61cc33",
+    "sourceTreeDirty": false,
+    "sourceFilesMatched": 395,
+    "captureBrowser": "/Users/philipshen/Developer/retouch-worktrees/desktop-types-cf4ca734/archive-check/Retouch.app/Contents/Resources/capture-browser/arm64/chrome-headless-shell",
+    "passed": [
+      "selected PNG dimensions and alpha",
+      "fractional viewport export",
+      "separate ZIP dimensions and pixels",
+      "JPEG signature",
+      "cancellation before launch",
+      "unchanged packaged source"
+    ]
+  },
+  "packagedBrowserWorkflows": {
+    "svelteChromiumAndWebKit": "Passed imported contracts, aliases, shared defaults, insertion, swapping, detach, ordering, retained state, exact history, dropped-update recovery and production exclusion",
+    "reactChromiumAndWebKit": "Passed normal fill/click component creation, drafts, exact undo/redo and recovery of three comparisons with dropped updates",
+    "screenViewChromiumAndWebKit": "Passed page, nested, shadow and same-origin embedded scroll restoration, canvas pan, state retention, route/reload isolation and cross-origin exclusions",
+    "projectScreensChromiumAndWebKit": "Passed current markers, comparison geometry after content resizing, screen persistence and project isolation"
+  },
+  "packageTamperVerification": "Passed mutation and relocation checks; original unchanged",
+  "homebrew": {
+    "version": "7.0.1",
+    "installation": {
+      "verification": {
+        "captureBrowser": {
+          "playwrightVersion": "1.59.1",
+          "revision": "1217",
+          "architectures": [
+            "arm64",
+            "x64"
+          ],
+          "files": 34
+        },
+        "sourceCommit": "cf4ca73425bedc02f356f04b1ea7ee80bd61cc33",
+        "sourceTreeDirty": false,
+        "sourceFiles": 395,
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ],
+        "signature": "strict verification passed; trust and notarization are separate checks"
+      },
+      "manifestMatchesArchive": true,
+      "quarantine": "0381;6aaff0f3;;957922BF-6D3C-49A4-8F8E-01C950F50074",
+      "nativeLaunchAttempted": false
+    },
+    "originalInventoriesRestored": true,
+    "temporaryAppAndTapRemoved": true,
+    "isolatedTrustEmpty": true,
+    "autoRemoveDisabled": true,
+    "localCask": "/Users/philipshen/Developer/retouch-worktrees/desktop-types-cf4ca734/retouch-studio.rb",
+    "localCaskSha256": "2144d31485a149b2eab1d2a31169ea0ae51ebe07285ffd9f593621cea999928c"
+  },
+  "gatekeeper": {
+    "exitCode": 3,
+    "result": "Unnotarized Developer ID"
+  },
+  "nativeLaunchAttempted": false,
+  "notarization": "Not submitted; existing notarytool Keychain profile name pending",
+  "unverified": [
+    "native UI launch for this artifact",
+    "Intel runtime execution",
+    "notarization and trusted public distribution",
+    "Homebrew upgrade"
+  ],
+  "testSetupCorrection": "Initial Chromium React attempt pointed at the WebKit-only recovered browser cache and failed before launch. Reran with the normal Chromium cache and passed.",
+  "evidenceLogs": {
+    "retouch-desktop-types-brew-cleanup.log": {
+      "path": "/tmp/retouch-desktop-types-brew-cleanup.log",
+      "sha256": "e2531d3911bffc7d901469fe432fb9c76c5d8df4a957148a8cdae629a548d21a"
+    },
+    "retouch-desktop-types-brew-install.log": {
+      "path": "/tmp/retouch-desktop-types-brew-install.log",
+      "sha256": "efbfb13205be873a915af5e46c4eaa585c9b00658dd11b0073ada1ad74661e68"
+    },
+    "retouch-desktop-types-brew-prepare.log": {
+      "path": "/tmp/retouch-desktop-types-brew-prepare.log",
+      "sha256": "a42f9d0c5fc0f510b70d92377ef90f6960e293c76f649475292bf92e38c21014"
+    },
+    "retouch-desktop-types-brew-verify.json": {
+      "path": "/tmp/retouch-desktop-types-brew-verify.json",
+      "sha256": "af439f50bc1a02804865baed68579c332cf251552a17a7056a1df6fdc82974a4"
+    },
+    "retouch-desktop-types-build.log": {
+      "path": "/tmp/retouch-desktop-types-build.log",
+      "sha256": "6b3d35560f29250681baa36ad91f08e6a8446b9803dc0a801fb49c78525211e0"
+    },
+    "retouch-desktop-types-chromium.log": {
+      "path": "/tmp/retouch-desktop-types-chromium.log",
+      "sha256": "eb0a48c9ff61c03695e2d4946cab682b7c860c16c598176ea70f9b23425553dc"
+    },
+    "retouch-desktop-types-export.json": {
+      "path": "/tmp/retouch-desktop-types-export.json",
+      "sha256": "9846198204e103f8dd372a9e86eea72a8e7298cbe4f5089f2c17809d104a0382"
+    },
+    "retouch-desktop-types-final.json": {
+      "path": "/tmp/retouch-desktop-types-final.json",
+      "sha256": "112867d3d11e408534f2fdb791a58e0b75c3bbe6f4f3c88f32551480ea1a3ede"
+    },
+    "retouch-desktop-types-gatekeeper.log": {
+      "path": "/tmp/retouch-desktop-types-gatekeeper.log",
+      "sha256": "7a5450e658f4ee27d8d3fd63dcff25edeae5acf40a6b1eb813ec250b9e4eee63"
+    },
+    "retouch-desktop-types-original-final.json": {
+      "path": "/tmp/retouch-desktop-types-original-final.json",
+      "sha256": "7a3fd115024881f1edb3235b94930a311feb1bf03506e06088507c80c20d8450"
+    },
+    "retouch-desktop-types-original.json": {
+      "path": "/tmp/retouch-desktop-types-original.json",
+      "sha256": "7a3fd115024881f1edb3235b94930a311feb1bf03506e06088507c80c20d8450"
+    },
+    "retouch-desktop-types-prepare.json": {
+      "path": "/tmp/retouch-desktop-types-prepare.json",
+      "sha256": "112867d3d11e408534f2fdb791a58e0b75c3bbe6f4f3c88f32551480ea1a3ede"
+    },
+    "retouch-desktop-types-project-chromium.log": {
+      "path": "/tmp/retouch-desktop-types-project-chromium.log",
+      "sha256": "404881e37fbb755f2577dc69fdf2ffd9783241fad0be7b2c3f851e2342232d78"
+    },
+    "retouch-desktop-types-project-webkit.log": {
+      "path": "/tmp/retouch-desktop-types-project-webkit.log",
+      "sha256": "23b644aa00f2245167bf79fb4f5df3dd9b1a059265fb4718f76ba11af760ef8a"
+    },
+    "retouch-desktop-types-react-chromium-final.log": {
+      "path": "/tmp/retouch-desktop-types-react-chromium-final.log",
+      "sha256": "f15a53bcf4676360e199b9ff529ded4af23591b17f2cf72f764b1a822c486d3f"
+    },
+    "retouch-desktop-types-react-chromium.log": {
+      "path": "/tmp/retouch-desktop-types-react-chromium.log",
+      "sha256": "d5e20743dc111e825aa4b0323e55cfc1e8cf878e04ed80385a45793a80531c3d"
+    },
+    "retouch-desktop-types-react-webkit.log": {
+      "path": "/tmp/retouch-desktop-types-react-webkit.log",
+      "sha256": "fa8263ee262c822bd8938b28ba4a79dd1a7555900666ebbff05ddcec95223487"
+    },
+    "retouch-desktop-types-runtime-tests.log": {
+      "path": "/tmp/retouch-desktop-types-runtime-tests.log",
+      "sha256": "8f0fbefedb10d867a71f17cb7130c99cf5368fe84e62f9556d043c1b01a464b4"
+    },
+    "retouch-desktop-types-screen-chromium.log": {
+      "path": "/tmp/retouch-desktop-types-screen-chromium.log",
+      "sha256": "90d8b8c5c11d25a2ddce02859fe5880127c5977747721cb79f607aef5738f47f"
+    },
+    "retouch-desktop-types-screen-webkit.log": {
+      "path": "/tmp/retouch-desktop-types-screen-webkit.log",
+      "sha256": "37f8d3d18c3adb7b4fd1e846cb7409370c4a8d29d266ca1d9ed9db236b15a6d8"
+    },
+    "retouch-desktop-types-source.json": {
+      "path": "/tmp/retouch-desktop-types-source.json",
+      "sha256": "c0b1d0abb86539b718ae0ae8e86a6aee89d194c9904686d9268869bd2decf44c"
+    },
+    "retouch-desktop-types-tamper.log": {
+      "path": "/tmp/retouch-desktop-types-tamper.log",
+      "sha256": "ee0e093762528692b73c240d1f29ca071435cf6ff09dc8004e5d36360d46904a"
+    },
+    "retouch-desktop-types-unit.log": {
+      "path": "/tmp/retouch-desktop-types-unit.log",
+      "sha256": "f4aea14590d01247b04314dc734343d5111af5610ddfceb4ec787fc69ee22459"
+    },
+    "retouch-desktop-types-webkit.log": {
+      "path": "/tmp/retouch-desktop-types-webkit.log",
+      "sha256": "2ba31a3199a03e989994335c2d88ff2339f1b8527d6e08b4ddc1159119b62e4a"
+    }
+  }
+}

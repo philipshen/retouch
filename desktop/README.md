@@ -1,6 +1,31 @@
 # Retouch for macOS
 
-## Latest local signed candidate — component authoring, 2026-09-20
+## Latest local signed candidate — imported contracts and screens, 2026-09-20
+
+The universal Developer ID signed app packages clean commit `cf4ca734`.
+All 395 source entries and four native build inputs matched that checkpoint.
+It includes imported Svelte property contracts, aliased component editing,
+per-screen scroll restoration and the current-screen comparison indicator.
+
+Artifact: `/Users/philipshen/Developer/retouch-worktrees/desktop-types-cf4ca734/Retouch-0.1.0-mac.zip`
+
+SHA-256: `5aa811859ef1442b8ad87fda0009556a709a58ca4fc9708890f9c44261588564`
+
+The extracted runtime passed 2,400 unit tests and Svelte, React component creation,
+screen-view memory and project-screen workflows in Chromium and WebKit. React
+creation used normal fill/click controls in both engines. All 33 desktop tests,
+package tamper checks and bundled PNG/JPEG/ZIP export checks passed. Final
+verification confirmed 4,820 packaged files and seven symlinks unchanged.
+
+Homebrew 7.0.1 installed the checksum-bound local cask into an isolated app directory.
+Installed signatures and manifest passed, with quarantine intact. Cleanup restored
+original formula, cask, tap, trust and developer inventories; autoremove was disabled.
+
+Gatekeeper reports **Unnotarized Developer ID**. No native launch was attempted.
+Native UI launch, Intel execution, notarization, trusted public distribution and
+cask upgrade remain unverified. See the [verification receipt](verification/2026-09-20-imported-types-screens-developer-id.json).
+
+## Previous signed candidate — component authoring, 2026-09-20
 
 The universal Developer ID signed app packages clean commit `9d15ca05`, including
 Svelte component insertion, swapping, ordering, reparenting, independent detachment,

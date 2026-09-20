@@ -28234,3 +28234,21 @@ dropped broadcasts and production exclusion
 (`/tmp/retouch-svelte-imported-types-{chromium,webkit}-final.log`). Native artifacts
 were not rebuilt or launched. Full Figma parity, arbitrary-site coverage and
 notarized public macOS distribution remain unfinished.
+
+### Packaged imported contracts and screen workflow checkpoint
+
+Built the universal Developer ID candidate from clean cf4ca734 and verified all
+395 source entries and four native inputs. Its extracted runtime passed 2,400
+unit tests and combined Svelte imported-contract/alias authoring workflows in
+Chromium and WebKit. React component creation/recovery now passes with normal
+controls in both engines; screen-view memory and project-screen workflows also
+passed in both. All 33 desktop tests, bundled exports and tamper checks passed.
+Final package verification confirmed unchanged production bytes and signatures.
+
+Homebrew 7.0.1 installed the local checksum-bound cask with quarantine intact.
+The installed manifest matched the archive. Cleanup with autoremove disabled
+restored original inventories and removed the isolated app, tap and trust.
+Evidence: desktop/verification/2026-09-20-imported-types-screens-developer-id.json.
+Gatekeeper still reports Unnotarized Developer ID; no native launch occurred.
+Native UI, Intel execution, notarization, public distribution and cask upgrade
+remain unverified. Full Figma parity and arbitrary-site coverage remain incomplete.
