@@ -2,41 +2,45 @@
  'use strict';
  const V=root.RetouchHTMLCSSValues;
  const namespace=Math.random().toString(36).slice(2);let serial=0;
- // Ask the browser's cascade to choose a linked class. Temporary custom-property
+ // Ask the browser's cascade to choose a linked declaration. Temporary custom-property
  // markers retain the original selectors, media/supports/container conditions,
  // layers, specificity, importance and order. All mutations are synchronous and
  // reverted before control returns; no authored declaration is replaced.
- function classLink(info,el,property,managed){
-  const d=el.ownerDocument,w=d.defaultView,name='--rt-prototype-probe-'+namespace+'-'+(++serial),tokens=new Map(),links=new Map();let count=0;
+ function link(info,el,property,managed){
+  const d=el.ownerDocument,w=d.defaultView,name='--rt-prototype-probe-'+namespace+'-'+(++serial),tokens=new Map(),scopes=new Map(),links=new Map(),styleId=el.getAttribute('data-rt-style');let count=0;
   for(const [scope,group]of Object.entries(info.variableLinks||{})){
    const link=group[property];if(!link)continue;
-   const token=scope+'!['+property+':'+link.value.replace(/_/g,'\\_').replace(/\s+/g,'_')+']',marker='rt'+(++count);
-   if(!el.classList.contains(token))continue;
-   tokens.set('.'+w.CSS.escape(token),marker);links.set(marker,{link,override:!!(link.override||info.variableOverrides?.[scope]?.includes(property))});
+   const marker='rt'+(++count);
+   if(info.classVariables){const token=scope+'!['+property+':'+link.value.replace(/_/g,'\\_').replace(/\s+/g,'_')+']';if(!el.classList.contains(token))continue;tokens.set('.'+w.CSS.escape(token),marker);}
+   else if(styleId&&/^[a-f0-9]{10}$/.test(styleId))scopes.set(scope,marker);else continue;
+   const normalized=d.createElement('span').style;normalized.setProperty(property,link.value);
+   links.set(marker,{link,value:normalized.getPropertyValue(property),override:!!(link.override||info.variableOverrides?.[scope]?.includes(property))});
   }
-  if(!tokens.size)return null;
+  if(!links.size)return null;
   const changed=[],seen=new Set(),registration=d.createElement('style');
   registration.setAttribute('data-rt-prototype-probe','');
   registration.textContent='@property '+name+' { syntax: "*"; inherits: false; initial-value: none; }';
   const inlineBefore={value:el.style.getPropertyValue(name),priority:el.style.getPropertyPriority(name),hadStyle:el.hasAttribute('style')};
   function mark(style,marker){
    const declarations=[...style].filter(p=>V.overlaps(p,property));if(!declarations.length)return;
+   if(!info.classVariables&&links.has(marker)&&style.getPropertyValue(property)!==links.get(marker).value)marker='blocked';
    const important=declarations.some(p=>style.getPropertyPriority(p)==='important');
    changed.push({style,value:style.getPropertyValue(name),priority:style.getPropertyPriority(name)});style.setProperty(name,marker,important?'important':'');
   }
-  function rules(list,parentMarker='blocked'){
+  function rules(list,parentMarker='blocked',sheetMarker='blocked'){
    for(const rule of list){
     let marker=parentMarker;
-    if(rule.selectorText)marker=tokens.get(rule.selectorText)||(rule.selectorText==='&'?parentMarker:'blocked');
+    if(rule.selectorText)marker=tokens.get(rule.selectorText)||(rule.selectorText==='[data-rt-style=\"'+styleId+'\"]'?sheetMarker:rule.selectorText==='&'?parentMarker:'blocked');
     if(rule.style&&rule.selectorText)mark(rule.style,marker);
     if(rule.styleSheet)scanSheet(rule.styleSheet);
-    if(rule.cssRules)rules(rule.cssRules,marker);
+    if(rule.cssRules)rules(rule.cssRules,marker,sheetMarker);
    }
   }
   function scanSheet(sheet){
    if(!sheet||sheet.disabled||seen.has(sheet))return;seen.add(sheet);
    let list;try{list=sheet.cssRules;}catch{throw Error('A stylesheet is unreadable. Prototype variable bindings cannot determine the active screen scope.');}
-   rules(list);
+   const owner=sheet.ownerNode,marker=!info.classVariables&&owner?.getAttribute('data-rt-css')===styleId?scopes.get(owner.getAttribute('data-rt-width')):'blocked';
+   rules(list,'blocked',marker||'blocked');
   }
   try{
    (d.head||d.documentElement).append(registration);
@@ -52,5 +56,5 @@
    if(!inlineBefore.hadStyle&&!el.getAttribute('style'))el.removeAttribute('style');registration.remove();
   }
  }
- root.RetouchPrototypeBindingCascade={classLink,isProbeProperty:name=>name.startsWith('--rt-prototype-probe-'+namespace+'-')};
+ root.RetouchPrototypeBindingCascade={link,classLink:link,isProbeProperty:name=>name.startsWith('--rt-prototype-probe-'+namespace+'-')};
 })(window);

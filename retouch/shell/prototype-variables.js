@@ -1,6 +1,6 @@
 (function(root){
  'use strict';
- const documents=new Set(),styles=new Map(),ownedInline=new WeakMap(),B=root.RetouchCollectionBindings;
+ const documents=new Set(),styles=new Map(),ownedInline=new WeakMap();
  let epoch=0,values={},revision,library=null,queue=Promise.resolve(),scheduled=false,dirty=false;
  const report=error=>root.RetouchPresentationHost.error(error.message);
  function restore(el,property,entry){
@@ -11,16 +11,15 @@
  function restoreDocument(d){for(const [el,entries]of styles)if(!d||el.ownerDocument===d){for(const [property,entry]of entries)restore(el,property,entry);styles.delete(el);}}
  function currentBindings(info,d,el){
   if(!info.variables&&!info.classVariables)throw Error(info.variableReason||'This layer cannot resolve variable bindings.');
-  const properties=[...new Set(Object.values(info.variableLinks||{}).flatMap(group=>Object.keys(group)))],width=d.defaultView.innerWidth,result=[];
+  const properties=[...new Set(Object.values(info.variableLinks||{}).flatMap(group=>Object.keys(group)))],result=[];
   for(const property of properties){
-   // Query just above the current width so exact boundary bindings participate.
-   const scoped=info.classVariables?info:{...info,variableLinks:Object.fromEntries(Object.entries(info.variableLinks||{}).filter(([scope])=>Number(scope)<=width)),cssRules:Object.fromEntries(Object.entries(info.cssRules||{}).filter(([scope])=>Number(scope)<=width))};
-   const inherited=info.classVariables?root.RetouchPrototypeBindingCascade.classLink(info,el,property,styles.get(el)?.get(property)):B.inherited(scoped,width+1,property);
-   if(!inherited||inherited.override||inherited.link.override)continue;
-   const link=inherited.link;result.push({property,binding:{id:link.id,modes:link.modes,...(link.unit!==undefined?{unit:link.unit}:{})}});
+   const active=root.RetouchPrototypeBindingCascade.link(info,el,property,styles.get(el)?.get(property));
+   if(!active||active.override)continue;
+   const link=active.link;result.push({property,binding:{id:link.id,modes:link.modes,...(link.unit!==undefined?{unit:link.unit}:{})}});
   }
   return result;
  }
+
  async function project(next,ticket){
   const targets=[];
   for(const d of [...documents]){

@@ -26851,3 +26851,30 @@ animation-controlled declarations, the numeric HTML cascade path, complete
 Liquid/Vue playback and broader Figma feature parity remain unfinished. No desktop
 artifact rebuild, native launch or push in this increment; notarized Homebrew
 installation remains incomplete.
+
+### 2026-09-20 — Cascade-aware playback for HTML variable bindings
+
+Plain HTML variable playback now uses the browser-cascade resolver instead of
+selecting the nearest saved numeric scope. Managed style identity and screen-scope
+metadata identify each source binding, while the browser determines which live
+rule wins. Competing stylesheet declarations and application inline overrides
+retain their precedence. A live change to a managed HTML declaration is treated
+as an override until restored; its value is compared through CSS declaration
+normalization. Class bindings continue to use utility identity, allowing equivalent
+compiled color spellings such as named colors and hex.
+
+Chromium and WebKit passed an expanded HTML suite with different variables bound
+at base and 768px scopes, resizing in both directions, important external stylesheet
+overrides, edits to the managed rule itself, important application inline overrides,
+and restoration after each override is removed. Existing authoring/history, typed
+values, aliases, overlays, navigation, restart/exit and in-flight cancellation
+checks passed, with source and variable-library bytes unchanged. The React runtime
+and direct cascade/watcher suites also passed both browsers after the shared
+resolver change. All 2,088 unit tests passed; syntax and diff checks passed.
+
+This closes the prior managed-numeric-scope shortcut for HTML playback. Direct
+CSSOM mutations without an observed signal, inaccessible cross-origin stylesheets,
+animation-controlled values and complete Liquid/Vue integration remain gaps.
+Variable expressions, conditions, multiple actions, non-style bindings, the broader
+design-feature matrix and notarized Homebrew distribution remain incomplete.
+No desktop artifact rebuild, native launch or push in this increment.
