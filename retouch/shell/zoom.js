@@ -19,17 +19,35 @@
     function scan(root){for(const node of root.querySelectorAll('*')){if(node!==d.documentElement&&node!==d.body&&typeof node.scrollTo==='function')elements.push(node);if(node.shadowRoot)scan(node.shadowRoot);}}
     scan(d);return elements;
   }
-  function captureNestedScroll(d){
-    const elements=nestedScrollElements(d),known=new WeakSet(elements),positions=new WeakMap();
-    for(const node of elements)if(node.scrollLeft||node.scrollTop)positions.set(node,{x:node.scrollLeft,y:node.scrollTop});
-    return {known,positions};
+  function accessibleEmbed(node){
+    if(node.hasAttribute('sandbox')&&!node.sandbox.contains('allow-same-origin'))return null;
+    if(!node.hasAttribute('srcdoc')){
+      const url=new URL(node.getAttribute('src')||'about:blank',node.baseURI);
+      if(url.href!=='about:blank'&&url.origin!==node.ownerDocument.location.origin)return null;
+    }
+    return node.contentDocument;
   }
-  function restoreNestedScroll(d,saved){
+  function captureNestedScroll(d,depth=0){
+    const elements=nestedScrollElements(d),known=new WeakSet(elements),positions=new WeakMap(),documents=new WeakMap();
+    for(const node of elements){
+      if(node.scrollLeft||node.scrollTop)positions.set(node,{x:node.scrollLeft,y:node.scrollTop});
+      if(node.localName==='iframe'&&depth<20)try{
+        const child=accessibleEmbed(node),w=child?.defaultView;
+        if(child?.body&&w)documents.set(child,{url:child.location.href,x:w.scrollX,y:w.scrollY,nested:captureNestedScroll(child,depth+1)});
+      }catch{ /* Cross-origin or navigating embeds retain their own view. */ }
+    }
+    return {known,positions,documents};
+  }
+  function restoreNestedScroll(d,saved,depth=0){
     if(!saved)return;
-    // Node identity prevents an old view from scrolling a replacement widget.
+    // Node and document identity prevent old views from scrolling replacements.
     for(const node of nestedScrollElements(d))if(saved.known.has(node)){
       const point=saved.positions.get(node),x=point?.x||0,y=point?.y||0;
       if(node.scrollLeft!==x||node.scrollTop!==y)node.scrollTo({left:x,top:y,behavior:'instant'});
+      if(node.localName==='iframe'&&depth<20)try{
+        const child=accessibleEmbed(node),view=child&&saved.documents.get(child);
+        if(view&&child.location.href===view.url&&child.defaultView){restoreNestedScroll(child,view.nested,depth+1);child.defaultView.scrollTo({left:view.x,top:view.y,behavior:'instant'});}
+      }catch{ /* Never navigate or weaken an embed's origin boundary. */ }
     }
   }
   for(const event of ['retouch:before-zoom','retouch:screen'])window.addEventListener(event,()=>viewRevision++);

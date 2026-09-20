@@ -28146,3 +28146,28 @@ nested-scroll forwarding and main-screen resize regressions passed in Chromium.
 All 2,393 unit tests passed (`/tmp/retouch-screen-nested-full.log`). Native artifacts
 were not rebuilt or launched. Full Figma parity, arbitrary-site coverage and
 notarized public macOS distribution remain incomplete.
+
+### Embedded screen-view restoration checkpoint
+
+Main-screen view memory now traverses accessible same-origin iframe documents,
+restoring their page scroll and nested regions while the saved document identity
+and URL still match. Recursion is bounded to 20 frame levels. Reloaded documents
+and changed embedded routes retain their own positions. Origin and sandbox checks
+skip known inaccessible frames before document access; no frame navigation,
+security-header changes or source writes are involved.
+
+Validation: Chromium and WebKit passed embedded page/nested-region restoration,
+retained embedded form state and document identity, same-document embedded route
+changes, embedded reload isolation, cross-origin embeds and opaque sandboxed
+srcdoc frames. The existing root/nested/shadow/RTL/replacement, zoom/pan, route and
+reload assertions passed in those runs too (`/tmp/retouch-screen-embed-{chromium,webkit}.log`).
+All 2,393 unit tests passed (`/tmp/retouch-screen-embed-full.log`). The cross-origin
+fixture uses a separate local server because the HTML adapter correctly serves
+its own pages with SAMEORIGIN framing headers. WebKit verification exposed access
+diagnostics from probing cross-origin documents; explicit origin/sandbox checks
+removed those probes for known inaccessible frames.
+
+Closed shadow roots, cross-origin embedded content, arbitrary navigation/redirect
+patterns and broader site coverage remain unverified or unsupported. Native
+artifacts were not rebuilt or launched. Full Figma parity and notarized public
+macOS distribution remain incomplete.

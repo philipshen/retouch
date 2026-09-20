@@ -641,8 +641,10 @@ and canvas pan at the current zoom. Positions are separate for each page URL and
 size in the current preview document; reloading the page clears them. Resizing
 gestures and screen-size undo keep their existing pan behavior. This remembers
 the page scroll and nested scroll regions, including open shadow roots and RTL
-horizontal positions. Replaced widgets keep their own state. Closed shadow roots
-and documents embedded inside the page are not captured.
+horizontal positions. Same-origin embedded pages restore their page and nested
+scroll while their document and URL remain unchanged (up to 20 frame levels).
+Replaced widgets and reloaded/navigated embeds keep their own state. Closed shadow
+roots, cross-origin embeds and opaque sandboxed frames are not captured.
 
 Click a layer in a comparison preview to open that screen size on the main
 canvas and select the matching layer. Links in comparison previews select
