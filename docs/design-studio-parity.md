@@ -26318,3 +26318,33 @@ that case retains the existing endpoint animation. Automatic scroll clamping,
 unmatched responsive content and large-scene performance still need verification.
 No source-operation changes, full unit rerun, desktop rebuild or push. Full Figma
 parity and notarized Homebrew distribution remain unfinished.
+
+### Direct comparison-screen resizing
+
+Each comparison preview now has visible width, height and corner grips in the
+compact view. Dragging resizes its actual iframe without reloading the document;
+preview scaling remains fitted to the comparison panel. Grips support one-pixel
+arrow steps, Shift ten-pixel steps, grouped held-key history, the existing aspect
+lock, and Shift-constrained corner dragging (including toggling Shift mid-drag).
+Each drag commits one comparison-size history entry. Escape, pointer cancellation,
+window focus loss, hiding the preview, and workspace/panel size changes cancel the
+preview and preserve redo. Completion checks the current workspace geometry too,
+so pointer release cannot commit a drag before a pending resize event arrives.
+The existing per-screen dimension validation, persistence and source isolation are
+retained. Grips live outside the preview selection target, so resizing does not
+select page content or start a marquee.
+
+The dedicated browser suite passed Chromium and WebKit: live media-query changes,
+all three grips, locked/temporary proportions, mid-drag modifier changes, grouped
+keyboard history, undo/redo, cancellation paths, workspace-resize race, reload
+persistence, unchanged main-screen/source, and retained comparison document/form
+state. Light-theme screenshots were inspected in both engines. Existing comparison
+selection/editing, scrolling and panel resizing suites passed both engines, as did
+project-screen persistence/history. The WebKit project-screen suite initially
+missed its rename input; an isolated rerun passed without changing that path.
+Syntax and diff checks passed; no source-operation changes or unit-suite rerun.
+
+This does not turn comparison previews into independent full editing canvases.
+Native touch/pen validation and very large comparison-screen ergonomics remain.
+No desktop artifact was rebuilt or branch pushed. Full Figma parity and notarized
+Homebrew distribution remain unfinished.

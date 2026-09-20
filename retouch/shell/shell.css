@@ -1413,3 +1413,14 @@ html, body { overflow:clip; }
 .prototype-navigation-snapshot{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none;background:white;z-index:1}
 
 .prototype-navigation-loading{position:absolute;z-index:3;bottom:16px;left:16px;padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink);font:11px Inter,system-ui,sans-serif;pointer-events:none}
+
+/* Comparison grips stay outside the preview hit target and preserve its document. */
+.compare-preview-frame { position:relative; }
+.compare-resize-handle { position:absolute;z-index:4;min-width:0;padding:0;border:1px solid #d4d4d4;border-radius:3px;background:#fff;touch-action:none; }
+.compare-resize-handle[data-axis="width"] { right:0;top:50%;width:10px;height:32px;transform:translateY(-50%);cursor:ew-resize; }
+.compare-resize-handle[data-axis="height"] { left:50%;bottom:0;width:32px;height:10px;transform:translateX(-50%);cursor:ns-resize; }
+.compare-resize-handle[data-axis="both"] { right:0;bottom:0;width:14px;height:14px;cursor:nwse-resize; }
+.compare-resize-handle::after { content:'';display:block;width:2px;height:14px;margin:auto;background:#a3a3a3; }
+.compare-resize-handle[data-axis="height"]::after { width:14px;height:2px; }
+.compare-resize-handle[data-axis="both"]::after { width:6px;height:6px;background:none;border-right:2px solid #a3a3a3;border-bottom:2px solid #a3a3a3; }
+.compare-resize-handle:hover,.compare-resize-handle:focus-visible,.compare-resize-handle.dragging { border-color:var(--accent);outline:2px solid var(--accent); }

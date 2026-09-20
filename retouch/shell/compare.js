@@ -10,8 +10,10 @@
   let activeName=null,activeDimensionScrub=null,draggedScreen=null,addScreenButton=null,addScreenDialog=null;
   const clearScreenDrag=()=>{draggedScreen=null;rail.querySelectorAll('[data-screen-drop]').forEach(card=>delete card.dataset.screenDrop);};
   window.addEventListener('blur',clearScreenDrag);
+  window.addEventListener('resize',()=>activeDimensionScrub?.layoutChanged?.());
   for(const type of ['blur','pagehide'])window.addEventListener(type,()=>activeDimensionScrub?.cancel());
   document.addEventListener('keydown',event=>{if(activeDimensionScrub&&event.key==='Escape'&&!event.isComposing){event.preventDefault();event.stopImmediatePropagation();activeDimensionScrub.cancel();}},true);
+  for(const type of ['keydown','keyup'])document.addEventListener(type,event=>{if(event.key==='Shift'&&!event.isComposing)activeDimensionScrub?.updateShift?.(event.shiftKey);},true);
   document.addEventListener('pointerdown',event=>{if(activeDimensionScrub&&!activeDimensionScrub.field.contains(event.target))activeDimensionScrub.cancel();},true);
   document.addEventListener('pointerdown',event=>{if(activeName&&!activeName.input.contains(event.target))activeName.finish();},true);
   const removed=[],orderUndo=[],orderRedo=[];let removals=0,undoOrder,redoOrder;
@@ -244,7 +246,7 @@
     const toolbar=document.createElement('div');toolbar.className='compare-toolbar';const heading=document.createElement('h2');heading.textContent='Screens';toolbar.append(heading);rail.append(toolbar);
     const focus=document.createElement('button');focus.id='comparisonFocus';focus.type='button';focus.className='control-button';focus.setAttribute('aria-label','Screen controls');focus.textContent='Controls';focus.setAttribute('aria-expanded',String(!focusPreviews));focus.title=focusPreviews?'Show screen controls':'Hide screen controls and focus previews';
     focus.onclick=()=>{focusPreviews=!focusPreviews;rail.classList.toggle('focus-previews',focusPreviews);focus.setAttribute('aria-expanded',String(!focusPreviews));focus.title=focusPreviews?'Show screen controls':'Hide screen controls and focus previews';try{localStorage.setItem(storageKey+'.focus',String(focusPreviews));}catch{}layoutPreviews();};toolbar.append(focus);
-    const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.hidden=true;hint.textContent='Click a layer to select it on the main canvas; double-click text to type. F2 edits the selected text layer. Shift-click adds or removes layers. Drag from empty space to select a group. Style scope stays unchanged. Right-click a layer, or press Shift+F10 on a focused preview, to open its editing menu. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll the panel at its center. Enter opens its size.';rail.append(hint);
+    const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.hidden=true;hint.textContent='Click a layer to select it on the main canvas; double-click text to type. F2 edits the selected text layer. Shift-click adds or removes layers. Drag from empty space to select a group. Style scope stays unchanged. Right-click a layer, or press Shift+F10 on a focused preview, to open its editing menu. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll the panel at its center. Enter opens its size. Drag the preview edge or corner grips to resize; Escape cancels.';rail.append(hint);
     const help=document.createElement('button');help.type='button';help.className='control-button';help.textContent='?';help.setAttribute('aria-label','Comparison help');help.setAttribute('aria-controls',hint.id);help.setAttribute('aria-expanded','false');help.title='Selection and keyboard help';help.onclick=()=>{hint.hidden=!hint.hidden;help.setAttribute('aria-expanded',String(!hint.hidden));layoutPreviews();};help.onkeydown=e=>{if(e.key==='Escape'&&!hint.hidden){e.preventDefault();e.stopPropagation();hint.hidden=true;help.setAttribute('aria-expanded','false');layoutPreviews();}};toolbar.append(help);
     scopeSummary=document.createElement('p');scopeSummary.className='hint compare-scope';scopeSummary.setAttribute('aria-label','Comparison style scope');scopeSummary.textContent='Style scope: '+scope.label;rail.append(scopeSummary);
     const linkScroll=document.createElement('button');linkScroll.type='button';linkScroll.className='control-button';linkScroll.id='comparisonLinkedScroll';linkScroll.textContent='↕';linkScroll.setAttribute('aria-label','Link scrolling across screens');linkScroll.setAttribute('aria-pressed',String(linkedScrolling));linkScroll.title='Scroll pages together by relative position. Matching nested panels follow too.';linkScroll.onclick=()=>{linkedScrolling=!linkedScrolling;linkScroll.setAttribute('aria-pressed',String(linkedScrolling));try{localStorage.setItem(storageKey+'.linkedScroll',String(linkedScrolling));}catch{}refreshLinkedScroll();};toolbar.append(linkScroll);
@@ -433,6 +435,7 @@
       const scopeButton=document.createElement('button');scopeButton.className='control-button';scopeButton.textContent='Edit styles: '+width+' px and larger';scopeButton.setAttribute('aria-label','Edit styles from '+width+' px');scopeButton.title='Use this preview size and set the selected layer’s style scope to this width and larger. Does not change source until you edit a style.';scopeButton.disabled=!selected;
       scopeButton.onclick=()=>{if(!selected)return;window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,occurrence:0,scopeAtWidth:true,route:path()}}));};
       const dimensions=document.createElement('div');dimensions.className='compare-dimensions';
+      const previewFrame=document.createElement('div');previewFrame.className='compare-preview-frame';const resizeHandles=[];
       const inputs={},dimensionError=document.createElement('p');dimensionError.className='compare-dimension-error';dimensionError.setAttribute('role','status');dimensionError.id='comparison-name-error-'+(++previewSerial);nameInput.setAttribute('aria-describedby',dimensionError.id);dimensionError.hidden=true;
       let history=sizeHistories.get(size);if(!history){history={undo:[],redo:[],ratio:[width,height]};sizeHistories.set(size,history);}
       const sizeUndo=history.undo,sizeRedo=history.redo,sizeHistory=document.createElement('div');sizeHistory.className='compare-header';
@@ -464,7 +467,7 @@
       };
       const replaySize=(from,to,undo,moveFocus=true)=>{const entry=from.at(-1);if(!entry)return;const target=undo?entry.before:entry.after;if(applyDimensions(...target,false)){history.ratio=[...(undo?entry.ratioBefore:entry.ratioAfter)];from.pop();to.push(entry);updateSizeHistory();const button=undo?undoSize:redoSize;if(moveFocus)(button.disabled?(undo?redoSize:undoSize):button).focus();}};
       undoSize.onclick=()=>replaySize(sizeUndo,sizeRedo,true);redoSize.onclick=()=>replaySize(sizeRedo,sizeUndo,false);
-      for(const target of [dimensions,sizeHistory])target.addEventListener('keydown',event=>{
+      for(const target of [dimensions,sizeHistory,previewFrame])target.addEventListener('keydown',event=>{
         if(event.defaultPrevented||event.isComposing||event.altKey||!(event.metaKey||event.ctrlKey))return;
         const key=event.key.toLowerCase(),redo=key==='y'||key==='z'&&event.shiftKey;if(key!=='z'&&key!=='y')return;
         const input=event.target===inputs.width?inputs.width:event.target===inputs.height?inputs.height:null;
@@ -511,11 +514,38 @@
         for(const type of ['pointercancel','lostpointercapture'])field.addEventListener(type,event=>{if(dimensionScrub?.id===event.pointerId)finishDimensionScrub(true);});
         field.append(input);dimensions.append(field);
       }
+      for(const axis of ['width','height','both']){
+        const handle=document.createElement('button');handle.type='button';handle.className='compare-resize-handle';handle.dataset.axis=axis;handle.title='Drag to resize this screen. Arrow keys: 1 pixel; Shift+arrow: 10 pixels. Shift+corner drag locks proportions. Escape cancels.';resizeHandles.push(handle);
+        handle.addEventListener('pointerdown',event=>{
+          if(event.button!==0||loadingSet||removals)return;event.preventDefault();event.stopPropagation();activeDimensionScrub?.cancel();handle.focus({preventScroll:true});dimensionGesture=null;
+          dimensionScrub={id:event.pointerId,field:handle,axis,before:[width,height],ratio:[...history.ratio],x:event.clientX,y:event.clientY,scale:viewport.clientWidth/width,workspaceWidth:innerWidth,workspaceHeight:innerHeight,previewWidth:viewport.clientWidth,edge:true};activeDimensionScrub={field:handle,edge:true,cancel:()=>finishDimensionScrub(true),layoutChanged:()=>{if(edgeLayoutChanged(dimensionScrub))finishDimensionScrub(true);},updateShift:shiftKey=>{const saved=dimensionScrub;if(saved?.edge)moveEdge({pointerId:saved.id,clientX:saved.lastX??saved.x,clientY:saved.lastY??saved.y,shiftKey,preventDefault(){}});}};handle.classList.add('dragging');handle.setPointerCapture(event.pointerId);
+        });
+        function moveEdge(event){
+          const saved=dimensionScrub;if(!saved?.edge||saved.id!==event.pointerId)return;event.preventDefault();saved.lastX=event.clientX;saved.lastY=event.clientY;const clamp=value=>Math.max(240,Math.min(7680,Math.round(value)));
+          let next={width:axis==='height'?saved.before[0]:clamp(saved.before[0]+(event.clientX-saved.x)/saved.scale),height:axis==='width'?saved.before[1]:clamp(saved.before[1]+(event.clientY-saved.y)/saved.scale)};
+          if(axis==='both'&&event.shiftKey&&!lockedRatios.has(size))next=window.RetouchScreens.constrain(next,'both',{width:saved.before[0],height:saved.before[1]},true);
+          applyDimensions(next.width,next.height,false,axis,true);
+        }
+        handle.addEventListener('pointermove',moveEdge);
+        handle.addEventListener('pointerup',event=>{if(dimensionScrub?.id===event.pointerId){event.preventDefault();finishDimensionScrub(false);}});
+        for(const type of ['pointercancel','lostpointercapture'])handle.addEventListener(type,event=>{if(dimensionScrub?.id===event.pointerId)finishDimensionScrub(true);});
+        for(const type of ['click','dblclick','contextmenu'])handle.addEventListener(type,event=>{event.preventDefault();event.stopPropagation();});
+        handle.addEventListener('keyup',event=>{if(event.key.startsWith('Arrow'))dimensionGesture=null;});handle.addEventListener('blur',()=>{dimensionGesture=null;});
+        handle.addEventListener('keydown',event=>{
+          if(loadingSet||removals||event.isComposing||event.altKey||event.ctrlKey||event.metaKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;
+          event.preventDefault();event.stopPropagation();const horizontal=['ArrowLeft','ArrowRight'].includes(event.key);if(axis==='width'&&!horizontal||axis==='height'&&horizontal)return;
+          const direction=['ArrowLeft','ArrowUp'].includes(event.key)?-1:1,amount=direction*(event.shiftKey?10:1),repeat=event.repeat&&dimensionGesture?.input===handle&&dimensionGesture.key===event.key&&dimensionGesture.entry===sizeUndo.at(-1),previous=sizeUndo.at(-1),changedAxis=horizontal?'width':'height';
+          const applied=applyDimensions(Math.max(240,Math.min(7680,width+(horizontal?amount:0))),Math.max(240,Math.min(7680,height+(horizontal?0:amount))),!repeat,changedAxis);
+          if(repeat&&applied){dimensionGesture.entry.after=[width,height];dimensionGesture.entry.ratioAfter=[...history.ratio];}else if(!repeat)dimensionGesture=sizeUndo.at(-1)!==previous?{input:handle,key:event.key,entry:sizeUndo.at(-1)}:null;
+        });
+        previewFrame.append(handle);
+      }
+      function edgeLayoutChanged(saved){return saved?.edge&&(saved.workspaceWidth!==innerWidth||saved.workspaceHeight!==innerHeight||saved.previewWidth!==viewport.clientWidth);}
       function finishDimensionScrub(cancelled){
-        if(!dimensionScrub)return;const saved=dimensionScrub;dimensionScrub=null;activeDimensionScrub=null;
+        if(!dimensionScrub)return;const saved=dimensionScrub;cancelled=cancelled||edgeLayoutChanged(saved);dimensionScrub=null;activeDimensionScrub=null;
         if(cancelled){applyDimensions(...saved.before,false,undefined,true);history.ratio=[...saved.ratio];dimensionError.hidden=true;dimensionError.textContent='';}
         else if(width!==saved.before[0]||height!==saved.before[1]){sizeUndo.push({before:saved.before,after:[width,height],ratioBefore:saved.ratio,ratioAfter:[...history.ratio]});if(sizeUndo.length>50)sizeUndo.shift();sizeRedo.length=0;}
-        remember();updateSizeHistory();if(saved.field.hasPointerCapture(saved.id))saved.field.releasePointerCapture(saved.id);
+        remember();updateSizeHistory();saved.field.classList.remove('dragging');if(saved.field.hasPointerCapture(saved.id))saved.field.releasePointerCapture(saved.id);
       }
       const order=document.createElement('div');order.className='compare-header';
       const up=document.createElement('button'),down=document.createElement('button');
@@ -562,7 +592,7 @@
       const previewBody=document.createElement('div');previewBody.className='compare-preview-body';previewBody.id='comparison-preview-'+(++previewSerial);previewBody.hidden=collapsedScreens.has(size);surface.hidden=previewBody.hidden;
       const disclosure=document.createElement('button');disclosure.type='button';disclosure.className='control-button';disclosure.setAttribute('aria-controls',previewBody.id);
       function updateDisclosure(){disclosure.textContent=previewBody.hidden?'Show preview':'Hide preview';disclosure.setAttribute('aria-label',(previewBody.hidden?'Show ':'Hide ')+name+' preview');disclosure.setAttribute('aria-expanded',String(!previewBody.hidden));}
-      function setCollapsed(hidden){previewBody.hidden=hidden;if(hidden)collapsedScreens.add(size);else collapsedScreens.delete(size);updateDisclosure();}
+      function setCollapsed(hidden){if(hidden&&dimensionScrub)finishDimensionScrub(true);previewBody.hidden=hidden;if(hidden)collapsedScreens.add(size);else collapsedScreens.delete(size);updateDisclosure();}
       disclosure.onclick=()=>{setCollapsed(!previewBody.hidden);remember();updateControls();};
       function updateLabels(){
         updateNameHistory();
@@ -571,6 +601,7 @@
         label.textContent=name===`Custom ${width} × ${height}`?name:`${name} · ${width} × ${height}`;
         reorder.setAttribute('aria-label','Reorder '+name+' comparison');label.setAttribute('aria-label','Rename '+name+' comparison');nameInput.setAttribute('aria-label','Comparison name');
         card.setAttribute('aria-label',name+' comparison');edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');remove.setAttribute('aria-label','Remove '+name+' comparison');viewport.setAttribute('aria-label','Edit from '+name+' comparison');frame.title=name+' comparison preview';scopeMessage.setAttribute('aria-label',name+' scope coverage');
+        for(const handle of resizeHandles){handle.setAttribute('aria-label','Resize '+name+' comparison '+(handle.dataset.axis==='both'?'dimensions':handle.dataset.axis));handle.setAttribute('aria-description',width+' by '+height+' pixels');}
         for(const axis of ['width','height'])inputs[axis].setAttribute('aria-label',name+' comparison '+axis);
         up.setAttribute('aria-label','Move '+name+' comparison up');down.setAttribute('aria-label','Move '+name+' comparison down');
         undoSize.setAttribute('aria-label','Undo '+name+' comparison size');redoSize.setAttribute('aria-label','Redo '+name+' comparison size');
@@ -578,7 +609,7 @@
       }
       for(const [control,action]of [[label,'rename'],[edit,'edit'],[reveal,'reveal'],[disclosure,'visibility']]){control.dataset.comparisonAction=action;control.dataset.comparisonCommand=previewBody.id+'-'+action;}
       updateLabels();updateSizeHistory();
-      viewport.append(overlay);previewBody.append(viewport,message,reveal,scopeMessage,scopeButton);card.append(header,nameHistory,dimensions,dimensionError,sizeHistory,order,disclosure,previewBody);rail.insertBefore(card,before);
+      viewport.append(overlay);previewFrame.prepend(viewport);previewBody.append(previewFrame,message,reveal,scopeMessage,scopeButton);card.append(header,nameHistory,dimensions,dimensionError,sizeHistory,order,disclosure,previewBody);rail.insertBefore(card,before);
       function activate(event,context=false,textEdit=false){
         try{
           const d=frame.contentDocument,loc=frame.contentWindow.location;
@@ -680,7 +711,7 @@
   });
   window.addEventListener('retouch:viewport',updateControls);
   window.addEventListener('retouch:screen',updateControls);
-  new ResizeObserver(()=>{if(open)layoutPreviews();}).observe(rail);
+  let railWidth=rail.clientWidth;new ResizeObserver(()=>{const nextWidth=rail.clientWidth;if(nextWidth!==railWidth)activeDimensionScrub?.layoutChanged?.();railWidth=nextWidth;if(open)layoutPreviews();}).observe(rail);
   const developmentRuntimes=new WeakMap();
   async function refreshClientClasses(frame){
     const win=frame.contentWindow,d=frame.contentDocument;
