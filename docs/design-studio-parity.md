@@ -28046,3 +28046,34 @@ passed production instrumentation exclusion (`/tmp/retouch-svelte-alias-chromium
 `/tmp/retouch-svelte-alias-webkit.log`). The first Chromium attempt exposed a fixture
 construction mistake (the child was appended to a nonexistent closing tag); the
 fixture was corrected before the successful final browser runs.
+
+### Svelte aliased instance inspection and editing checkpoint
+
+Existing component instances imported through project TypeScript/JavaScript path
+mappings now resolve in the canvas, Layers and component library. Property
+contracts, reset controls, shared defaults, duplication and detachment use the
+same source definition resolver as library dependencies. Property/default review
+revisions include configuration and resolution snapshots, so an alias redirect
+to an identical-looking definition still invalidates the reviewed edit.
+
+The component adapter collects resolution guards throughout a source plan,
+including nested batch planners and selected-instance operations. Config source
+snapshots and every attempted path are checked before writing; a changed config
+or newly created preferred target refuses the whole transaction. Relative imports
+retain their existing property revision format. Symlinked, external and
+unconfigured imports remain unavailable. Bundler aliases must agree with these
+project path mappings; executable-only aliases and arbitrary package graphs are
+still unfinished.
+
+Validation: all 2,391 unit tests passed
+(`/tmp/retouch-svelte-alias-instance-full.log`). New tests cover aliased property
+history, identical-source alias redirection, config/preferred-path changes, shared
+default/reset/detach/duplicate and selected property guards. Chromium and WebKit
+passed combined shared-default and structural workflows with the existing app
+instances imported through aliases: retained repeated/nested state and draft
+inputs, exact undo/redo, swap, detach, insertion, ordering, reparenting,
+duplicate/delete, all-preview synchronization and production exclusion. Both
+recovered 96 dropped source broadcasts (`/tmp/retouch-svelte-alias-instance-chromium.log`,
+`/tmp/retouch-svelte-alias-instance-webkit.log`). Native artifacts were not rebuilt
+or launched. Full Figma parity, arbitrary-site coverage and trusted public macOS
+cask distribution remain incomplete.

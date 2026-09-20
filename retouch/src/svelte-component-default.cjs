@@ -13,7 +13,7 @@ function inspect(def,name){
  }
  if(nodes.length!==1)return null;const node=nodes[0],value=props.literal({type:'Attribute',value:{type:'ExpressionTag',expression:node}});if(!value)return null;
  const contract=require('./svelte-component-choices.cjs').read(def.text).get(name);if(contract&&(!contract.supported||contract.type!==value.type||contract.choices&&!contract.choices.includes(value.value)))return null;
- return {node,editor:{...value,...(contract?.choices?{choices:contract.choices}:{}),revision:source.contentHash(JSON.stringify([def.file,source.contentHash(def.text),name]))}};
+ return {node,editor:{...value,...(contract?.choices?{choices:contract.choices}:{}),revision:source.contentHash(JSON.stringify([def.file,def.definitionHash??source.contentHash(def.text),name]))}};
 }
 function describe(def,name){try{return inspect(def,name)?.editor||null;}catch{return null;}}
 function plan(r,op,definition){try{

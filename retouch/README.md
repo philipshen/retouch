@@ -252,8 +252,11 @@ removes only wrapper styles. Groups use `display: contents`; arbitrary authored
 CSS selector behavior after adding a wrapper remains unverified. Wrappers with
 bindings, directives or local declarations cannot be removed.
 
-Direct relative imports of project `.svelte` components now expose component
-instances in the canvas, Layers and component library. Existing literal string,
+Direct imports of project `.svelte` components expose component instances in the
+canvas, Layers and component library. Relative imports and project TypeScript/
+JavaScript path aliases are supported when the bundler uses matching mappings.
+Property and shared-default review revisions include alias resolution; source
+transactions also guard the relevant config and preferred fallback paths. Existing literal string,
 number and boolean properties can be edited in the inspector with exact
 undo/redo. Select several usages in one source file to edit shared properties,
 or copy properties and choose which compatible values to paste. These batches
