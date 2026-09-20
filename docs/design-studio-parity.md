@@ -27059,3 +27059,31 @@ selection on assignments/expression references, inherited object mode contexts,
 separate design pages, conditional action lists and full design parity remain
 unfinished. No native artifact rebuild, launch or push in this increment;
 notarized Homebrew distribution remains incomplete.
+
+### 2026-09-20 — Explicit target and copied source modes
+
+Set variable now has a Target mode selector, with Current mode as the default.
+Copied values also have an independent Source mode selector. Users can update an
+inactive mode or copy between modes of the same variable without changing the
+presentation's selected mode. Changing the value source preserves the target
+mode; changing the source variable clears its old mode selection. Missing modes
+are shown explicitly and refused during playback before state changes.
+
+Optional `modeId` and copy-only `sourceModeId` fields retain UUID validation and
+round-trip through all four source adapters and exact source history. Runtime
+validates each mode against its own variable collection, reads a copied value as
+a snapshot, and writes only the selected target mode. Expression output can also
+be assigned to an explicit target mode; expression references still read current
+presentation modes until their own mode selector is implemented.
+
+All 2,126 unit tests passed, including cross-mode self-copy, inactive assignment,
+snapshot independence, malformed/missing modes, resets and adapter history.
+Chromium and WebKit passed real UI authoring, selection persistence across value
+source changes, undo/redo, inactive target playback, independent copied values,
+mode switching, remounts, keyboard activation, restart/exit and unchanged source
+and library files. The light-theme mode-copy inspector screenshot was inspected.
+
+Explicit modes on expression references, inherited object mode contexts, separate
+design pages, conditional/multiple actions and the broader parity matrix remain
+unfinished. No native rebuild/launch or push. Notarized Homebrew distribution is
+still incomplete.

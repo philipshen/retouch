@@ -54,19 +54,22 @@
    const assignment=root.RetouchPrototypeValues.assignment(input);
    if(!library){const loaded=await root.RetouchVariableLibraryRequest();if(ticket!==epoch)return;library=loaded;revision=loaded.revision;}
    const variable=library.variables.find(v=>v.id===assignment.id);if(!variable||variable.type!==assignment.type)throw Error('The prototype variable is missing or its type changed. Edit this interaction again.');
+   const collection=library.collections.find(c=>c.id===variable.collectionId),modeId=assignment.modeId||modes[variable.collectionId]||collection.defaultMode;
+   if(!collection.modes.some(mode=>mode.id===modeId))throw Error('The target variable mode is missing. Edit this interaction again.');
+   const targetModes=assignment.modeId?{...modes,[variable.collectionId]:modeId}:modes;
    let value=assignment.value;
    if(assignment.expression!==undefined){
     const response=await root.RetouchVariableModePreview({revision,modes,modeOverrides:values,expression:assignment.expression});if(ticket!==epoch)return;
     if(response.result?.type!==assignment.type)throw Error('The expression returned a different variable type.');value=response.result.value;
    }else if(assignment.variableId!==undefined){
     const source=library.variables.find(v=>v.id===assignment.variableId);if(!source||source.type!==assignment.type)throw Error('The source variable is missing or has a different type. Edit this interaction again.');
-    const resolved=await root.RetouchVariableModePreview({revision,modes,modeOverrides:values,variableId:source.id});if(ticket!==epoch)return;
+    const sourceModes={...modes};if(assignment.sourceModeId){const collection=library.collections.find(c=>c.id===source.collectionId);if(!collection.modes.some(mode=>mode.id===assignment.sourceModeId))throw Error('The source variable mode is missing. Edit this interaction again.');sourceModes[source.collectionId]=assignment.sourceModeId;}
+    const resolved=await root.RetouchVariableModePreview({revision,modes:sourceModes,modeOverrides:values,variableId:source.id});if(ticket!==epoch)return;
     const current=resolved.values.find(v=>v.id===source.id);if(!current||current.type!==assignment.type)throw Error('The source variable could not be resolved.');value=current.value;
    }
-   const modeId=modes[variable.collectionId]||library.collections.find(c=>c.id===variable.collectionId).defaultMode;
    const next={...values,[assignment.id]:{...values[assignment.id],[modeId]:value}};
    // Validate even if no mounted layer uses the variable.
-   await root.RetouchVariableModePreview({revision,modes,modeOverrides:next,variableId:assignment.id});if(ticket!==epoch)return;
+   await root.RetouchVariableModePreview({revision,modes:targetModes,modeOverrides:next,variableId:assignment.id});if(ticket!==epoch)return;
    const applied=await project(next,ticket);if(ticket===epoch){values=next;if(!applied)refresh();}
   });},
   mount(d){documents.add(d);const release=root.RetouchPrototypeVariableWatch.mount(d,refresh,el=>ownedInline.has(el)&&ownedInline.get(el)===el.getAttribute('style'));refresh();let released=false;return ()=>{if(released)return;released=true;release();documents.delete(d);restoreDocument(d);};},

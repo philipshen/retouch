@@ -57,3 +57,14 @@ test('reset cancels an in-flight mode change before another session reads its mo
  const pending=runtime.setMode({collectionId:id(1),modeId:id(20)});await seen;runtime.reset();release();await pending;
  await runtime.assign({id:id(4),type:'number',variableId:id(3)});assert.equal(requests.at(-1).modeOverrides[id(4)][id(2)],12);assert.deepEqual(errors,[]);
 });
+
+test('explicit target and source modes copy independent snapshots without switching presentation modes',async()=>{
+ const {runtime,requests,errors,library}=setup();alternate(library);
+ await runtime.assign({id:id(3),type:'number',modeId:id(20),value:77});assert.deepEqual(requests.at(-1).modeOverrides,{[id(3)]:{[id(20)]:77}});
+ await runtime.assign({id:id(4),type:'number',variableId:id(3),sourceModeId:id(20)});assert.equal(requests.at(-1).modeOverrides[id(4)][id(2)],77);
+ await runtime.assign({id:id(3),type:'number',modeId:id(20),value:88});assert.equal(requests.at(-1).modeOverrides[id(4)][id(2)],77);
+ await runtime.assign({id:id(4),type:'number',modeId:id(20),variableId:id(3)});assert.equal(requests.at(-1).modeOverrides[id(4)][id(20)],12,'default source still uses presentation mode');
+ await runtime.assign({id:id(3),type:'number',variableId:id(3),sourceModeId:id(20)});assert.equal(requests.at(-1).modeOverrides[id(3)][id(2)],88,'same variable can copy across modes');
+ const count=requests.length;for(const bad of [{id:id(3),type:'number',modeId:id(99),value:1},{id:id(4),type:'number',variableId:id(3),sourceModeId:id(99)}])await runtime.assign(bad);assert.equal(requests.length,count);assert.equal(errors.length,2);assert.ok(errors.every(e=>/mode is missing/.test(e)));
+ runtime.reset();await runtime.assign({id:id(4),type:'number',variableId:id(3),sourceModeId:id(20)});assert.equal(requests.at(-1).modeOverrides[id(4)][id(2)],50);
+});

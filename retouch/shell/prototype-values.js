@@ -46,15 +46,17 @@
   return {collectionId:value.collectionId,modeId:value.modeId};
  }
  function assignment(value){
-  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['id','type','value','variableId','expression'].includes(key))||typeof value.id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.id))throw Error('Choose a variable.');
+  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['id','type','value','variableId','expression','modeId','sourceModeId'].includes(key))||typeof value.id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.id))throw Error('Choose a variable.');
   if(!['color','number','boolean','string'].includes(value.type))throw Error('Choose a supported variable type.');
+  const modeFields={};for(const key of ['modeId','sourceModeId'])if(Object.hasOwn(value,key)){if(typeof value[key]!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value[key]))throw Error('Choose a valid variable mode.');modeFields[key]=value[key];}
+  if(Object.hasOwn(value,'sourceModeId')&&!Object.hasOwn(value,'variableId'))throw Error('A source mode belongs to a copied variable.');
   if(Object.hasOwn(value,'expression')){
    if(Object.hasOwn(value,'value')||Object.hasOwn(value,'variableId'))throw Error('Choose one expression instead of another value source.');
-   const checked=E.analyze(value.expression);if(checked.type!==value.type)throw Error('The expression must return the target variable’s type.');return {id:value.id,type:value.type,expression:checked.expression};
+   const checked=E.analyze(value.expression);if(checked.type!==value.type)throw Error('The expression must return the target variable’s type.');return {id:value.id,type:value.type,...modeFields,expression:checked.expression};
   }
   if(Object.hasOwn(value,'variableId')){
    if(Object.hasOwn(value,'value')||typeof value.variableId!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value.variableId))throw Error('Choose one source variable instead of a literal value.');
-   return {id:value.id,type:value.type,variableId:value.variableId};
+   return {id:value.id,type:value.type,...modeFields,variableId:value.variableId};
   }
   let literal=value.value;
   if(value.type==='color')literal=palette.parse(literal).value;
@@ -62,7 +64,7 @@
   else if(value.type==='boolean'){if(typeof literal!=='boolean')throw Error('Choose true or false.');}
   else if(value.type==='string'){if(typeof literal!=='string'||literal.length>4096||literal.includes('\0'))throw Error('Enter text up to 4096 characters.');}
   else throw Error('Choose a supported variable type.');
-  return {id:value.id,type:value.type,value:literal};
+  return {id:value.id,type:value.type,...modeFields,value:literal};
  }
  function validate(value){
   if(!Array.isArray(value)||value.length>32)throw Error('Use at most 32 interactions per source layer.');
