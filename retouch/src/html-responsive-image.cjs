@@ -1,12 +1,13 @@
 'use strict';
 const MagicString=require('magic-string'),{parse}=require('./capture-srcset.cjs');
+const escapeAttribute=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 const attr=(node,name)=>node.attrs?.find(item=>item.name===name)?.value??null;
-function inspect(resolved){
+function inspect(resolved,adapter=require('./adapters/html.cjs')){
  const image=resolved.element.node;if(image.tagName!=='img')return null;
  const picture=image.parentNode?.tagName==='picture'?image.parentNode:null;
  const plain=!picture&&attr(image,'srcset')===null;
  if(picture&&picture.childNodes.filter(node=>node.tagName==='img').length!==1)throw Error('Choose a picture with one image fallback.');
- const eligible=new Set((resolved.elements||require('./adapters/html.cjs').collect(resolved.source,resolved.relPath).elements).map(element=>element.location.startOffset));
+ const eligible=new Set((resolved.elements||adapter.collect(resolved.source,resolved.relPath).elements).map(element=>element.location.startOffset));
  const nodes=picture?picture.childNodes.slice(0,picture.childNodes.indexOf(image)).filter(node=>node.tagName==='source'):[];
  if([image,...nodes].some(node=>!eligible.has(node.sourceCodeLocation?.startOffset)))throw Error('Responsive image attributes are duplicated or ambiguous.');
  const sources=[image,...nodes].map((node,index)=>({index:index-1,src:attr(node,'src'),srcset:attr(node,'srcset'),sizes:attr(node,'sizes'),media:attr(node,'media'),type:attr(node,'type')}));
@@ -15,17 +16,17 @@ function inspect(resolved){
  if(candidates.length>256)throw Error('This image has too many responsive candidates to edit.');
  return {plain,picture:!!picture,sources,candidates,nodes:[image,...nodes]};
 }
-function describe(resolved){try{const state=inspect(resolved);if(!state)return null;const {nodes,...descriptor}=state;return descriptor;}catch(error){return {reason:error.message,candidates:[]};}}
-function finish(resolved,out){
- const after=out.toString(),html=require('./adapters/html.cjs'),beforeElements=html.collect(resolved.source,resolved.relPath).elements,nextElements=html.collect(after,resolved.relPath).elements;
+function describe(resolved,adapter){try{const state=inspect(resolved,adapter);if(!state)return null;const {nodes,...descriptor}=state;return descriptor;}catch(error){return {reason:error.message,candidates:[]};}}
+function finish(resolved,out,adapter){
+ const after=out.toString(),html=adapter||require('./adapters/html.cjs'),beforeElements=html.collect(resolved.source,resolved.relPath).elements,nextElements=html.collect(after,resolved.relPath).elements;
  if(beforeElements.length!==nextElements.length||beforeElements.some((element,index)=>element.id!==nextElements[index].id||element.tag!==nextElements[index].tag))return {ok:false,refused:true,reason:'The image edit changes document structure.'};
  return {ok:true,hash:html.contentHash(after),edits:after===resolved.source?[]:[{file:resolved.file,before:resolved.source,after}]};
 }
-function planSource(resolved,op){
+function planSource(resolved,op,adapter){
  const refuse=reason=>({ok:false,refused:true,reason});
  try{
   if(!op.fileHash||op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the image.');
-  const state=inspect(resolved);
+  const state=inspect(resolved,adapter);
   if(!Number.isInteger(op.sourceIndex)||!state?.sources.some(source=>source.index===op.sourceIndex))return refuse('Choose an available responsive image source.');
   if(!op.changes||typeof op.changes!=='object'||Array.isArray(op.changes)||!Object.keys(op.changes).length)return refuse('Choose source settings to change.');
   const node=state.nodes[op.sourceIndex+1],out=new MagicString(resolved.source),location=node.sourceCodeLocation;
@@ -35,10 +36,10 @@ function planSource(resolved,op){
    if(value===attr(node,name))continue;
    const token=location.attrs?.[name];
    if(value===null){if(token)out.remove(token.startOffset,token.endOffset);continue;}
-   const replacement=name+'="'+value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'"';
+   const replacement=name+'="'+(adapter?.escapeAttribute||escapeAttribute)(value)+'"';
    if(token)out.overwrite(token.startOffset,token.endOffset,replacement);else out.appendLeft(location.startTag.startOffset+1+node.tagName.length,' '+replacement);
   }
-  return finish(resolved,out);
+  return finish(resolved,out,adapter);
  }catch(error){return refuse(error.message);}
 }
 function imageURL(value){
@@ -52,11 +53,11 @@ function candidateSet(candidates){
  for(const candidate of candidates){const value=resolution(candidate.descriptors),key=value.unit+value.value;units.add(value.unit);if(seen.has(key))throw Error('Each candidate in a source needs a different width or pixel density.');seen.add(key);}
  if(units.size>1)throw Error('Use widths for every candidate in this source, or pixel densities for every candidate.');
 }
-function planCandidates(resolved,op){
+function planCandidates(resolved,op,adapter){
  const refuse=reason=>({ok:false,refused:true,reason});
  try{
   if(!op.fileHash||op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the image.');
-  const state=inspect(resolved),source=state?.sources.find(source=>source.index===op.sourceIndex);
+  const state=inspect(resolved,adapter),source=state?.sources.find(source=>source.index===op.sourceIndex);
   if(!Number.isInteger(op.sourceIndex)||!source)return refuse('Choose an available responsive image source.');
   const old=source.srcset||'',candidates=parse(old,{locations:true}),selected=state.candidates.find(candidate=>candidate.key===op.candidate&&candidate.attribute==='srcset'&&candidate.sourceIndex===op.sourceIndex),index=selected?candidates.findIndex(candidate=>candidate.start===selected.start):-1;
   if(!['add','remove','descriptor'].includes(op.action)||op.action!=='add'&&index<0)return refuse('Choose an available responsive image candidate.');
@@ -82,23 +83,23 @@ function planCandidates(resolved,op){
   }
   const next=parse(value);candidateSet(next);
   if(next.length!==candidates.length+(op.action==='add'?1:op.action==='remove'?-1:0))return refuse('The candidate edit changes another image URL.');
-  const node=state.nodes[op.sourceIndex+1],location=node.sourceCodeLocation,token=location.attrs?.srcset,out=new MagicString(resolved.source),replacement='srcset="'+value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'"';
+  const node=state.nodes[op.sourceIndex+1],location=node.sourceCodeLocation,token=location.attrs?.srcset,out=new MagicString(resolved.source),replacement='srcset="'+(adapter?.escapeAttribute||escapeAttribute)(value)+'"';
   if(op.action==='remove'&&node.tagName==='img'&&!value.trim()&&token)out.remove(token.startOffset,token.endOffset);
   else if(token)out.overwrite(token.startOffset,token.endOffset,replacement);else out.appendLeft(location.startTag.startOffset+1+node.tagName.length,' '+replacement);
-  return finish(resolved,out);
+  return finish(resolved,out,adapter);
  }catch(error){return refuse(error.message);}
 }
-function plan(resolved,op){
+function plan(resolved,op,adapter){
  const refuse=reason=>({ok:false,refused:true,reason});
  try{
   if(!op.fileHash||op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the image.');
-  const state=inspect(resolved),candidate=state?.candidates.find(candidate=>candidate.key===op.candidate);if(!candidate)return refuse('Choose an available image candidate.');
+  const state=inspect(resolved,adapter),candidate=state?.candidates.find(candidate=>candidate.key===op.candidate);if(!candidate)return refuse('Choose an available image candidate.');
   imageURL(op.src);
   if(candidate.url===op.src)return {ok:true,hash:resolved.hash,edits:[]};
   const node=state.nodes[candidate.sourceIndex+1],old=attr(node,candidate.attribute)||'',value=candidate.attribute==='src'?op.src:old.slice(0,candidate.start)+op.src+old.slice(candidate.end),location=node.sourceCodeLocation,token=location.attrs?.[candidate.attribute];
-  const escaped=value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'),replacement=candidate.attribute+'="'+escaped+'"',out=new MagicString(resolved.source);
+  const escaped=(adapter?.escapeAttribute||escapeAttribute)(value),replacement=candidate.attribute+'="'+escaped+'"',out=new MagicString(resolved.source);
   if(token)out.overwrite(token.startOffset,token.endOffset,replacement);else out.appendLeft(location.startTag.startOffset+1+node.tagName.length,' '+replacement);
-  return finish(resolved,out);
+  return finish(resolved,out,adapter);
  }catch(error){return refuse(error.message);}
 }
 module.exports={describe,plan,planSource,planCandidates,inspect,imageURL};
