@@ -11,10 +11,10 @@ async function retainedMarkup(model){
  const v=view(r,sourceKind);r.element=r.elements.find(e=>v.tag(e)==='path');
  const planned=sourceModule.plan(r,{type:'createSVGStrokeSource',fileHash:r.hash,model:{...model,position:model.position==='center'?'inside':'center'}},sourceKind);assert.ok(planned.ok,planned.reason);
  const created=planned.edits[0].after,elements=adapter.collect(created,relPath).elements,retained={...r,source:created,hash:adapter.contentHash(created),elements,element:elements.find(e=>e.id===planned.selectionIds[0])};
- const changed=sourceModule.plan(retained,{type:'setSVGStrokeSourcePosition',fileHash:retained.hash,position:model.position},sourceKind);assert.ok(changed.ok,changed.reason);
+ const changed=adapter.planOp(retained,{type:'setSVGStrokeSourcePosition',fileHash:retained.hash,position:model.position});assert.ok(changed.ok,changed.reason);
  let rendered=changed.edits[0].after;
  const finalElements=adapter.collect(rendered,relPath).elements,final={...r,source:rendered,hash:adapter.contentHash(rendered),elements:finalElements,element:finalElements.find(e=>e.id===changed.selectionIds[0])};
- const restored=sourceModule.plan(final,{type:'restoreSVGStrokeSource',fileHash:final.hash},sourceKind);assert.ok(restored.ok,restored.reason);assert.equal(restored.edits[0].after,source);
+ const restored=adapter.planOp(final,{type:'restoreSVGStrokeSource',fileHash:final.hash});assert.ok(restored.ok,restored.reason);assert.equal(restored.edits[0].after,source);
  if(sourceKind==='react'){
   const root=process.env.RT_STROKE_REACT_FIXTURE||fixture,React=require(path.join(root,'node_modules/react')),server=require(path.join(root,'node_modules/react-dom/server'));
   const code=require(path.join(root,'node_modules/esbuild')).transformSync(rendered,{loader:'jsx',format:'cjs',jsx:'transform'}).code,module={exports:{}};

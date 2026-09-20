@@ -87,7 +87,7 @@ The planner preserves original and surrounding source identities and ancestry,
 refuses stale hashes, dynamic geometry, duplicate/unaccounted attributes,
 metadata/animation children and externally altered generated markup. Existing
 source transactions provide stale-file protection and exact undo/redo. The
-planner is **not registered with adapters or the server**: browser style proof,
+planner was **not registered with adapters or the server at this checkpoint**: browser style proof,
 mutation guards (including multi-selection and ancestor operations), inspector
 routing, paint/geometry editing, duplication and export integration remain open.
 It requires a caller-provided resolved paint snapshot. It does not establish
@@ -102,3 +102,40 @@ fail verification. Each case also checks exact original-source restoration.
 Logs: `/tmp/retouch-stroke-source-full-final.log` and
 `/tmp/retouch-stroke-source-{html,react,liquid}-{chromium,webkit}-final.log`.
 No desktop package was rebuilt for this checkpoint.
+
+## Guarded adapter and API operations — 2026-09-20
+
+HTML, React and Liquid now describe canonical retained groups and their owners,
+and route `setSVGStrokeSourcePosition` / `restoreSVGStrokeSource` through the
+normal source transaction and persistent history APIs. `createSVGStrokeSource`
+remains internal: authored-style fidelity and repeated component-instance
+identity still need browser proof before offering creation in the inspector.
+
+Preflight guards cover selected originals, generated children, groups,
+ancestors, selection members and source destinations. Whole-group deletion,
+independent sibling edits and unchanged retained markup remain possible.
+Post-plan checks also cover indirect API planners and additional source files:
+modified/generated groups, duplicate groups and new definition-identity
+collisions cannot slip through by bypassing an adapter. Dedicated stroke
+operations must match the deterministic canonical plan exactly. Existing damaged
+groups can remain untouched while unrelated source is edited. React direct
+application now uses the same guarded planner as its HTTP operations.
+
+Fresh validation: 2,461 tests passed, none skipped, with four test workers under
+process-scoped `caffeinate -i`. Earlier runs encountered an installation-child
+exit 143 and idle HTTP connection resets during long delays; the installation
+suite passed independently. The new HTTP harness now requests fresh connections,
+without retrying mutations or weakening assertions. Final full-suite log:
+`/tmp/retouch-stroke-guards-full-awake.log` (41.96 seconds).
+
+Three real sidecar tests exercise authentication, descriptors, preflight and
+post-plan refusal, normal alignment/restoration, stale hashes and persisted exact
+undo/redo. Direct-application tests cover all three adapters too. Browser output
+now changes/restores through adapter operations: each Chromium/WebKit format
+passed 684 pixel checks (4,104 total), including compiled React without warnings
+and rendered Liquid. Logs: `/tmp/retouch-stroke-guards-{html,react,liquid}-{chromium,webkit}.log`.
+
+Remaining: browser creation/style and repeated-instance proof, inspector controls,
+original geometry/paint editing, duplication identity remapping, export and
+responsive behavior. This is not full stroke parity or any-site verification.
+No desktop bundle was rebuilt or launched.

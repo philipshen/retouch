@@ -335,7 +335,7 @@ function describeElement(resolved) {
 
 function describe(resolved) {
   const svgDuplication=require('../liquid-svg-mask.cjs').describeDuplicate(resolved);
-  return {...describeElement(resolved),...require('../liquid-group-scale.cjs').describe(resolved),svgDuplication,svgBooleanGroup:require('../svg-boolean-group.cjs').describe(resolved,'liquid'),svgBooleanOwner:require('../svg-boolean-group.cjs').owner(resolved,'liquid'),svgMask:require('../liquid-svg-mask.cjs').describe(resolved),svgBooleanReplacement:require('../svg-combine-selection.cjs').describe(resolved,'liquid'),svgGradientCreation:require('../svg-gradient-create.cjs').describe(resolved,'liquid'),svgGradients:require('../source-svg-gradient.cjs').describe(resolved,'liquid'),svgTransform:require('../svg-transform.cjs').describe(resolved,'liquid'),svgInsertion:require('../liquid-svg-insert.cjs').describe(resolved),svgConversion:require('../svg-convert.cjs').describe(resolved),svgGeometry:require('../liquid-svg-geometry.cjs').describe(resolved),...layerNames.describe(resolved),...require('../liquid-text-styles.cjs').describe(resolved),...require('../liquid-color-styles.cjs').describe(resolved),...require('../liquid-effect-styles.cjs').describe(resolved),...require('../liquid-variable-bindings.cjs').describe(resolved),components:theme.ancestry(resolved),structure:{...structure.describe(resolved,'liquid',{templateChildren:true}),...require('../native-frame-selection.cjs').describe(resolved,'liquid'),...require('../native-insert.cjs').describe(resolved,'liquid'),...svgDuplication}};
+  return {...describeElement(resolved),...require('../liquid-group-scale.cjs').describe(resolved),svgDuplication,svgStrokeSource:require('../svg-stroke-source.cjs').describe(resolved,'liquid'),svgStrokeOwner:require('../svg-stroke-source.cjs').owner(resolved,'liquid'),svgBooleanGroup:require('../svg-boolean-group.cjs').describe(resolved,'liquid'),svgBooleanOwner:require('../svg-boolean-group.cjs').owner(resolved,'liquid'),svgMask:require('../liquid-svg-mask.cjs').describe(resolved),svgBooleanReplacement:require('../svg-combine-selection.cjs').describe(resolved,'liquid'),svgGradientCreation:require('../svg-gradient-create.cjs').describe(resolved,'liquid'),svgGradients:require('../source-svg-gradient.cjs').describe(resolved,'liquid'),svgTransform:require('../svg-transform.cjs').describe(resolved,'liquid'),svgInsertion:require('../liquid-svg-insert.cjs').describe(resolved),svgConversion:require('../svg-convert.cjs').describe(resolved),svgGeometry:require('../liquid-svg-geometry.cjs').describe(resolved),...layerNames.describe(resolved),...require('../liquid-text-styles.cjs').describe(resolved),...require('../liquid-color-styles.cjs').describe(resolved),...require('../liquid-effect-styles.cjs').describe(resolved),...require('../liquid-variable-bindings.cjs').describe(resolved),components:theme.ancestry(resolved),structure:{...structure.describe(resolved,'liquid',{templateChildren:true}),...require('../native-frame-selection.cjs').describe(resolved,'liquid'),...require('../native-insert.cjs').describe(resolved,'liquid'),...svgDuplication}};
 }
 
 function refuse(reason) { return { ok: false, refused: true, reason }; }
@@ -344,8 +344,9 @@ function escapeText(t) {
     .replace(/\{/g, '&#123;').replace(/\}/g, '&#125;');
 }
 
-function planOp(resolved, op) {
- const groups=require('../svg-boolean-group.cjs'),blocked=groups.guard(resolved,op,'liquid');if(blocked)return blocked;if(groups.types.has(op.type))return groups.plan(resolved,op,'liquid');
+function planUnchecked(resolved, op) {
+ const strokes=require('../svg-stroke-source.cjs'),strokeBlocked=strokes.guard(resolved,op,'liquid');if(strokeBlocked)return strokeBlocked;
+ const groups=require('../svg-boolean-group.cjs'),blocked=groups.guard(resolved,op,'liquid');if(blocked)return blocked;if(strokes.types.has(op.type))return strokes.plan(resolved,op,'liquid');if(groups.types.has(op.type))return groups.plan(resolved,op,'liquid');
   if(op.type==='scaleGroup')return require('../liquid-group-scale.cjs').plan(resolved,op);
   if(op.type==='duplicateElement'&&require('../liquid-svg-mask.cjs').describeDuplicate(resolved))return require('../liquid-svg-mask.cjs').plan(resolved,op);
   if(['createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds'].includes(op.type))return require('../liquid-svg-mask.cjs').plan(resolved,op);
@@ -455,6 +456,7 @@ function planOp(resolved, op) {
   }
   return { ok: true, hash: contentHash(next), edits: [{file:resolved.file,before:resolved.source,after:next}] };
 }
+function planOp(resolved,op){return require('../svg-stroke-source.cjs').validatePlan(resolved,op,'liquid',planUnchecked(resolved,op));}
 function applyOp(resolved,op) {
   return require('../transactions.cjs').applyPlan(resolved.appRoot || path.dirname(resolved.file),planOp(resolved,op));
 }
@@ -472,6 +474,6 @@ module.exports = {
   describeComponent: resolved=>resolved.element.theme?theme.describe(resolved):components.describe(resolved),
   hasReference: components.hasReference,
   assets: { directory: 'assets', urlPrefix: '/assets/', uploadDirectory: '' },
-  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['connectPrototypeScroll','setPrototypeInteractions','scaleGroup','frameSelection','groupSelection','removeFrame','reparentElement','reparentSelection','duplicateSelection','deleteSelection','moveSelection',...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','insertElement','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', 'setImageFill', ...structure.types] },
+  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['connectPrototypeScroll','setPrototypeInteractions','scaleGroup','frameSelection','groupSelection','removeFrame','reparentElement','reparentSelection','duplicateSelection','deleteSelection','moveSelection',...require('../svg-stroke-source.cjs').types,...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','insertElement','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', 'setImageFill', ...structure.types] },
   _parse: parse, // exported for tests
 };

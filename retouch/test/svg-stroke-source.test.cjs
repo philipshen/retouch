@@ -14,6 +14,7 @@ for(const kind of ['html','react','liquid']){
  test(kind+' retained stroke creation, alignment changes and restore preserve original bytes and source identities',()=>{
   const r=resolve(kind),made=create(r,kind);assert.equal(made.ok,true,made.reason);assert.deepEqual(made.removedSourceIds,[]);
   let fresh=resolve(kind,made.edits[0].after,made.selectionIds[0]),c=S.context(fresh,kind);assert.ok(c);assert.equal(c.model.position,'inside');
+  assert.ok(S.context({...fresh,elements:null},kind));
   const original=c.source,mapping=new Map(made.sourceIdMap);assert.equal(c.original.id,mapping.get(r.element.id)||r.element.id);
   for(const e of r.elements)assert.ok(fresh.elements.find(n=>n.id===(mapping.get(e.id)||e.id)));
   for(const position of ['outside','center','inside']){
@@ -71,4 +72,50 @@ for(const kind of ['html','react','liquid'])test(kind+' retained source covers p
   for(const value of ['width={size}','width="60" {...props}'])assert.equal(create(resolve(kind,initial.source.replace('width="60"',value)),kind).refused,true);
  }
  if(kind==='liquid')assert.equal(create(resolve(kind,initial.source.replace('width="60"','width="{{ size }}"')),kind).refused,true);
+});
+for(const kind of ['html','react','liquid'])test(kind+' adapter guards retain stroke originals across direct, selection, destination and ancestor edits',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),initial=resolve(kind),made=create(initial,kind),r=resolve(kind,made.edits[0].after,made.selectionIds[0]),v=view(r,kind),c=S.context(r,kind);
+ const description=adapter.describe(r);assert.equal(description.svgStrokeSource.position,'inside');assert.equal(description.svgStrokeOwner,r.element.id);
+ const change=adapter.planOp(r,{type:'setSVGStrokeSourcePosition',fileHash:r.hash,position:'outside'});assert.ok(change.ok,change.reason);
+ assert.equal(adapter.planOp(r,{type:'restoreSVGStrokeSource',fileHash:r.hash}).edits[0].after,initial.source);
+ assert.equal(adapter.capabilities.ops.includes('createSVGStrokeSource'),false);
+ assert.equal(adapter.planOp(initial,{type:'createSVGStrokeSource',fileHash:initial.hash,model}).refused,true);
+ const inside=v.elements.filter(e=>v.start(e)>v.start(r.element)&&v.end(e)<=v.end(r.element));
+ for(const element of [r.element,...inside])for(const type of ['setSVGGeometry','setSVGTransform','renameElement','duplicateElement','setClasses','setChildren']){
+  const child={...r,element},op={type,fileHash:r.hash,property:'d',value:'M0 0H10V10H0Z',matrix:[1,0,0,1,2,0],name:'Changed',classes:['x'],children:[]};
+  assert.equal(adapter.describe(child).svgStrokeOwner,r.element.id);
+  assert.equal(adapter.planOp(child,op).refused,true,type+' '+v.tag(element));
+ }
+ const peer=v.elements.find(e=>v.tag(e)==='circle'),ancestor=v.elements.find(e=>v.tag(e)==='svg'),child={...r,element:c.original};
+ for(const op of [{type:'deleteSelection',ids:[peer.id,c.original.id]},{type:'setSVGTransforms',ids:[peer.id,c.original.id],matrices:[]},{type:'reparentElement',destinationId:c.original.id},{type:'createSVGMask',ids:[peer.id,c.original.id],maskId:peer.id}])assert.equal(adapter.planOp({...r,element:peer},{...op,fileHash:r.hash}).refused,true);
+ for(const type of ['duplicateElement','scaleGroup','setChildren'])assert.equal(adapter.planOp({...r,element:ancestor},{type,fileHash:r.hash}).refused,true);
+ const renamed=adapter.planOp({...r,element:ancestor},{type:'renameElement',fileHash:r.hash,name:'Art'});assert.ok(renamed.ok,renamed.reason);
+ const independent=adapter.planOp({...r,element:peer},{type:'setSVGGeometry',fileHash:r.hash,property:'r',value:'3'});assert.ok(independent.ok,independent.reason);
+ assert.ok(S.context(resolve(kind,independent.edits[0].after,r.element.id),kind));
+ assert.equal(adapter.planOp(child,{type:'deleteElement',fileHash:r.hash}).refused,true);
+ const deleted=adapter.planOp(r,{type:'deleteElement',fileHash:r.hash});assert.ok(deleted.ok,deleted.reason);assert.ok(!deleted.edits[0].after.includes('data-rt-stroke-alignment'));
+});
+for(const kind of ['html','react','liquid'])test(kind+' transaction guard catches indirect changes and duplicates without blocking unrelated source',()=>{
+ const initial=resolve(kind),made=create(initial,kind),r=resolve(kind,made.edits[0].after,made.selectionIds[0]),c=S.context(r,kind);
+ const proposal=(after,file=r.file)=>({ok:true,edits:[{file,before:r.source,after}]});
+ const op={type:'indirectStyleUpdate',fileHash:r.hash};
+ for(const after of [r.source.replace('stroke="blue"','stroke="green"'),r.source.replace('width="60"','width="90"'),r.source.replace('data-rt-stroke-alignment','data-rt-lost-stroke'),r.source.replace('</svg>',r.source.slice(c.v.start(c.group),c.v.end(c.group))+'</svg>'),r.source.replace('</svg>','<path id="'+c.id+'" d="M0 0L1 1"/></svg>')]){
+  const refused=S.validatePlan(r,op,kind,proposal(after));assert.equal(refused.refused,true,after);assert.equal(refused.edits,undefined);
+ }
+ const sibling=proposal(r.source.replace('Untouched','Edited'));assert.equal(S.validatePlan(r,op,kind,sibling),sibling);
+ // A global style operation can plan changes in another source file.
+ const multi={ok:true,edits:[sibling.edits[0],{file:r.file.replace('art.','other.'),before:r.source,after:r.source.replace('width="60"','width="90"')}]};assert.equal(S.validatePlan(r,op,kind,multi).refused,true);
+ const malformed=resolve(kind,r.source.replace('data-rt-stroke-model="','data-rt-stroke-model="bad'),r.element.id);assert.equal(S.context(malformed,kind),null);assert.equal(S.guard(malformed,{type:'renameElement'},kind).refused,true);
+ const unrelated={ok:true,edits:[{file:r.file,before:malformed.source,after:malformed.source.replace('Untouched','Edited')}]};assert.equal(S.validatePlan(malformed,op,kind,unrelated),unrelated);
+ const sourceOp={type:'setSVGStrokeSourcePosition',fileHash:r.hash,position:'outside'},valid=S.plan(r,sourceOp,kind);assert.equal(S.validatePlan(r,sourceOp,kind,valid),valid);
+ assert.equal(S.validatePlan(r,sourceOp,kind,proposal(valid.edits[0].after.replace('Untouched','Changed'))).refused,true);
+});
+for(const kind of ['html','react','liquid'])test(kind+' direct adapter application enforces the same retained-source guard as planning',t=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'rt-stroke-apply-')),adapter=require('../src/adapters/'+kind+'.cjs'),initial=resolve(kind),file=path.join(root,initial.relPath),made=create(initial,kind);
+ t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(file,made.edits[0].after);
+ const r={...resolve(kind,made.edits[0].after,made.selectionIds[0]),file,appRoot:root},c=S.context(r,kind);
+ const refused=adapter.applyOp({...r,element:c.original},{type:'setSVGGeometry',fileHash:r.hash,property:'width',value:'90'});assert.equal(refused.refused,true);assert.equal(fs.readFileSync(file,'utf8'),r.source);
+ const changed=adapter.applyOp(r,{type:'setSVGStrokeSourcePosition',fileHash:r.hash,position:'outside'});assert.ok(changed.ok,changed.reason);assert.equal(fs.readFileSync(file,'utf8'),changed.edits[0].after);
+ const next={...resolve(kind,fs.readFileSync(file,'utf8'),changed.selectionIds[0]),file,appRoot:root};
+ const restored=adapter.applyOp(next,{type:'restoreSVGStrokeSource',fileHash:next.hash});assert.ok(restored.ok,restored.reason);assert.equal(fs.readFileSync(file,'utf8'),initial.source);
 });

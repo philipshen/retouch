@@ -1,7 +1,7 @@
 'use strict';
-// Source transaction foundation, intentionally not registered with adapters yet.
-// Callers supply resolved paint in the shape's local coordinate system. Browser
-// style proof and generated-child mutation guards must precede public routing.
+// Source creation stays internal until browser style and instance fidelity are
+// proved. Existing retained groups support guarded alignment and restoration.
+// Callers of the internal creator supply resolved paint in local coordinates.
 const crypto=require('node:crypto'),G=require('../shell/svg-path.js'),A=require('../shell/svg-affine.js'),S=require('../shell/svg-stroke-alignment.js');
 const view=require('./svg-boolean-group.cjs').view;
 const marker='data-rt-stroke-alignment',originalMarker='data-rt-stroke-original';
@@ -10,6 +10,7 @@ const jsxNames=Object.fromEntries([...paintNames,'clip-rule','clip-path'].map(na
 const escape=value=>String(value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function input(model){return {...model,document:G.parseCompound(model.path)};}
 function shape(r,kind,v=view(r,kind)){
+ r={...r,elements:v.elements};
  const e=r.element,tag=v.tag(e),geometry=kind==='react'?require('./jsx-svg-geometry.cjs').describe(r):kind==='liquid'?require('./liquid-svg-geometry.cjs').describe(r):require('./svg-geometry.cjs').describe(e);
  if(!geometry||geometry.fields.some(f=>f.editable===false))throw Error('Choose literal SVG geometry.');
  const allowed=new Set([...geometry.fields.map(f=>f.name),...paintNames,...Object.values(jsxNames),'transform','data-rt-name','data-rt-shape']);
@@ -111,3 +112,72 @@ function plan(r,op,kind){
  }catch(error){return refuse(error.message);}
 }
 module.exports={plan,context};
+
+// Creation remains internal until the browser can prove style/instance fidelity.
+// Existing retained groups can change alignment or restore their original source.
+const types=new Set(['setSVGStrokeSourcePosition','restoreSVGStrokeSource']);
+const deletionTypes=new Set(['deleteElement','deleteSelection','deleteComponent','deleteComponentSelection']);
+function referencedIds(op){
+ const ids=new Set();
+ for(const [key,value]of Object.entries(op||{}))if(/^(?:id|ids|.*Id|.*Ids)$/.test(key))for(const item of Array.isArray(value)?value:[value])if(typeof item==='string'&&/^[a-f0-9]{10}$/.test(item))ids.add(item);
+ return [...ids];
+}
+function marked(v){return v.elements.filter(e=>v.attrs(e).some(a=>a.name===marker));}
+function owner(r,kind){
+ if(!r.source?.includes(marker))return null;
+ const v=view(r,kind);for(let id=r.element.id;id;id=v.parents.get(id)){const e=v.elements.find(e=>e.id===id);if(e&&v.attrs(e).some(a=>a.name===marker))return id;}return null;
+}
+function describe(r,kind){
+ if(!r.source?.includes(marker))return null;
+ const c=context(r,kind);return c?{position:c.model.position,width:c.model.width,originalId:c.original.id,canRestore:true}:null;
+}
+function guard(r,op,kind){
+ if(!r.source?.includes(marker))return null;
+ const v=view(r,kind),groups=marked(v),selected=new Set([r.element.id,...referencedIds(op)]),targets=v.elements.filter(e=>selected.has(e.id));
+ const contains=(a,b)=>v.start(a)<=v.start(b)&&v.end(a)>=v.end(b);
+ const refuse=()=>({ok:false,refused:true,reason:'Restore the original shape before editing the contents of this retained stroke.'});
+ for(const group of groups)for(const target of targets){
+  if(contains(group,target)){
+   if(types.has(op.type)&&target.id===group.id&&target.id===r.element.id)continue;
+   if(deletionTypes.has(op.type)&&targets.some(e=>contains(e,group)))continue;
+   return refuse();
+  }
+  if(contains(target,group)&&!deletionTypes.has(op.type)&&!['renameElement','setSVGTransform','setSVGTransforms'].includes(op.type))return refuse();
+ }
+ return null;
+}
+function validatePlan(r,op,kind,planned){
+ if(!planned?.ok||!Array.isArray(planned.edits))return planned;
+ const refuse=()=>({ok:false,refused:true,reason:'This edit would alter retained stroke source. Restore the original shape before editing or duplicating its generated structure.'});
+ // Source operations are deterministic; only their exact single-file plan may
+ // replace the canonical group. Never trust a caller-supplied bypass flag.
+ if(types.has(op.type)){
+  const expected=plan(r,op,kind);return expected.ok&&JSON.stringify(expected.edits)===JSON.stringify(planned.edits)?planned:refuse();
+ }
+ try{
+  for(const edit of planned.edits){
+   if(![edit.before,edit.after].some(source=>typeof source==='string'&&source.includes(marker)))continue;
+   if(!require('./adapters/'+kind+'.cjs').matches(edit.file))continue;
+   const relPath=require('node:path').relative(r.appRoot||require('node:path').dirname(r.file),edit.file);
+   const state=source=>{const resolved={...r,file:edit.file,relPath,source:source||'',elements:null},v=view(resolved,kind);return {resolved,v,groups:marked(v)};};
+   const before=state(edit.before),after=state(edit.after),unmatched=[...after.groups];
+   const selected=new Set([r.element.id,...(Array.isArray(op.ids)?op.ids:[])]),originalView=edit.file===r.file?view(r,kind):null;
+   for(const group of before.groups){
+    const text=edit.before.slice(before.v.start(group),before.v.end(group));
+    const index=unmatched.findIndex(e=>edit.after.slice(after.v.start(e),after.v.end(e))===text);
+    if(index>=0){
+     const fresh=unmatched.splice(index,1)[0];
+     // A new definition reference outside the group can invalidate otherwise
+     // unchanged markup. Previously damaged groups may remain untouched.
+     if(context({...before.resolved,element:group},kind)&&!context({...after.resolved,element:fresh},kind))return refuse();
+    }else{
+     const removable=deletionTypes.has(op.type)&&originalView&&originalView.elements.some(e=>selected.has(e.id)&&originalView.start(e)<=before.v.start(group)&&originalView.end(e)>=before.v.end(group));
+     if(!removable)return refuse();
+    }
+   }
+   if(unmatched.length)return refuse();
+  }
+  return planned;
+ }catch{return refuse();}
+}
+Object.assign(module.exports,{types,referencedIds,owner,describe,guard,validatePlan});

@@ -1,0 +1,28 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{spawn}=require('node:child_process'),{once}=require('node:events');
+const G=require('../shell/svg-path.js'),S=require('../src/svg-stroke-source.cjs'),{view}=require('../src/svg-boolean-group.cjs');
+for(const kind of ['html','react','liquid'])test(kind+' HTTP operations protect retained strokes and persist exact alignment/restore history',async t=>{
+ const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'rt-stroke-api-'))),adapter=require('../src/adapters/'+kind+'.cjs'),relPath='art.'+(kind==='react'?'jsx':kind==='liquid'?'liquid':'html'),file=path.join(root,relPath);
+ const markup='<main><svg><rect x="20" y="20" width="60" height="60" fill="red" stroke="blue"/><circle cx="10" cy="10" r="2"/></svg><p>Untouched</p></main>',source=kind==='react'?'export default function Art(){return '+markup+'}':markup;
+ const resolve=(text,id)=>{const r={source:text,file,relPath,elements:adapter.collect(text,relPath).elements,hash:adapter.contentHash(text)},v=view(r,kind);r.element=id?r.elements.find(e=>e.id===id):r.elements.find(e=>v.tag(e)==='rect');return r;};
+ const original=resolve(source),made=S.plan(original,{type:'createSVGStrokeSource',fileHash:original.hash,model:{document:G.parseCompound('M20 20H80V80H20Z'),width:8,fill:'red',stroke:'blue',position:'inside'}},kind);assert.ok(made.ok,made.reason);fs.writeFileSync(file,made.edits[0].after);
+ const code=`const path=require('node:path');const base=require(process.env.RT_SOURCE+'/adapters/'+process.env.RT_KIND+'.cjs');
+ const adapter={...base,planOp(r,op){if(op.type==='testIndirectStrokeWrite')return {ok:true,edits:[{file:r.file,before:r.source,after:r.source.replace('width="60"','width="90"')}]};return base.planOp(r,op);}};
+ const server=require(process.env.RT_SOURCE+'/server.cjs').startServer({appRoot:process.env.RT_ROOT,port:0,adapter,quiet:true});server.once('listening',()=>process.stdout.write(JSON.stringify({port:server.address().port})+'\\n'));
+ process.on('SIGTERM',()=>{server.retouchIndex.close();server.close(()=>process.exit(0));});`;
+ const child=spawn(process.execPath,['-e',code],{env:{...process.env,RT_ROOT:root,RT_KIND:kind,RT_SOURCE:path.resolve(__dirname,'../src'),RETOUCH_STATE_DIR:path.join(root,'.history')},stdio:['ignore','pipe','pipe']});let stderr='';child.stderr.on('data',data=>stderr+=data);
+ t.after(async()=>{if(child.exitCode===null){const closed=once(child,'exit');child.kill('SIGTERM');await closed;}fs.rmSync(root,{recursive:true,force:true});});
+ const port=await new Promise((resolve,reject)=>{let output='';const timer=setTimeout(()=>reject(Error('Server startup timeout: '+stderr)),10000);child.once('exit',code=>{clearTimeout(timer);reject(Error('Server exited '+code+': '+stderr));});child.stdout.on('data',data=>{output+=data;for(const line of output.split('\n')){if(!line.startsWith('{"port":'))continue;clearTimeout(timer);resolve(JSON.parse(line).port);}});});
+ const base='http://127.0.0.1:'+port,shell=await(await fetch(base+'/rt',{headers:{connection:'close'}})).text(),token=/__RT_TOKEN = "([0-9a-f]+)"/.exec(shell)?.[1];assert.ok(token);
+ const run=async op=>{const response=await fetch(base+'/rt/__api/op',{method:'POST',headers:{connection:'close','x-retouch-token':token,'content-type':'application/json'},body:JSON.stringify(op)});return {status:response.status,data:await response.json()};};
+ const retained=resolve(fs.readFileSync(file,'utf8'),made.selectionIds[0]),v=view(retained,kind),c=S.context(retained,kind),peer=v.elements.find(e=>v.tag(e)==='circle'),parent=v.elements.find(e=>v.tag(e)==='svg');
+ const response=await fetch(base+'/rt/__api/resolve?id='+retained.element.id,{headers:{connection:'close','x-retouch-token':token}}),description=(await response.json()).element;assert.equal(description.svgStrokeSource.position,'inside');
+ for(const op of [{id:c.original.id,type:'setSVGGeometry',property:'width',value:'90'},{id:c.original.id,type:'setPrototypeInteractions',interactions:[]},{id:peer.id,type:'setSVGTransforms',ids:[peer.id,c.original.id],matrices:[]},{id:peer.id,type:'reparentElement',destinationId:c.original.id},{id:parent.id,type:'duplicateElement'},{id:peer.id,type:'testIndirectStrokeWrite'}]){
+  const result=await run({...op,fileHash:retained.hash});assert.equal(result.status,409,JSON.stringify(result));assert.equal(result.data.refused,true);assert.match(result.data.reason,/stroke/i);assert.equal(fs.readFileSync(file,'utf8'),retained.source);
+ }
+ const changed=await run({id:retained.element.id,type:'setSVGStrokeSourcePosition',fileHash:retained.hash,position:'outside'});assert.equal(changed.status,200,JSON.stringify(changed));assert.ok(changed.data.undoId);
+ const outside=fs.readFileSync(file,'utf8'),outsideState=resolve(outside,changed.data.selectionIds[0]);assert.equal(S.context(outsideState,kind).model.position,'outside');
+ const stale=await run({id:outsideState.element.id,type:'restoreSVGStrokeSource',fileHash:retained.hash});assert.equal(stale.status,409);assert.equal(fs.readFileSync(file,'utf8'),outside);
+ const restored=await run({id:outsideState.element.id,type:'restoreSVGStrokeSource',fileHash:outsideState.hash});assert.equal(restored.status,200,JSON.stringify(restored));assert.equal(fs.readFileSync(file,'utf8'),source);
+ for(const [type,undoId,expected]of [['undo',restored.data.undoId,outside],['undo',changed.data.undoId,retained.source],['redo',changed.data.undoId,outside],['redo',restored.data.undoId,source]]){const result=await run({type,undoId});assert.equal(result.status,200,JSON.stringify(result));assert.equal(fs.readFileSync(file,'utf8'),expected);}
+});

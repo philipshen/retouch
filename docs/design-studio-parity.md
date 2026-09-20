@@ -28682,3 +28682,20 @@ and verify exact original-source restoration. React output produces no invalid
 attribute warnings. Logs: `/tmp/retouch-stroke-source-full-final.log` and
 `/tmp/retouch-stroke-source-{html,react,liquid}-{chromium,webkit}-final.log`.
 Desktop artifact remains older than this source. Full goal remains incomplete.
+
+### 2026-09-20 — guarded retained-stroke API
+
+HTML/React/Liquid adapters and the HTTP API can now change or restore existing
+canonical retained strokes, with ownership descriptors and exact history.
+Preflight guards cover originals, generated children, selections/destinations
+and ancestors; post-plan checks cover indirect planners and additional files.
+React direct writes share the same guarded planner. Creation remains internal
+pending browser style and repeated-instance proof; inspector creation is open.
+
+Fresh full-suite evidence: 2,461 passed, zero skipped, four workers with
+process-scoped `caffeinate -i`; `/tmp/retouch-stroke-guards-full-awake.log`.
+Earlier installation timeout/idle socket failures are recorded in
+`stroke-parity.md`; the new HTTP harness uses fresh connections, no mutation
+retries. All six adapter-output browser runs passed 684 pixel checks each:
+`/tmp/retouch-stroke-guards-{html,react,liquid}-{chromium,webkit}.log`.
+Desktop package unchanged. Full Figma/any-site/distribution goal remains open.
