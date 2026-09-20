@@ -260,7 +260,9 @@ or copy properties and choose which compatible values to paste. These batches
 validate every selected value before saving and use one undo step. Literal defaults
 from rune destructuring or legacy `export let` declarations appear as inherited
 values. Reset removes an override; editing an inherited value creates one. Shared
-property reset is supported, with definition revision checks and exact history. Property updates preserve mounted child state and synchronize open
+property reset is supported, with definition revision checks and exact history.
+Reset properties removes all supported default overrides on an instance or the
+selected usages in one step; already-inherited usages are left unchanged. Property updates preserve mounted child state and synchronize open
 screen previews. Native root markers are forwarded without additional DOM
 wrappers. Native roots can be grouped as an instance, including conditional branches
 that share a root present in every branch. Repeated usages retain separate
