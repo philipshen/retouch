@@ -41,14 +41,17 @@ function validate(input){
  for(const variable of variables)for(const value of Object.values(variable.values))if(object(value)){const target=byId.get(value.alias);if(!target)fail('An alias refers to a missing variable.');if(target.type!==variable.type)fail('Variable aliases must reference the same type.');}
  return {version:1,collections,variables};
 }
-function resolver(input,modes={}){
+function resolver(input,modes={},overrides={}){
  const library=validate(input),collections=new Map(library.collections.map(collection=>[collection.id,collection])),variables=new Map(library.variables.map(variable=>[variable.id,variable]));
  shape(modes,[...collections.keys()]);const selected=new Map();for(const collection of collections.values()){const id=Object.hasOwn(modes,collection.id)?modes[collection.id]:collection.defaultMode;if(!collection.modes.some(mode=>mode.id===id))fail('The selected mode does not belong to its collection.');selected.set(collection.id,id);}
+ // Snapshot literal runtime assignments. They override aliases and modes only
+ // for this resolver; the authored library is never changed.
+ shape(overrides,[...variables.keys()]);const assigned=new Map(Object.entries(overrides).map(([id,value])=>[id,literal(variables.get(id).type,value)]));
  function resolve(id){
   if(!variables.has(id))fail('Unknown variable.');const initial=variables.get(id),path=[],seen=new Set();let current=initial;
   while(current){
    if(seen.has(current.id))fail('Variable alias cycle: '+[...path.map(item=>variables.get(item.variableId).name),current.name].join(' → '));seen.add(current.id);
-   const modeId=selected.get(current.collectionId);path.push({variableId:current.id,collectionId:current.collectionId,modeId});const value=current.values[modeId];
+   const modeId=selected.get(current.collectionId);path.push({variableId:current.id,collectionId:current.collectionId,modeId});const value=assigned.has(current.id)?assigned.get(current.id):current.values[modeId];
    if(!object(value))return {id:initial.id,type:initial.type,value,path};current=variables.get(value.alias);
   }
  }

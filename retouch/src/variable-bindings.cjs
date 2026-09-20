@@ -10,8 +10,8 @@ function specification(binding){
  const modes=binding.modes===undefined?{}:binding.modes;if(!modes||typeof modes!=='object'||Array.isArray(modes)||Object.keys(modes).length>32)throw Error('Invalid collection modes.');for(const [collection,mode]of Object.entries(modes)){model.cssName(collection);model.cssName(mode);}
  return {id:binding.id,modes:{...modes},...(binding.unit!==undefined?{unit:binding.unit}:{})};
 }
-function resolve(library,property,binding){
- const spec=specification(binding),result=model.resolver(library,spec.modes).resolve(spec.id);let value;
+function convert(property,spec,result){
+ let value;
  if(result.type==='color'&&colors.includes(property)&&spec.unit===undefined)value=result.value;
  else if(result.type==='number'){
   if(lengths.includes(property)&&spec.unit!=='')value=V.variableNumberValue(property,result.value,spec.unit??'px');
@@ -22,4 +22,20 @@ function resolve(library,property,binding){
  if(value===undefined||!V.valid(property,value))throw Error('This variable type or resolved value cannot control '+property+'.');
  return {binding:spec,value,path:result.path,type:result.type};
 }
-module.exports={properties,specification,resolve};
+function resolve(library,property,binding,overrides={}){
+ const spec=specification(binding);return convert(property,spec,model.resolver(library,spec.modes,overrides).resolve(spec.id));
+}
+// Resolve a complete presentation update before returning any property values.
+// Each binding keeps its authored collection modes and unit. Reuse resolvers
+// across matching modes so large selections do not revalidate the library per row.
+function project(library,requests,overrides={}){
+ if(!Array.isArray(requests)||requests.length>256)throw Object.assign(Error('Preview up to 256 variable bindings.'),{statusCode:422});
+ const cache=new Map();model.resolver(library,{},overrides);
+ return requests.map(request=>{
+  if(!request||typeof request!=='object'||Array.isArray(request)||Object.keys(request).some(key=>!['property','binding'].includes(key))||!properties.includes(request.property))throw Object.assign(Error('Invalid variable binding preview.'),{statusCode:422});
+  const spec=specification(request.binding),key=JSON.stringify(Object.entries(spec.modes).sort(([a],[b])=>a.localeCompare(b)));
+  if(!cache.has(key))cache.set(key,model.resolver(library,spec.modes,overrides));
+  return {property:request.property,...convert(request.property,spec,cache.get(key).resolve(spec.id))};
+ });
+}
+module.exports={properties,specification,resolve,project};

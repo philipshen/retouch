@@ -23,3 +23,31 @@ test('number, boolean and string values retain their types and bounded content',
  assert.deepEqual(resolver(input).resolveAll().map(value=>value.value),[24,true,'Hello\nworld']);assert.deepEqual(resolver(input,{[id(1)]:id(3)}).resolveAll().map(value=>value.value),[-0.5,false,'']);
  input.variables[0].values[id(2)]=Infinity;assert.throws(()=>validate(input),/finite/);input.variables[0].values[id(2)]=24;input.variables[2].values[id(2)]='\0';assert.throws(()=>validate(input),/string/);
 });
+
+test('presentation assignments follow aliases across modes without changing authored values',()=>{
+ const input=fixture(),before=JSON.stringify(input),overrides={[id(8)]:'#123456'},runtime=resolver(input,{},overrides);
+ overrides[id(8)]='#ffffff';
+ assert.equal(runtime.resolve(id(7)).value,'#123456ff');
+ assert.equal(runtime.resolve(id(8)).value,'#123456ff');
+ assert.equal(resolver(input,{[id(4)]:id(6)},{[id(8)]:'#123456'}).resolve(id(7)).value,'#123456ff');
+ // The dark theme uses its own literal rather than the palette alias.
+ assert.equal(resolver(input,{[id(1)]:id(3)},{[id(8)]:'#123456'}).resolve(id(7)).value,'#000000ff');
+ const direct=resolver(input,{}, {[id(7)]:'#abcdef',[id(8)]:'#123456'}).resolve(id(7));
+ assert.equal(direct.value,'#abcdefff');assert.equal(direct.path.length,1);
+ assert.equal(JSON.stringify(input),before);assert.equal(resolver(input).resolve(id(7)).value,'#ffffffff');
+});
+
+test('runtime assignments preserve false, zero and empty strings and reject malformed state atomically',()=>{
+ const input=fixture();input.variables=[];
+ for(const [n,type,value]of [[9,'number',24],[10,'boolean',true],[11,'string','Hello']])input.variables.push({id:id(n),collectionId:id(1),name:type,type,values:{[id(2)]:value,[id(3)]:value}});
+ assert.deepEqual(resolver(input,{}, {[id(9)]:0,[id(10)]:false,[id(11)]:''}).resolveAll().map(x=>x.value),[0,false,'']);
+ for(const state of [null,[],{[id(99)]:0},{[id(9)]:NaN},{[id(9)]:Infinity},{[id(9)]:1000001},{[id(9)]:'3'},{[id(10)]:0},{[id(11)]:'\0'},{[id(11)]:'a'.repeat(4097)},{[id(9)]:{alias:id(9)}}])assert.throws(()=>resolver(input,{},state));
+ assert.throws(()=>resolver(fixture(),{}, {[id(8)]:'url(https://example.com)'}));
+});
+
+test('runtime assignments can terminate an alias cycle without changing future resolutions',()=>{
+ const input=fixture();input.variables[1].values[id(5)]={alias:id(7)};
+ assert.throws(()=>resolver(input).resolve(id(7)),/alias cycle/);
+ assert.equal(resolver(input,{}, {[id(8)]:'#ff0000'}).resolve(id(7)).value,'#ff0000ff');
+ assert.throws(()=>resolver(input).resolve(id(7)),/alias cycle/);
+});

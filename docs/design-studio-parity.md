@@ -26711,3 +26711,33 @@ Hover/timer-triggered links remain subject to browser popup policy and were not
 verified. The signed artifact still predates this increment. Full prototype
 variables/conditions, multiple actions and broader Figma parity remain unfinished,
 as does notarized Homebrew distribution. No push.
+
+### 2026-09-20 — Temporary variable resolution for prototype actions
+
+Added typed, request-scoped variable assignments to the collection resolver.
+Assignments use stable variable identities, follow dependent aliases, override a
+variable's authored mode value, and retain false, zero and empty string values.
+They are copied and validated when the resolver is created; they do not modify
+library definitions. Starting another resolver without assignments restores the
+saved values. Invalid identities, aliases used as assignments, malformed colors,
+wrong types and out-of-range values are rejected.
+
+The authenticated, revision-checked variable preview API now accepts `overrides`
+and an optional `bindings` batch (up to 256 `{property,binding}` entries). A batch
+resolves every property before returning, retains each binding's collection modes
+and units, and validates resulting CSS values. Matching mode selections share a
+resolver. The request limit is 2 MiB to accommodate bound layers and typed string
+values; oversize requests are refused. This is a read-only preparation path, with
+no source transaction or history entry.
+
+All 2,083 unit tests passed. Tests cover cross-collection aliases, direct versus
+aliased assignment, mode interactions, reset by discarding temporary state, unit
+conversion, invalid CSS, batch failures, the authenticated API's 256-binding
+batch, stale revisions, the size limit and byte-identical library/page files
+following previews. The existing API restart/history test still passes.
+
+This is the data layer for Set variable, not a completed prototype feature. The
+action picker, source interaction schema, active responsive binding discovery,
+runtime DOM application/restoration, navigation/overlay persistence and browser
+verification remain to be implemented. No UI or desktop artifact changed in this
+increment. Full Figma parity and notarized Homebrew distribution remain incomplete.

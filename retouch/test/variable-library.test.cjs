@@ -23,6 +23,17 @@ test('authenticated variable API persists across restart and restores history',a
   const saved=await post('/rt/__api/variables',{type:'replace',revision:null,library:data()});assert.equal(saved.status,200);assert.ok(saved.body.undoId);assert.equal((await post('/rt/__api/variables',{type:'replace',revision:null,library:data()})).status,409);
   assert.equal((await fetch(base+'/rt/__api/variables/resolve',{method:'POST',body:'{}'})).status,401);const preview=await post('/rt/__api/variables/resolve',{revision:saved.body.revision,modes:{}});assert.equal(preview.status,200);assert.equal(preview.body.values[0].value,'#ffffffff');assert.equal((await post('/rt/__api/variables/resolve',{revision:null,modes:{}})).status,409);
   const focused=await post('/rt/__api/variables/resolve',{revision:saved.body.revision,modes:{},variableId:id(3)});assert.equal(focused.status,200);assert.equal(focused.body.values.length,1);assert.equal(focused.body.values[0].id,id(3));assert.equal((await post('/rt/__api/variables/resolve',{revision:saved.body.revision,variableId:'invalid'})).status,422);
+  const bytes=fs.readFileSync(path.join(root,'.retouch/variables.json'),'utf8'),pageBytes=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const runtime={revision:saved.body.revision,overrides:{[id(3)]:'#123456'},bindings:[{property:'color',binding:{id:id(3)}}]};
+  const projected=await post('/rt/__api/variables/resolve',runtime);assert.equal(projected.status,200);assert.equal(projected.body.bindings[0].value,'#123456ff');assert.equal(projected.body.revision,saved.body.revision);assert.equal(projected.body.undoId,undefined);
+  const many=await post('/rt/__api/variables/resolve',{...runtime,bindings:Array(256).fill(runtime.bindings[0])});assert.equal(many.status,200);assert.equal(many.body.bindings.length,256);assert.ok(many.body.bindings.every(x=>x.value==='#123456ff'));
+  const assigned=await post('/rt/__api/variables/resolve',{revision:saved.body.revision,overrides:runtime.overrides,variableId:id(3)});assert.equal(assigned.body.values[0].value,'#123456ff');
+  for(const invalid of [{...runtime,revision:null},{...runtime,overrides:{[id(3)]:false}},{...runtime,modes:{}},{...runtime,bindings:[runtime.bindings[0],{property:'width',binding:{id:id(3)}}]}]){
+   const result=await post('/rt/__api/variables/resolve',invalid);assert.equal(result.status,invalid.revision===null?409:422);assert.equal(result.body.bindings,undefined);
+  }
+  assert.equal((await post('/rt/__api/variables/resolve',{...runtime,padding:'x'.repeat(2*1024*1024)})).status,413);
+  assert.equal(fs.readFileSync(path.join(root,'.retouch/variables.json'),'utf8'),bytes);assert.equal(fs.readFileSync(path.join(root,'index.html'),'utf8'),pageBytes);
+  assert.equal((await post('/rt/__api/variables/resolve',{revision:saved.body.revision})).body.values[0].value,'#ffffffff');
   await stop();base=await start();headers={'x-retouch-token':await token(),'content-type':'application/json'};const current=await fetch(base+'/rt/__api/variables',{headers}).then(r=>r.json());assert.equal(current.revision,saved.body.revision);
   assert.equal((await post('/rt/__api/op',{type:'undo',undoId:saved.body.undoId})).status,200);const undone=await fetch(base+'/rt/__api/variables',{headers}).then(r=>r.json());assert.equal(undone.revision,null);assert.deepEqual(undone.collections,[]);
  }finally{if(server)await stop();if(previous===undefined)delete process.env.RETOUCH_STATE_DIR;else process.env.RETOUCH_STATE_DIR=previous;}

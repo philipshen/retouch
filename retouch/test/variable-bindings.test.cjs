@@ -10,6 +10,29 @@ test('typed variable binding conversion validates CSS values and unit semantics'
  assert.equal(value('color',4),'#ffffffff');assert.equal(value('padding',5),'24px');assert.equal(value('width',5,{unit:'%'}),'24%');assert.equal(value('line-height',5),'24');assert.equal(value('visibility',6),'visible');assert.equal(value('font-family',7),'Arial, sans-serif');assert.equal(value('visibility',6,{modes:{[id(1)]:id(3)}}),'hidden');
  for(const [property,n,extra]of [['opacity',5,{}],['color',5,{}],['width',4,{}],['width',5,{unit:''}],['font-family',7,{unit:'px'}],['width',5,{unit:'evil'}],['width',5,{modes:null}],['width',5,{modes:{[id(1)]:id(99)}}]])assert.throws(()=>value(property,n,extra));
 });
+
+test('presentation projections preserve per-binding modes and units with temporary typed assignments',()=>{
+ const library=fixture(),before=JSON.stringify(library),requests=[
+  {property:'color',binding:{id:id(4)}},
+  {property:'color',binding:{id:id(4),modes:{[id(1)]:id(3)}}},
+  {property:'width',binding:{id:id(5),unit:'rem'}},
+  {property:'letter-spacing',binding:{id:id(5),unit:'%'}},
+  {property:'visibility',binding:{id:id(6)}},
+  {property:'font-family',binding:{id:id(7)}}
+ ];
+ assert.deepEqual(bindings.project(library,requests,{[id(5)]:12.5,[id(6)]:false,[id(7)]:'Georgia, serif'}).map(x=>x.value),['#ffffffff','#000000ff','12.5rem','0.125em','hidden','Georgia, serif']);
+ assert.deepEqual(bindings.project(library,requests.slice(0,2),{[id(4)]:'#f00'}).map(x=>x.value),['#ff0000ff','#ff0000ff']);
+ assert.equal(JSON.stringify(library),before);
+ assert.deepEqual(bindings.project(library,requests).map(x=>x.value),['#ffffffff','#000000ff','24rem','0.24em','visible','Arial, sans-serif']);
+});
+
+test('binding projection refuses invalid CSS or requests before returning partial output',()=>{
+ const library=fixture(),valid={property:'width',binding:{id:id(5)}};
+ for(const requests of [null,{},Array(257).fill(valid),[valid,{property:'background-image',binding:{id:id(7)}}],[valid,{property:'opacity',binding:{id:id(5)}}],[{...valid,extra:true}],[{property:'color',binding:{id:id(4),modes:{[id(1)]:id(99)}}}]])assert.throws(()=>bindings.project(library,requests));
+ assert.throws(()=>bindings.project(library,[valid],{[id(5)]:-1}),/cannot control/);
+ assert.throws(()=>bindings.project(library,[],{[id(99)]:false}));
+ assert.deepEqual(bindings.project(library,[]),[]);
+});
 test('HTML bindings retain identities, per-scope mode selection and appearance on detach',()=>{
  let source=apply(original,'color',{id:id(4)}).edits[0].after;
  source=apply(source,'color',{id:id(4),modes:{[id(1)]:id(3)}},768).edits[0].after;
