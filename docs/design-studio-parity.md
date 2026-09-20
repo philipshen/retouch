@@ -26586,3 +26586,33 @@ suite rerun. Generated pseudo-elements directly on display:contents wrappers are
 not measured separately yet; the prior effect-bounds and snapshot limitations
 remain. No desktop rebuild or push. Full Figma parity and notarized Homebrew
 distribution remain unfinished.
+
+
+### Separate selected-layer assets in one ZIP
+
+Selection export now offers Together as one image or Separate files (ZIP). The
+latter renders each captured selection identity independently using the chosen
+PNG/JPEG format, scale, transparency and quality settings, then returns one ZIP
+with an application/zip MIME type. Numbered, sanitized layer names avoid path
+traversal and duplicate filenames. Names come from layer names, accessible labels,
+IDs or tag names. Non-BMP letters are truncated by code point. The fflate 0.8.3
+dependency and lockfile are pinned; already-compressed images use stored ZIP entries.
+
+The existing per-server export slot covers the entire batch. Closing the dialog
+aborts the current render and remaining work. Batches allow up to 20 layers,
+128 MiB of encoded image data and two minutes total, in addition to individual
+render limits. A failed layer identifies its position and prevents a partial
+archive download. Each layer currently starts its own disposable renderer; shared
+browser/resource reuse is a future performance improvement.
+
+Chromium and WebKit editor flows produced PNG and JPEG archives, checked MIME and
+filename, independently validated each archive with system unzip, decoded separate
+asset dimensions/colors/alpha, and verified switching back to ordinary image
+export. Full Chromium screen/JPEG export regressions passed. All 2,070 unit tests
+passed before the final archive-size test was added; all four batch tests passed
+thereafter, covering naming/isolation, option validation, cancellation/failure and
+archive-size refusal. Chromium batch export passed again after filename and limit
+label cleanup. The ZIP dialog screenshot was inspected; syntax/diff checks passed.
+No desktop rebuild or push. Batch screen/size presets and PDF exports remain
+incomplete, alongside inherited snapshot/effect limits, full Figma parity and
+notarized Homebrew distribution.

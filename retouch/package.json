@@ -140,6 +140,7 @@
     "@babel/traverse": "^7.26.0",
     "@vue/compiler-dom": "3.5.42",
     "@vue/compiler-sfc": "3.5.42",
+    "fflate": "0.8.3",
     "magic-string": "^0.30.0",
     "paper": "0.12.18",
     "parse5": "^7.3.0",

@@ -5,6 +5,8 @@ function validate(body){
  if(![body.width,body.height].every(n=>Number.isInteger(n)&&n>=1&&n<=7680)||!Number.isFinite(body.scale)||body.scale<0.01||body.scale>8||Math.min(body.width,body.height)*body.scale<1||Math.max(body.width,body.height)*body.scale>32768||Math.ceil(body.width*body.scale)*Math.ceil(body.height*body.scale)>64*1024*1024)throw Error('Choose a scale from 0.01× to 8×, with output dimensions from 1 to 32,768 pixels and at most 64 megapixels.');
  if(body.area!==undefined&&!['viewport','page','selection'].includes(body.area))throw Error('Choose visible viewport, full page or selected layers.');
  if(body.area==='selection'&&(!Array.isArray(body.selectionIds)||!body.selectionIds.length||body.selectionIds.length>10000||body.selectionIds.some(id=>typeof id!=='string'||!/^\d+$/.test(id))))throw Error('Choose at least one captured layer to export.');
+ if(body.separate!==undefined&&typeof body.separate!=='boolean')throw Error('Invalid separate-layer export option.');
+ if(body.separate&&(body.area!=='selection'||body.selectionIds.length>20||body.selectionNames!==undefined&&(!Array.isArray(body.selectionNames)||body.selectionNames.length!==body.selectionIds.length||body.selectionNames.some(name=>typeof name!=='string'||name.length>200))))throw Error('Separate export supports up to 20 selected layers with valid names.');
  if(body.format!==undefined&&!['png','jpeg'].includes(body.format))throw Error('Choose PNG or JPEG.');
  if(body.quality!==undefined&&(body.format!=='jpeg'||!Number.isInteger(body.quality)||body.quality<1||body.quality>100))throw Error('JPEG quality must be a whole number from 1 to 100.');
  if(body.transparent!==undefined&&(typeof body.transparent!=='boolean'||body.transparent&&body.format==='jpeg'))throw Error('Transparent background is available only for PNG.');
@@ -14,7 +16,7 @@ function validate(body){
  return body;
 }
 async function render(body,{browserType,signal}={}){
- validate(body);let browser,timer,timedOut=false;const cancel=()=>browser?.close().catch(()=>{});signal?.throwIfAborted();signal?.addEventListener('abort',cancel,{once:true});
+ validate(body);if(body.separate)return require('./screen-export-batch.cjs').renderBatch(body,{signal,render:(item,options)=>render(item,{...options,browserType})});let browser,timer,timedOut=false;const cancel=()=>browser?.close().catch(()=>{});signal?.throwIfAborted();signal?.addEventListener('abort',cancel,{once:true});
  try{
   browser=await (browserType||require('playwright').chromium).launch(browserType?{}:require('./capture-browser.cjs').launchOptions());signal?.throwIfAborted();timer=setTimeout(()=>{timedOut=true;cancel();},30000);
   const context=await browser.newContext({viewport:{width:body.width,height:body.height},deviceScaleFactor:body.scale,serviceWorkers:'block',acceptDownloads:false}),page=await context.newPage();const failed=new Set();let requests=0;
