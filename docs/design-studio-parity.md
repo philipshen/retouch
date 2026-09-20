@@ -27030,3 +27030,32 @@ passed both engines; existing literal/copy playback passed Chromium.
 
 No desktop artifact rebuild, native launch or push in this increment. Full design
 parity and notarized Homebrew distribution remain unfinished.
+
+### 2026-09-20 — Independent presentation values per variable mode
+
+Prototype assignments now snapshot a value for the variable's current collection
+mode instead of replacing its value in every mode. Switching modes preserves each
+mode's previous temporary value. Copies and expressions read the selected mode;
+explicitly bound modes and alias chains resolve their own temporary values.
+Restart/exit clears all temporary mode values and restores original styles.
+The Set variable helper text explains this behavior.
+
+The collection resolver, CSS binding projection and authenticated preview endpoint
+accept `modeOverrides` keyed by variable then mode. They validate and snapshot all
+provided entries, including inactive modes, and retain typed false/zero/empty
+values. Mode-local values take precedence over the existing all-mode `overrides`
+API, which remains compatible; presentation playback uses mode-local state.
+No source or variable-library transaction is created by resolution/playback.
+
+All 2,120 unit tests passed. New tests cover cross-collection aliases, independent
+modes, snapshot isolation, inactive invalid values, CSS conversion and API
+expression/value/binding previews. Chromium and WebKit verify independent
+increments (100→110 and 200→210), switching back, simultaneous explicit-mode and
+automatic bindings, aliases, remounts, restart/exit and unchanged source/library.
+Existing expression and literal/copy browser suites passed Chromium.
+
+This closes the all-mode overwrite gap in the previous increment. Explicit mode
+selection on assignments/expression references, inherited object mode contexts,
+separate design pages, conditional action lists and full design parity remain
+unfinished. No native artifact rebuild, launch or push in this increment;
+notarized Homebrew distribution remains incomplete.

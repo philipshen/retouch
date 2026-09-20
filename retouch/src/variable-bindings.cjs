@@ -22,19 +22,19 @@ function convert(property,spec,result){
  if(value===undefined||!V.valid(property,value))throw Error('This variable type or resolved value cannot control '+property+'.');
  return {binding:spec,value,path:result.path,type:result.type};
 }
-function resolve(library,property,binding,overrides={}){
- const spec=specification(binding);return convert(property,spec,model.resolver(library,spec.modes,overrides).resolve(spec.id));
+function resolve(library,property,binding,overrides={},modeOverrides={}){
+ const spec=specification(binding);return convert(property,spec,model.resolver(library,spec.modes,overrides,modeOverrides).resolve(spec.id));
 }
 // Resolve a complete presentation update before returning any property values.
 // Each binding keeps its authored collection modes and unit. Reuse resolvers
 // across matching modes so large selections do not revalidate the library per row.
-function project(library,requests,overrides={}){
+function project(library,requests,overrides={},modeOverrides={}){
  if(!Array.isArray(requests)||requests.length>256)throw Object.assign(Error('Preview up to 256 variable bindings.'),{statusCode:422});
- const cache=new Map();model.resolver(library,{},overrides);
+ const cache=new Map();model.resolver(library,{},overrides,modeOverrides);
  return requests.map(request=>{
   if(!request||typeof request!=='object'||Array.isArray(request)||Object.keys(request).some(key=>!['property','binding'].includes(key))||!properties.includes(request.property))throw Object.assign(Error('Invalid variable binding preview.'),{statusCode:422});
   const spec=specification(request.binding),key=JSON.stringify(Object.entries(spec.modes).sort(([a],[b])=>a.localeCompare(b)));
-  if(!cache.has(key))cache.set(key,model.resolver(library,spec.modes,overrides));
+  if(!cache.has(key))cache.set(key,model.resolver(library,spec.modes,overrides,modeOverrides));
   return {property:request.property,...convert(request.property,spec,cache.get(key).resolve(spec.id))};
  });
 }

@@ -51,3 +51,18 @@ test('runtime assignments can terminate an alias cycle without changing future r
  assert.equal(resolver(input,{}, {[id(8)]:'#ff0000'}).resolve(id(7)).value,'#ff0000ff');
  assert.throws(()=>resolver(input).resolve(id(7)),/alias cycle/);
 });
+
+test('mode-local assignments snapshot independent values and follow aliases in their selected modes',()=>{
+ const input=fixture(),before=JSON.stringify(input),modeOverrides={[id(8)]:{[id(5)]:'#123456',[id(6)]:'#abcdef'}},day=resolver(input,{}, {},modeOverrides),night=resolver(input,{[id(4)]:id(6)}, {},modeOverrides);
+ modeOverrides[id(8)][id(5)]='#000000';assert.equal(day.resolve(id(7)).value,'#123456ff');assert.equal(night.resolve(id(7)).value,'#abcdefff');
+ assert.equal(resolver(input,{[id(1)]:id(3)}, {},modeOverrides).resolve(id(7)).value,'#000000ff');
+ assert.equal(resolver(input,{}, {[id(8)]:'#ff0000'},modeOverrides).resolve(id(8)).value,'#000000ff');
+ assert.equal(resolver(input,{[id(4)]:id(6)}, {},{[id(8)]:{[id(5)]:'#000000'}}).resolve(id(8)).value,input.variables[1].values[id(6)]);
+ assert.equal(JSON.stringify(input),before);
+});
+test('mode-local state validates inactive modes and retains false, zero and empty text',()=>{
+ const input=fixture();input.variables=[];for(const [n,type,value]of [[9,'number',24],[10,'boolean',true],[11,'string','Hello']])input.variables.push({id:id(n),collectionId:id(1),name:type,type,values:{[id(2)]:value,[id(3)]:value}});
+ const modeOverrides={[id(9)]:{[id(2)]:0},[id(10)]:{[id(2)]:false},[id(11)]:{[id(2)]:''}};
+ assert.deepEqual(resolver(input,{}, {},modeOverrides).resolveAll().map(x=>x.value),[0,false,'']);assert.deepEqual(resolver(input,{[id(1)]:id(3)}, {},modeOverrides).resolveAll().map(x=>x.value),[24,true,'Hello']);
+ for(const state of [null,[],{[id(99)]:{}},{[id(9)]:null},{[id(9)]:[]},{[id(9)]:{[id(5)]:1}},{[id(9)]:{[id(3)]:Infinity}},{[id(10)]:{[id(3)]:0}},{[id(11)]:{[id(3)]:'a'.repeat(4097)}},{[id(9)]:{[id(3)]:{alias:id(9)}}}])assert.throws(()=>resolver(input,{}, {},state));
+});

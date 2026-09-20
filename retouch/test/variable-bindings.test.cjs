@@ -75,3 +75,10 @@ test('percentage tracking bindings preserve percentage metadata and author relat
  assert.equal(css.describe(resolve(source)).cssRules[768]['letter-spacing'],'-0.125em');
  const detached=linked.plan(resolve(source),{type:'detachVariable',property:'letter-spacing',width:768});assert.equal(detached.ok,true,detached.reason);assert.equal(css.describe(resolve(detached.edits[0].after)).cssRules[768]['letter-spacing'],'-0.125em');
 });
+
+test('one projection resolves independent presentation values for the same variable in different modes',()=>{
+ const library=fixture(),requests=[{property:'width',binding:{id:id(5)}},{property:'width',binding:{id:id(5),modes:{[id(1)]:id(3)},unit:'rem'}}];
+ assert.deepEqual(bindings.project(library,requests,{}, {[id(5)]:{[id(2)]:10,[id(3)]:20}}).map(x=>x.value),['10px','20rem']);
+ assert.deepEqual(bindings.project(library,requests,{}, {[id(5)]:{[id(2)]:10}}).map(x=>x.value),['10px','48rem']);
+ assert.throws(()=>bindings.project(library,requests,{}, {[id(5)]:{[id(3)]:-1}}),/cannot control/);
+});
