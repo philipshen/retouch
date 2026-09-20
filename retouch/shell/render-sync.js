@@ -235,7 +235,28 @@
     d[Symbol.for('retouch.group-scale.runtime')]?.refresh();
     if(frame.contentDocument!==d)throw Error('Preview navigated while synchronizing group scale.');
   }
-  const api = { capture, restore, reconcile, sync, syncCSS, requestSourceSync, syncClasses, ensureGroupScaleRuntime, refreshStyles: revalidateStyles };
+  async function recoverStructure({frame,select,matches,current=()=>true,mounted=()=>true,fetcher=root.fetch.bind(root),parseHTML=html=>new root.DOMParser().parseFromString(html,'text/html'),timeout=8000}){
+    const initial=frame.contentDocument,href=frame.contentWindow.location.href;
+    const unchanged=()=>current()&&frame.contentDocument===initial&&frame.contentWindow.location.href===href;
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
+    try{
+      const response=await fetcher(href,{cache:'no-store',signal:controller.signal});if(!response.ok)throw Error('Could not render the saved structure.');
+      const fresh=parseHTML(await response.text()),nodes=select(fresh);
+      if(!unchanged())throw Error('Preview changed while checking the saved structure.');
+      if(!nodes.length||!nodes.every(matches))throw Error('The server has not rendered the saved structure yet.');
+      const live=select(initial);if(live.length&&live.every(matches))return;
+      const x=frame.contentWindow.scrollX,y=frame.contentWindow.scrollY;
+      frame.contentWindow.location.reload();
+      for(const deadline=Date.now()+timeout;Date.now()<deadline;){
+        if(!current())throw Error('Preview changed while restoring the saved structure.');
+        const d=frame.contentDocument;
+        if(d!==initial&&d?.readyState==='complete'&&frame.contentWindow.location.href===href&&mounted(d)){const next=select(d);if(next.length&&next.every(matches)){frame.contentWindow.scrollTo(x,y);return;}}
+        await new Promise(resolve=>setTimeout(resolve,50));
+      }
+      throw Error('The reloaded preview did not show the saved structure.');
+    }finally{clearTimeout(timer);}
+  }
+  const api = { capture, restore, reconcile, recoverStructure, sync, syncCSS, requestSourceSync, syncClasses, ensureGroupScaleRuntime, refreshStyles: revalidateStyles };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.RetouchRenderSync = api;
 })(typeof window !== 'undefined' ? window : globalThis);

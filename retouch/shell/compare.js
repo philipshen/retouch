@@ -790,7 +790,7 @@
       }));
     },
     syncImage(options){return this.syncRendered(options);},
-    syncSource(options){return this.syncRendered({...options,kind:'Classes',serverRendered:false});},
+    syncSource(options){return this.syncRendered({...options,kind:options.structural?'Structure':'Classes',serverRendered:false});},
     async syncRendered({select,matches,serverRendered=true,revisionAttribute,hash,onlyFrame,kind='Image',afterSync,authorStyles=false,revalidate=false}){
       if(!open)return;const expectedRoute=path(),failures=[];
       await Promise.all(cards.filter(card=>!onlyFrame||card.frame===onlyFrame).map(async card=>{
@@ -805,11 +805,14 @@
             if(!window.RetouchClientMount.ready(d))throw Error('Preview is still mounting.');
             // A comparison can mount after the source-change broadcast. Request fresh
             // server components through the verified development router, retaining React state.
-            if(['Classes','Scale'].includes(kind)&&!select(d).every(ready))await refreshClientClasses(card.frame);
+            if(['Classes','Scale','Structure'].includes(kind)&&!select(d).every(ready))await refreshClientClasses(card.frame);
             const next=card.frame.contentWindow.next;
-            if(!select(d).every(ready)&&/^16\.2\./.test(next?.version||'')){if(kind==='Scale'&&typeof next.router?.refresh==='function')next.router.refresh();else if(typeof next.router?.hmrRefresh==='function')next.router.hmrRefresh();}
+            if(!select(d).every(ready)&&/^16\.2\./.test(next?.version||'')){if(['Scale','Structure'].includes(kind)&&typeof next.router?.refresh==='function')next.router.refresh();else if(typeof next.router?.hmrRefresh==='function')next.router.hmrRefresh();}
           }
-          await RetouchRenderSync.sync({frame:card.frame,serverRendered,select,matches:ready,authorStyles,revalidate,current:()=>card.imageSyncToken===token&&open&&cards.includes(card)&&path()===expectedRoute});
+          const current=()=>card.imageSyncToken===token&&open&&cards.includes(card)&&path()===expectedRoute;
+          try{await RetouchRenderSync.sync({frame:card.frame,serverRendered,select,matches:ready,authorStyles,revalidate,current});}
+          catch(error){if(kind!=='Structure'||!current()||card.frame.contentDocument!==d)throw error;await RetouchRenderSync.recoverStructure({frame:card.frame,select,matches:ready,current,mounted:d=>window.RetouchClientMount.ready(d)});}
+
           if(kind==='Classes'&&card.imageSyncToken===token&&card.frame.contentDocument===d)await RetouchRenderSync.refreshStyles(d,hash||Date.now().toString(36));
           if(afterSync&&card.imageSyncToken===token&&card.frame.contentDocument===d)await afterSync(card.frame);
           if(card.imageSyncToken===token)card.retryImageControl.hidden=true;

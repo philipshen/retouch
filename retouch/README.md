@@ -633,6 +633,12 @@ the intended scope in the inspector before changing styles. Keyboard users can
 focus a preview and press Enter or Space to open its size with the current
 selection. Comparisons remain previews; editing happens on the main canvas.
 
+Component creation and structural undo/redo synchronize open comparisons against
+the saved source revision. If live updates fail, Retouch can reload a stale
+comparison only after a fresh server render proves that revision. The reload
+preserves scroll position but can reset app state in that preview. A stale or
+unavailable server render leaves a retry control instead of reporting success.
+
 Comparison selection hints distinguish hidden, absent and off-screen layers.
 Scroll a comparison to bring an off-screen layer and its outline into view.
 

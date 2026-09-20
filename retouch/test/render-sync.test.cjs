@@ -95,3 +95,14 @@ test('compiled style verification requests a source snapshot when the live revis
  const frame={contentDocument:document,contentWindow:{location:{href:'http://localhost/'},CustomEvent:class{constructor(type){this.type=type;}},dispatchEvent(event){events.push(event.type);hash=rendering.hash;css=rendering.value;}}};
  const result=await require('../shell/render-sync.js').syncCSS({frame,id:'1234567890',rendering});assert.equal(result.method,'compiled-styles');assert.deepEqual(events,['retouch:source-sync']);
 });
+test('structural preview fallback requires the saved server revision before reload and verifies the new document',async()=>{
+ const {recoverStructure}=require('../shell/render-sync.js'),initial={readyState:'complete',revision:'old'},fresh={readyState:'complete',revision:'saved'};let reloads=0,scroll=null;const frame={contentDocument:initial,contentWindow:{scrollX:12,scrollY:34,scrollTo:(x,y)=>scroll=[x,y],location:{href:'http://localhost/page',reload(){reloads++;frame.contentDocument=fresh;}}}},options={frame,select:d=>[d],matches:d=>d.revision==='saved',parseHTML:()=>fresh,fetcher:async()=>({ok:true,text:async()=>''})};
+ await recoverStructure(options);assert.equal(reloads,1);assert.deepEqual(scroll,[12,34]);
+ frame.contentDocument=initial;await assert.rejects(recoverStructure({...options,parseHTML:()=>initial}),/server has not rendered/);assert.equal(reloads,1);
+});
+test('structural preview fallback cancels on navigation or supersession and refuses stale reloads',async()=>{
+ const {recoverStructure}=require('../shell/render-sync.js'),initial={readyState:'complete',revision:'old'},fresh={readyState:'complete',revision:'saved'};let reloads=0,active=true;const frame={contentDocument:initial,contentWindow:{scrollX:0,scrollY:0,scrollTo(){},location:{href:'http://localhost/page',reload(){reloads++;frame.contentDocument={readyState:'complete',revision:'wrong'};}}}},options={frame,select:d=>[d],matches:d=>d.revision==='saved',parseHTML:()=>fresh,current:()=>active,timeout:5,fetcher:async()=>({ok:true,text:async()=>''})};
+ await assert.rejects(recoverStructure({...options,fetcher:async()=>{active=false;return {ok:true,text:async()=>''};}}),/Preview changed/);assert.equal(reloads,0);active=true;
+ await assert.rejects(recoverStructure({...options,fetcher:async()=>{frame.contentWindow.location.href='http://localhost/other';return {ok:true,text:async()=>''};}}),/Preview changed/);assert.equal(reloads,0);frame.contentWindow.location.href='http://localhost/page';
+ await assert.rejects(recoverStructure(options),/reloaded preview did not show/);assert.equal(reloads,1);
+});

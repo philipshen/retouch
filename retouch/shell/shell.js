@@ -2406,11 +2406,13 @@ function renderPanelContents(textEditing=false) {
 
 }
 
+const componentCreationDrafts=new Map();
 function createComponentSection(info) {
+  const key=info.file+'|'+info.id;let draft=componentCreationDrafts.get(key);if(!draft){draft={name:'NewComponent',open:false};componentCreationDrafts.set(key,draft);if(componentCreationDrafts.size>100)componentCreationDrafts.delete(componentCreationDrafts.keys().next().value);}
   const details=document.createElement('details');details.className='advanced';
-  const summary=document.createElement('summary');summary.textContent='Create component';details.append(summary);
+  const summary=document.createElement('summary');summary.textContent='Create component';details.append(summary);details.open=draft.open;details.ontoggle=()=>{if(details.isConnected)draft.open=details.open;};
   const body=document.createElement('div');body.style.padding='0 12px 12px';details.append(body);
-  const input=document.createElement('input');input.type='text';input.value='NewComponent';input.required=true;input.maxLength=80;input.pattern='[A-Z][A-Za-z0-9_$]{0,79}';
+  const input=document.createElement('input');input.type='text';input.value=draft.name;input.oninput=input.onchange=()=>{draft.name=input.value;draft.error=null;};input.required=true;input.maxLength=80;input.pattern='[A-Z][A-Za-z0-9_$]{0,79}';
   RetouchInspector.field(body,'Component name',input);
   RetouchInspector.note(body,'Creates a reusable component in this source file and replaces the selected subtree with an instance. This changes all screen sizes. JavaScript local values become props automatically.');
   const button=RetouchInspector.button('Create component from layer',async()=>{
@@ -2418,15 +2420,15 @@ function createComponentSection(info) {
     busyPanel(true);
     try{
       const result=await api('POST','/rt/__api/op',{type:'createComponent',id:info.id,fileHash:info.hash,name:input.value});
-      if(!result?.ok){RetouchInspector.note(body,result?.reason||result?.error||'Could not create the component.','refused');return;}
+      if(!result?.ok){draft.error=result?.reason||result?.error||'Could not create the component.';if(sel?.info?.id===info.id)renderPanel();return;}draft.error=null;
       editorHistory.record({type:'createComponent',id:info.id,sourceIdMap:result.createdComponent.sourceIdMap,undoId:result.undoId});
       layerLocks.remap(result.createdComponent.sourceIdMap);
       const created=result.createdComponent;
-      await refreshWrittenElement(result.element,el=>el.getAttribute('data-rt')===created.definitionId);
+      await refreshWrittenStructure(result.element,el=>el.getAttribute('data-rt')===created.definitionId);
       sel={hostId:created.definitionId,instanceId:created.instanceId,scope:'instance',info:result.element};
-      renderPanel();toast('Created '+created.name,'ok');
+      await layers.refresh();renderPanel();toast('Created '+created.name,'ok');
     }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
-  });body.append(button);return details;
+  });body.append(button);if(draft.error)RetouchInspector.note(body,draft.error,'refused');return details;
 }
 
 function componentSection(id) {
@@ -4314,7 +4316,7 @@ async function restoreHistory(direction,op) {
       const info = fresh.element;
       const selectionResult=(['setClassesSelection','setSVGTransforms'].includes(op.type)||op.type==='setCSSSelection'&&op.managedCSS)?await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id)))):null;
       const component = op.type === 'detachComponent'||op.type==='createComponent'&&direction==='redo' ? await api('GET', componentUrl(op.id,op.context)) : null;
-      const refresh=()=>(['structure','structureSelection','detachComponent'].includes(op.type)?refreshWrittenStructure:refreshWrittenElement)(info, el => {
+      const refresh=()=>(['structure','structureSelection','detachComponent','createComponent'].includes(op.type)?refreshWrittenStructure:refreshWrittenElement)(info, el => {
         if(selectionResult)return selectionResult.every(result=>result?.ok)&&(op.type==='setSVGTransforms'?svgSelectionMatches:classSelectionMatches)(selectionResult.map(result=>result.element),el.ownerDocument);
         if(op.svgCreatedId){const found=matchingInDocument(el.ownerDocument,op.svgCreatedId,null).length>0;return direction==='undo'?!found:found;}
         if(op.type==='createComponent'&&direction==='undo')return el.getAttribute('data-rt')===op.id;
@@ -4778,7 +4780,7 @@ async function refreshWrittenStructure(info, matches=()=>true) {
   // Identically shaped Svelte siblings can reorder through source-store updates.
   // Prove every comparison received the revision even if a broadcast was lost.
   const result=await window.RetouchComparisons?.syncSource({
-    select:d=>matchingInDocument(d,info.id,info),matches:()=>true,
+    select:d=>matchingInDocument(d,info.id,info),matches:()=>true,structural:true,
     revisionAttribute:info.renderRevisionAttribute,hash:info.hash
   });
   if(result?.failures.length)throw Error('Retry the failed comparison previews.');
