@@ -27611,3 +27611,11 @@ Verification:
 - The final WebKit inspector was inspected at `/tmp/retouch-vite-svelte-webkit.png`. Unsupported style sections now show one neutral availability note instead of repeated red errors. Content and layer controls remain available.
 
 Limits and next work: Svelte responsive CSS, rich text, structural operations, component editing, and reusable-style bindings remain unimplemented. Only the proven simple-text path retains component state; attribute, script, structure, and whitespace-sensitive changes use ordinary Svelte HMR. Custom preprocessing, SvelteKit SSR/hydration, other compiler versions, disconnected-client update recovery, and native packaging with the added compiler dependency remain unverified. This is an initial additional renderer, not evidence of arbitrary-site or full Figma parity. No signed desktop artifact was rebuilt or launched.
+
+### Svelte responsive source planning checkpoint
+
+- Added `svelte-css.cjs` source plans for single-layer and atomic multi-layer responsive CSS edits, per-layer change sets, and screen-scope reset.
+- Managed CSS lives inside the existing single Svelte style block, or a new block when absent. Canonical metadata and global selectors preserve authored CSS and produce usable production CSS through the installed Svelte compiler. Removing managed CSS preserves authored bytes and removes a wholly generated block.
+- Ownership checks include components and excluded spread hosts. Stale file hashes, computed inline styles, important inline conflicts, malformed or externally modified managed CSS, duplicate/missing owners, and non-CSS preprocessors are refused.
+- Verification: six source/compiler tests added; full unit suite passes (2,208 tests).
+- This checkpoint is backend infrastructure. The adapter still intentionally reports style authoring unavailable: inspector integration, state-preserving CSS HMR, responsive preview rendering, and browser history verification remain to implement. No native artifact or Homebrew release changes.
