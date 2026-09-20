@@ -17,7 +17,7 @@ function read(resolved){
 }
 function match(properties,values){
  const kept=Object.create(null),removed=[];
- for(const [name,value] of Object.entries(values)){const prop=properties.find(prop=>prop.name===name);if(prop&&(!prop.type||typeof value===prop.type)&&(!prop.choices||prop.choices.includes(value)))kept[name]=value;else removed.push(name);}
+ for(const [name,value] of Object.entries(values)){const prop=properties.find(prop=>prop.name===name);if(prop&&prop.supported!==false&&(!prop.type||typeof value===prop.type)&&(!prop.choices||prop.choices.includes(value)))kept[name]=value;else removed.push(name);}
  return {kept,removed};
 }
 module.exports={read,match};

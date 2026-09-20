@@ -2808,7 +2808,7 @@ async function insertLibraryComponent(item,target,isActive){
  if(!definition.insertion?.ok)throw Error(definition.insertion?.reason||'Could not read component properties.');
  const previous=target.swap?await api('GET',componentUrl(target.id)):null;
  if(target.swap&&!previous?.swap?.ok)throw Error(previous?.swap?.reason||'This instance cannot be swapped.');
- const kept={},removed=[];if(previous)for(const [name,value] of Object.entries(previous.swap.props)){const prop=definition.insertion.properties.find(prop=>prop.name===name);if(prop&&(!prop.type||typeof value===prop.type)&&(!prop.choices||prop.choices.includes(value)))Object.defineProperty(kept,name,{value,enumerable:true});else removed.push(name);}
+ const kept={},removed=[];if(previous)for(const [name,value] of Object.entries(previous.swap.props)){const prop=definition.insertion.properties.find(prop=>prop.name===name);if(prop&&prop.supported!==false&&(!prop.type||typeof value===prop.type)&&(!prop.choices||prop.choices.includes(value)))Object.defineProperty(kept,name,{value,enumerable:true});else removed.push(name);}
  const submit=async props=>{
  if(!isActive())return false;busyPanel(true);try{
   const result=await api('POST','/rt/__api/op',{type:target.swap?'swapComponent':'insertComponent',dropProps:removed,id:target.id,fileHash:target.hash,definitionFile:definition.file,definitionId:definition.definitionId,definitionHash:definition.hash,contractHash:definition.insertion.revision,props});

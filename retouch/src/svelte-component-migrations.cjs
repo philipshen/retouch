@@ -5,7 +5,7 @@ const fs=require('node:fs'),path=require('node:path'),source=require('./svelte-s
 const records=new Map(),pending=new Map(),limit=200;
 function record(root,plan){
  if(!plan?.ok)return;
- const structural=!!(plan.duplicatedComponent||plan.deletedComponent||plan.copiedComponents||plan.deletedComponentIds||plan.movedComponent||plan.movedComponentIds||plan.insertedComponent),mapping=new Map(plan.insertedComponent?.sourceIdMap||plan.movedComponent?.sourceIdMap||plan.duplicatedComponent?.sourceIdMap||plan.sourceIdMap||[]),removed=new Set(plan.deletedComponent?.removedSourceIds||plan.removedSourceIds||[]);
+ const structural=!!(plan.duplicatedComponent||plan.deletedComponent||plan.copiedComponents||plan.deletedComponentIds||plan.movedComponent||plan.movedComponentIds||plan.insertedComponent),mapping=new Map(plan.insertedComponent?.sourceIdMap||plan.movedComponent?.sourceIdMap||plan.duplicatedComponent?.sourceIdMap||plan.sourceIdMap||[]),removed=new Set([...(plan.deletedComponent?.removedSourceIds||plan.removedSourceIds||[]),...(plan.insertedComponent?.previousInstanceId?[plan.insertedComponent.previousInstanceId]:[])]);
  for(const edit of plan.edits||[]){
   if(!edit.file.endsWith('.svelte')||typeof edit.before!=='string'||typeof edit.after!=='string'||edit.before===edit.after)continue;
   let file;

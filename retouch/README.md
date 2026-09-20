@@ -285,6 +285,12 @@ collision-free local name, with exact undo/redo and synchronized previews. Proje
 component dependencies are checked for cycles and fixed DOM IDs. Aliased module
 paths, symlinked/external definitions, unsupported required contracts, dynamic
 roots and spread-controlled properties remain outside this insertion workflow.
+For literal usages without authored child content, Swap selected instance keeps
+compatible overrides and lists the overrides that will be removed. Supply any
+new required properties before applying. The replacement initializes fresh;
+unaffected instances and supported parent state remain retained. Undo restores
+the exact source, with the restored instance initialized anew. Bound properties,
+spreads, directives and child content must be preserved before such a swap.
 Editing shared default declarations, variants, detach and broader component
 authoring remain unfinished.
 

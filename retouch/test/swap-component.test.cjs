@@ -50,3 +50,6 @@ test('swap retains the instance layer name without turning it into a component p
 test('component swapping maps its replacement usage and preserves sibling identities through import changes',()=>{
  const f=fixture();try{const plan=planner.plan(f.resolved,f.op);assert.equal(plan.ok,true,plan.reason);const mapping=new Map(plan.insertedComponent.sourceIdMap);assert.equal(mapping.get(f.resolved.element.id),plan.insertedComponent.instanceId);const next=id.collectElements(plan.edits[0].after,f.resolved.relPath).elements;assert.deepEqual(next.map(e=>e.id).sort(),f.resolved.elements.map(e=>mapping.get(e.id)||e.id).sort());}finally{f.close();}
 });
+test('Swap preview and planning remove explicitly unsupported property contracts',()=>{
+ const match=require('../src/component-swap-props.cjs').match([{name:'label',type:'string',supported:true},{name:'callback',type:null,supported:false}],{label:'Keep',callback:'not a callable value'});assert.deepEqual({...match.kept},{label:'Keep'});assert.deepEqual(match.removed,['callback']);
+});
