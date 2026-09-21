@@ -35,6 +35,12 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,reactFixture=process.env.RT_REACT
   await page.setViewportSize({width:1200,height:700});await page.waitForFunction(()=>{const field=document.querySelector('[aria-label="Stroke alignment"]');if(!field)return false;const box=field.getBoundingClientRect();return innerWidth===1200&&box.top>=0&&box.bottom<=innerHeight;});assert.equal(await alignment.isVisible(),true);await page.setViewportSize({width:1440,height:1000});
   await page.getByRole('button',{name:'Lock rect · Card',exact:true}).click();await page.getByRole('treeitem',{name:'rect · Card',exact:true}).click();await settled();assert.equal(await alignment.isDisabled(),true);assert.equal(await page.getByRole('button',{name:'Restore original shape',exact:true}).isDisabled(),true);assert.equal(read(),made.edits[0].after);
   await page.getByRole('button',{name:'Unlock rect · Card',exact:true}).click();await page.getByRole('treeitem',{name:'rect · Card',exact:true}).click();await settled();assert.equal(await alignment.isDisabled(),false);
+  // Check at write time: page styles can change after the inspector is mounted.
+  const beforeOverride=read();
+  await app.locator('head').evaluate(head=>{const style=head.ownerDocument.createElement('style');style.id='stroke-override';style.textContent='[data-rt-stroke-alignment] > g:last-child > path{stroke:lime!important}';head.append(style);});
+  assert.equal(await page.evaluate(()=>writeSVGStrokeSource('setSVGStrokeSourcePosition',{position:'outside'})),false);await settled();assert.equal(read(),beforeOverride);assert.equal(await alignment.inputValue(),'inside');
+  assert.equal(await page.evaluate(()=>document.querySelectorAll('[data-rt-stroke-reference]').length),0);
+  await app.locator('#stroke-override').evaluate(el=>el.remove());
   for(const position of ['center','outside','inside']){
    const before=read(),previous=await alignment.inputValue();await alignment.selectOption(position);await settled();await wait(()=>read()!==before);const after=read();await wait(async()=>await alignment.inputValue()===position);await pixels(position);
    assert.equal(await app.locator('input').inputValue(),'retained draft');assert.equal(await app.locator('input').evaluate(()=>window.strokeDocument),'same');

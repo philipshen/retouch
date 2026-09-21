@@ -131,7 +131,7 @@ function describe(r,kind){
  if(!r.source?.includes(marker))return null;
  const c=context(r,kind);if(!c)return null;
  const positions=['inside','center','outside'].filter(position=>{try{S.normalize({...input(c.model),position});return true;}catch{return false;}});
- return {position:c.model.position,width:c.model.width,positions,originalId:c.original.id,canRestore:true};
+ return {position:c.model.position,width:c.model.width,positions,originalId:c.original.id,canRestore:true,definitionId:c.id,model:c.model};
 }
 function guard(r,op,kind){
  if(!r.source?.includes(marker))return null;

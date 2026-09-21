@@ -3617,6 +3617,7 @@ async function writeSVGStrokeSource(type,extra){
  const primary=sel?.info;if(!primary?.svgStrokeSource||panelTasks||sourceRequests||undoBusy||editing||!strokeSourceEditable(primary))return false;
  busyPanel(true);
  try{
+  if(type==='setSVGStrokeSourcePosition')RetouchSVGStrokeFidelity.check(matchingEls(primary.id)[0],primary.svgStrokeSource.model,primary.svgStrokeSource.definitionId);
   const result=await api('POST','/rt/__api/op',{type,id:primary.id,fileHash:primary.hash,...extra});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update the stroke.');if(result.unchanged)return true;
   const removed=result.removedSourceIds||[],deletedLocks=layerLocks.removeSourceIds(removed);

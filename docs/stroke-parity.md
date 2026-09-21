@@ -176,3 +176,36 @@ server-rendered markup. Tests seed a retained group through the internal planner
 they do **not** prove user-facing creation. Creation/style/instance proof,
 original paint/geometry editing, responsive semantics, duplication and export
 remain open. No desktop package was rebuilt or launched.
+
+## Existing-stroke rendered fidelity — 2026-09-21
+
+Alignment writes now compare the currently rendered retained group with a
+canonical reference in a closed shadow root in the editor document. The check
+uses the server's canonical model and definition identity. It refuses overridden
+paint, clipping, mask geometry, transforms, visible retained originals, active
+animations, changed generated geometry, duplicate rendered groups and definition
+IDs before submitting a source operation. Restore original shape remains
+available as the recovery action. Reference construction does not mutate the
+preview document.
+
+The browser checker covers all three positions and three affine transforms,
+including harmless clip-path paint CSS, with unchanged screenshot pixels. It
+also checks authored-DOM identity/mutation records and cleanup of reference
+nodes and temporary Paper scopes. The WebKit element screenshot stability wait
+timed out; capturing the same SVG bounding rectangle with page.screenshot avoids
+that actionability wait while retaining the pixel comparison.
+
+This verifies the current group, not the prospective layout after switching
+modes. CSS that starts matching newly generated nodes, ancestor/sibling :has
+rules, responsive contexts, arbitrary-page stroke creation, original paint and
+geometry editing, duplication and export still require further work. The
+browser check is an editor precondition, not an API authorization boundary.
+No desktop bundle was rebuilt or launched.
+
+Validation: 2,461 source tests passed with no skips
+(`/tmp/retouch-stroke-fidelity-full.log`); 273 fidelity cases passed in each of
+Chromium and WebKit (`/tmp/retouch-stroke-fidelity-{chromium,webkit}.log`).
+All six HTML/React/Liquid editor workflows passed, including CSS override
+refusal without source writes and subsequent normal alignment/history/state
+retention (`/tmp/retouch-stroke-fidelity-controls-{chromium,webkit}.log` and
+`/tmp/retouch-stroke-fidelity-controls-{react,liquid}-{chromium,webkit}.log`).
