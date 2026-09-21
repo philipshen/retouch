@@ -583,6 +583,7 @@ function captureInspectorSelectionTarget(el,sourceId){
   };
 }
 async function select(node,{toggle=false,sourceId,current=()=>true}={}) {
+  if(!sourceId&&node?.closest?.('[data-rt-stroke-alignment]'))node=node.closest('[data-rt-stroke-alignment]');
   stopDrawing?.();
   if(!sourceId&&node?.closest?.('[data-rt-boolean-result]'))node=node.closest('[data-rt-boolean]');
   const componentToggle=toggle&&sel?.info.kind==='instance';
@@ -744,6 +745,7 @@ function clearSelection() {
 
 /* ---------- inline text editing ---------- */
 async function startInlineEdit(node, evt, quiet, openVector=false) {
+  if(node?.closest?.('[data-rt-stroke-alignment]'))node=node.closest('[data-rt-stroke-alignment]');
   const vectorRequest=openVector?++vectorEntrySerial:null;
   const c = await classify(node);
   if(openVector&&vectorRequest!==vectorEntrySerial)return;
@@ -765,6 +767,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
     info,
   };
   if(el.hasAttribute('data-rt-group')){renderPanel();return;}
+  if(info.svgStrokeOwner){renderPanel();return;}
   if(info.svgBooleanOwner){
     if(openVector&&info.svgBooleanGroup){
       RetouchSVGBooleanGroup.revealOriginals(info);renderPanel();
@@ -2072,15 +2075,22 @@ function renderPanelContents(textEditing=false) {
   head.className = 'sec';head.dataset.strokeContext=JSON.stringify([info.id,styleScope]);head.dataset.layerTag=info.kind==='instance'?'':info.tag;
   const badge = document.createElement('span');
   badge.className = 'kindbadge' + (info.kind === 'instance' ? ' instance' : '');
-  badge.textContent = info.svgBooleanGroup?'Boolean group':sel.multiple?.length>1?sel.multiple.length+(info.kind==='instance'?' components':' layers'):info.kind === 'instance' ? info.tag : info.tag.charAt(0).toUpperCase()+info.tag.slice(1);
+  badge.textContent = info.svgStrokeSource?'Vector':info.svgBooleanGroup?'Boolean group':sel.multiple?.length>1?sel.multiple.length+(info.kind==='instance'?' components':' layers'):info.kind === 'instance' ? info.tag : info.tag.charAt(0).toUpperCase()+info.tag.slice(1);
   head.appendChild(badge);
   const file = document.createElement('div');
   file.className = 'filepath';
   file.textContent = info.file;
   head.appendChild(file);
   if(info.kind==='instance'&&sel.multiple?.length>1){panelBody.append(head,componentSelectionSection(sel.multiple));return;}
-  if(info.styleAuthoring!==false&&!info.svgBooleanOwner&&!(sel.multiple||[]).some(i=>i.svgBooleanOwner))head.appendChild(screenScopeSection());
+  if(info.styleAuthoring!==false&&!info.svgStrokeOwner&&!info.svgBooleanOwner&&!(sel.multiple||[]).some(i=>i.svgBooleanOwner||i.svgStrokeOwner))head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
+  if(info.svgStrokeOwner||(sel.multiple||[]).some(item=>item.svgStrokeOwner)){
+   const section=RetouchInspector.section('Stroke');
+   if(sel.multiple?.length>1)RetouchInspector.note(section,'Select one vector to change stroke alignment.');
+   else if(info.svgStrokeSource)mountStrokeSourceControls(section,info);
+   else{RetouchInspector.note(section,'This shape belongs to a stroke.');section.append(RetouchInspector.button('Select stroke',async()=>{await restoreLayerSelection([info.svgStrokeOwner]);if(sel)renderPanel();}));}
+   panelBody.append(section);return;
+  }
   mountLayerStyleClipboard();
   if(sel.multiple?.length>1&&info.styleAuthoring===false){const section=RetouchInspector.section('Selection');RetouchInspector.note(section,'Select one layer to edit its content.');panelBody.append(section);return;}
   if(groupMovementRoots())panelBody.append(groupMovementSection(info));
@@ -3582,6 +3592,38 @@ async function refreshSVGBooleanSelection(parentId,ids){
  if(/\.(?:html?|liquid)$/i.test(parent.element.file))await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,parentId,parent.element),matches});
  else await refreshWrittenElement(parent.element,matches);
  await restoreLayerSelection(ids);if(sel)renderPanel();await layers.refresh();
+}
+function strokeSourceEditable(info){
+ if(sel?.info.id!==info.id||sel.info.hash!==info.hash||sel.multiple?.length)return false;
+ const matches=matchingEls(info.id);return matches.length===1&&[matches[0],...matches[0].querySelectorAll('[data-rt]')].every(el=>!layerLocks.locked(el));
+}
+function mountStrokeSourceControls(section,info){
+ const I=RetouchInspector,current=()=>strokeSourceEditable(info)&&!panelTasks&&!sourceRequests&&!undoBusy&&!editing;
+ const alignment=I.select(section,'Stroke alignment',[['inside','Inside'],['center','Center'],['outside','Outside']],info.svgStrokeSource.position,async position=>{
+  if(!current()){alignment.value=info.svgStrokeSource.position;return;}
+  if(position===info.svgStrokeSource.position)return;
+  if(!await writeSVGStrokeSource('setSVGStrokeSourcePosition',{position}))alignment.value=info.svgStrokeSource.position;
+ });
+ alignment.closest('.inspector-field').querySelector('span').textContent='Align';
+ for(const option of alignment.options)option.disabled=!info.svgStrokeSource.positions.includes(option.value);
+ alignment.disabled=!strokeSourceEditable(info);
+ const weight=document.createElement('input');weight.value=info.svgStrokeSource.width;weight.disabled=true;weight.title='Restore the original shape to edit stroke weight.';I.field(section,'Stroke weight',weight).closest('.inspector-field').querySelector('span').textContent='Weight';
+ const restore=I.button('Restore original shape',()=>current()&&writeSVGStrokeSource('restoreSVGStrokeSource',{}));restore.disabled=!strokeSourceEditable(info);restore.title='Restores the original geometry and stroke settings.';section.append(restore);
+ I.note(section,'Restores the original geometry and stroke settings.');
+ if(info.svgStrokeSource.positions.length===1)I.note(section,'Inside and Outside require a closed shape with supported contours.');
+ if(!strokeSourceEditable(info))I.note(section,'Select one unlocked vector rendered once on this page.');
+}
+async function writeSVGStrokeSource(type,extra){
+ const primary=sel?.info;if(!primary?.svgStrokeSource||panelTasks||sourceRequests||undoBusy||editing||!strokeSourceEditable(primary))return false;
+ busyPanel(true);
+ try{
+  const result=await api('POST','/rt/__api/op',{type,id:primary.id,fileHash:primary.hash,...extra});
+  if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update the stroke.');if(result.unchanged)return true;
+  const removed=result.removedSourceIds||[],deletedLocks=layerLocks.removeSourceIds(removed);
+  editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:[primary.id],selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:removed,undoId:result.undoId});
+  layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,result.selectionIds);
+  toast(type==='restoreSVGStrokeSource'?'Original shape restored':'Stroke alignment updated','ok');return true;
+ }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 async function writeSVGMask(type,extra){
  const infos=sel?.multiple||[sel?.info];if(!infos[0]||panelTasks||sourceRequests||undoBusy||editing)return;const primary=sel.info,ids=infos.map(i=>i.id);busyPanel(true);

@@ -75,3 +75,6 @@ module.exports.planOp=(r,op)=>{
  if(blocked)return blocked;
  return strokes.validatePlan(r,op,'react',strokes.types.has(op.type)?strokes.plan(r,op,'react'):planAdapterOp(r,op));
 };
+
+const describeStrokeSource=module.exports.describe;
+module.exports.describe=r=>require('../svg-stroke-source.cjs').decorateDescription(describeStrokeSource(r));

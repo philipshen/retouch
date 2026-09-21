@@ -125,3 +125,6 @@ function planOp(resolved,op){return require('../svg-stroke-source.cjs').validate
 module.exports={name:'html',matches:file=>/\.html?$/i.test(file),collect,stamp,contentHash:hash,describe,planOp,
  applyOp:(resolved,op)=>require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),planOp(resolved,op)),
  capabilities:{classAttr:'class',ops:['connectPrototypeScroll','setPrototypeInteractions',...require('../svg-stroke-source.cjs').types,...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setChildren','setTag','setHref','setSrc','setResponsiveImage','setResponsiveImageSource','setResponsiveImageCandidates','setPictureSources',...structure.types]}};
+
+const describeStrokeSource=module.exports.describe;
+module.exports.describe=r=>require('../svg-stroke-source.cjs').decorateDescription(describeStrokeSource(r));

@@ -129,7 +129,9 @@ function owner(r,kind){
 }
 function describe(r,kind){
  if(!r.source?.includes(marker))return null;
- const c=context(r,kind);return c?{position:c.model.position,width:c.model.width,originalId:c.original.id,canRestore:true}:null;
+ const c=context(r,kind);if(!c)return null;
+ const positions=['inside','center','outside'].filter(position=>{try{S.normalize({...input(c.model),position});return true;}catch{return false;}});
+ return {position:c.model.position,width:c.model.width,positions,originalId:c.original.id,canRestore:true};
 }
 function guard(r,op,kind){
  if(!r.source?.includes(marker))return null;
@@ -181,3 +183,12 @@ function validatePlan(r,op,kind,planned){
  }catch{return refuse();}
 }
 Object.assign(module.exports,{types,referencedIds,owner,describe,guard,validatePlan});
+
+function decorateDescription(info){
+ if(!info.svgStrokeOwner)return info;
+ const structure={...info.structure,canCopy:false,canDuplicate:false,canReparent:false,canFrame:false,canRemoveFrame:false,canMoveBefore:false,canMoveAfter:false,canMoveFirst:false,canMoveLast:false};
+ if(info.svgStrokeOwner!==info.id)structure.canDelete=false;
+ return {...info,structure,canRename:false,canCreateComponent:false,svgGeometry:null,svgConversion:null,svgDuplication:null,svgMovement:null,svgInsertion:null,svgBooleanReplacement:null,svgMask:null,
+  svgTransform:info.svgTransform?{...info.svgTransform,editable:false,reason:'Restore the original shape before changing its geometry.'}:null};
+}
+module.exports.decorateDescription=decorateDescription;

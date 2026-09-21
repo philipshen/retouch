@@ -477,3 +477,6 @@ module.exports = {
   capabilities: { collectionSelection:true, classAttr: 'class', ops: ['connectPrototypeScroll','setPrototypeInteractions','scaleGroup','frameSelection','groupSelection','removeFrame','reparentElement','reparentSelection','duplicateSelection','deleteSelection','moveSelection',...require('../svg-stroke-source.cjs').types,...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','insertElement','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', 'setImageFill', ...structure.types] },
   _parse: parse, // exported for tests
 };
+
+const describeStrokeSource=module.exports.describe;
+module.exports.describe=r=>require('../svg-stroke-source.cjs').decorateDescription(describeStrokeSource(r));

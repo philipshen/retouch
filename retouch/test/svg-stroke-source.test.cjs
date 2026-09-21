@@ -63,7 +63,7 @@ for(const kind of ['html','react','liquid'])test(kind+' retained source covers p
  for(const [element,data,position]of cases){
   const initial=resolve(kind),source=initial.source.replace(/<rect[^>]*\/>/,element.replace('/>',' transform="translate(3 4)"/>')),r=resolve(kind,source);r.element=view(r,kind).elements.find(e=>view(r,kind).start(e)===source.indexOf(element.slice(0,element.indexOf(' '))+' '));
   const made=create(r,kind,{model:{...model,document:G.parseCompound(data),matrix:[1,0,0,1,3,4],position}});assert.ok(made.ok,made.reason);
-  const fresh=resolve(kind,made.edits[0].after,made.selectionIds[0]);assert.equal(S.plan(fresh,{type:'restoreSVGStrokeSource',fileHash:fresh.hash},kind).edits[0].after,source);
+  const fresh=resolve(kind,made.edits[0].after,made.selectionIds[0]);assert.deepEqual(S.describe(fresh,kind).positions,position==='center'?['center']:['inside','center','outside']);assert.equal(S.plan(fresh,{type:'restoreSVGStrokeSource',fileHash:fresh.hash},kind).edits[0].after,source);
   if(position==='center')assert.equal(S.plan(fresh,{type:'setSVGStrokeSourcePosition',fileHash:fresh.hash,position:'inside'},kind).refused,true);
  }
  const initial=resolve(kind),duplicate=resolve(kind,initial.source.replace('width="60"','width="60" width="90"'));assert.equal(create(duplicate,kind).refused,true);
@@ -75,7 +75,7 @@ for(const kind of ['html','react','liquid'])test(kind+' retained source covers p
 });
 for(const kind of ['html','react','liquid'])test(kind+' adapter guards retain stroke originals across direct, selection, destination and ancestor edits',()=>{
  const adapter=require('../src/adapters/'+kind+'.cjs'),initial=resolve(kind),made=create(initial,kind),r=resolve(kind,made.edits[0].after,made.selectionIds[0]),v=view(r,kind),c=S.context(r,kind);
- const description=adapter.describe(r);assert.equal(description.svgStrokeSource.position,'inside');assert.equal(description.svgStrokeOwner,r.element.id);
+ const description=adapter.describe(r);assert.equal(description.svgStrokeSource.position,'inside');assert.equal(description.svgStrokeOwner,r.element.id);assert.equal(description.svgTransform.editable,false);assert.equal(description.svgGeometry,null);assert.equal(description.structure.canDuplicate,false);
  const change=adapter.planOp(r,{type:'setSVGStrokeSourcePosition',fileHash:r.hash,position:'outside'});assert.ok(change.ok,change.reason);
  assert.equal(adapter.planOp(r,{type:'restoreSVGStrokeSource',fileHash:r.hash}).edits[0].after,initial.source);
  assert.equal(adapter.capabilities.ops.includes('createSVGStrokeSource'),false);

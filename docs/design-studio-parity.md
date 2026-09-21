@@ -28699,3 +28699,19 @@ Earlier installation timeout/idle socket failures are recorded in
 retries. All six adapter-output browser runs passed 684 pixel checks each:
 `/tmp/retouch-stroke-guards-{html,react,liquid}-{chromium,webkit}.log`.
 Desktop package unchanged. Full Figma/any-site/distribution goal remains open.
+
+### 2026-09-21 — retained-stroke inspector controls
+
+Existing canonical strokes now expose Inside/Center/Outside and Restore original
+shape through the normal light inspector, source history and render sync. Layers
+retain their original labels as one logical vector; generated children and
+unsupported geometry controls are hidden. Locks and repeated instances disable
+editing. Stroke weight remains read-only; arbitrary-page creation remains open.
+
+Fresh source suite: 2,461 passed (`/tmp/retouch-stroke-inspector-full.log`). Six
+complete HTML/Next React/Liquid inspector workflows passed in Chromium/WebKit,
+including source/pixel/history/state/lock/selection checks and a smaller window:
+`/tmp/retouch-stroke-controls-{html,react,liquid}-{chromium,webkit}-final.log`.
+Inspected screenshot: `/tmp/retouch-stroke-controls-chromium.png`. See
+`stroke-parity.md` for fixture/readiness details and remaining scope. Desktop
+package unchanged; full Figma parity and any-site behavior remain unproven.

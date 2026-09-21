@@ -139,3 +139,40 @@ Remaining: browser creation/style and repeated-instance proof, inspector control
 original geometry/paint editing, duplication identity remapping, export and
 responsive behavior. This is not full stroke parity or any-site verification.
 No desktop bundle was rebuilt or launched.
+
+## Existing-stroke inspector controls — 2026-09-21
+
+Canonical retained strokes now have a light-theme Stroke inspector with an
+Inside/Center/Outside selector and Restore original shape action. The width is
+shown read-only until original paint editing is implemented. The server reports
+which positions the geometry supports, so open/unsupported contours cannot offer
+an invalid alignment choice. Source operations use the normal structural history
+and render synchronization paths.
+
+The layer list shows the original shape's label as one logical vector, omitting
+hidden originals and generated paths. Canvas clicks/double-clicks select that
+vector, rather than entering generated geometry. Owned geometry, transform,
+duplication and movement capabilities no longer advertise unsupported edits.
+Locked groups/descendants and repeated rendered source identities disable the
+controls; a multiple selection asks for one vector. Restoration is explicit and
+undoable, with a tooltip explaining that it restores original stroke settings.
+
+Fresh evidence:
+- All 2,461 source tests passed: `/tmp/retouch-stroke-inspector-full.log`.
+- Six complete inspector workflows passed: HTML, Next.js React and Liquid in
+  Chromium and WebKit. Coverage includes logical layer selection, double-click,
+  absent resize handles, locks, repeated-instance refusal, a smaller window,
+  all three alignment modes with pixels, exact change/restore undo/redo and
+  retained input drafts/preview document identity.
+- Logs: `/tmp/retouch-stroke-controls-{html,react,liquid}-{chromium,webkit}-final.log`.
+- Light inspector screenshot inspected: `/tmp/retouch-stroke-controls-chromium.png`.
+
+React verification uses `/private/tmp/retouch-react-insertion-typed.kLGibf` for
+Next/React and separate existing browser fixtures. The browser-only fixture does
+not include Next. A cold page is explicitly rendered before UI checks; successful
+final React builds took about 24/29 seconds. Earlier fixture/startup failures did
+not establish a UI failure. The final runs exercised actual Next HMR, not just
+server-rendered markup. Tests seed a retained group through the internal planner;
+they do **not** prove user-facing creation. Creation/style/instance proof,
+original paint/geometry editing, responsive semantics, duplication and export
+remain open. No desktop package was rebuilt or launched.

@@ -9,6 +9,7 @@
     }).join('');
   }
   function label(el, textLayer=false) {
+    if(el.hasAttribute('data-rt-stroke-alignment')){const original=el.querySelector(':scope > [data-rt-stroke-original] > *');if(original)return label(original,textLayer);}
     const tag=el.tagName.toLowerCase();
     const name=el.getAttribute('data-rt-layer-name') || el.getAttribute('data-rt-name') || el.getAttribute('aria-label') || el.getAttribute('alt') || el.id ||
       (textLayer?textLabel(el):[...el.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join(' ')).trim().replace(/\s+/g,' ');
@@ -57,6 +58,7 @@
     const roots=[],map=new Map();
     for(const el of d.querySelectorAll('[data-rt], [data-rt-i]')) {
       if(['SCRIPT','STYLE','TEMPLATE','HEAD','META','LINK'].includes(el.tagName))continue;
+      if(el.parentElement?.closest('[data-rt-stroke-alignment]'))continue;
       let parent=el.parentElement;while(parent&&!map.has(parent))parent=parent.parentElement;
       if(el.closest?.('[data-rt-boolean-result]')?.parentElement?.hasAttribute('data-rt-boolean'))continue;
       if(el.hasAttribute('data-rt-boolean-operands')&&el.parentElement?.hasAttribute('data-rt-boolean')&&parent){map.set(el,map.get(parent));continue;}
