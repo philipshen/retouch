@@ -308,3 +308,42 @@ requires both `RT_E2E_SVG_COLORS=1` and `RT_E2E_SVG_STROKES=1`. The light settin
 popover screenshot was inspected at
 `/tmp/retouch-stroke-settings-html-webkit.png`. No desktop build or launch was
 performed in this checkpoint.
+
+## Internal creation paint snapshot — 2026-09-21
+
+`svg-stroke-source.creation` now supplies an internal literal-source contract
+(tag, exact geometry attributes, canonical path, matrix, parent and source ID).
+It rejects retained/boolean-owned children and does not advertise a public
+creation capability. The browser `svg-stroke-snapshot.js` captures a normalized
+center-stroke model from the connected shape's resolved CSS without adding or
+changing preview nodes.
+
+Capture verifies source geometry/transform against the DOM, refuses repeated
+IDs in the current DOM root and active shape animations, and resolves inherited
+paint/currentColor/CSS variables, opacity, caps, joins, miter, dash values and
+stroke weight. Percentage lengths use the normalized diagonal of the nearest
+SVG viewport in user units. Open lines/polylines remain open. Unsupported
+filters, clipping/masks, markers, non-scaling strokes, stroke-first paint order,
+paint references and CSS-altered/unresolved geometry are explicitly refused.
+These are remaining implementation gaps, not the intended final parity scope.
+
+Both Chromium and WebKit passed 200 snapshot checks and compared 192,000 pixels
+per browser across eight primitive/path shapes with literal and percentage
+strokes. Each case compares an original rendered shape with center output made
+through the actual internal source planner. The image tolerance permits fewer
+than 1% of each image's pixels to differ by more than 16 channel levels; it is
+not an exact-byte image equivalence claim. Geometry mutation, CSS geometry,
+animations, transforms, paint/effect overrides and repeated identities are
+checked. Snapshot capture produces no authored-DOM mutation records and leaks
+no Paper scopes. Logs: `/tmp/retouch-stroke-snapshot-{chromium,webkit}.log`.
+
+This module is not yet loaded by the editor or a public creation endpoint.
+Prospective generated CSS, wrapping effects on ancestors/siblings, identity
+checks across separate DOM roots, and repeated component instances remain
+unproved. Full arbitrary-page creation is still unfinished. No desktop build or
+launch was performed.
+
+All 2,470 source tests passed with no skips in 61.38 seconds
+(`/tmp/retouch-stroke-snapshot-full.log`), including the internal creation
+contract for HTML, React and Liquid. Browser checks used the temporary
+slow-host timeout wrapper described above; no checks were bypassed.

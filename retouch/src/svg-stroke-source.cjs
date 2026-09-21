@@ -37,7 +37,7 @@ function shape(r,kind,v=view(r,kind)){
  }else path=require('./svg-convert.cjs').pathFor(tag,geometry.fields);
  const document=G.parseCompound(path);if(!document)throw Error('The original shape geometry could not be retained.');
  const matrix=A.parse(v.attr(e,'transform'));if(!matrix)throw Error('Resolve the original shape transform.');
- return {path:G.serializeCompound(document),matrix,parentId};
+ return {path:G.serializeCompound(document),matrix,parentId,tag,fields:geometry.fields.map(({name,value})=>({name,value}))};
 }
 function markup(original,model,id,kind){
  const normalized=S.normalize(input(model));
@@ -119,7 +119,16 @@ function plan(r,op,kind){
   return {ok:true,structural:true,hash:v.adapter.contentHash(after),parentId,selectionIds:[selected.id],sourceIdMap:[...mapping].filter(([a,b])=>a!==b),removedSourceIds:removed,edits:[{file:r.file,before:r.source,after}]};
  }catch(error){return refuse(error.message);}
 }
-module.exports={plan,context};
+// An internal source contract for the browser's resolved-paint snapshot. This
+// does not advertise or authorize creation before prospective fidelity proof.
+function creation(r,kind){
+ try{
+  const v=view(r,kind),geometry=shape(r,kind,v);
+  for(let id=r.element.id;id;id=v.parents.get(id)){const e=v.elements.find(e=>e.id===id);if(v.attr(e,marker)!==undefined||v.attr(e,'data-rt-boolean')!==undefined)return null;}
+  return {id:r.element.id,...geometry};
+ }catch{return null;}
+}
+module.exports={plan,context,creation};
 
 // Creation remains internal until the browser can prove style/instance fidelity.
 // Existing retained groups can change alignment/weight or restore original source.

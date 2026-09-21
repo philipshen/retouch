@@ -150,3 +150,10 @@ for(const kind of ['html','react','liquid'])test(kind+' retained stroke settings
   assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceStyle',fileHash:'stale',property:'linecap',value:'round'}).refused,true);
  }
 });
+
+for(const kind of ['html','react','liquid'])test(kind+' internal stroke creation snapshot identifies literal source and never advertises creation',()=>{
+ const initial=resolve(kind),candidate=S.creation(initial,kind);assert.equal(candidate.id,initial.element.id);assert.equal(candidate.tag,'rect');assert.equal(candidate.path,G.serializeCompound(model.document));assert.deepEqual(candidate.matrix,[1,0,0,1,0,0]);assert.ok(candidate.fields.some(field=>field.name==='width'&&field.value==='60'));
+ assert.equal(require('../src/adapters/'+kind+'.cjs').capabilities.ops.includes('createSVGStrokeSource'),false);
+ const made=create(initial,kind),retained=resolve(kind,made.edits[0].after,made.selectionIds[0]),c=S.context(retained,kind);assert.equal(S.creation({...retained,element:c.original},kind),null);assert.equal(S.creation(retained,kind),null);
+ for(const attribute of ['class="styled"','id="referenced"','onclick="changed()"'])assert.equal(S.creation(resolve(kind,initial.source.replace('<rect ','<rect '+attribute+' ')),kind),null);
+});
