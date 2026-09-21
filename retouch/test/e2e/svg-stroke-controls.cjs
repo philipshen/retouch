@@ -55,6 +55,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,reactFixture=process.env.RT_REACT
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===after);
 
   }
+  await require('./svg-retained-stroke-settings.cjs')({page,app,read,settled,wait});
   // One history entry per label gesture; Escape restores the DOM and source.
   const scrub=page.getByLabel('Stroke weight',{exact:true}),label=scrub.locator('..').locator('span'),box=await label.boundingBox(),saved=read(),beforeDOM=await app.locator('[data-rt-stroke-alignment]').innerHTML();
   const drag=async()=>{await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+4,box.y+box.height/2,{steps:4});};

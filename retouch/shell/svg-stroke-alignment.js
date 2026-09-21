@@ -34,7 +34,7 @@
   const linecap=input.linecap??'butt',linejoin=input.linejoin??'miter',miterlimit=input.miterlimit??4;
   if(!['butt','round','square'].includes(linecap)||!['miter','round','bevel'].includes(linejoin)||!Number.isFinite(miterlimit)||miterlimit<1||miterlimit>1000)throw Error('Choose supported stroke caps, joins and miter limit.');
   const dasharray=input.dasharray??'none',dashoffset=input.dashoffset??0;
-  if(!V.valid('stroke-dasharray',dasharray)||typeof dasharray!=='string'||dasharray.includes('%')||!Number.isFinite(dashoffset)||Math.abs(dashoffset)>100000)throw Error('Choose literal source-unit dashes and offset.');
+  if(!V.valid('stroke-dasharray',dasharray)||typeof dasharray!=='string'||dasharray!=='none'&&!dasharray.trim().split(/[\s,]+/).every(value=>/^(?:\d+\.?\d*|\.\d+)(?:px)?$/.test(value))||!Number.isFinite(dashoffset)||Math.abs(dashoffset)>100000)throw Error('Choose literal source-unit dashes and offset.');
   const opacity=input.opacity??1,fillOpacity=input.fillOpacity??1,strokeOpacity=input.strokeOpacity??1;
   if(![opacity,fillOpacity,strokeOpacity].every(n=>Number.isFinite(n)&&n>=0&&n<=1))throw Error('Choose opacity between zero and one.');
   const boxes=input.document.subpaths.map(part=>G.bounds(part.nodes,part.closed));if(boxes.some(box=>!box))throw Error('The path bounds could not be measured.');

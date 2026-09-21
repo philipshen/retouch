@@ -16,7 +16,7 @@ test('stroke alignment preserves literal dash and opacity settings',()=>{
  for(const text of ['stroke-dasharray="4 2 1 2"','stroke-dashoffset="-3"','opacity="0.5"','fill-opacity="0.25"','stroke-opacity="0.75"','stroke-linecap="round"','stroke-linejoin="bevel"'])assert.ok(output.includes(text));
 });
 test('stroke alignment rejects unsupported geometry and unresolved paints without mutating input',()=>{
- for(const change of [{position:'bad'},{width:-1},{width:Infinity},{matrix:[1,0,0,0,0,0]},{fillRule:'bad'},{stroke:'url(#gradient)'},{fill:'var(--paint)'},{dasharray:'10%'},{miterlimit:0},{opacity:2},{document:G.parseCompound('M0 0L10 10'),position:'inside'}]){const input={document,...change},before=JSON.stringify(input);assert.throws(()=>S.render(input,id));assert.equal(JSON.stringify(input),before);}
+ for(const change of [{position:'bad'},{width:-1},{width:Infinity},{matrix:[1,0,0,0,0,0]},{fillRule:'bad'},{stroke:'url(#gradient)'},{fill:'var(--paint)'},{dasharray:'10%'},{dasharray:'var(--dash)'},{dasharray:'inherit'},{dasharray:'calc(1 + 2)'},{miterlimit:0},{opacity:2},{document:G.parseCompound('M0 0L10 10'),position:'inside'}]){const input={document,...change},before=JSON.stringify(input);assert.throws(()=>S.render(input,id));assert.equal(JSON.stringify(input),before);}
  assert.throws(()=>S.render({document},'bad"id'));assert.doesNotThrow(()=>S.render({document:G.parseCompound('M0 0L10 10'),position:'center'},id));
 });
 

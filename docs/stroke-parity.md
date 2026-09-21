@@ -258,3 +258,53 @@ undo/redo and retained drafts/document identity. Logs:
 `/tmp/retouch-stroke-weight-controls-html-chromium.log` and
 `/tmp/retouch-stroke-weight-controls-{html,react,liquid}-{chromium,webkit}-final.log`
 (the HTML Chromium result uses the first path).
+
+## Retained-stroke advanced settings — 2026-09-21
+
+Retained strokes now reuse the existing advanced Stroke settings popover beside
+Weight: cap/join icon controls, Solid/Dashed/Custom pattern selection, Dash and
+Gap fields, custom literal dash lists, miter limit and dash offset. Source edits
+change only the selected model property, preserving geometry, paint, original
+bytes and definition identity. They use the same guarded transactions and exact
+undo/redo path as weight/alignment. Miter and offset support grouped numeric
+previews; outside miter previews also update mask bounds.
+
+The renderer now explicitly rejects unresolved dash variables and inherited
+values, which the general CSS validator previously accepted. Retained dash
+lengths use literal SVG source units (optional px); percentages are refused.
+The general numeric expression handler respects already-handled arrow keys so
+it cannot increment a live-preview field a second time.
+
+The existing ordinary-SVG settings test is preserved, with its outside-click
+check targeting the Design tab explicitly so it cannot switch to Prototype. The new retained
+workflow is `retouch/test/e2e/svg-retained-stroke-settings.cjs`, called by the
+retained-stroke editor workflow. A dash pixel comparison explicitly uses butt
+caps: square caps can legitimately fill small gaps when stroke weight is larger
+than the gap, so that case must not be mistaken for broken dash rendering.
+
+All 2,467 source tests passed (`/tmp/retouch-stroke-settings-full.log`). Each
+browser passed 390 rendered-fidelity/preview checks
+(`/tmp/retouch-stroke-settings-fidelity-{chromium,webkit}.log`). General arbitrary
+page creation, prospective CSS fidelity, variable widths, multiple paints,
+responsive semantics and desktop packaging remain open; this is not full stroke
+or Figma parity.
+
+All six retained-stroke editor workflows passed, with keyboard undo/redo for
+all 13 advanced-setting changes and toolbar history for weight/alignment.
+HTML/WebKit passed at the normal action timeout
+(`/tmp/retouch-stroke-settings-controls-html-webkit-keyboard.log`); the remaining
+five used a temporary runner that only sets Playwright's action timeout to
+900,000 ms, with the existing initial React render timeout set to the same
+value. No assertions or user interactions were bypassed. These isolated runs
+used process-scoped `caffeinate -di`; no global power settings were changed.
+Logs: `/tmp/retouch-stroke-settings-controls-{html,react,liquid}-{chromium,webkit}-slow-host.log`
+(except HTML/WebKit, whose path is above). Earlier short-timeout runs stopped
+at varying click/keypress or cold Next compilation stages.
+
+The ordinary-SVG settings workflow also passed on Chromium, including scoped
+values, screen fallback, reset and exact history:
+`/tmp/retouch-stroke-settings-existing-chromium-slow-host.log`. Its fixture
+requires both `RT_E2E_SVG_COLORS=1` and `RT_E2E_SVG_STROKES=1`. The light settings
+popover screenshot was inspected at
+`/tmp/retouch-stroke-settings-html-webkit.png`. No desktop build or launch was
+performed in this checkpoint.

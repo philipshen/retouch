@@ -136,3 +136,17 @@ for(const kind of ['html','react','liquid'])test(kind+' retained stroke weight c
   assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceWidth',fileHash:'stale',width:12}).refused,true);
  }
 });
+
+for(const kind of ['html','react','liquid'])test(kind+' retained stroke settings isolate changes, validate values and restore original bytes',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),initial=resolve(kind),values={linecap:['butt','round','square'],linejoin:['miter','round','bevel'],miterlimit:[1,2.5,1000],dasharray:['none','4 8','1, 2, 3','0 0','2px 4px'],dashoffset:[-100000,-.25,0,100000]};
+ for(const position of ['inside','center','outside']){
+  const made=create(initial,kind,{model:{...model,position}}),r=resolve(kind,made.edits[0].after,made.selectionIds[0]),before=S.context(r,kind);assert.ok(adapter.capabilities.ops.includes('setSVGStrokeSourceStyle'));
+  for(const [property,list]of Object.entries(values))for(const value of list){
+   const op={type:'setSVGStrokeSourceStyle',fileHash:r.hash,property,value},changed=adapter.planOp(r,op);assert.ok(changed.ok,changed.reason);if(value===before.model[property]){assert.equal(changed.unchanged,true);continue;}
+   const next=resolve(kind,changed.edits[0].after,changed.selectionIds[0]),after=S.context(next,kind);assert.equal(after.source,before.source);assert.equal(after.id,before.id);assert.equal(after.model[property],value);for(const key of Object.keys(before.model))if(![property,'bounds'].includes(key))assert.deepEqual(after.model[key],before.model[key]);assert.equal(adapter.planOp(next,{type:'restoreSVGStrokeSource',fileHash:next.hash}).edits[0].after,initial.source);
+   assert.equal(S.validatePlan(r,op,kind,changed),changed);
+  }
+  for(const [property,value]of [['fill','green'],['position','outside'],['path','M0 0L1 1'],['__proto__',{}],['linecap','triangle'],['linejoin','arcs'],['miterlimit',0],['miterlimit','2'],['miterlimit',1001],['dasharray','1% 2%'],['dasharray','-1 2'],['dasharray','var(--dash)'],['dasharray','1,,2'],['dashoffset','1'],['dashoffset',100001],['dashoffset',NaN],['dashoffset',Infinity],['linecap',null],['dasharray',undefined]])assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceStyle',fileHash:r.hash,property,value}).refused,true,property+'='+value);
+  assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceStyle',fileHash:'stale',property:'linecap',value:'round'}).refused,true);
+ }
+});

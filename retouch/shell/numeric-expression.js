@@ -38,7 +38,7 @@
   };
   input.addEventListener('change',event=>{held=false;if(input.disabled||input.value===initial)return;if(!normalize())event.stopImmediatePropagation();},true);
   if(numeric){
-   input.addEventListener('keydown',event=>{if(event.isComposing||event.ctrlKey||event.metaKey||event.altKey||!['ArrowUp','ArrowDown'].includes(event.key))return;try{const result=parse();if(!result)return;event.preventDefault();event.stopPropagation();held=true;result.value=Math.max(min,Math.min(max,result.value+(event.key==='ArrowUp'?1:-1)*(event.shiftKey?10:1)));input.value=format(result);input.dispatchEvent(new Event('input',{bubbles:true}));}catch{};});
+   input.addEventListener('keydown',event=>{if(event.defaultPrevented||event.isComposing||event.ctrlKey||event.metaKey||event.altKey||!['ArrowUp','ArrowDown'].includes(event.key))return;try{const result=parse();if(!result)return;event.preventDefault();event.stopPropagation();held=true;result.value=Math.max(min,Math.min(max,result.value+(event.key==='ArrowUp'?1:-1)*(event.shiftKey?10:1)));input.value=format(result);input.dispatchEvent(new Event('input',{bubbles:true}));}catch{};});
    const finish=queue=>{if(!held)return;held=false;if(queue)root.RetouchPanelFocus?.queue(input);input.dispatchEvent(new Event('change',{bubbles:true}));};
    input.addEventListener('keyup',event=>{if(['ArrowUp','ArrowDown'].includes(event.key))finish(true);});
    input.addEventListener('keydown',event=>{if(event.key==='Escape')held=false;});input.addEventListener('blur',()=>finish(false));

@@ -26,6 +26,11 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,engine=process.env.RT_E2E_BROWSER
   await page.evaluate(()=>strokePreview.restore());assert.equal(await frame.locator('[data-rt-stroke-alignment]').innerHTML(),beforePreview);assert.equal(await page.evaluate(()=>{const nodes=[...document.querySelector('iframe').contentDocument.querySelector('[data-rt-stroke-alignment]').querySelectorAll('*')];return nodes.every((el,i)=>el===strokePreviewNodes[i]);}),true);await run(model);
   // A concurrent external attribute change survives cancellation.
   await page.evaluate(({model,id})=>{const group=document.querySelector('iframe').contentDocument.querySelector('[data-rt-stroke-alignment]');window.strokePreview=RetouchSVGStrokeFidelity.previewWeight(group,model,id);strokePreview.update(12);const path=[...group.children[1].children].filter(el=>el.localName==='path').at(-1);path.setAttribute('stroke-width','999');},{model,id});assert.equal(await page.evaluate(()=>strokePreview.current()),false);await page.evaluate(()=>strokePreview.restore());assert.equal(await frame.locator('[data-rt-stroke-alignment] > g:last-child > path').last().getAttribute('stroke-width'),'999');await frame.locator('[data-rt-stroke-alignment]').evaluate((el,html)=>el.innerHTML=html,beforePreview);await run(model);
+  for(const [property,values]of [['miterlimit',[1,2.5,8]],['dashoffset',[-12.5,0,12.5]]]){
+   await page.evaluate(({model,id,property})=>{const group=document.querySelector('iframe').contentDocument.querySelector('[data-rt-stroke-alignment]');window.strokePreview=RetouchSVGStrokeFidelity.previewProperty(group,model,id,property);},{model,id,property});
+   for(const value of values){await page.evaluate(value=>strokePreview.update(value),value);await run({...model,[property]:value});}
+   await page.evaluate(()=>strokePreview.restore());assert.equal(await frame.locator('[data-rt-stroke-alignment]').innerHTML(),beforePreview);await run(model);
+  }
   const image=await snapshot();
   const harmless=await frame.addStyleTag({content:'body{font-family:serif;color:orange} clipPath path{fill:lime;stroke:orange;stroke-width:100}'});await run(model);assert.deepEqual(await snapshot(),image);await harmless.evaluate(el=>el.remove());
   const cases=[

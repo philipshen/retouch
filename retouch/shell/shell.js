@@ -3617,6 +3617,23 @@ function mountStrokeSourceControls(section,info){
   return {...preview,current:()=>current()&&preview.current()};
  };
  weight.retouchNumericHandle(weight,{canvas:true,keyboardOnly:true,keys:['ArrowDown','ArrowUp']});
+ const strokeModel=info.svgStrokeSource.model;
+ const saveSetting=async(property,value,input)=>{
+  if(!current()||value===strokeModel[property]){input.value=strokeModel[property];return;}
+  if(!await writeSVGStrokeSource('setSVGStrokeSourceStyle',{property,value}))input.value=strokeModel[property];
+ };
+ for(const [property,label,choices]of [['linecap','SVG line ends',[['butt','No caps'],['round','Round'],['square','Square']]],['linejoin','SVG line joins',[['miter','Miter'],['round','Round'],['bevel','Bevel']]]]){
+  const input=I.select(section,label,choices,strokeModel[property],value=>saveSetting(property,value,input));input.disabled=!strokeSourceEditable(info);
+ }
+ for(const [property,label,min,max]of [['miterlimit','SVG miter limit',1,1000],['dashoffset','SVG dash offset',-100000,100000]]){
+  const input=I.number(section,label,strokeModel[property],min,max,value=>saveSetting(property,value,input));input.value=strokeModel[property];input.disabled=!strokeSourceEditable(info);I.fieldDraft(input);
+  input.retouchNumericPreview=()=>{
+   if(!current())throw Error('Select one unlocked vector rendered once on this page.');
+   const preview=RetouchSVGStrokeFidelity.previewProperty(matchingEls(info.id)[0],strokeModel,info.svgStrokeSource.definitionId,property);
+   return {...preview,current:()=>current()&&preview.current()};
+  };input.retouchNumericHandle(input,{canvas:true,keyboardOnly:true,keys:['ArrowDown','ArrowUp']});
+ }
+ const dashes=document.createElement('input');dashes.type='text';dashes.dataset.sourceUnits='true';dashes.value=strokeModel.dasharray;dashes.disabled=!strokeSourceEditable(info);dashes.title='Dash and gap lengths in SVG source units, separated by spaces or commas; none gives a solid stroke.';dashes.oninput=()=>dashes.setCustomValidity('');dashes.onchange=()=>saveSetting('dasharray',dashes.value.trim(),dashes);I.field(section,'SVG dash pattern',dashes);I.fieldDraft(dashes);
  const restore=I.button('Restore original shape',()=>current()&&writeSVGStrokeSource('restoreSVGStrokeSource',{}));restore.disabled=!strokeSourceEditable(info);restore.title='Restores the original geometry and stroke settings.';section.append(restore);
  I.note(section,'Restores the original geometry and stroke settings.');
  if(info.svgStrokeSource.positions.length===1)I.note(section,'Inside and Outside require a closed shape with supported contours.');
@@ -3632,7 +3649,7 @@ async function writeSVGStrokeSource(type,extra){
   const removed=result.removedSourceIds||[],deletedLocks=layerLocks.removeSourceIds(removed);
   editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:[primary.id],selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:removed,undoId:result.undoId});
   layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,result.selectionIds);
-  toast(type==='restoreSVGStrokeSource'?'Original shape restored':type==='setSVGStrokeSourceWidth'?'Stroke weight updated':'Stroke alignment updated','ok');return true;
+  toast(type==='restoreSVGStrokeSource'?'Original shape restored':type==='setSVGStrokeSourceWidth'?'Stroke weight updated':type==='setSVGStrokeSourceStyle'?'Stroke settings updated':'Stroke alignment updated','ok');return true;
  }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 async function writeSVGMask(type,extra){

@@ -88,7 +88,11 @@ function plan(r,op,kind){
     if(!Number.isFinite(op.width)||op.width<0||op.width>10000)throw Error('Choose a stroke width between 0 and 10,000 source units.');
     model=S.normalize({...input(model),width:op.width});
    }
-   else throw Error('Choose create, change alignment or weight, or restore original stroke.');
+   else if(op.type==='setSVGStrokeSourceStyle'){
+    if(!['linecap','linejoin','miterlimit','dasharray','dashoffset'].includes(op.property)||op.value===null||op.value===undefined)throw Error('Choose a supported stroke setting and value.');
+    model=S.normalize({...input(model),[op.property]:op.value});
+   }
+   else throw Error('Choose a supported retained stroke edit.');
   }
   if(replacement===undefined){const rendered=markup(original,model,id,kind);replacement=rendered.text;originalOffset=rendered.originalOffset;}
   const after=r.source.slice(0,start)+replacement+r.source.slice(end);
@@ -119,7 +123,7 @@ module.exports={plan,context};
 
 // Creation remains internal until the browser can prove style/instance fidelity.
 // Existing retained groups can change alignment/weight or restore original source.
-const types=new Set(['setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','restoreSVGStrokeSource']);
+const types=new Set(['setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','setSVGStrokeSourceStyle','restoreSVGStrokeSource']);
 const deletionTypes=new Set(['deleteElement','deleteSelection','deleteComponent','deleteComponentSelection']);
 function referencedIds(op){
  const ids=new Set();
