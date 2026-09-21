@@ -13,7 +13,8 @@
  }
  function matches(el,selectors){try{return selectors.map(selector=>el.matches(selector)?'1':'0').join('');}catch{throw Error('A page CSS selector cannot be inspected before wrapping this stroke.');}}
  function state(el,selectors){const box=el.getBoundingClientRect();return {el,matches:matches(el,selectors),css:style(el),before:style(el,'::before'),after:style(el,'::after'),box:[box.x,box.y,box.width,box.height]};}
- function unchanged(before,selectors){const next=state(before.el,selectors);return before.el.isConnected&&['matches','css','before','after'].every(key=>before[key]===next[key])&&before.box.every((value,i)=>Math.abs(value-next.box[i])<.01);}
+ function equivalent(before,next){return ['matches','css','before','after'].every(key=>before[key]===next[key])&&before.box.every((value,i)=>Math.abs(value-next.box[i])<.01);}
+ function unchanged(before,selectors){return before.el.isConnected&&equivalent(before,state(before.el,selectors));}
  function prepare(el,candidate,position,id){
   if(typeof id!=='string'||!/^rt-stroke-[a-f0-9]{16}$/.test(id))throw Error('Choose a valid stroke definition identity.');
   const tree=el.getRootNode();if(tree.querySelector('[id="'+id+'"],[data-rt-stroke-id="'+id+'"]'))throw Error('Choose an unused stroke definition identity.');
@@ -34,5 +35,5 @@
    group.remove();
   }
  }
- const api={prepare};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGStrokeProbe=api;
+ const api={prepare,selectors,state,equivalent};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGStrokeProbe=api;
 })(typeof window==='object'?window:globalThis);

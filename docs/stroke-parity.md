@@ -386,3 +386,37 @@ async source writes and large-page performance remain unverified. The module
 is not loaded by the editor and arbitrary-page creation is still not exposed.
 An isolated or committed-preview lifecycle is needed before calling this safe
 for general pages. No desktop package was rebuilt or launched.
+
+## Internal isolated wrapper preview — 2026-09-22
+
+`svg-stroke-isolation.js` runs the proposed-wrapper probe in a temporary,
+script-disabled iframe in the editor document. A constant CSP blocks resource
+loads before importing page markup. It preserves standards/quirks mode, copies
+readable stylesheets and form/scroll state, then compares computed styles,
+selector matches, pseudo styles, element bounds, rendered text ranges and the
+selected stroke snapshot before testing the wrapper. The authored document is
+not temporarily wrapped. The iframe is removed on acceptance and refusal.
+
+Before returning, the check verifies the authored markup, element identities,
+styles, form state, text layout, stylesheet text, viewport and animation state
+again. Authored attribute and CSSOM edits during asynchronous setup are
+preserved and cause refusal. Unreadable CSSOM, nested CSS selectors, nested
+documents, detected shadow/custom content and unfinished animations are
+conservatively refused.
+
+Chromium and WebKit each passed 366 checks across standards/quirks modes,
+three transforms and all three alignments. Checks cover generated and
+surrounding CSS effects, exact source definition identity, zero authored DOM
+mutation records, unchanged focus/drafts, no repeated authored scripts or
+event handlers, no extra intercepted resource requests, and iframe/Paper
+cleanup. Logs: `/tmp/retouch-stroke-isolation-{chromium,webkit}-final.log`.
+The source suite passed all 2,473 tests with no skips in 362.90 seconds
+(`/tmp/retouch-stroke-isolation-full.log`). Browser runs used the temporary
+slow-host action-timeout wrapper; assertions were not bypassed.
+
+This remains internal and is not loaded by the editor. Resource-backed
+layouts, relative CSS URLs, fonts, stylesheet import/layer semantics, closed
+shadow roots and large-page performance need further proof. Baseline mismatch
+causes refusal; the tested fixtures do not establish arbitrary-page fidelity.
+The later check-to-source-commit race and public creation lifecycle remain
+unfinished. No desktop package was rebuilt or launched.
