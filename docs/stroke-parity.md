@@ -209,3 +209,52 @@ All six HTML/React/Liquid editor workflows passed, including CSS override
 refusal without source writes and subsequent normal alignment/history/state
 retention (`/tmp/retouch-stroke-fidelity-controls-{chromium,webkit}.log` and
 `/tmp/retouch-stroke-fidelity-controls-{react,liquid}-{chromium,webkit}.log`).
+
+## Editable retained-stroke weight — 2026-09-21
+
+The light Stroke inspector now edits Weight in SVG source units, for Inside,
+Center and Outside. The source operation validates a finite width from 0 to
+10,000 and regenerates the canonical stroke/mask bounds while retaining the
+original shape bytes, geometry, paint, alignment and definition identity.
+Zero and fractional widths are supported. Restore original shape intentionally
+restores the original authored stroke settings, including its original weight.
+
+Typing commits through the shared field controls. Label/Option dragging and
+held Up/Down keys preview the generated stroke without replacing DOM nodes.
+A gesture commits once on release; Escape restores the prior attributes without
+a source write. Outside-stroke previews update mask bounds as well as the stroke
+width. Cancellation only restores attributes still owned by the preview, so it
+does not overwrite a concurrent external attribute change. Locked/repeated
+instances remain disabled, and writes use the rendered-fidelity precondition.
+
+The shared numeric-handle helper gained opt-in keyboard-only registration and
+custom key ordering; existing canvas handles keep their original default keys.
+Source and HTTP tests cover valid/invalid/stale edits and exact history across
+all three adapters. Browser coverage includes pixels for all alignments, label
+and held-key grouping/cancellation, retained input/document state, locks and
+CSS-override refusal. Preview tests also cover zero/fractional weights, all
+three affine transforms, node identity and external-change cancellation.
+
+This does not enable arbitrary-page creation or establish prospective CSS
+fidelity. Original geometry/paint editing, variable-width strokes, multiple
+paints, responsive semantics, duplication/export and desktop packaging remain
+unfinished.
+
+Validation notes: all 2,464 source tests passed on the final implementation
+(`/tmp/retouch-stroke-weight-full-keyboard.log`). An earlier run had one
+ECONNRESET in React effect-catalog HTTP tests after a long pause; those three
+tests passed in isolation, and both later full runs passed. The final full run
+still took about 496 seconds. No production retry logic was added.
+
+Each browser passed 318 rendered-fidelity/preview cases
+(`/tmp/retouch-stroke-weight-fidelity-{chromium,webkit}.log`). The inspector
+screenshot was inspected at `/tmp/retouch-stroke-weight.png`. The editor test
+now waits for the layer list to remove its deliberately duplicated vector before
+clicking Lock, rather than relying on the panel's unrelated busy state.
+
+All six complete editor workflows passed: HTML, React/Next and Liquid in
+Chromium/WebKit, including weight pixels, held-key and label gestures, exact
+undo/redo and retained drafts/document identity. Logs:
+`/tmp/retouch-stroke-weight-controls-html-chromium.log` and
+`/tmp/retouch-stroke-weight-controls-{html,react,liquid}-{chromium,webkit}-final.log`
+(the HTML Chromium result uses the first path).

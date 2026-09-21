@@ -41,8 +41,8 @@ for(const kind of ['html','react','liquid']){
  test(kind+' retained source uses atomic transactions and exact history for create, change, restore',t=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'rt-stroke-source-')),initial=resolve(kind),file=path.join(root,initial.relPath),history=new(require('../src/history.cjs').SourceHistory)(),states=[initial.source],entries=[];
   t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(file,initial.source);let selected=initial.element.id;
-  for(const type of ['createSVGStrokeSource','setSVGStrokeSourcePosition','restoreSVGStrokeSource']){
-   const r={...resolve(kind,fs.readFileSync(file,'utf8'),selected),file},plan=S.plan(r,{type,fileHash:r.hash,model,position:'outside'},kind);assert.ok(plan.ok,plan.reason);
+  for(const type of ['createSVGStrokeSource','setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','restoreSVGStrokeSource']){
+   const r={...resolve(kind,fs.readFileSync(file,'utf8'),selected),file},plan=S.plan(r,{type,fileHash:r.hash,model,position:'outside',width:12.5},kind);assert.ok(plan.ok,plan.reason);
    const result=require('../src/transactions.cjs').applyPlan(root,plan);assert.ok(result.ok,result.reason);selected=result.selectionIds[0];entries.push(history.record(result.edits));states.push(fs.readFileSync(file,'utf8'));
   }
   assert.equal(states.at(-1),states[0]);
@@ -118,4 +118,21 @@ for(const kind of ['html','react','liquid'])test(kind+' direct adapter applicati
  const changed=adapter.applyOp(r,{type:'setSVGStrokeSourcePosition',fileHash:r.hash,position:'outside'});assert.ok(changed.ok,changed.reason);assert.equal(fs.readFileSync(file,'utf8'),changed.edits[0].after);
  const next={...resolve(kind,fs.readFileSync(file,'utf8'),changed.selectionIds[0]),file,appRoot:root};
  const restored=adapter.applyOp(next,{type:'restoreSVGStrokeSource',fileHash:next.hash});assert.ok(restored.ok,restored.reason);assert.equal(fs.readFileSync(file,'utf8'),initial.source);
+});
+
+for(const kind of ['html','react','liquid'])test(kind+' retained stroke weight changes preserve geometry, paint, original bytes and identities',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),initial=resolve(kind);
+ for(const position of ['inside','center','outside']){
+  const made=create(initial,kind,{model:{...model,position}}),r=resolve(kind,made.edits[0].after,made.selectionIds[0]),before=S.context(r,kind);
+  assert.ok(adapter.capabilities.ops.includes('setSVGStrokeSourceWidth'));
+  for(const width of [0,.125,12.5,10000]){
+   const op={type:'setSVGStrokeSourceWidth',fileHash:r.hash,width},changed=adapter.planOp(r,op);assert.ok(changed.ok,changed.reason);assert.equal(S.validatePlan(r,op,kind,changed),changed);
+   const next=resolve(kind,changed.edits[0].after,changed.selectionIds[0]),after=S.context(next,kind);assert.equal(after.source,before.source);assert.equal(after.id,before.id);assert.equal(after.model.width,width);
+   const {width:oldWidth,bounds:oldBounds,...oldModel}=before.model,{width:newWidth,bounds:newBounds,...newModel}=after.model;assert.deepEqual(newModel,oldModel);assert.equal(after.model.bounds.width,before.model.bounds.width+2*(width-before.model.width)*Math.max(1,before.model.miterlimit));
+   assert.equal(adapter.planOp(next,{type:'restoreSVGStrokeSource',fileHash:next.hash}).edits[0].after,initial.source);
+  }
+  assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceWidth',fileHash:r.hash,width:8}).unchanged,true);
+  for(const width of [undefined,null,'12',NaN,Infinity,-1,10001])assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceWidth',fileHash:r.hash,width}).refused,true);
+  assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceWidth',fileHash:'stale',width:12}).refused,true);
+ }
 });

@@ -322,10 +322,10 @@
       handles.set(target,options);const blocked=new Set(),up=event=>{if(drag?.id===event.pointerId){event.preventDefault();event.stopPropagation();stop(false);}},cancel=event=>{if(drag?.id===event.pointerId)stop(true);},blur=()=>{if(drag?.target===target)abort();};
       const down=event=>{if(!options.canvas||event.isComposing)return;
         if(drag?.keyboard&&drag.target===target&&['Escape','Enter'].includes(event.key)){event.preventDefault();event.stopPropagation();if(event.key==='Escape')for(const key of drag.held)blocked.add(key);stop(event.key==='Escape');return;}
-        if(event.metaKey||event.ctrlKey)return;const keys=options.axis==='y'?['ArrowUp','ArrowDown']:['ArrowLeft','ArrowRight'];if(!keys.includes(event.key))return;event.preventDefault();event.stopPropagation();if(blocked.has(event.key))return;if(!drag)start(event,true);if(!drag?.keyboard||drag.target!==target)return;drag.held.add(event.key);applyDelta((event.key===keys[0]?-1:1)*(event.shiftKey?10:event.altKey?0.1:1));
+        if(event.metaKey||event.ctrlKey)return;const keys=options.keys||(options.axis==='y'?['ArrowUp','ArrowDown']:['ArrowLeft','ArrowRight']);if(!keys.includes(event.key))return;event.preventDefault();event.stopPropagation();if(blocked.has(event.key))return;if(!drag)start(event,true);if(!drag?.keyboard||drag.target!==target)return;drag.held.add(event.key);applyDelta((event.key===keys[0]?-1:1)*(event.shiftKey?10:event.altKey?0.1:1));
       };
       const release=event=>{blocked.delete(event.key);if(drag?.keyboard&&drag.target===target&&drag.held.has(event.key)){event.preventDefault();event.stopPropagation();drag.held.delete(event.key);if(!drag.held.size)stop(false);}};
-      const events=[['pointerdown',start],['pointermove',move],['pointerup',up],['pointercancel',cancel],['lostpointercapture',cancel],['keydown',down],['keyup',release],['blur',blur]];for(const [name,fn]of events)target.addEventListener(name,fn);return ()=>{for(const [name,fn]of events)target.removeEventListener(name,fn);handles.delete(target);};
+      const events=[['pointerdown',start],['pointermove',move],['pointerup',up],['pointercancel',cancel],['lostpointercapture',cancel],['keydown',down],['keyup',release],['blur',blur]];for(const [name,fn]of events)if(!options.keyboardOnly||!name.startsWith('pointer')&&name!=='lostpointercapture')target.addEventListener(name,fn);return ()=>{for(const [name,fn]of events)target.removeEventListener(name,fn);handles.delete(target);};
     };
     return input;
   }

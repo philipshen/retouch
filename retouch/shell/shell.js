@@ -3607,7 +3607,16 @@ function mountStrokeSourceControls(section,info){
  alignment.closest('.inspector-field').querySelector('span').textContent='Align';
  for(const option of alignment.options)option.disabled=!info.svgStrokeSource.positions.includes(option.value);
  alignment.disabled=!strokeSourceEditable(info);
- const weight=document.createElement('input');weight.value=info.svgStrokeSource.width;weight.disabled=true;weight.title='Restore the original shape to edit stroke weight.';I.field(section,'Stroke weight',weight).closest('.inspector-field').querySelector('span').textContent='Weight';
+ const weight=I.number(section,'Stroke weight',info.svgStrokeSource.width,0,10000,async width=>{
+  if(!current()||width===info.svgStrokeSource.width){weight.value=info.svgStrokeSource.width;return;}
+  if(!await writeSVGStrokeSource('setSVGStrokeSourceWidth',{width}))weight.value=info.svgStrokeSource.width;
+ });weight.value=info.svgStrokeSource.width;weight.disabled=!strokeSourceEditable(info);weight.closest('.inspector-field').querySelector('span').textContent='Weight';weight.title='Stroke weight in SVG source units.';I.fieldDraft(weight);
+ weight.retouchNumericPreview=()=>{
+  if(!current())throw Error('Select one unlocked vector rendered once on this page.');
+  const preview=RetouchSVGStrokeFidelity.previewWeight(matchingEls(info.id)[0],info.svgStrokeSource.model,info.svgStrokeSource.definitionId);
+  return {...preview,current:()=>current()&&preview.current()};
+ };
+ weight.retouchNumericHandle(weight,{canvas:true,keyboardOnly:true,keys:['ArrowDown','ArrowUp']});
  const restore=I.button('Restore original shape',()=>current()&&writeSVGStrokeSource('restoreSVGStrokeSource',{}));restore.disabled=!strokeSourceEditable(info);restore.title='Restores the original geometry and stroke settings.';section.append(restore);
  I.note(section,'Restores the original geometry and stroke settings.');
  if(info.svgStrokeSource.positions.length===1)I.note(section,'Inside and Outside require a closed shape with supported contours.');
@@ -3617,13 +3626,13 @@ async function writeSVGStrokeSource(type,extra){
  const primary=sel?.info;if(!primary?.svgStrokeSource||panelTasks||sourceRequests||undoBusy||editing||!strokeSourceEditable(primary))return false;
  busyPanel(true);
  try{
-  if(type==='setSVGStrokeSourcePosition')RetouchSVGStrokeFidelity.check(matchingEls(primary.id)[0],primary.svgStrokeSource.model,primary.svgStrokeSource.definitionId);
+  if(type!=='restoreSVGStrokeSource')RetouchSVGStrokeFidelity.check(matchingEls(primary.id)[0],primary.svgStrokeSource.model,primary.svgStrokeSource.definitionId);
   const result=await api('POST','/rt/__api/op',{type,id:primary.id,fileHash:primary.hash,...extra});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update the stroke.');if(result.unchanged)return true;
   const removed=result.removedSourceIds||[],deletedLocks=layerLocks.removeSourceIds(removed);
   editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:[primary.id],selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:removed,undoId:result.undoId});
   layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,result.selectionIds);
-  toast(type==='restoreSVGStrokeSource'?'Original shape restored':'Stroke alignment updated','ok');return true;
+  toast(type==='restoreSVGStrokeSource'?'Original shape restored':type==='setSVGStrokeSourceWidth'?'Stroke weight updated':'Stroke alignment updated','ok');return true;
  }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 async function writeSVGMask(type,extra){

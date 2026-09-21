@@ -64,5 +64,23 @@
    return true;
   }finally{host.remove();}
  }
- const api={check};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGStrokeFidelity=api;
+ // Scrubbing changes only the generated stroke and mask bounds. Preserve DOM
+ // identities and restore only values still owned by this preview.
+ function previewWeight(group,input,id){
+  check(group,input,id);
+  const m=model(input),rendered=group.children[1],parent=group.parentElement,strokePath=[...rendered.children].filter(el=>el.localName==='path').at(-1),changes=[];
+  let markup=group.innerHTML,active=true;
+  const remember=(el,name)=>{const item={el,name,before:el.getAttribute(name),last:el.getAttribute(name)};changes.push(item);return item;};
+  const weight=remember(strokePath,'stroke-width'),bounds=m.position==='outside'?[rendered.querySelector('mask'),rendered.querySelector('mask > rect')].flatMap(el=>Object.keys(m.bounds).map(name=>remember(el,name))):[];
+  const current=()=>active&&group.isConnected&&group.parentElement===parent&&group.children[1]===rendered&&group.innerHTML===markup;
+  const set=(item,value)=>{item.last=String(value);item.el.setAttribute(item.name,item.last);};
+  return {current,update(width){
+   if(!current())throw Error('The stroke changed during the weight preview.');
+   const next=model({...m,width});set(weight,next.width*(m.position==='center'?1:2));for(const item of bounds)set(item,next.bounds[item.name]);markup=group.innerHTML;
+  },restore(){
+   if(!active)return;active=false;
+   for(const item of changes)if(item.el.getAttribute(item.name)===item.last){if(item.before===null)item.el.removeAttribute(item.name);else item.el.setAttribute(item.name,item.before);}
+  }};
+ }
+ const api={check,previewWeight};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGStrokeFidelity=api;
 })(typeof window==='object'?window:globalThis);
