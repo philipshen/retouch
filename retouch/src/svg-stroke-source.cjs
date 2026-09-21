@@ -75,7 +75,8 @@ function plan(r,op,kind){
    if(model.path!==geometry.path||JSON.stringify(model.matrix)!==JSON.stringify(geometry.matrix))throw Error('The stroke snapshot does not match the original geometry and transform.');
    for(let parent=v.parents.get(r.element.id);parent;parent=v.parents.get(parent)){const e=v.elements.find(e=>e.id===parent);if(v.attr(e,marker)!==undefined||v.attr(e,'data-rt-boolean')!==undefined)throw Error('Edit the owning retained group first.');}
    original=r.source.slice(start,end);oldOriginal=r.element;created=true;
-   do{id='rt-stroke-'+crypto.randomBytes(8).toString('hex');}while(r.source.includes(id));
+   if(op.definitionId!==undefined){if(typeof op.definitionId!=='string'||!/^rt-stroke-[a-f0-9]{16}$/.test(op.definitionId)||r.source.includes(op.definitionId))throw Error('Choose an unused stroke definition identity.');id=op.definitionId;}
+   else do{id='rt-stroke-'+crypto.randomBytes(8).toString('hex');}while(r.source.includes(id));
   }else{
    const c=context(r,kind);if(!c)throw Error('Select an unchanged retained stroke group.');
    ({source:original,original:oldOriginal,model,id}=c);

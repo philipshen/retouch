@@ -347,3 +347,42 @@ All 2,470 source tests passed with no skips in 61.38 seconds
 (`/tmp/retouch-stroke-snapshot-full.log`), including the internal creation
 contract for HTML, React and Liquid. Browser checks used the temporary
 slow-host timeout wrapper described above; no checks were bypassed.
+
+## Internal proposed-wrapper probe — 2026-09-21
+
+The internal creator accepts an optional validated, unused definition ID, so a
+browser probe and the subsequent deterministic source plan can use the same
+identity. Existing internal calls may still generate a fresh random identity.
+This does not add creation to public adapter capabilities.
+
+`svg-stroke-probe.js` captures the selected shape, temporarily wraps the actual
+node in a proposed retained stroke, verifies generated fidelity, compares the
+surrounding DOM root's computed styles, pseudo-element styles, bounds and CSS
+selector matches, then restores the original node and order in `finally`.
+The probe checks all three alignments and preserves the original element
+identity, markup, input draft and preview document on acceptance and refusal.
+
+A WebKit test demonstrated that computed fill alone could remain stale during
+the SVG move for `g + circle`. Matching-selector comparison now detects that
+structural change independently. Stylesheet media conditions use the preview's
+window, not the editor viewport. Unreadable CSSOM and nested style selectors
+are refused before any wrapping. The check is conservative: changed matching
+rules may cause a refusal even when their current rendered effect is neutral.
+
+Both Chromium and WebKit passed 165 proposed-wrapper checks, including own
+paint/original-display overrides, ancestor :has effects, sibling selectors,
+pseudo content, active/inactive media rules, unavailable CSSOM, nested rules,
+identity collisions and exact restoration. Every accepted probe was converted
+into a source plan with the same definition ID. Logs:
+`/tmp/retouch-stroke-probe-{chromium,webkit}.log`. All 2,473 source tests passed
+(`/tmp/retouch-stroke-probe-full.log`, 109.57 seconds), including deterministic
+ID validation and collision refusal in HTML, React and Liquid.
+
+Critical limits: this probe makes observable DOM mutations even when it
+restores exact markup; the tests explicitly observe those records. Authored
+MutationObservers may react after return. Separate shadow/iframe roots,
+stylesheet conditions beyond this proof, layout/style changes during later
+async source writes and large-page performance remain unverified. The module
+is not loaded by the editor and arbitrary-page creation is still not exposed.
+An isolated or committed-preview lifecycle is needed before calling this safe
+for general pages. No desktop package was rebuilt or launched.

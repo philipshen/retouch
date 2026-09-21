@@ -157,3 +157,10 @@ for(const kind of ['html','react','liquid'])test(kind+' internal stroke creation
  const made=create(initial,kind),retained=resolve(kind,made.edits[0].after,made.selectionIds[0]),c=S.context(retained,kind);assert.equal(S.creation({...retained,element:c.original},kind),null);assert.equal(S.creation(retained,kind),null);
  for(const attribute of ['class="styled"','id="referenced"','onclick="changed()"'])assert.equal(S.creation(resolve(kind,initial.source.replace('<rect ','<rect '+attribute+' ')),kind),null);
 });
+
+for(const kind of ['html','react','liquid'])test(kind+' stroke creation accepts one stable unused probe identity',()=>{
+ const initial=resolve(kind),definitionId='rt-stroke-0123456789abcdef',op={type:'createSVGStrokeSource',fileHash:initial.hash,model,definitionId};
+ const first=S.plan(initial,op,kind),second=S.plan(initial,op,kind);assert.ok(first.ok,first.reason);assert.deepEqual(first.edits,second.edits);assert.equal(S.context(resolve(kind,first.edits[0].after,first.selectionIds[0]),kind).id,definitionId);
+ for(const id of [null,'bad',definitionId.toUpperCase()])assert.equal(S.plan(initial,{...op,definitionId:id},kind).refused,true);
+ const collided=resolve(kind,initial.source.replace('Untouched',definitionId));assert.equal(S.plan(collided,{...op,fileHash:collided.hash},kind).refused,true);
+});
