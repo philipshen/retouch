@@ -10,6 +10,7 @@ module.exports=function isolateSelection(ids){
      if(node.nodeType!==Node.ELEMENT_NODE)return;
      if(getComputedStyle(node).display==='contents'){for(const child of node.childNodes)measure(child);return;}
      boxes.push(node.getBoundingClientRect());
+     if(globalThis.RetouchExportSVGBounds)boxes.push(...globalThis.RetouchExportSVGBounds(node));
     };
     for(const node of selected)measure(node);
     const visibleBoxes=boxes.filter(box=>box.width>0&&box.height>0);

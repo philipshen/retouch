@@ -13,6 +13,13 @@ module.exports=function captureDocument({shadowKey,responsive=false,sourceDocume
  function styles(source,pseudo){
   const computed=getComputedStyle(source,pseudo),style=output.createElement('span').style;
   for(const property of computed){if(property.startsWith('animation')||property.startsWith('transition')||property==='-webkit-user-modify')continue;let value=computed.getPropertyValue(property);value=value.split(location.href.split('#')[0]+'#').join('#');value=cssReferences(source,value);style.setProperty(property,value);}
+  // WebKit can report "none" for an SVG presentation transform. Freezing
+  // that value would override the copied attribute in the export browser.
+  // Read the effective local matrix, so a CSS override of the attribute also
+  // remains an override. The parent screen matrix cancels viewport placement.
+  if(!pseudo&&source.namespaceURI==='http://www.w3.org/2000/svg'&&source.localName!=='svg'&&source.hasAttribute('transform')&&computed.transform==='none'){
+   try{const parent=source.parentElement?.getScreenCTM?.(),own=source.getScreenCTM?.();if(parent&&own){const matrix=parent.inverse().multiply(own),values=[matrix.a,matrix.b,matrix.c,matrix.d,matrix.e,matrix.f];if(values.every(Number.isFinite)){style.setProperty('transform','matrix('+values.join(',')+')');style.setProperty('transform-origin','0px 0px');style.setProperty('transform-box','view-box');for(const name of ['rotate','scale','translate'])style.setProperty(name,'none');}}}catch{}
+  }
   return style.cssText;
  }
  function clone(node){

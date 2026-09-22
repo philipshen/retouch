@@ -44,6 +44,11 @@ async function renderInBrowser(body,{browser,signal}){
   if(failed.size)throw Error('Some screen resources could not be loaded. No file was exported.');signal?.throwIfAborted();
   let clip;if(body.area==='page'){const height=await page.evaluate(()=>{scrollTo({left:0,top:0,behavior:'instant'});return Math.max(innerHeight,document.documentElement.scrollHeight,document.documentElement.offsetHeight,document.body.scrollHeight,document.body.offsetHeight);});if(!Number.isFinite(height)||height*body.scale>32768||Math.ceil(body.width*body.scale)*Math.ceil(height*body.scale)>64*1024*1024)throw Error('The full page exceeds the 64-megapixel or 32,768-pixel height limit. Try 1× or export the visible viewport.');clip={x:0,y:0,width:body.width,height};}
   if(body.area==='selection'){
+   const svgSelection=await page.evaluate(ids=>ids.some(id=>{const node=document.querySelector('[data-capture-node="'+id+'"]');return node?.namespaceURI==='http://www.w3.org/2000/svg'&&node.localName!=='svg';}),body.selectionIds);
+   if(svgSelection){
+    await page.evaluate(require('node:fs').readFileSync(require.resolve('paper/dist/paper-core.min.js'),'utf8')+'\n;globalThis.RetouchExportPaper=paper;');
+    await page.evaluate('globalThis.RetouchExportSVGBounds='+require('./screen-export-svg-bounds.cjs').toString());
+   }
    clip=await page.evaluate(require('./screen-export-selection.cjs'),body.selectionIds);
    if(Math.min(clip.width,clip.height)*body.scale<1||Math.max(clip.width,clip.height)*body.scale>32768||Math.ceil(clip.width*body.scale)*Math.ceil(clip.height*body.scale)>64*1024*1024)throw Error('Selected layers exceed the export dimension or 64-megapixel limit. Try a smaller scale.');
   }

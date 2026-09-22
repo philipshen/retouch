@@ -553,3 +553,50 @@ fixture now loads the same palette-values dependency used by the full editor;
 its first P3 run exposed the missing fixture dependency. The browser workflows
 used the temporary slow-host timeout runner without bypassing assertions.
 Inspected UI: `/tmp/retouch-stroke-paints-html-chromium.png`.
+
+## Selected SVG stroke export bounds — 2026-09-22
+
+Selected-layer raster/PDF export now retains the geometric selection frame and
+expands it to include supported SVG stroke paint. Center and Outside strokes
+are no longer cropped at their path geometry. Inside strokes using the exact
+same-path user-space clip remain bounded by their geometry. The calculation
+runs in the disposable export document, loading the installed Paper runtime
+only for graphical SVG selections. Captured author scripts remain disabled.
+
+The measurement supports paths and SVG primitives, transformed geometry,
+rounded rectangles, caps, joins and non-scaling strokes. Sharp miter and square
+cap corners are calculated in local stroke coordinates before transformation;
+Paper's transformed miter-limit comparison otherwise misses valid corners.
+Non-scaling strokes use transformed geometry with an unscaled stroke width.
+Text/use and unsupported geometry retain conservative padding. Arbitrary
+filters, markers, arbitrary clipping and exact text/use paint bounds are not
+proved by this checkpoint. Root SVG canvas export keeps its viewport semantics.
+
+The cross-engine checks also exposed WebKit reporting `transform: none` for
+SVG presentation transforms. Frozen captures now recover the effective local
+matrix from screen matrices when this happens, preserving CSS overrides and
+folding individual transforms into that matrix without applying them twice.
+This affects frozen rendered-page captures as well as screen export; responsive
+captures continue retaining their authored styling.
+
+Validation: all 2,478 source tests passed, no skips, in 16.87 seconds
+(`/tmp/retouch-export-source-v4.log`). Chromium and WebKit each passed 80
+painted-bounds cases (eight shapes, five affine transforms, scaling/fixed-width
+strokes), 60 retained-stroke export checks and 72 mask export pixel checks.
+The bounds cases compare exported frames with actual alpha pixels, retaining
+the native geometry frame, and check Paper scope cleanup. Retained cases cover
+Inside/Center/Outside, transforms, group/paint opacity, 1x/2x raster dimensions,
+sibling isolation, SVG metadata removal and unchanged authored source/DOM.
+Screen-export endpoint rendering is Chromium, with captures originating in
+each browser; direct bounds tests run independently in each engine.
+
+Both browsers passed existing layer PNG/JPEG/PDF, SVG reference and
+`display:contents` exports. Frozen-capture regressions passed CSS transform
+replacement/removal, individual transforms and nested SVG viewports, comparing
+screen matrices and geometry after Chromium reconstruction. Both also passed
+SVG asset capture and complete site capture/edit/exact undo/redo/CLI workflows.
+Logs: `/tmp/retouch-export-all-v2.log` and
+`/tmp/retouch-export-capture-checks-v4.log`. An earlier full run failed one server
+startup timeout and a capture run timed out on page reload; both processes
+terminated and unchanged checks passed on rerun. No assertions were relaxed.
+The desktop package was not rebuilt or notarized for this checkpoint.

@@ -28749,3 +28749,13 @@ history. Both browsers passed 462 generated-stroke fidelity checks. See
 [stroke parity](stroke-parity.md#retained-fill-and-stroke-paints--2026-09-22)
 for evidence and remaining scope. Multiple strokes, retained gradients and
 geometry editing, responsive paint variants and desktop delivery remain open.
+
+### 2026-09-22 — selected SVG painted export bounds
+
+Selected SVG export now includes Center/Outside stroke extents while preserving
+the selection's geometry frame. Local-space corner calculations cover sharp
+joins and square caps under transforms, including fixed-width strokes. Frozen
+WebKit captures also preserve SVG attribute transforms and their CSS overrides.
+See [stroke export bounds](stroke-parity.md#selected-svg-stroke-export-bounds--2026-09-22)
+for verification and limits. Arbitrary filters/markers, exact text/use paint
+bounds, broad Figma parity and trusted desktop distribution remain open.
