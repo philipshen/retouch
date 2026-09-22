@@ -107,7 +107,8 @@ function plan(r,op,kind){
     else{const gradients={...model.gradients,[op.paint]:require('../shell/svg-stroke-gradient.js').edit(model.gradients?.[op.paint],op)};model=S.normalize({...input(model),gradients,[op.paint]:model[op.paint]==='none'?'#000000':model[op.paint]});}
    }
    else if(op.type==='setSVGStrokeSourceStyle'){
-    if(!['fill','stroke','linecap','linejoin','miterlimit','dasharray','dashoffset'].includes(op.property)||op.value===null||op.value===undefined)throw Error('Choose a supported stroke setting and value.');
+    if(!['fill','stroke','fillOpacity','strokeOpacity','linecap','linejoin','miterlimit','dasharray','dashoffset'].includes(op.property)||op.value===null||op.value===undefined)throw Error('Choose a supported stroke setting and value.');
+    if(['fillOpacity','strokeOpacity'].includes(op.property)&&!Number.isFinite(op.value))throw Error('Choose a finite paint opacity.');
     model=['fill','stroke'].includes(op.property)?S.setPaint(input(model),op.property,op.value):S.normalize({...input(model),[op.property]:op.value});
    }
    else throw Error('Choose a supported retained stroke edit.');

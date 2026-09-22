@@ -300,3 +300,16 @@ for(const kind of ['html','react','liquid'])test(kind+' retained gradients prese
  assert.equal(adapter.planOp(r,{type:'restoreSVGStrokeSource',fileHash:r.hash}).edits[0].after,initial.source);
  assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceGradient',paint:'stroke',action:'reverse',fileHash:'stale'}).refused,true);
 });
+for(const kind of ['html','react','liquid'])test(kind+' shared paint opacity preserves gradients and intrinsic color alpha with atomic exact history',t=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),gradient={type:'linearGradient',fields:{gradientTransform:'rotate(20 .5 .5)'},stops:[{offset:'0',color:'#ff000080',opacity:'.6'},{offset:'1',color:'blue',opacity:'0'}]};
+ let r=resolve(kind);r=resolve(kind,r.source.replace('<circle','<rect x="20" y="20" width="60" height="60" fill="red" stroke="blue"/><circle'));
+ for(const opacity of [.3,.8]){const v=view(r,kind);r.element=r.elements.find(element=>v.tag(element)==='rect'&&S.creation({...r,element},kind));const change=create(r,kind,{model:{...model,fill:'#12345680',fillOpacity:opacity,strokeOpacity:opacity,gradients:opacity===.3?{fill:gradient,stroke:gradient}:undefined}});assert.ok(change.ok,change.reason);r=resolve(kind,change.edits[0].after,change.selectionIds[0]);}
+ const groups=r.elements.filter(element=>S.context({...r,element},kind)),ids=groups.map(e=>e.id),before=groups.map(element=>S.context({...r,element},kind));r.element=groups[0];
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'rt-gradient-opacity-')),file=path.join(root,r.relPath);t.after(()=>fs.rmSync(root,{recursive:true,force:true}));r.file=file;fs.writeFileSync(file,r.source);
+ for(const property of ['fillOpacity','strokeOpacity'])for(const values of [[.4,.4],[.2,.7],[0,1]]){
+  const op={type:'setSVGStrokeSelection',fileHash:r.hash,ids,property,values:Object.fromEntries(ids.map((id,i)=>[id,values[i]]))},change=adapter.planOp(r,op);assert.ok(change.ok,change.reason);assert.equal(S.validatePlan(r,op,kind,change),change);
+  const after=change.edits[0].after,next=resolve(kind,after,change.selectionIds[0]);change.selectionIds.forEach((id,i)=>{const c=S.context({...next,element:next.elements.find(e=>e.id===id)},kind);assert.equal(c.model[property],values[i]);assert.deepEqual({...c.model,[property]:before[i].model[property]},before[i].model);assert.equal(c.source,before[i].source);assert.equal(c.id,before[i].id);});
+  const history=new(require('../src/history.cjs').SourceHistory)(),applied=require('../src/transactions.cjs').applyPlan(root,change);assert.ok(applied.ok,applied.reason);const entry=history.record(applied.edits);assert.ok(history.apply(root,'undo',entry,{}).ok);assert.equal(fs.readFileSync(file,'utf8'),r.source);assert.ok(history.apply(root,'redo',entry,{}).ok);assert.equal(fs.readFileSync(file,'utf8'),after);assert.ok(history.apply(root,'undo',entry,{}).ok);
+  for(const bad of [-.1,1.1,NaN,Infinity,null,'0.4',undefined]){const refused=adapter.planOp(r,{...op,values:{...op.values,[ids[1]]:bad}});assert.equal(refused.refused,true);assert.equal(refused.edits,undefined);assert.equal(fs.readFileSync(file,'utf8'),r.source);}
+ }
+});

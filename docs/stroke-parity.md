@@ -998,3 +998,49 @@ both browsers, with CSS/instance refusal, exact undo/redo, original restoration
 and preserved document/form state (`/tmp/retouch-gradient-import-six.log`).
 These focused workflows do not replace the preceding full editor regressions.
 Desktop packaging was not rebuilt.
+
+### Shared gradient paint opacity
+
+Multiple aligned vectors now expose Fill and Stroke opacity when at least one
+selected paint is a gradient. Typing a percentage sets every selected paint's
+opacity; dragging or holding arrows on Mixed adjusts all values by the same
+number of percentage points. The shared bounds stop when any paint reaches
+zero or 100%, preserving the differences between selected paints. Escape and
+zero-net gestures restore the preview without a source write. A completed
+gesture is one atomic source edit and one undo entry.
+
+This opacity multiplies the existing paint: gradient stop colors/alpha, stop
+opacity, intrinsic solid-color alpha, gradient geometry and the other paint
+stay intact. It works for both gradient-only selections and mixed solid/gradient
+selections. Solid-only selections retain their existing effective-color-alpha
+controls. Shared gradient stop/type editing remains open; selecting one vector
+still exposes those controls. Same-file, single-rendered-instance and lock
+requirements still apply to shared source edits.
+
+Source verification passed all 2,510 tests without failures or skips in 16.72
+seconds (`/tmp/retouch-shared-gradient-opacity-source.log`). New adapter tests
+cover per-member opacity on mixed gradient/solid vectors, unchanged stop and
+intrinsic-alpha data, independent fill/stroke opacity, zero/one boundaries,
+invalid-member refusal without partial writes, canonical validation and exact
+file undo/redo in HTML, React and Liquid.
+
+The focused browser workflow can be run with `RT_STROKE_CREATE=1` and
+`RT_STROKE_SHARED_GRADIENT_ONLY=1` on
+`retouch/test/e2e/svg-stroke-controls.cjs`; it uses the same renderer/browser
+fixture environment as the complete stroke workflow. The shared-gradient helper
+also runs inside the complete mixed-vector-selection regression.
+
+The complete HTML/Liquid/React stroke workflows passed in Chromium and WebKit
+(`/tmp/retouch-shared-gradient-opacity-six.log`, individual logs
+`/tmp/retouch-shared-gradient-opacity-controls-{renderer}-{browser}.log`). New
+browser coverage verifies mixed solid/gradient and gradient-only fill/stroke
+selections, absolute values, relative drags and held keys, boundary and zero-net
+no-ops, Escape restoration, unchanged paint/gradient metadata, atomic CSS
+refusal, exact undo/redo and retained document/form state. The same runs passed
+existing stroke creation, geometry/path, paint, gradient, lock and transform
+regressions. A focused HTML Chromium run passed as well
+(`/tmp/retouch-shared-gradient-opacity-focused.log`). The light-theme controls
+were visually inspected in `/tmp/retouch-shared-gradient-opacity-html-chromium.png`.
+An initial run was intentionally stopped after identifying a test cleanup wait
+for a gradient-only field after restoring solid paints; the final runs use the
+correct solid-selection wait. Desktop artifacts were not rebuilt or launched.

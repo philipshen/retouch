@@ -3673,8 +3673,22 @@ function strokeSelectionPreview(infos,property){
   catch(error){for(const p of previews)p.restore();throw error;}
   return {current:()=>current()&&previews.every(p=>p.current()),update:value=>{try{if(!current())throw Error('The selection changed.');if(Array.isArray(value)&&value.length!==previews.length)throw Error('Provide a value for every selected vector.');previews.forEach((p,i)=>p.update(Array.isArray(value)?value[i]:value));}catch(error){for(const p of previews)p.restore();throw error;}},restore:()=>{for(const p of previews)p.restore();}};
 }
+function mountStrokeSelectionOpacity(section,infos,paint){
+ const I=RetouchInspector,property=paint+'Opacity',values=infos.map(info=>info.svgStrokeSource.model[property]*100),common=values.every(value=>value===values[0])?values[0]:null,initial=common===null?'':String(common);
+ const current=()=>strokeSelectionEditable(infos)&&!panelTasks&&!sourceRequests&&!undoBusy&&!editing;
+ const save=async numbers=>{if(!current()||!await writeSVGStrokeSelection(infos,property,numbers.map(value=>value/100)))input.value=initial;};
+ const input=I.number(section,'Shared '+paint+' paint opacity (%)',common??NaN,0,100,value=>save(values.map(()=>value)));input.value=initial;input.placeholder=common===null?'Mixed':'';input.disabled=!strokeSelectionEditable(infos);I.fieldDraft(input);input.closest('.inspector-field').querySelector('span').textContent='Opacity';
+ input.title='Fades each selected paint without changing solid colors or gradient stops. Drag or use arrow keys on Mixed to adjust each opacity by the same amount.';
+ const relative=()=>common===null&&input.value==='';input.retouchNumericInitialValue=()=>relative()?'0':input.value;
+ input.retouchNumericRead=raw=>relative()?{value:0,min:-Math.min(...values),max:100-Math.max(...values),format:delta=>String(values[0]+delta)}:{value:Number(raw)};
+ input.retouchNumericPreview=()=>{
+  const mixed=relative(),preview=strokeSelectionPreview(infos,property),numbers=value=>mixed?values.map(before=>Math.max(0,Math.min(100,before+value))):values.map(()=>value);
+  return {...preview,update:value=>preview.update(numbers(value).map(value=>value/100)),commit:async value=>{if(mixed&&value===0){input.value=initial;return;}await save(numbers(value));}};
+ };
+ input.retouchNumericHandle(input,{canvas:true,keyboardOnly:true,keys:['ArrowDown','ArrowUp']});
+}
 function mountStrokeSelectionPaint(section,infos,property){
- if(infos.some(info=>info.svgStrokeSource.model.gradients?.[property])){RetouchInspector.note(section,'Select one gradient to edit its stops.');return;}
+ if(infos.some(info=>info.svgStrokeSource.model.gradients?.[property])){mountStrokeSelectionOpacity(section,infos,property);RetouchInspector.note(section,'Select one gradient to edit its stops.');return;}
  const I=RetouchInspector,models=infos.map(info=>info.svgStrokeSource.model),colors=models.map(model=>{
   const parsed=RetouchPaintPicker.parsePaint(model[property]);return parsed?RetouchPaletteValues[parsed.space==='display-p3'?'p3':'srgb'](parsed.channels,parsed.alpha*model[property+'Opacity']):model[property];
  }),original=colors.every(value=>value===colors[0])?colors[0]:'',input=document.createElement('input');

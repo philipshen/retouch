@@ -8,7 +8,7 @@ module.exports=function planSelection(r,op,kind){
  const selected=op.ids;
  if(!Array.isArray(selected)||selected.length<2||selected.length>100||new Set(selected).size!==selected.length||!selected.includes(r.element.id)||selected.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))return refuse('Select 2 to 100 distinct aligned vectors from one source file.');
  const type=op.property==='position'?'setSVGStrokeSourcePosition':op.property==='width'?'setSVGStrokeSourceWidth':'setSVGStrokeSourceStyle';
- const perMember=op.values!==undefined,numeric=['width','miterlimit','dashoffset'].includes(op.property);
+ const perMember=op.values!==undefined,numeric=['width','miterlimit','dashoffset','fillOpacity','strokeOpacity'].includes(op.property);
  if(perMember&&(!['fill','stroke'].includes(op.property)&&!numeric||op.value!==undefined||!op.values||typeof op.values!=='object'||Array.isArray(op.values)||Object.keys(op.values).length!==selected.length||selected.some(id=>!Object.hasOwn(op.values,id)||(numeric?!Number.isFinite(op.values[id]):typeof op.values[id]!=='string'))))return refuse('Provide one supported value for every selected vector.');
  const extra=value=>op.property==='position'?{position:value}:op.property==='width'?{width:value}:{property:op.property,value};
  try{
