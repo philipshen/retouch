@@ -1,7 +1,7 @@
 'use strict';
-// Source creation stays internal until browser style and instance fidelity are
-// proved. Existing retained groups support guarded alignment and restoration.
-// Callers of the internal creator supply resolved paint in local coordinates.
+// The editor proves rendered fidelity in an isolated preview before creation.
+// Source planning independently checks geometry, identity and exact file bytes.
+// Callers supply resolved paint in local coordinates.
 const crypto=require('node:crypto'),G=require('../shell/svg-path.js'),A=require('../shell/svg-affine.js'),S=require('../shell/svg-stroke-alignment.js');
 const view=require('./svg-boolean-group.cjs').view;
 const marker='data-rt-stroke-alignment',originalMarker='data-rt-stroke-original';
@@ -120,8 +120,7 @@ function plan(r,op,kind){
   return {ok:true,structural:true,hash:v.adapter.contentHash(after),parentId,selectionIds:[selected.id],sourceIdMap:[...mapping].filter(([a,b])=>a!==b),removedSourceIds:removed,edits:[{file:r.file,before:r.source,after}]};
  }catch(error){return refuse(error.message);}
 }
-// An internal source contract for the browser's resolved-paint snapshot. This
-// does not advertise or authorize creation before prospective fidelity proof.
+// Literal source geometry for the browser's resolved-paint snapshot.
 function creation(r,kind){
  try{
   const v=view(r,kind),geometry=shape(r,kind,v);
@@ -131,9 +130,8 @@ function creation(r,kind){
 }
 module.exports={plan,context,creation};
 
-// Creation remains internal until the browser can prove style/instance fidelity.
-// Existing retained groups can change alignment/weight or restore original source.
-const types=new Set(['setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','setSVGStrokeSourceStyle','restoreSVGStrokeSource']);
+// Public creation requires a stable definition identity for deterministic plans.
+const types=new Set(['createSVGStrokeSource','setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','setSVGStrokeSourceStyle','restoreSVGStrokeSource']);
 const deletionTypes=new Set(['deleteElement','deleteSelection','deleteComponent','deleteComponentSelection']);
 function referencedIds(op){
  const ids=new Set();
@@ -172,6 +170,7 @@ function validatePlan(r,op,kind,planned){
  // Source operations are deterministic; only their exact single-file plan may
  // replace the canonical group. Never trust a caller-supplied bypass flag.
  if(types.has(op.type)){
+  if(op.type==='createSVGStrokeSource'&&typeof op.definitionId!=='string')return {ok:false,refused:true,reason:'Choose a stable stroke definition identity before creating the stroke.'};
   const expected=plan(r,op,kind);return expected.ok&&JSON.stringify(expected.edits)===JSON.stringify(planned.edits)?planned:refuse();
  }
  try{

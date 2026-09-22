@@ -12,7 +12,7 @@ SVG export preserves inside/outside appearance through more complex geometry.
 | Requirement | Current repository evidence | Remaining work |
 | --- | --- | --- |
 | Stroke paints | `retouch/shell/svg-paint.js` and the inspector expose single SVG paint and scoped stroke properties. | Multiple independently editable stroke fills and their order/visibility. |
-| Alignment | A retained-path rendering foundation now exists in `retouch/shell/svg-stroke-alignment.js`; no source operation or inspector position control is connected yet. | Inside/center/outside rendering while retaining editable originals. |
+| Alignment | The inspector now creates retained strokes from supported literal SVG shapes and edits Inside/Center/Outside, weight, caps, joins and dashes; see the 2026-09-22 integration checkpoint below. | Broader authored attributes, rendered instances, resource-backed previews, editing retained geometry/paints and export/package verification. |
 | Caps, joins, dashes | `svg-paint.js` parses regular/custom patterns; `inspector-ui.js` provides style, dash/gap, custom text, caps and joins. `test/e2e/svg-stroke-settings.cjs` covers source/history and scopes. | Per-point/vector-network equivalence, endpoint placement and full geometry fidelity still need proof. |
 | Width profiles | No profile model or authoring control found. | Profiles, direct width handles, serialization and rendering/export fidelity. |
 | Brush/dynamic strokes | No corresponding model or control found. | Brush source/assets, dynamic parameters, editable geometry and export. |
@@ -438,3 +438,77 @@ restoration passes again without recreating the sandbox. Logs:
 waiting for the fixture input before reaching these assertions; the terminal
 process was confirmed before retrying. No full source-suite rerun was needed
 for this isolated browser-only follow-up.
+
+## Stroke creation in the inspector — 2026-09-22
+
+Supported ordinary SVG shapes now show an Align field in the existing light
+Stroke section. Center preserves the ordinary shape; choosing Inside or Outside
+captures its rendered paint, tests the proposed wrapper in an inert preview,
+rechecks the selection/document and submits one deterministic source operation.
+HTML, React and Liquid descriptions advertise literal creation candidates. The
+public operation requires a stable unused definition ID and validates geometry,
+transform, file revision and the exact source plan independently of the browser.
+
+Creation records one structural history entry, remaps selection/locks to the
+logical vector and preserves the original authored shape verbatim. The existing
+retained-stroke controls take over after conversion. Undo/redo and Restore
+original shape use the normal source-history and preview-refresh paths. The
+operation is source-global; the alignment field's tooltip identifies that it
+applies to every screen. Multi-selection, repeated rendered IDs and locked
+shapes cannot initiate creation through this control.
+
+The isolated preview now copies nested open shadow roots, their inline/adopted
+stylesheets, text layout, forms and scroll state. It checks surrounding shadow
+content during the wrapper probe and checks shadow source/style changes again
+before submission. Custom-element constructors and connection callbacks do
+not run in the sandbox. Closed custom content, manual slot assignment and
+nested documents remain unsupported. Shadow-root selection itself is not yet
+a creation target.
+
+CSSOM nesting is resolved for selector-match comparisons using the complete
+parent selector list through `:is()`, following the
+[CSS Nesting specification](https://drafts.csswg.org/css-nesting/#nest-selector).
+The browser resolver is checked against the repository's PostCSS-based source
+resolver for explicit/implicit nesting, lists, repeated ampersands, functional
+selectors, quoted values, escapes and size limits.
+
+React/Next testing found a CSSOM serialization loss: a transition shorthand
+with a variable, followed by an unresolved variable in a longhand, serialized
+to empty longhands in Chromium. Re-parsing that serialization changed a 200 ms
+transition to zero. Inline stylesheet text is preserved when a fresh parse
+still matches the current CSSOM rule list; CSSOM edits use current serialized
+rules. Baseline style/layout comparisons still apply. This does not establish
+lossless reconstruction of every external or dynamically modified stylesheet.
+
+After the source refresh, creation checks that exactly one retained group
+renders and verifies its generated fidelity. If that check detects a change,
+the editor reports it and keeps the normal Undo entry available. This is not
+an atomic transaction between browser state and server writes, nor an automatic
+rollback of every asynchronous page effect. General resources/fonts, closed
+shadow content, dynamic geometry, repeated instances, retained geometry/paint
+editing, multiple strokes, profiles and brushes remain part of the full goal.
+No desktop package was rebuilt or launched for this checkpoint.
+
+Validation on this implementation: all 2,475 source tests passed with no skips
+in 55.82 seconds (`/tmp/retouch-stroke-creation-full-final.log`), including
+public HTTP creation/refusal and exact history for all three source adapters.
+Six complete editor workflows passed: HTML, React/Next and Liquid in Chromium
+and WebKit. Each starts from ordinary source, refuses generated CSS overrides
+and repeated instances, creates through the Align field, checks pixels and
+exact creation undo/redo, then exercises alignment, weight, advanced settings,
+scrub/key gesture grouping/cancellation, locks and exact restoration. Draft
+inputs and preview document markers survive the edits.
+
+Editor logs: `/tmp/retouch-stroke-creation-controls-{html,liquid}-{chromium,webkit}-final.log`,
+`/tmp/retouch-stroke-creation-react-chromium-preserve.log` and
+`/tmp/retouch-stroke-creation-controls-react-webkit-final.log`.
+The isolated-preview suite passed 402 checks per engine, including shadow
+parts, nested open roots, adopted stylesheet changes, constructor/connection
+counters, the pending-transition serialization case and zero additional
+resource requests or authored mutation records. The underlying proposed-wrapper
+suite passed 165 checks per engine. Logs:
+`/tmp/retouch-stroke-creation-{isolation,probe}-none-{chromium,webkit}-final.log`.
+Browser runs used the temporary slow-host action/prewarm timeouts without
+bypassing assertions. Inspected screenshots include
+`/tmp/retouch-stroke-creation-html-webkit-final.png` and
+`/tmp/retouch-stroke-creation-chromium.png`.

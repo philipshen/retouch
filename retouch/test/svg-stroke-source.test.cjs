@@ -78,7 +78,7 @@ for(const kind of ['html','react','liquid'])test(kind+' adapter guards retain st
  const description=adapter.describe(r);assert.equal(description.svgStrokeSource.position,'inside');assert.equal(description.svgStrokeOwner,r.element.id);assert.equal(description.svgTransform.editable,false);assert.equal(description.svgGeometry,null);assert.equal(description.structure.canDuplicate,false);
  const change=adapter.planOp(r,{type:'setSVGStrokeSourcePosition',fileHash:r.hash,position:'outside'});assert.ok(change.ok,change.reason);
  assert.equal(adapter.planOp(r,{type:'restoreSVGStrokeSource',fileHash:r.hash}).edits[0].after,initial.source);
- assert.equal(adapter.capabilities.ops.includes('createSVGStrokeSource'),false);
+ assert.equal(adapter.capabilities.ops.includes('createSVGStrokeSource'),true);
  assert.equal(adapter.planOp(initial,{type:'createSVGStrokeSource',fileHash:initial.hash,model}).refused,true);
  const inside=v.elements.filter(e=>v.start(e)>v.start(r.element)&&v.end(e)<=v.end(r.element));
  for(const element of [r.element,...inside])for(const type of ['setSVGGeometry','setSVGTransform','renameElement','duplicateElement','setClasses','setChildren']){
@@ -151,15 +151,16 @@ for(const kind of ['html','react','liquid'])test(kind+' retained stroke settings
  }
 });
 
-for(const kind of ['html','react','liquid'])test(kind+' internal stroke creation snapshot identifies literal source and never advertises creation',()=>{
+for(const kind of ['html','react','liquid'])test(kind+' stroke creation snapshot identifies literal source for the editor',()=>{
  const initial=resolve(kind),candidate=S.creation(initial,kind);assert.equal(candidate.id,initial.element.id);assert.equal(candidate.tag,'rect');assert.equal(candidate.path,G.serializeCompound(model.document));assert.deepEqual(candidate.matrix,[1,0,0,1,0,0]);assert.ok(candidate.fields.some(field=>field.name==='width'&&field.value==='60'));
- assert.equal(require('../src/adapters/'+kind+'.cjs').capabilities.ops.includes('createSVGStrokeSource'),false);
+ assert.equal(require('../src/adapters/'+kind+'.cjs').capabilities.ops.includes('createSVGStrokeSource'),true);
  const made=create(initial,kind),retained=resolve(kind,made.edits[0].after,made.selectionIds[0]),c=S.context(retained,kind);assert.equal(S.creation({...retained,element:c.original},kind),null);assert.equal(S.creation(retained,kind),null);
  for(const attribute of ['class="styled"','id="referenced"','onclick="changed()"'])assert.equal(S.creation(resolve(kind,initial.source.replace('<rect ','<rect '+attribute+' ')),kind),null);
 });
 
 for(const kind of ['html','react','liquid'])test(kind+' stroke creation accepts one stable unused probe identity',()=>{
  const initial=resolve(kind),definitionId='rt-stroke-0123456789abcdef',op={type:'createSVGStrokeSource',fileHash:initial.hash,model,definitionId};
+ const adapter=require('../src/adapters/'+kind+'.cjs');assert.deepEqual(adapter.describe(initial).svgStrokeCreation,S.creation(initial,kind));const publicPlan=adapter.planOp(initial,op);assert.ok(publicPlan.ok,publicPlan.reason);assert.equal(adapter.planOp(initial,{...op,fileHash:'stale'}).refused,true);assert.equal(S.validatePlan(initial,op,kind,{...publicPlan,edits:[{...publicPlan.edits[0],after:publicPlan.edits[0].after+'<!--tampered-->'}]}).refused,true);
  const first=S.plan(initial,op,kind),second=S.plan(initial,op,kind);assert.ok(first.ok,first.reason);assert.deepEqual(first.edits,second.edits);assert.equal(S.context(resolve(kind,first.edits[0].after,first.selectionIds[0]),kind).id,definitionId);
  for(const id of [null,'bad',definitionId.toUpperCase()])assert.equal(S.plan(initial,{...op,definitionId:id},kind).refused,true);
  const collided=resolve(kind,initial.source.replace('Untouched',definitionId));assert.equal(S.plan(collided,{...op,fileHash:collided.hash},kind).refused,true);

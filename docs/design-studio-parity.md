@@ -28715,3 +28715,22 @@ including source/pixel/history/state/lock/selection checks and a smaller window:
 Inspected screenshot: `/tmp/retouch-stroke-controls-chromium.png`. See
 `stroke-parity.md` for fixture/readiness details and remaining scope. Desktop
 package unchanged; full Figma parity and any-site behavior remain unproven.
+
+### 2026-09-22 — stroke creation through the light inspector
+
+The Align field now converts supported ordinary SVG shapes into retained
+Inside/Outside strokes, with stable source identity, one-step creation
+undo/redo, logical layer selection and the existing alignment/weight/advanced
+stroke controls. HTML, React/Next and Liquid use the same source guards and
+isolated rendered preflight. Open shadow content and native CSS nesting are
+included in the preview checks; inline stylesheet preservation fixes a
+Chromium pending-shorthand serialization loss encountered in Next's overlay.
+
+All 2,475 source tests passed. Six complete editor workflows passed across the
+three adapters in Chromium and WebKit, as did 402 isolated-preview checks and
+165 wrapper checks per browser. Exact logs, screenshots, semantics and limits
+are recorded in [the stroke parity checkpoint](stroke-parity.md#stroke-creation-in-the-inspector--2026-09-22).
+Creation still requires supported literal source and one unlocked rendered
+instance. General resources/fonts, closed shadow roots, dynamic attributes,
+responsive paint preservation, retained geometry/paint editing, multiple
+strokes, profiles, brushes and desktop/package verification remain open.

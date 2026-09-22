@@ -323,7 +323,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   if(svgPaint&&panel.querySelector('[aria-label="SVG fill"]')&&!['svg','foreignobject'].includes((head.dataset.layerTag||'').toLowerCase())){
    for(const name of ['Fill','Stroke'])for(const section of [...panel.children].filter(el=>title(el)===name)){
     const keep=new Set([...section.children].filter(el=>el.tagName==='H3'));
-    for(const row of section.querySelectorAll(':scope > .inspector-field'))if(fieldControl(row)?.getAttribute('aria-label')?.startsWith('SVG ')){keep.add(row);if(row.nextElementSibling?.classList.contains('control-button'))keep.add(row.nextElementSibling);const label=fieldControl(row).getAttribute('aria-label');if(['SVG fill','SVG stroke'].includes(label))row.querySelector(':scope > span').textContent='Color';}
+    for(const row of section.querySelectorAll(':scope > .inspector-field'))if(/^(SVG |Stroke alignment$)/.test(fieldControl(row)?.getAttribute('aria-label')||'')){keep.add(row);if(row.nextElementSibling?.classList.contains('control-button'))keep.add(row.nextElementSibling);const label=fieldControl(row).getAttribute('aria-label');if(['SVG fill','SVG stroke'].includes(label))row.querySelector(':scope > span').textContent='Color';}
     for(const child of [...section.children])if(!keep.has(child))child.remove();
    }
    if(appearance){for(const row of [...appearance.querySelectorAll('.inspector-field')])if(/^(?:Corner radius|(?:Top|Bottom) (?:left|right) corner)/.test(fieldControl(row)?.getAttribute('aria-label')||'')){const reset=row.nextElementSibling;row.remove();if(reset?.classList.contains('control-button'))reset.remove();}appearance.querySelectorAll('.radius-corners').forEach(el=>el.remove());}

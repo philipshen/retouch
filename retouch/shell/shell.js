@@ -2221,6 +2221,7 @@ function renderPanelContents(textEditing=false) {
   }
   if(info.svgTransform){const position=RetouchInspector.section('Vector position');RetouchSVGResize.positionFields(position,info,target,{onCanvas:()=>resizeSVGOnCanvas(info,target,null,'ne','rotate'),current:()=>sel?.info===info&&!panelTasks&&!undoBusy&&!sourceRequests&&!editing,save:matrix=>writeSVGTransform(info,target,matrix)});panelBody.append(position);}
   if(info.svgTransform){const size=RetouchInspector.section('Vector size');RetouchSVGResize.sizeFields(size,info,target,{current:()=>sel?.info===info&&!panelTasks&&!undoBusy&&!sourceRequests&&!editing,save:matrix=>writeSVGTransform(info,target,matrix)});panelBody.append(size);}
+  if(info.svgStrokeCreation)mountStrokeCreationControls(info);
   if(info.svgGradientCreation)mountSVGGradientCreation(info,target);
   if(info.svgGradients?.length)mountSVGGradients(info,target);
   if(info.svgGeometry){
@@ -3596,6 +3597,35 @@ async function refreshSVGBooleanSelection(parentId,ids){
 function strokeSourceEditable(info){
  if(sel?.info.id!==info.id||sel.info.hash!==info.hash||sel.multiple?.length)return false;
  const matches=matchingEls(info.id);return matches.length===1&&[matches[0],...matches[0].querySelectorAll('[data-rt]')].every(el=>!layerLocks.locked(el));
+}
+function mountStrokeCreationControls(info){
+ const I=RetouchInspector,section=I.section('Stroke');
+ const alignment=I.select(section,'Stroke alignment',[['inside','Inside'],['center','Center'],['outside','Outside']],'center',async position=>{
+  if(position==='center')return;
+  if(!await createSVGStrokeSource(info,position))alignment.value='center';
+ });alignment.closest('.inspector-field').querySelector('span').textContent='Align';
+ alignment.disabled=!strokeSourceEditable(info);
+ alignment.title='Align the stroke relative to the shape. Applies to every screen.';
+ panelBody.append(section);
+}
+async function createSVGStrokeSource(info,position){
+ if(!info.svgStrokeCreation||!strokeSourceEditable(info)||panelTasks||sourceRequests||undoBusy||editing)return false;
+ busyPanel(true);
+ try{
+  const definitionId='rt-stroke-'+[...crypto.getRandomValues(new Uint8Array(8))].map(value=>value.toString(16).padStart(2,'0')).join('');
+  const proof=await RetouchSVGStrokeIsolation.prepare(matchingEls(info.id)[0],info.svgStrokeCreation,position,definitionId);
+  if(!strokeSourceEditable(info))throw Error('The selection changed. Select the shape again.');
+  proof.assertCurrent();
+  const result=await api('POST','/rt/__api/op',{type:'createSVGStrokeSource',id:info.id,fileHash:info.hash,definitionId,model:{...proof.model,document:RetouchSVGPath.parseCompound(proof.model.path)}});
+  if(!result?.ok)throw Error(result?.reason||result?.error||'Could not align the stroke.');
+  const removed=result.removedSourceIds||[],deletedLocks=layerLocks.removeSourceIds(removed);
+  editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:removed,undoId:result.undoId});
+  layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,result.selectionIds);
+  const rendered=matchingEls(result.selectionIds[0]);
+  if(rendered.length!==1)throw Error('The stroke now renders more than once. Undo to restore the original shape.');
+  try{RetouchSVGStrokeFidelity.check(rendered[0],proof.model,definitionId);}catch{throw Error('The page changed after aligning the stroke. Undo to restore the original shape.');}
+  toast('Stroke alignment updated','ok');return true;
+ }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 function mountStrokeSourceControls(section,info){
  const I=RetouchInspector,current=()=>strokeSourceEditable(info)&&!panelTasks&&!sourceRequests&&!undoBusy&&!editing;
