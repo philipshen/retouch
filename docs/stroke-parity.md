@@ -11,7 +11,7 @@ SVG export preserves inside/outside appearance through more complex geometry.
 
 | Requirement | Current repository evidence | Remaining work |
 | --- | --- | --- |
-| Stroke paints | `retouch/shell/svg-paint.js` and the inspector expose single SVG paint and scoped stroke properties. | Multiple independently editable stroke fills and their order/visibility. |
+| Stroke paints | Ordinary and retained SVG shapes expose a single fill/stroke paint; retained paints use the light color picker, compact alpha controls and source history. | Multiple independently editable stroke fills and their order/visibility, retained gradients and responsive paint preservation. |
 | Alignment | The inspector now creates retained strokes from supported literal SVG shapes and edits Inside/Center/Outside, weight, caps, joins and dashes; see the 2026-09-22 integration checkpoint below. | Broader authored attributes, rendered instances, resource-backed previews, editing retained geometry/paints and export/package verification. |
 | Caps, joins, dashes | `svg-paint.js` parses regular/custom patterns; `inspector-ui.js` provides style, dash/gap, custom text, caps and joins. `test/e2e/svg-stroke-settings.cjs` covers source/history and scopes. | Per-point/vector-network equivalence, endpoint placement and full geometry fidelity still need proof. |
 | Width profiles | No profile model or authoring control found. | Profiles, direct width handles, serialization and rendering/export fidelity. |
@@ -512,3 +512,44 @@ Browser runs used the temporary slow-host action/prewarm timeouts without
 bypassing assertions. Inspected screenshots include
 `/tmp/retouch-stroke-creation-html-webkit-final.png` and
 `/tmp/retouch-stroke-creation-chromium.png`.
+
+## Retained fill and stroke paints — 2026-09-22
+
+Retained vectors now keep Fill and Stroke color rows after alignment creation.
+The existing compact swatch, color picker and alpha field edit each paint;
+`none` removes it. This uses the normal retained source operation and history,
+with the same singleton/lock and rendered-fidelity checks as stroke settings.
+Literal colors, alpha and Display P3 are supported; unresolved references and
+contextual/system colors are refused for these retained paint edits.
+
+The displayed paint combines its literal alpha with its captured fill/stroke
+opacity. Saving a paint stores the chosen effective alpha in that color and
+sets that paint's separate opacity multiplier to one, avoiding multiplication
+of the requested alpha twice. The other paint and group opacity are preserved.
+The original source shape remains verbatim and Restore original shape restores
+its original paints and opacity. Source tests cover non-unit paint and group
+opacity in HTML, React and Liquid.
+
+Picker previews update only generated paint/opacity attributes (and existing
+mask bounds), preserve node identities and restore attributes still owned by
+the preview on cancellation. Source changes occur on Apply; cancellation leaves
+source unchanged. These controls do not add multiple paints, gradients, width
+profiles, brushes, responsive variants or retained geometry editing. Desktop
+packaging remains unchanged.
+
+Validation: all 2,478 source tests passed with no skips in 40.69 seconds
+(`/tmp/retouch-stroke-paints-full.log`). Six HTML/React/Liquid editor workflows
+passed in Chromium and WebKit, including color-picker preview/cancellation,
+Apply, compact alpha edits, `none`, rendered opaque/translucent pixel samples,
+exact source undo/redo and draft/document preservation. The existing alignment,
+weight, advanced settings and gesture-history checks still pass in those runs.
+Logs: `/tmp/retouch-stroke-paints-controls-{html,react,liquid}-{chromium,webkit}.log`.
+
+Both engines also passed 462 generated-stroke fidelity checks covering all
+alignments and three transforms, including the new color/alpha/Display P3
+previews and restoration. Logs:
+`/tmp/retouch-stroke-paints-fidelity-none-{chromium,webkit}.log`. The standalone
+fixture now loads the same palette-values dependency used by the full editor;
+its first P3 run exposed the missing fixture dependency. The browser workflows
+used the temporary slow-host timeout runner without bypassing assertions.
+Inspected UI: `/tmp/retouch-stroke-paints-html-chromium.png`.

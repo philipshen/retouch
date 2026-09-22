@@ -28734,3 +28734,18 @@ Creation still requires supported literal source and one unlocked rendered
 instance. General resources/fonts, closed shadow roots, dynamic attributes,
 responsive paint preservation, retained geometry/paint editing, multiple
 strokes, profiles, brushes and desktop/package verification remain open.
+
+### 2026-09-22 — retained vector paint controls
+
+Aligned vectors now retain the normal light Fill and Stroke color rows,
+including the existing picker, compact alpha inputs and `none`. Picker drafts
+preview on the generated paths and cancel without source changes. Committed
+paints use effective alpha while preserving group opacity, the other paint,
+definition identity and the original authored shape for restoration.
+
+All 2,478 source tests passed; six HTML/React/Liquid workflows passed across
+Chromium and WebKit with color/alpha pixels, picker cancellation and exact
+history. Both browsers passed 462 generated-stroke fidelity checks. See
+[stroke parity](stroke-parity.md#retained-fill-and-stroke-paints--2026-09-22)
+for evidence and remaining scope. Multiple strokes, retained gradients and
+geometry editing, responsive paint variants and desktop delivery remain open.

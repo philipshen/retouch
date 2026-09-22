@@ -138,7 +138,7 @@ for(const kind of ['html','react','liquid'])test(kind+' retained stroke weight c
 });
 
 for(const kind of ['html','react','liquid'])test(kind+' retained stroke settings isolate changes, validate values and restore original bytes',()=>{
- const adapter=require('../src/adapters/'+kind+'.cjs'),initial=resolve(kind),values={linecap:['butt','round','square'],linejoin:['miter','round','bevel'],miterlimit:[1,2.5,1000],dasharray:['none','4 8','1, 2, 3','0 0','2px 4px'],dashoffset:[-100000,-.25,0,100000]};
+ const adapter=require('../src/adapters/'+kind+'.cjs'),initial=resolve(kind),values={fill:['none','#12ab34','rgb(10 20 30 / .4)','color(display-p3 1 0.2 0.1 / 0.8)'],stroke:['none','blue','#12345678'],linecap:['butt','round','square'],linejoin:['miter','round','bevel'],miterlimit:[1,2.5,1000],dasharray:['none','4 8','1, 2, 3','0 0','2px 4px'],dashoffset:[-100000,-.25,0,100000]};
  for(const position of ['inside','center','outside']){
   const made=create(initial,kind,{model:{...model,position}}),r=resolve(kind,made.edits[0].after,made.selectionIds[0]),before=S.context(r,kind);assert.ok(adapter.capabilities.ops.includes('setSVGStrokeSourceStyle'));
   for(const [property,list]of Object.entries(values))for(const value of list){
@@ -146,7 +146,7 @@ for(const kind of ['html','react','liquid'])test(kind+' retained stroke settings
    const next=resolve(kind,changed.edits[0].after,changed.selectionIds[0]),after=S.context(next,kind);assert.equal(after.source,before.source);assert.equal(after.id,before.id);assert.equal(after.model[property],value);for(const key of Object.keys(before.model))if(![property,'bounds'].includes(key))assert.deepEqual(after.model[key],before.model[key]);assert.equal(adapter.planOp(next,{type:'restoreSVGStrokeSource',fileHash:next.hash}).edits[0].after,initial.source);
    assert.equal(S.validatePlan(r,op,kind,changed),changed);
   }
-  for(const [property,value]of [['fill','green'],['position','outside'],['path','M0 0L1 1'],['__proto__',{}],['linecap','triangle'],['linejoin','arcs'],['miterlimit',0],['miterlimit','2'],['miterlimit',1001],['dasharray','1% 2%'],['dasharray','-1 2'],['dasharray','var(--dash)'],['dasharray','1,,2'],['dashoffset','1'],['dashoffset',100001],['dashoffset',NaN],['dashoffset',Infinity],['linecap',null],['dasharray',undefined]])assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceStyle',fileHash:r.hash,property,value}).refused,true,property+'='+value);
+  for(const [property,value]of [['stroke','Canvas'],['fill','currentColor'],['fill','var(--paint)'],['stroke','url(#paint)'],['fill','inherit'],['stroke','light-dark(red, blue)'],['background','green'],['position','outside'],['path','M0 0L1 1'],['__proto__',{}],['linecap','triangle'],['linejoin','arcs'],['miterlimit',0],['miterlimit','2'],['miterlimit',1001],['dasharray','1% 2%'],['dasharray','-1 2'],['dasharray','var(--dash)'],['dasharray','1,,2'],['dashoffset','1'],['dashoffset',100001],['dashoffset',NaN],['dashoffset',Infinity],['linecap',null],['dasharray',undefined]])assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceStyle',fileHash:r.hash,property,value}).refused,true,property+'='+value);
   assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceStyle',fileHash:'stale',property:'linecap',value:'round'}).refused,true);
  }
 });
@@ -164,4 +164,11 @@ for(const kind of ['html','react','liquid'])test(kind+' stroke creation accepts 
  const first=S.plan(initial,op,kind),second=S.plan(initial,op,kind);assert.ok(first.ok,first.reason);assert.deepEqual(first.edits,second.edits);assert.equal(S.context(resolve(kind,first.edits[0].after,first.selectionIds[0]),kind).id,definitionId);
  for(const id of [null,'bad',definitionId.toUpperCase()])assert.equal(S.plan(initial,{...op,definitionId:id},kind).refused,true);
  const collided=resolve(kind,initial.source.replace('Untouched',definitionId));assert.equal(S.plan(collided,{...op,fileHash:collided.hash},kind).refused,true);
+});
+
+for(const kind of ['html','react','liquid'])test(kind+' retained paint edits use effective alpha and preserve original source opacity',()=>{
+ const initial=resolve(kind),made=create(initial,kind,{model:{...model,opacity:.3,fillOpacity:.4,strokeOpacity:.6}}),r=resolve(kind,made.edits[0].after,made.selectionIds[0]),before=S.context(r,kind),adapter=require('../src/adapters/'+kind+'.cjs');
+ for(const property of ['fill','stroke']){
+  const changed=adapter.planOp(r,{type:'setSVGStrokeSourceStyle',fileHash:r.hash,property,value:'#11223380'});assert.ok(changed.ok,changed.reason);const next=resolve(kind,changed.edits[0].after,changed.selectionIds[0]),after=S.context(next,kind);assert.equal(after.model[property],'#11223380');assert.equal(after.model[property+'Opacity'],1);assert.equal(after.model.opacity,.3);assert.equal(after.model[property==='fill'?'strokeOpacity':'fillOpacity'],property==='fill'?.6:.4);assert.equal(after.id,before.id);assert.equal(after.source,before.source);assert.equal(adapter.planOp(next,{type:'restoreSVGStrokeSource',fileHash:next.hash}).edits[0].after,initial.source);
+ }
 });

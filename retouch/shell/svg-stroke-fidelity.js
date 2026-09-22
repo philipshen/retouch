@@ -64,21 +64,21 @@
    return true;
   }finally{host.remove();}
  }
- // Scrubbing changes only the generated stroke and mask bounds. Preserve DOM
+ // Paint and numeric previews change generated attributes and mask bounds. Preserve DOM
  // identities and restore only values still owned by this preview.
  function previewProperty(group,input,id,property){
-  const attribute={width:'stroke-width',miterlimit:'stroke-miterlimit',dashoffset:'stroke-dashoffset'}[property];
-  if(!attribute)throw Error('Choose a numeric stroke setting.');
+  const paint=['fill','stroke'].includes(property),attribute={fill:'fill',stroke:'stroke',width:'stroke-width',miterlimit:'stroke-miterlimit',dashoffset:'stroke-dashoffset'}[property];
+  if(!attribute)throw Error('Choose a supported stroke setting.');
   check(group,input,id);
   const m=model(input),rendered=group.children[1],parent=group.parentElement,strokePath=[...rendered.children].filter(el=>el.localName==='path').at(-1),changes=[];
   let markup=group.innerHTML,active=true;
   const remember=(el,name)=>{const item={el,name,before:el.getAttribute(name),last:el.getAttribute(name)};changes.push(item);return item;};
-  const field=remember(strokePath,attribute),bounds=m.position==='outside'?[rendered.querySelector('mask'),rendered.querySelector('mask > rect')].flatMap(el=>Object.keys(m.bounds).map(name=>remember(el,name))):[];
+  const field=remember(property==='fill'?[...rendered.children].find(el=>el.localName==='path'):strokePath,attribute),opacity=paint?remember(field.el,property+'-opacity'):null,bounds=m.position==='outside'?[rendered.querySelector('mask'),rendered.querySelector('mask > rect')].flatMap(el=>Object.keys(m.bounds).map(name=>remember(el,name))):[];
   const current=()=>active&&group.isConnected&&group.parentElement===parent&&group.children[1]===rendered&&group.innerHTML===markup;
   const set=(item,value)=>{item.last=String(value);item.el.setAttribute(item.name,item.last);};
   return {current,update(value){
-   if(!current())throw Error('The stroke changed during the weight preview.');
-   const next=model({...m,[property]:value});set(field,property==='width'?next.width*(m.position==='center'?1:2):next[property]);for(const item of bounds)set(item,next.bounds[item.name]);markup=group.innerHTML;
+   if(!current())throw Error('The stroke changed during the stroke preview.');
+   const next=paint?root.RetouchSVGStrokeAlignment.setPaint({...m,document:root.RetouchSVGPath.parseCompound(m.path)},property,value):model({...m,[property]:value});if(opacity)set(opacity,1);set(field,property==='width'?next.width*(m.position==='center'?1:2):next[property]);for(const item of bounds)set(item,next.bounds[item.name]);markup=group.innerHTML;
   },restore(){
    if(!active)return;active=false;
    for(const item of changes)if(item.el.getAttribute(item.name)===item.last){if(item.before===null)item.el.removeAttribute(item.name);else item.el.setAttribute(item.name,item.before);}

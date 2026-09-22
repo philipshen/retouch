@@ -43,6 +43,11 @@
   if(Object.values(bounds).some(n=>!Number.isFinite(n)||Math.abs(n)>1e8))throw Error('The stroke extends beyond supported geometry bounds.');
   return {path,position,width,fillRule,matrix:[...matrix],...paints,linecap,linejoin,miterlimit,dasharray,dashoffset,opacity,fillOpacity,strokeOpacity,bounds};
  }
+ const contextualPaint=new Set('currentcolor inherit initial unset revert revert-layer context-fill context-stroke accentcolor accentcolortext activetext buttonborder buttonface buttontext canvas canvastext field fieldtext graytext highlight highlighttext linktext mark marktext selecteditem selecteditemtext visitedtext activeborder activecaption appworkspace background buttonhighlight buttonshadow captiontext inactiveborder inactivecaptiontext infobackground infotext menu menutext scrollbar threeddarkshadow threedface threedhighlight threedlightshadow threedshadow window windowframe windowtext'.split(' '));
+ function setPaint(input,property,value){
+  if(!['fill','stroke'].includes(property)||typeof value!=='string'||contextualPaint.has(value.trim().toLowerCase())||/\b(?:var|env|url|light-dark)\s*\(/i.test(value))throw Error('Choose a literal stroke or fill color, or none.');
+  return normalize({...input,[property]:value,[property+'Opacity']:1});
+ }
  function render(input,id){
   if(typeof id!=='string'||!/^rt-stroke-[a-f0-9]{16}$/.test(id))throw Error('Provide a unique stroke definition identity.');
   const m=normalize(input),shape='d="'+escape(m.path)+'"',fillRule='fill-rule="'+m.fillRule+'"',bounds=Object.entries(m.bounds).map(([key,value])=>key+'="'+value+'"').join(' ');
@@ -59,5 +64,5 @@
   const stroke='<path '+shape+' fill="none" stroke="'+escape(m.stroke)+'" stroke-opacity="'+m.strokeOpacity+'" stroke-width="'+m.width*(m.position==='center'?1:2)+'" stroke-linecap="'+m.linecap+'" stroke-linejoin="'+m.linejoin+'" stroke-miterlimit="'+m.miterlimit+'" stroke-dasharray="'+escape(m.dasharray)+'" stroke-dashoffset="'+m.dashoffset+'"'+constraint+'/>';
   return '<g transform="'+A.format(m.matrix)+'" opacity="'+m.opacity+'">'+definitions+fill+stroke+'</g>';
  }
- const api={normalize,render};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGStrokeAlignment=api;
+ const api={normalize,render,setPaint};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGStrokeAlignment=api;
 })(typeof window==='object'?window:globalThis);

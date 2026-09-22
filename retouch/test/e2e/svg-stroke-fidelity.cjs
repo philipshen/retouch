@@ -3,7 +3,7 @@ const path=require('node:path'),assert=require('node:assert/strict'),G=require('
 const fixture=process.env.RT_INSPECTOR_FIXTURE,engine=process.env.RT_E2E_BROWSER||'chromium',id='rt-stroke-0123456789abcdef';
 (async()=>{const browser=await require(path.join(fixture,'node_modules/playwright'))[engine].launch();let checks=0;try{
  const page=await browser.newPage();await page.setContent('<style>svg,path,g{fill:lime;stroke:purple;opacity:.2;transform:scale(3)}</style><iframe style="width:400px;height:400px;border:0"></iframe>');
- for(const script of ['svg-path.js','svg-affine.js','html-css-values.js'])await page.addScriptTag({path:path.resolve(__dirname,'../../shell',script)});
+ for(const script of ['svg-path.js','svg-affine.js','palette-values.js','html-css-values.js'])await page.addScriptTag({path:path.resolve(__dirname,'../../shell',script)});
  await page.addScriptTag({path:require.resolve('paper/dist/paper-core.min.js')});
  for(const script of ['svg-stroke-alignment.js','svg-stroke-fidelity.js'])await page.addScriptTag({path:path.resolve(__dirname,'../../shell',script)});
  const frame=page.frames().find(f=>f.parentFrame());
@@ -26,9 +26,9 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,engine=process.env.RT_E2E_BROWSER
   await page.evaluate(()=>strokePreview.restore());assert.equal(await frame.locator('[data-rt-stroke-alignment]').innerHTML(),beforePreview);assert.equal(await page.evaluate(()=>{const nodes=[...document.querySelector('iframe').contentDocument.querySelector('[data-rt-stroke-alignment]').querySelectorAll('*')];return nodes.every((el,i)=>el===strokePreviewNodes[i]);}),true);await run(model);
   // A concurrent external attribute change survives cancellation.
   await page.evaluate(({model,id})=>{const group=document.querySelector('iframe').contentDocument.querySelector('[data-rt-stroke-alignment]');window.strokePreview=RetouchSVGStrokeFidelity.previewWeight(group,model,id);strokePreview.update(12);const path=[...group.children[1].children].filter(el=>el.localName==='path').at(-1);path.setAttribute('stroke-width','999');},{model,id});assert.equal(await page.evaluate(()=>strokePreview.current()),false);await page.evaluate(()=>strokePreview.restore());assert.equal(await frame.locator('[data-rt-stroke-alignment] > g:last-child > path').last().getAttribute('stroke-width'),'999');await frame.locator('[data-rt-stroke-alignment]').evaluate((el,html)=>el.innerHTML=html,beforePreview);await run(model);
-  for(const [property,values]of [['miterlimit',[1,2.5,8]],['dashoffset',[-12.5,0,12.5]]]){
+  for(const [property,values]of [['miterlimit',[1,2.5,8]],['dashoffset',[-12.5,0,12.5]],['fill',['none','#12345678','color(display-p3 1 0.2 0.1 / 0.8)']],['stroke',['none','lime','#12345678']]]){
    await page.evaluate(({model,id,property})=>{const group=document.querySelector('iframe').contentDocument.querySelector('[data-rt-stroke-alignment]');window.strokePreview=RetouchSVGStrokeFidelity.previewProperty(group,model,id,property);},{model,id,property});
-   for(const value of values){await page.evaluate(value=>strokePreview.update(value),value);await run({...model,[property]:value});}
+   for(const value of values){await page.evaluate(value=>strokePreview.update(value),value);await run({...model,[property]:value,...(['fill','stroke'].includes(property)?{[property+'Opacity']:1}:{})});}
    await page.evaluate(()=>strokePreview.restore());assert.equal(await frame.locator('[data-rt-stroke-alignment]').innerHTML(),beforePreview);await run(model);
   }
   const image=await snapshot();

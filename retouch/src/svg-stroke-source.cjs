@@ -90,8 +90,8 @@ function plan(r,op,kind){
     model=S.normalize({...input(model),width:op.width});
    }
    else if(op.type==='setSVGStrokeSourceStyle'){
-    if(!['linecap','linejoin','miterlimit','dasharray','dashoffset'].includes(op.property)||op.value===null||op.value===undefined)throw Error('Choose a supported stroke setting and value.');
-    model=S.normalize({...input(model),[op.property]:op.value});
+    if(!['fill','stroke','linecap','linejoin','miterlimit','dasharray','dashoffset'].includes(op.property)||op.value===null||op.value===undefined)throw Error('Choose a supported stroke setting and value.');
+    model=['fill','stroke'].includes(op.property)?S.setPaint(input(model),op.property,op.value):S.normalize({...input(model),[op.property]:op.value});
    }
    else throw Error('Choose a supported retained stroke edit.');
   }
