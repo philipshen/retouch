@@ -28814,3 +28814,14 @@ while preserving paints, alignment, placement and the archived original shape.
 See [retained path editing](stroke-parity.md#retained-stroke-path-editing--2026-09-22)
 for source validation, supported geometry and verification evidence. Full Figma
 Design parity and trusted desktop distribution remain open.
+
+
+### 2026-09-22 — preserve hot-update delivery time after suspension
+
+Compiled-preview synchronization now counts actual polling opportunities, so
+suspending the tab does not exhaust its wait before a queued update can apply.
+Ready and delayed updates retain the current document; a permanently missing
+update still reaches the existing fallback. See the
+[delivery-time investigation](stroke-parity.md#delayed-hot-update-delivery-after-suspension--2026-09-22)
+for the deterministic regression and the separate, still-unresolved intermittent
+React draft reset.

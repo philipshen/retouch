@@ -873,3 +873,39 @@ Escape, visible-fill CSS refusal, exact undo/redo, and preserved document/form
 state. Existing shared paint/settings, alignment, transform, lock and pixel
 checks also passed in those workflows. Successful reruns do not resolve the
 intermittent React failure above. Desktop packaging was not rebuilt.
+
+
+## Delayed hot-update delivery after suspension — 2026-09-22
+
+The compiled preview wait now counts polling opportunities rather than wall-clock
+time. It normally allows about eight seconds (160 checks, 50 ms apart), with
+three stable readiness samples required before continuing. A tab suspension no
+longer exhausts that budget before a queued hot update can run. Permanently
+missing updates still reach the existing fallback; the wait is not indefinite.
+
+A deterministic browser reproducer advanced the clock by nine seconds per read
+and delayed readiness for two checks. The preceding implementation made two
+unnecessary page fetches (`/tmp/retouch-refresh-delivery-before.log`). The
+regression helper now covers ready, pending and permanently missing updates;
+it intercepts fallback reloads when testing the last case.
+
+Separately, three buffered baseline Chromium React runs completed 960 refreshes
+without a reload or form-draft loss (`/tmp/retouch-refresh-buffer-runs.log` and
+`/tmp/retouch-refresh-buffer-{0,1,2}.log`). This did not reproduce the earlier
+shared-paint draft reset, so that failure remains unresolved. The delivery-wait
+change fixes the demonstrated timeout behavior, not a proven root cause of that
+intermittent reset.
+
+All 2,499 source tests passed with no failures or skips in 17.14 seconds
+(`/tmp/retouch-refresh-delivery-source-final.log`).
+
+Svelte's real Vite workflow passed in Chromium and WebKit, covering source text,
+responsive CSS, multi-selection, exact undo/redo, retained component/document
+state, conditional identity and exclusion of editor code from production builds
+(`/tmp/retouch-refresh-delivery-svelte-{chromium,webkit}.log`).
+
+All six full HTML/Liquid/React stroke editor workflows passed in Chromium and
+WebKit (`/tmp/retouch-refresh-delivery-six.log`). Both React runs passed all
+three deterministic suspension/delivery scenarios, along with the retained path,
+shared paints/settings, transforms, pixels, locks, exact source history and
+form/document preservation checks. Desktop packaging was not rebuilt.

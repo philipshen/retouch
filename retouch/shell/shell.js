@@ -993,10 +993,11 @@ async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawin
     // Only compiler-stamped revisions can prove the live page reflects this write.
     if(!info.renderRevisionAttribute)return false;
     // A fresh server response can precede delivery of the browser hot update.
-    // Use the same bounded window as RetouchRenderSync before falling back.
-    let stable=0,syncAfter=0;const deadline=performance.now()+8000;
-    // After a scheduling gap, inspect the live revision before timing out.
-    // A ready frame still gets its three stable samples instead of a reload.
+    // Normally allow about eight seconds of polling before falling back.
+    let stable=0,syncAfter=0,attempts=0;
+    // Give the framework 160 actual delivery opportunities. A suspended tab's
+    // wall-clock gap must not consume the wait before its queued HMR can run.
+    // A ready frame still gets its three stable samples at the boundary.
     while(true){
       if(!current())return false;
       try{
@@ -1007,7 +1008,7 @@ async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawin
         if(!ready&&performance.now()>=syncAfter){RetouchRenderSync.requestSourceSync(iframe);syncAfter=performance.now()+1000;}
         if(stable>=3)return true;
       }catch{stable=0;}
-      if(stable===0&&performance.now()>=deadline)return false;
+      if(++attempts>=160&&stable===0)return false;
       await new Promise(resolve=>setTimeout(resolve,50));
     }
   }
