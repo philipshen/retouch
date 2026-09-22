@@ -715,8 +715,8 @@ common source ancestor and retains the selection through exact undo/redo.
 
 Ordinary shapes must first be aligned individually before joining these shared
 stroke controls. Mixed ordinary/retained selections still have shared transform
-controls. Cross-file edits, path-node editing of retained geometry, shared paint
-picker controls, gradients and multiple paints remain open.
+controls. Cross-file edits, path-node editing of retained geometry, gradients
+and multiple paints remain open. Shared paint controls are covered below.
 
 Validation: all 2,490 source tests passed without failures or skips in 16.81
 seconds (`/tmp/retouch-stroke-shared-full-final.log`). Coverage includes
@@ -735,3 +735,57 @@ Chromium workflows were rerun successfully (`/tmp/retouch-stroke-shared-layout.l
 React and WebKit runs already used that final layout. The final HTML/Chromium
 multi-selection screenshot was inspected. Desktop packaging was not rebuilt
 for this checkpoint.
+
+## Shared aligned-vector fill and stroke paint — 2026-09-22
+
+Multiple aligned vectors now retain the normal light Fill and Stroke paint
+rows, color picker, and compact opacity fields. Different colors and alpha
+values display Mixed. Picker drafts preview every selected vector and Escape
+restores them without a source write. Applying a color is one atomic edit and
+one history entry, including Display P3 and explicit no-paint values.
+
+Opacity edits preserve each vector's color channels and color space. Bare hex
+edits preserve each existing paint's effective alpha; entering hex after None
+adds paint at full opacity. Explicit CSS color values retain their own alpha.
+No-paint values keep the opacity field disabled until paint is added. These
+are shared source edits across every screen size.
+
+The batch operation accepts an exact source-ID-to-paint map for fill or stroke.
+It rejects incomplete maps, unknown members, simultaneous scalar/map values,
+and invalid paints before returning a file edit. Values follow their original
+source identities while the planner composes structural mappings. Paint edits
+normalize the chosen paint opacity, preserving the other paint, group opacity,
+archived geometry, placement, and private definition identity.
+
+Retained gradients, multiple paints, path-node editing and mixed ordinary/
+aligned-vector paint editing remain open.
+
+Verification also exposed a compiled-preview timing edge. The old refresh loop
+could skip every live revision check after a scheduling gap and fall back to
+reloading an already-current document. A deterministic React browser regression
+advanced the monotonic clock between observations and recorded an unnecessary
+fetch/reload. Refresh now checks the live revision before expiring its wait and
+still requires three stable samples, including stylesheet and client-mount
+readiness. Stale or mismatched revisions do not bypass the existing checks.
+
+The final source suite passed all 2,493 tests without failures or skips in
+16.21 seconds (`/tmp/retouch-stroke-shared-paint-final-source.log`). New source
+coverage exercises distinct per-member sRGB/P3 paint values, effective alpha,
+other-paint/group-opacity preservation, incomplete/ambiguous maps, and atomic
+refusal of invalid late members.
+
+Ordinary shared paint regressions passed in Chromium and WebKit
+(`/tmp/retouch-stroke-shared-paint-ordinary-{chromium,webkit}.log`), including
+per-layer alpha, hidden paints, P3 strokes, invalid drafts, and exact history.
+The final HTML/Chromium multi-selection screenshot was inspected: mixed paint
+labels render once and the existing compact color/opacity rows remain intact.
+
+All six complete HTML/React/Liquid editor workflows passed in Chromium and
+WebKit on the final code (`/tmp/retouch-stroke-shared-paint-verified-six.log`).
+They exercise picker preview/cancellation, distinct colors and alpha,
+opacity-only edits, bare hex, Display P3, None-to-hex creation, atomic CSS
+refusal, exact undo/redo, retained selection and document/input state. The
+React runs in both engines also pass the deterministic scheduling-gap
+regression; its pre-fix run recorded one unnecessary fetch and reload
+(`/tmp/retouch-stroke-shared-paint-pause-before.log`). Desktop packaging was
+not rebuilt for this checkpoint.

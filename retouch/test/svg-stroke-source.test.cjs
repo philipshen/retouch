@@ -241,3 +241,14 @@ for(const kind of ['html','react','liquid'])test(kind+' shared alignment refuses
  for(const position of ['inside','outside']){const bad=adapter.planOp(state,{type:'setSVGStrokeSelection',fileHash:state.hash,ids:groups.map(e=>e.id),property:'position',value:position});assert.equal(bad.refused,true);assert.equal(bad.edits,undefined);}
  const center=adapter.planOp(state,{type:'setSVGStrokeSelection',fileHash:state.hash,ids:groups.map(e=>e.id),property:'position',value:'center'});assert.ok(center.ok,center.reason);
 });
+for(const kind of ['html','react','liquid'])test(kind+' selected stroke paints preserve distinct colors and effective opacity atomically',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs');let r=resolve(kind),source=r.source.replace('<circle','<rect x="20" y="20" width="60" height="60" fill="red" stroke="blue"/><circle');r=resolve(kind,source);
+ for(const alpha of [.4,.7]){const v=view(r,kind);r.element=r.elements.find(e=>v.tag(e)==='rect'&&S.creation({...r,element:e},kind));const made=create(r,kind,{model:{...model,fillOpacity:alpha,strokeOpacity:alpha,opacity:.3}});assert.ok(made.ok,made.reason);r=resolve(kind,made.edits[0].after,made.selectionIds[0]);}
+ const groups=r.elements.filter(element=>S.context({...r,element},kind)),ids=groups.map(e=>e.id),originals=groups.map(element=>S.context({...r,element},kind));r.element=groups[0];
+ for(const property of ['fill','stroke']){
+  const values={[ids[0]]:'#11223380',[ids[1]]:'color(display-p3 0.2 0.6 0.8 / 0.5)'},op={type:'setSVGStrokeSelection',fileHash:r.hash,ids,property,values},change=adapter.planOp(r,op);assert.ok(change.ok,change.reason);assert.equal(change.edits.length,1);
+  const next=resolve(kind,change.edits[0].after,change.selectionIds[0]);change.selectionIds.forEach((id,i)=>{const c=S.context({...next,element:next.elements.find(e=>e.id===id)},kind);assert.equal(c.model[property],values[ids[i]]);assert.equal(c.model[property+'Opacity'],1);assert.equal(c.model.opacity,.3);assert.equal(c.model[property==='fill'?'strokeOpacity':'fillOpacity'],originals[i].model[property==='fill'?'strokeOpacity':'fillOpacity']);assert.equal(c.source,originals[i].source);assert.equal(c.id,originals[i].id);});
+  assert.equal(S.validatePlan(r,op,kind,change),change);
+  for(const extra of [{value:'red'},{values:null},{values:['red','blue']},{values:{[ids[0]]:'red'}},{values:{...values,extra:'green'}},{values:{...values,[ids[1]]:'var(--paint)'}},{values:{...values,[ids[1]]:null}},{property:'width'}]){const refused=adapter.planOp(r,{...op,...extra});assert.equal(refused.refused,true);assert.equal(refused.edits,undefined);}
+ }
+});

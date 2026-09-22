@@ -28788,3 +28788,12 @@ updates the whole selection and one undo restores it. See
 [shared aligned-vector settings](stroke-parity.md#shared-aligned-vector-stroke-settings--2026-09-22)
 for adapter boundaries and verification evidence. Full Figma parity and desktop
 distribution remain incomplete.
+
+### 2026-09-22 — shared aligned-vector paints
+
+Aligned-vector selections now have Fill and Stroke color pickers and opacity
+fields. Mixed colors and alpha remain independently editable: changing opacity
+preserves colors; bare hex preserves alpha. Drafts cancel without a source edit,
+and the entire selection uses one undo entry. See
+[shared retained paints](stroke-parity.md#shared-aligned-vector-fill-and-stroke-paint--2026-09-22)
+for verification and current limits.
