@@ -420,3 +420,21 @@ shadow roots and large-page performance need further proof. Baseline mismatch
 causes refusal; the tested fixtures do not establish arbitrary-page fidelity.
 The later check-to-source-commit race and public creation lifecycle remain
 unfinished. No desktop package was rebuilt or launched.
+
+The isolated result also exposes `assertCurrent()`, a synchronous recheck of
+the captured authored document after the temporary iframe has been removed.
+Callers can use it immediately before submitting the source operation. It
+checks current state, not uninterrupted history: restoring the same original
+nodes, styles and drafts makes the proof current again. It is not a lock or an
+atomic browser/server transaction, and cannot protect a later asynchronous
+commit by itself. The editor does not yet consume this internal method.
+
+Freshness checks passed in Chromium and WebKit: 384 checks per engine,
+including post-return draft changes, CSSOM rule insertion and replacement of
+the selected node with identical markup. Each invalidates the proof; exact
+restoration passes again without recreating the sandbox. Logs:
+`/tmp/retouch-stroke-freshness-chromium-retry.log` and
+`/tmp/retouch-stroke-freshness-webkit.log`. The initial Chromium run timed out
+waiting for the fixture input before reaching these assertions; the terminal
+process was confirmed before retrying. No full source-suite rerun was needed
+for this isolated browser-only follow-up.

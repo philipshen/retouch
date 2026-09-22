@@ -46,9 +46,15 @@
    const target=clones[elements.indexOf(el)],snapshot=root.RetouchSVGStrokeSnapshot.capture(target,candidate);
    if(JSON.stringify(snapshot)!==JSON.stringify(captured))throw Error('The isolated preview changes the selected stroke.');
    const result=P.prepare(target,candidate,position,id);
-   const finalText=textBoxes(original),currentSheets=[...original.styleSheets,...(original.adoptedStyleSheets||[])].map(sheet=>sheetText(sheet));
-   if(!el.isConnected||original.documentElement.outerHTML!==markup||JSON.stringify(sheets)!==JSON.stringify(currentSheets)||viewport.some((value,i)=>value!==[original.defaultView.innerWidth,original.defaultView.innerHeight,original.defaultView.devicePixelRatio][i])||finalText.length!==text.length||finalText.some((item,i)=>item.node!==text[i].node||item.text!==text[i].text||!sameBoxes(item.boxes,text[i].boxes))||original.getAnimations?.().some(animation=>animation.playState!=='finished')||elements.some((node,i)=>!node.isConnected||!P.equivalent(baseline[i],P.state(node,rules))||formState(node)!==forms[i]))throw Error('The page changed while checking the isolated stroke preview.');
-   return {...result,isolated:true};
+   // Call again immediately before submitting the source operation. This is
+   // a synchronous freshness check, not an atomic browser/server transaction.
+   const assertCurrent=()=>{
+    const finalText=textBoxes(original),currentSheets=[...original.styleSheets,...(original.adoptedStyleSheets||[])].map(sheet=>sheetText(sheet));
+    if(original.defaultView.document!==original||!el.isConnected||original.documentElement.outerHTML!==markup||JSON.stringify(sheets)!==JSON.stringify(currentSheets)||viewport.some((value,i)=>value!==[original.defaultView.innerWidth,original.defaultView.innerHeight,original.defaultView.devicePixelRatio][i])||finalText.length!==text.length||finalText.some((item,i)=>item.node!==text[i].node||item.text!==text[i].text||!sameBoxes(item.boxes,text[i].boxes))||original.getAnimations?.().some(animation=>animation.playState!=='finished')||elements.some((node,i)=>!node.isConnected||!P.equivalent(baseline[i],P.state(node,rules))||formState(node)!==forms[i]))throw Error('The page changed while checking the isolated stroke preview.');
+    return true;
+   };
+   assertCurrent();
+   return {...result,isolated:true,assertCurrent};
   }finally{root.clearTimeout(loadTimer);frame.onload=frame.onerror=null;frame.remove();}
  }
  const api={prepare};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGStrokeIsolation=api;

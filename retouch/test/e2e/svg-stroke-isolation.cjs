@@ -16,6 +16,16 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,engine=process.env.RT_E2E_BROWSER
    await run(position);
    for(const [css,error]of [['[data-rt-stroke-original]{display:block!important}',/reveals/],['[data-rt-stroke-alignment] > g:last-child > path{stroke:lime!important}',/stroke/],['body:has([data-rt-stroke-alignment]) p{color:red}',/another element/],['body:has([data-rt-stroke-alignment]) p::before{content:"B"}',/another element/],['svg:has([data-rt-stroke-alignment]){transform:translate(2px,3px)}',/another element/],['g+circle{fill:orange}',/another element/],['@media (min-width:0px){g+circle{fill:orange}}',/another element/],['@media (min-width:600px){g+circle{fill:orange}}',null]]){const style=await frame.addStyleTag({content:css});try{await run(position,error);}catch(failure){console.error({transform,position,css});throw failure;}await style.evaluate(el=>el.remove());await run(position);}
   }
+  for(const change of ['draft','css','replacement']){
+   const fresh=await page.evaluate(async({candidate,id,change})=>{
+    const d=document.querySelector('iframe').contentDocument,el=d.querySelector('[data-rt]'),proof=await RetouchSVGStrokeIsolation.prepare(el,candidate,'inside',id),valid=proof.assertCurrent();let restore;
+    if(change==='draft'){const input=d.querySelector('input'),value=input.value;input.value='new draft';restore=()=>input.value=value;}
+    else if(change==='css'){const sheet=d.styleSheets[0],index=sheet.cssRules.length;sheet.insertRule('[data-rt-stroke-alignment] path{stroke:purple!important}',index);restore=()=>sheet.deleteRule(index);}
+    else {const replacement=el.cloneNode(true);el.replaceWith(replacement);restore=()=>replacement.replaceWith(el);}
+    let error;try{proof.assertCurrent();}catch(e){error=e.message;}finally{restore();}
+    return {valid,error,restored:proof.assertCurrent(),leaks:document.querySelectorAll('[data-rt-stroke-isolation]').length};
+   },{candidate,id,change});assert.equal(fresh.valid,true);assert.match(fresh.error,/page changed/i);assert.equal(fresh.restored,true);assert.equal(fresh.leaks,0);checks++;
+  }
   await frame.locator('style').first().evaluate(el=>Object.defineProperty(el.sheet,'cssRules',{configurable:true,get(){throw new DOMException('Cross-origin rules','SecurityError');}}));const inaccessible=await run('inside',/cannot be fully inspected/);assert.equal(inaccessible.mutations,0);await frame.locator('style').first().evaluate(el=>delete el.sheet.cssRules);
   if(await frame.evaluate(()=>CSS.supports('selector(&)'))){const nested=await frame.addStyleTag({content:'svg{g+circle{fill:orange}}'});const result=await run('inside',/cannot be fully inspected/);assert.equal(result.mutations,0);await nested.evaluate(el=>el.remove());}
   for(const type of ['custom','shadow','frame']){
