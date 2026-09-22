@@ -279,3 +279,24 @@ for(const kind of ['html','react','liquid'])test(kind+' retained path editing pr
   const damaged=resolve(kind,change.edits[0].after.replace('width="60"','width="61"'),change.selectionIds[0]);assert.equal(S.context(damaged,kind),null);
  }
 });
+for(const kind of ['html','react','liquid'])test(kind+' retained gradients preserve stroke geometry, original bytes and independent paint identities',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),initial=resolve(kind),made=create(initial,kind);let r=resolve(kind,made.edits[0].after,made.selectionIds[0]);const before=S.context(r,kind),archive=before.source;
+ const apply=extra=>{const op={type:'setSVGStrokeSourceGradient',fileHash:r.hash,...extra},result=adapter.planOp(r,op);assert.ok(result.ok,result.reason);assert.equal(S.validatePlan(r,op,kind,result),result);r=resolve(kind,result.edits[0]?.after||r.source,result.selectionIds?.[0]||r.element.id);return S.context(r,kind);};
+ for(const paint of ['fill','stroke']){
+  let c=apply({paint,action:'create',value:{type:'linearGradient',color:'#12345680'}});assert.equal(c.source,archive);assert.equal(c.id,before.id);assert.equal(c.model.gradients[paint].stops[0].color,'#12345680');assert.ok(r.source.includes(c.id+'-'+paint));
+  c=apply({paint,action:'opacity',value:.35});assert.equal(c.model[paint+'Opacity'],.35);
+  c=apply({paint,changes:{x1:'10%',x2:'90%',spreadMethod:'reflect'}});assert.equal(c.model.gradients[paint].fields.x1,'10%');
+  c=apply({paint,stop:1,changes:{'stop-color':'color(display-p3 0.2 0.6 0.8)','stop-opacity':'.75'}});assert.equal(c.model.gradients[paint].stops[1].opacity,'0.75');
+  c=apply({paint,action:'insertStop',stop:1,value:{offset:'.5',color:'red',opacity:'1'}});assert.equal(c.model.gradients[paint].stops.length,3);
+  c=apply({paint,action:'moveStop',stop:1,value:'.8'});assert.equal(c.model.gradients[paint].stops[1].offset,'0.8');
+  c=apply({paint,action:'reverse'});assert.equal(c.model.gradients[paint].stops[1].color,'red');
+  c=apply({paint,action:'setType',value:'radialGradient'});assert.equal(c.model.gradients[paint].fields.x1,'10%');
+  c=apply({paint,changes:{cx:'45%',r:'40%',fr:'10%'}});assert.equal(c.model.gradients[paint].fields.r,'40%');
+  c=apply({paint,action:'removeStop',stop:1});assert.equal(c.model.gradients[paint].stops.length,2);
+  for(const bad of [{paint:'other',action:'reverse'},{paint,stop:4,changes:{'stop-color':'red'}},{paint,stop:0,changes:{'stop-color':'currentColor'}},{paint,changes:{href:'#foreign'}},{paint,action:'removeStop',stop:0},{paint,action:'create',value:{type:'linearGradient',color:'red'}}]){const result=adapter.planOp(r,{type:'setSVGStrokeSourceGradient',fileHash:r.hash,...bad});assert.equal(result.refused,true);assert.equal(result.edits,undefined);}
+ }
+ const gradients=S.context(r,kind).model.gradients;for(const [type,extra]of [['setSVGStrokeSourceWidth',{width:11}],['setSVGStrokeSourceTransform',{matrix:[1,0,0,1,4,5]}],['setSVGStrokeSourcePath',{path:'M10 20 L80 20 L80 80 L20 80 Z'}],['setSVGStrokeSourcePosition',{position:'outside'}]]){const result=adapter.planOp(r,{type,fileHash:r.hash,...extra});assert.ok(result.ok,result.reason);r=resolve(kind,result.edits[0].after,result.selectionIds[0]);assert.deepEqual(S.context(r,kind).model.gradients,gradients);}
+ const c=apply({paint:'fill',action:'solid',value:'#abcdef'});assert.equal(c.model.gradients.fill,undefined);assert.deepEqual(c.model.gradients.stroke,gradients.stroke);assert.equal(c.source,archive);
+ assert.equal(adapter.planOp(r,{type:'restoreSVGStrokeSource',fileHash:r.hash}).edits[0].after,initial.source);
+ assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceGradient',paint:'stroke',action:'reverse',fileHash:'stale'}).refused,true);
+});

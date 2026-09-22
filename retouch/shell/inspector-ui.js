@@ -353,7 +353,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    }
    if(name==='Fill gradient'||name==='Stroke gradient'){
     for(const names of [['x1','y1'],['x2','y2'],['cx','cy'],['fx','fy'],['r','fr']])pair(section,names.map(name=>'Gradient '+name));
-    for(const row of section.querySelectorAll('.inspector-field')){const label=fieldControl(row)?.getAttribute('aria-label')||'';row.querySelector(':scope > span').textContent=label.replace(/^Gradient /,'').replace(/^Stop \d+ /,'').replace('gradientUnits','Units').replace('spreadMethod','Spread');}
+    for(const row of section.querySelectorAll('.inspector-field')){const label=fieldControl(row)?.getAttribute('aria-label')||'';row.querySelector(':scope > span').textContent=label.replace(/^(?:Fill|Stroke) gradient opacity \(%\)$/,'Opacity').replace(/^Gradient /,'').replace(/^Stop \d+ /,'').replace('gradientUnits','Units').replace('spreadMethod','Spread');}
    }
    if(name==='Fill'||name==='Effects'){
     const options=disclosure(name==='Fill'?'Fill options':'Effect options',name+'-options');
@@ -646,7 +646,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    section.classList.toggle('empty-svg-paint',empty);section.append(action);
   }
   const fillSection=panel.querySelector(':scope > [data-section="fill"]'),imageSection=panel.querySelector(':scope > [data-section="image-fill"]');
-  if(fillSection&&imageSection&&!fillSection.querySelector('[aria-label="SVG fill"], [aria-label="Combined fill"]')){
+  if(fillSection&&imageSection&&!fillSection.querySelector('[aria-label="SVG fill"], [aria-label="Combined fill"], [data-gradient-paint]')){
    const advancedFills=disclosure('More fill controls','more-fill-controls'),background=fillSection.querySelector('input[data-paint-property="background-color"]');let backgroundRow=background;
    while(backgroundRow&&backgroundRow.parentElement!==fillSection)backgroundRow=backgroundRow.parentElement;
    for(const child of [...fillSection.children])if(child.tagName!=='H3'&&child!==backgroundRow)advancedFills.append(child);

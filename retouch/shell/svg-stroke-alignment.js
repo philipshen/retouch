@@ -1,6 +1,7 @@
 (function(root){
  'use strict';
  const G=root.RetouchSVGPath||(typeof require==='function'?require('./svg-path.js'):null),A=root.RetouchSVGAffine||(typeof require==='function'?require('./svg-affine.js'):null),V=root.RetouchHTMLCSSValues||(typeof require==='function'?require('./html-css-values.js'):null);
+ const Gradient=root.RetouchSVGStrokeGradient||(typeof require==='function'?require('./svg-stroke-gradient.js'):null);
  const escape=value=>String(value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
  function boundaries(document,path,fillRule){
   if(document.subpaths.length>128||document.subpaths.reduce((n,p)=>n+p.nodes.length,0)>512)throw Error('The aligned stroke exceeds the contour or point limit.');
@@ -44,12 +45,13 @@
   const x=Math.min(...boxes.map(b=>b.x)),y=Math.min(...boxes.map(b=>b.y)),right=Math.max(...boxes.map(b=>b.x+b.width)),bottom=Math.max(...boxes.map(b=>b.y+b.height));
   const padding=width*Math.max(1,miterlimit)+1,bounds={x:x-padding,y:y-padding,width:right-x+padding*2,height:bottom-y+padding*2};
   if(Object.values(bounds).some(n=>!Number.isFinite(n)||Math.abs(n)>1e8))throw Error('The stroke extends beyond supported geometry bounds.');
-  return {path,position,width,fillRule,matrix:[...matrix],...paints,linecap,linejoin,miterlimit,dasharray,dashoffset,opacity,fillOpacity,strokeOpacity,bounds,...(input.placement===undefined?{}:{placement:[...input.placement]}),...(originalPath===undefined||originalPath===path?{}:{originalPath})};
+  const gradients={};if(input.gradients!==undefined){if(!input.gradients||Array.isArray(input.gradients)||typeof input.gradients!=='object'||Object.keys(input.gradients).some(key=>!['fill','stroke'].includes(key)))throw Error('Choose fill or stroke gradients.');for(const [paint,gradient]of Object.entries(input.gradients))gradients[paint]=Gradient.normalize(gradient);}
+  return {path,position,width,fillRule,matrix:[...matrix],...paints,linecap,linejoin,miterlimit,dasharray,dashoffset,opacity,fillOpacity,strokeOpacity,bounds,...(input.placement===undefined?{}:{placement:[...input.placement]}),...(originalPath===undefined||originalPath===path?{}:{originalPath}),...(Object.keys(gradients).length?{gradients}:{})};
  }
  const contextualPaint=new Set('currentcolor inherit initial unset revert revert-layer context-fill context-stroke accentcolor accentcolortext activetext buttonborder buttonface buttontext canvas canvastext field fieldtext graytext highlight highlighttext linktext mark marktext selecteditem selecteditemtext visitedtext activeborder activecaption appworkspace background buttonhighlight buttonshadow captiontext inactiveborder inactivecaptiontext infobackground infotext menu menutext scrollbar threeddarkshadow threedface threedhighlight threedlightshadow threedshadow window windowframe windowtext'.split(' '));
  function setPaint(input,property,value){
   if(!['fill','stroke'].includes(property)||typeof value!=='string'||contextualPaint.has(value.trim().toLowerCase())||/\b(?:var|env|url|light-dark)\s*\(/i.test(value))throw Error('Choose a literal stroke or fill color, or none.');
-  return normalize({...input,[property]:value,[property+'Opacity']:1});
+  const gradients={...input.gradients};delete gradients[property];return normalize({...input,gradients,[property]:value,[property+'Opacity']:1});
  }
  function render(input,id){
   if(typeof id!=='string'||!/^rt-stroke-[a-f0-9]{16}$/.test(id))throw Error('Provide a unique stroke definition identity.');
@@ -62,9 +64,11 @@
    definitions='<defs><mask id="'+id+'" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="luminance" '+bounds+'><rect '+bounds+' fill="white"/><path '+shape+' '+fillRule+' fill="black" stroke="none"/></mask></defs>';
    constraint=' mask="url(#'+id+')"';
   }
+  for(const [paint,gradient]of Object.entries(m.gradients||{}))definitions+='<defs>'+Gradient.render(gradient,id+'-'+paint)+'</defs>';
+  const paintValue=paint=>m.gradients?.[paint]?'url(#'+id+'-'+paint+')':m[paint];
   // Fill is separate so the outside mask never removes the original interior.
-  const fill='<path '+shape+' '+fillRule+' fill="'+escape(m.fill)+'" fill-opacity="'+m.fillOpacity+'" stroke="none"/>';
-  const stroke='<path '+shape+' fill="none" stroke="'+escape(m.stroke)+'" stroke-opacity="'+m.strokeOpacity+'" stroke-width="'+m.width*(m.position==='center'?1:2)+'" stroke-linecap="'+m.linecap+'" stroke-linejoin="'+m.linejoin+'" stroke-miterlimit="'+m.miterlimit+'" stroke-dasharray="'+escape(m.dasharray)+'" stroke-dashoffset="'+m.dashoffset+'"'+constraint+'/>';
+  const fill='<path '+shape+' '+fillRule+' fill="'+escape(paintValue('fill'))+'" fill-opacity="'+m.fillOpacity+'" stroke="none"/>';
+  const stroke='<path '+shape+' fill="none" stroke="'+escape(paintValue('stroke'))+'" stroke-opacity="'+m.strokeOpacity+'" stroke-width="'+m.width*(m.position==='center'?1:2)+'" stroke-linecap="'+m.linecap+'" stroke-linejoin="'+m.linejoin+'" stroke-miterlimit="'+m.miterlimit+'" stroke-dasharray="'+escape(m.dasharray)+'" stroke-dashoffset="'+m.dashoffset+'"'+constraint+'/>';
   return '<g transform="'+A.format(m.matrix)+'" opacity="'+m.opacity+'">'+definitions+fill+stroke+'</g>';
  }
  const api={normalize,render,setPaint};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGStrokeAlignment=api;

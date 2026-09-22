@@ -68,6 +68,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,reactFixture=process.env.RT_REACT
 
   }
   await require('./compiled-refresh-suspension.cjs')({page});
+  await require('./svg-retained-stroke-gradients.cjs')({page,app,read,settled,wait,sharp});
   await require('./svg-retained-stroke-path.cjs')({page,app,read,settled,wait});
   await require('./svg-retained-stroke-transforms.cjs')({page,app,read,settled,wait});
   await require('./svg-retained-stroke-selection.cjs')({page,app,read,settled,wait});

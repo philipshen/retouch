@@ -3637,8 +3637,13 @@ async function createSVGStrokeSource(info,position){
   toast('Stroke alignment updated','ok');return true;
  }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
+function strokeGradientTarget(info,paint){return [...(matchingEls(info.id)[0]?.children[1]?.children||[])].filter(el=>el.localName==='path')[paint==='fill'?0:1];}
+function strokeGradients(info){return Object.entries(info.svgStrokeSource.model.gradients||{}).map(([paint,gradient])=>RetouchSVGStrokeGradient.describe(gradient,info.svgStrokeSource.definitionId+'-'+paint,paint));}
 function mountStrokeSourcePaint(section,info,property){
- const I=RetouchInspector,model=info.svgStrokeSource.model,input=document.createElement('input');input.type='text';input.spellcheck=false;input.dataset.paintProperty=property;
+ const I=RetouchInspector,model=info.svgStrokeSource.model;
+ if(model.gradients?.[property])return;
+ const type=I.select(section,property==='fill'?'Fill type':'Stroke type',[['solid','Solid'],['linearGradient','Linear'],['radialGradient','Radial']],'solid',type=>{if(type!=='solid')void setSVGGradient(info,property,undefined,undefined,'create',{type,color:model[property]==='none'?'#000000':model[property]});});type.disabled=!strokeSourceEditable(info);
+ const input=document.createElement('input');input.type='text';input.spellcheck=false;input.dataset.paintProperty=property;
  const parsed=model[property]==='none'?null:RetouchPaintPicker.parsePaint(model[property]);
  const original=parsed?RetouchPaletteValues[parsed.space==='display-p3'?'p3':'srgb'](parsed.channels,parsed.alpha*model[property+'Opacity']):model[property];
  input.value=original;input.disabled=!strokeSourceEditable(info);input.retouchPreviewDocument=matchingEls(info.id)[0]?.ownerDocument;
@@ -3669,6 +3674,7 @@ function strokeSelectionPreview(infos,property){
   return {current:()=>current()&&previews.every(p=>p.current()),update:value=>{try{if(!current())throw Error('The selection changed.');if(Array.isArray(value)&&value.length!==previews.length)throw Error('Provide a value for every selected vector.');previews.forEach((p,i)=>p.update(Array.isArray(value)?value[i]:value));}catch(error){for(const p of previews)p.restore();throw error;}},restore:()=>{for(const p of previews)p.restore();}};
 }
 function mountStrokeSelectionPaint(section,infos,property){
+ if(infos.some(info=>info.svgStrokeSource.model.gradients?.[property])){RetouchInspector.note(section,'Select one gradient to edit its stops.');return;}
  const I=RetouchInspector,models=infos.map(info=>info.svgStrokeSource.model),colors=models.map(model=>{
   const parsed=RetouchPaintPicker.parsePaint(model[property]);return parsed?RetouchPaletteValues[parsed.space==='display-p3'?'p3':'srgb'](parsed.channels,parsed.alpha*model[property+'Opacity']):model[property];
  }),original=colors.every(value=>value===colors[0])?colors[0]:'',input=document.createElement('input');
@@ -3729,6 +3735,7 @@ async function writeSVGStrokeSelection(infos,property,value){
  }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 function mountStrokeSourceControls(section,info){
+ info.svgGradients=strokeGradients(info);
  const geometry=RetouchInspector.section('SVG geometry'),points=RetouchInspector.button('Edit vector points',()=>editSVGPoints(info));points.dataset.canvasTool='vertices';points.disabled=!strokeSourceEditable(info);geometry.append(points);panelBody.append(geometry);
  const fill=RetouchInspector.section('Fill');mountStrokeSourcePaint(fill,info,'fill');panelBody.append(fill);mountStrokeSourcePaint(section,info,'stroke');
  const I=RetouchInspector,current=()=>strokeSourceEditable(info)&&!panelTasks&&!sourceRequests&&!undoBusy&&!editing;
@@ -3767,6 +3774,7 @@ function mountStrokeSourceControls(section,info){
   };input.retouchNumericHandle(input,{canvas:true,keyboardOnly:true,keys:['ArrowDown','ArrowUp']});
  }
  const dashes=document.createElement('input');dashes.type='text';dashes.dataset.sourceUnits='true';dashes.value=strokeModel.dasharray;dashes.disabled=!strokeSourceEditable(info);dashes.title='Dash and gap lengths in SVG source units, separated by spaces or commas; none gives a solid stroke.';dashes.oninput=()=>dashes.setCustomValidity('');dashes.onchange=()=>saveSetting('dasharray',dashes.value.trim(),dashes);I.field(section,'SVG dash pattern',dashes);I.fieldDraft(dashes);
+ if(info.svgGradients.length)mountSVGGradients(info,matchingEls(info.id)[0]);
  const restore=I.button('Restore original shape',()=>current()&&writeSVGStrokeSource('restoreSVGStrokeSource',{}));restore.disabled=!strokeSourceEditable(info);restore.title='Restores the original geometry and stroke settings.';section.append(restore);
  I.note(section,'Restores the original geometry and stroke settings.');
  if(info.svgStrokeSource.positions.length===1)I.note(section,'Inside and Outside require a closed shape with supported contours.');
@@ -3782,7 +3790,7 @@ async function writeSVGStrokeSource(type,extra){
   const removed=result.removedSourceIds||[],deletedLocks=layerLocks.removeSourceIds(removed);
   editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:[primary.id],selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:removed,undoId:result.undoId});
   layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,result.selectionIds);
-  toast(type==='setSVGStrokeSourcePath'?'Vector path updated':type==='setSVGStrokeSourceTransform'?'Vector updated':type==='restoreSVGStrokeSource'?'Original shape restored':type==='setSVGStrokeSourceWidth'?'Stroke weight updated':type==='setSVGStrokeSourceStyle'?(extra.property==='fill'?'Fill updated':extra.property==='stroke'?'Stroke color updated':'Stroke settings updated'):'Stroke alignment updated','ok');return true;
+  toast(type==='setSVGStrokeSourceGradient'?'Gradient updated':type==='setSVGStrokeSourcePath'?'Vector path updated':type==='setSVGStrokeSourceTransform'?'Vector updated':type==='restoreSVGStrokeSource'?'Original shape restored':type==='setSVGStrokeSourceWidth'?'Stroke weight updated':type==='setSVGStrokeSourceStyle'?(extra.property==='fill'?'Fill updated':extra.property==='stroke'?'Stroke color updated':'Stroke settings updated'):'Stroke alignment updated','ok');return true;
  }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 async function writeSVGMask(type,extra){
@@ -3912,7 +3920,7 @@ function editSVGGradientOnCanvas(info,target,gradient,focusLabel=null){
  const save=async(changes,focus,keepEditing,stop,action,value)=>{
   if(!keepEditing)return setSVGGradient(info,gradient.paint,changes,stop,action,value);
   let cancelled=false;const cancel=()=>{cancelled=true;if(stopDrawing===cancel)stopDrawing=null;},events=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'];const pending=setSVGGradient(info,gradient.paint,changes,stop,action,value,{keepDrawing:cancel});stopDrawing=cancel;events.forEach(name=>window.addEventListener(name,cancel));canvasSurface.addEventListener('scroll',cancel);
-  try{const saved=await pending;if(saved!==true||cancelled||stopDrawing!==cancel||sel?.info.id!==info.id)return;const fresh=sel.info,next=fresh.svgGradients?.find(item=>item.paint===gradient.paint&&item.id===gradient.id),element=target.isConnected&&target.ownerDocument===doc()?target:matchingEls(info.id)[0];if(!next||!element)return;stopDrawing=null;editSVGGradientOnCanvas(fresh,element,next,focus);}
+  try{const saved=await pending;if(saved!==true||cancelled||stopDrawing!==cancel||sel?.info.id!==info.id)return;const fresh=sel.info,next=(fresh.svgStrokeSource?strokeGradients(fresh):fresh.svgGradients)?.find(item=>item.paint===gradient.paint&&item.id===gradient.id),element=fresh.svgStrokeSource?strokeGradientTarget(fresh,gradient.paint):target.isConnected&&target.ownerDocument===doc()?target:matchingEls(info.id)[0];if(!next||!element)return;stopDrawing=null;editSVGGradientOnCanvas(fresh,element,next,focus);}
   finally{events.forEach(name=>window.removeEventListener(name,cancel));canvasSurface.removeEventListener('scroll',cancel);if(stopDrawing===cancel)stopDrawing=null;}
  };
  const addStop=offset=>{const nodes=[...(target.ownerDocument.getElementById(gradient.id)?.children||[])].filter(node=>node.localName==='stop');if(nodes.length!==gradient.stops.length)return;const insertion=svgGradientStopInsertion(svgGradientStopValues(nodes),offset);return save(undefined,'Gradient color stop '+(insertion.index+1),true,insertion.index,'insertStop',insertion.value);};
@@ -3947,19 +3955,25 @@ function mountSVGGradientCreation(info,target){
  });select.disabled=!!reason;select.title=reason||'Create a gradient from the current color to transparent';}
  RetouchInspector.note(section,'Creates shared SVG paint from the current color to transparent. Page styles can override attribute paint.');panelBody.append(section);
 }
-function mountSVGGradients(info,target){
+function mountSVGGradients(info,ordinaryTarget){
  for(const gradient of info.svgGradients){
+  const target=info.svgStrokeSource?strokeGradientTarget(info,gradient.paint):ordinaryTarget;
   const section=RetouchInspector.section(gradient.paint==='fill'?'Fill gradient':'Stroke gradient');section.dataset.gradientPaint=gradient.paint;
-  RetouchInspector.note(section,(gradient.type==='linearGradient'?'Linear':'Radial')+' · #'+gradient.id);
-  const reason=gradient.reason; if(reason){RetouchInspector.note(section,reason,'refused');panelBody.append(section);continue;}
+  RetouchInspector.note(section,info.svgStrokeSource?'Gradient for this shape':(gradient.type==='linearGradient'?'Linear':'Radial')+' · #'+gradient.id);
+  const reason=gradient.reason||(info.svgStrokeSource&&!strokeSourceEditable(info)?'Select one unlocked vector.':null); if(reason){RetouchInspector.note(section,reason,'refused');panelBody.append(section);continue;}
   const type=RetouchInspector.select(section,'Gradient type',[['solid','Solid'],['linearGradient','Linear'],['radialGradient','Radial']],gradient.type,value=>{
    if(value!=='solid')return setSVGGradient(info,gradient.paint,undefined,undefined,'setType',value);
-   try{const node=target?.ownerDocument.getElementById(gradient.id)?.querySelector('stop');if(!node)throw Error('The gradient stop is no longer available.');const css=node.ownerDocument.defaultView.getComputedStyle(node),color=RetouchPaletteValues.parse(RetouchColorStyles.fromComputed(css.stopColor)),opacity=Math.max(0,Math.min(1,parseFloat(css.stopOpacity)/(css.stopOpacity.endsWith('%')?100:1))),alpha=Math.round(color.alpha*opacity*1e12)/1e12;
+   try{const node=target?.ownerDocument.getElementById(gradient.id)?.querySelector('stop');if(!node)throw Error('The gradient stop is no longer available.');const css=node.ownerDocument.defaultView.getComputedStyle(node),color=RetouchPaletteValues.parse(RetouchColorStyles.fromComputed(css.stopColor)),opacity=Math.max(0,Math.min(1,parseFloat(css.stopOpacity)/(css.stopOpacity.endsWith('%')?100:1))),alpha=Math.round(color.alpha*opacity*(info.svgStrokeSource?.model[gradient.paint+'Opacity']??1)*1e12)/1e12;
     setSVGGradient(info,gradient.paint,undefined,undefined,'solid',color.space==='display-p3'?RetouchPaletteValues.p3(color.channels,alpha):RetouchPaletteValues.srgb(color.channels,alpha));
    }catch(error){type.value=gradient.type;toast(error.message,'err');}
   });type.title='Solid uses the first stop’s color and opacity for this layer';
+  if(info.svgStrokeSource){
+   const model=info.svgStrokeSource.model,property=gradient.paint+'Opacity',current=()=>strokeSourceEditable(info)&&!panelTasks&&!sourceRequests&&!undoBusy&&!editing;
+   const alpha=RetouchInspector.number(section,(gradient.paint==='fill'?'Fill':'Stroke')+' gradient opacity (%)',model[property]*100,0,100,value=>setSVGGradient(info,gradient.paint,undefined,undefined,'opacity',value/100));RetouchInspector.fieldDraft(alpha);
+   alpha.retouchNumericPreview=()=>{if(!current())throw Error('Select one unlocked gradient.');const preview=RetouchSVGStrokeFidelity.previewProperty(matchingEls(info.id)[0],model,info.svgStrokeSource.definitionId,property);return {current:()=>current()&&preview.current(),update:value=>preview.update(value/100),restore:()=>preview.restore()};};alpha.retouchNumericHandle(alpha,{canvas:true,keyboardOnly:true,keys:['ArrowDown','ArrowUp']});
+  }
   const canvas=RetouchInspector.button('Edit gradient on canvas',()=>editSVGGradientOnCanvas(info,target,gradient));canvas.setAttribute('aria-label','Edit '+gradient.paint+' gradient on canvas');section.append(canvas);
-  const unique=RetouchInspector.button('Make unique',()=>setSVGGradient(info,gradient.paint,undefined,undefined,'detach'));unique.setAttribute('aria-label','Make '+gradient.paint+' gradient unique');section.append(unique);
+  const unique=RetouchInspector.button('Make unique',()=>setSVGGradient(info,gradient.paint,undefined,undefined,'detach'));unique.setAttribute('aria-label','Make '+gradient.paint+' gradient unique');if(!info.svgStrokeSource)section.append(unique);
   const reverse=RetouchInspector.button('Reverse gradient',()=>setSVGGradient(info,gradient.paint,undefined,undefined,'reverse'));reverse.setAttribute('aria-label','Reverse '+gradient.paint+' gradient');section.append(reverse);
   const bindStops=mountSVGGradientStopRail(section,info,target,gradient);
   const write=(changes,stop)=>setSVGGradient(info,gradient.paint,changes,stop);
@@ -3976,10 +3990,11 @@ function mountSVGGradients(info,target){
   for(const item of gradient.fields)field(section,'Gradient '+item.name,item.value,item.name,undefined,item.name==='gradientUnits'?['','objectBoundingBox','userSpaceOnUse']:item.name==='spreadMethod'?['','pad','reflect','repeat']:null);
   gradient.stops.forEach((stop,index)=>{const group=document.createElement('div');group.className='svg-gradient-stop';const title=document.createElement('p');title.className='hint';title.textContent='Stop '+(index+1);group.append(title);field(group,'Stop '+(index+1)+' position',stop.offset,'offset',index);field(group,'Stop '+(index+1)+' color',stop.color,'stop-color',index);field(group,'Stop '+(index+1)+' opacity',stop.opacity,'stop-opacity',index);const remove=RetouchInspector.button('Remove gradient stop '+(index+1),()=>setSVGGradient(info,gradient.paint,undefined,index,'removeStop'));remove.setAttribute('aria-label','Remove gradient stop '+(index+1));remove.title='Remove stop';remove.textContent='−';remove.classList.add('svg-gradient-stop-remove');remove.disabled=gradient.stops.length<=2;group.append(remove);section.append(group);});
   bindStops?.();
-  RetouchInspector.note(section,'Shared gradient · Edits affect all referencing layers and screen sizes. Page styles can override stop colors.');section.lastElementChild.classList.add('gradient-scope');panelBody.append(section);
+  RetouchInspector.note(section,info.svgStrokeSource?'Applies to this shape on every screen.':'Shared gradient · Edits affect all referencing layers and screen sizes. Page styles can override stop colors.');section.lastElementChild.classList.add('gradient-scope');panelBody.append(section);
  }
 }
 async function setSVGGradient(info,paint,changes,stop,action,value,refreshOptions={}){
+ if(info.svgStrokeSource){if(sel?.info!==info)return false;return writeSVGStrokeSource('setSVGStrokeSourceGradient',{paint,...(changes===undefined?{}:{changes}),...(stop===undefined?{}:{stop}),...(action===undefined?{}:{action,value})});}
  if(sel?.info!==info||panelTasks||undoBusy||sourceRequests)return;busyPanel(true);
  try{const result=await api('POST','/rt/__api/op',{type:'setSVGGradient',id:info.id,fileHash:info.hash,paint,...(changes===undefined?{}:{changes}),...(stop===undefined?{}:{stop}),...(action===undefined?{}:{action,value})});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update gradient','err');if(result.undoId)editorHistory.record({type:'setSVGGradient',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGradientsMatch(el,sel.info),refreshOptions);renderPanel();toast(value?.type==='solid'?'Paint updated':'Gradient updated','ok');return true;}finally{busyPanel(false);}
 }

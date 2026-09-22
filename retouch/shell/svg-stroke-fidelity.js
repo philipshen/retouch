@@ -14,7 +14,7 @@
  }
  function value(css,property,el){
   const raw=css.getPropertyValue(property).trim();
-  if(!['mask-image','clip-path'].includes(property)||!raw.startsWith('url('))return raw;
+  if(!['mask-image','clip-path','fill','stroke'].includes(property)||!raw.startsWith('url('))return raw;
   const match=/^url\(["']?([^"')]+)["']?\)$/.exec(raw);if(!match)throw Error('Resolve the stroke clipping reference.');
   const url=new URL(match[1],el.baseURI),documentURL=new URL(el.ownerDocument.URL);
   if(url.href.split('#')[0]!==documentURL.href.split('#')[0])throw Error('The stroke uses an external clipping reference.');
@@ -32,6 +32,7 @@
   if(group.getAnimations?.({subtree:true}).some(animation=>animation.playState!=='finished')||group.querySelector('animate,animateTransform,animateMotion,set'))throw Error('Pause or remove the stroke animation before editing alignment.');
   const definitions=[...tree.querySelectorAll('[id="'+id+'"]')];
   if(m.position==='center'?definitions.length!==0:definitions.length!==1||!rendered.contains(definitions[0]))throw Error('The stroke definition identity is duplicated or belongs to another shape.');
+  for(const paint of Object.keys(m.gradients||{})){const nodes=[...tree.querySelectorAll('[id="'+id+'-'+paint+'"]')];if(nodes.length!==1||!rendered.contains(nodes[0]))throw Error('The stroke gradient identity is duplicated or belongs to another shape.');}
   const host=root.document.createElement('div');
   host.style.cssText='all:initial!important;position:fixed!important;left:-100000px!important;top:0!important;display:block!important;opacity:0!important;pointer-events:none!important;';
   host.setAttribute('aria-hidden','true');host.setAttribute('data-rt-stroke-reference','');
@@ -47,6 +48,8 @@
     if(i>0)for(const attribute of ref.attributes)if(actual.getAttribute(attribute.name)!==attribute.value)throw Error('A generated stroke attribute changed: '+attribute.name+'. Re-select the vector.');
     if(actual.localName==='path'&&actual.getAttribute('pathLength')!==ref.getAttribute('pathLength'))throw Error('A generated stroke attribute changed: pathLength. Re-select the vector.');
     if(actual.localName==='mask')properties.push('mask-type');
+    if(actual.localName==='stop')properties.push('stop-color','stop-opacity');
+    if(['linearGradient','radialGradient'].includes(actual.localName)){properties.push('color-interpolation');for(const name of ['x1','y1','x2','y2','cx','cy','r','fx','fy','fr','gradientUnits','spreadMethod','gradientTransform','href','xlink:href'])if(actual.getAttribute(name)!==ref.getAttribute(name))throw Error('A generated gradient attribute changed: '+name+'. Re-select the vector.');}
     if(i>1)properties.push(...transforms);
     if(coordinates[actual.localName]){
      properties.push(...coordinates[actual.localName],'clip-rule','marker-start','marker-mid','marker-end');
@@ -68,13 +71,13 @@
  // Paint and numeric previews change generated attributes and mask bounds. Preserve DOM
  // identities and restore only values still owned by this preview.
  function previewProperty(group,input,id,property){
-  const paint=['fill','stroke'].includes(property),attribute={fill:'fill',stroke:'stroke',width:'stroke-width',miterlimit:'stroke-miterlimit',dashoffset:'stroke-dashoffset'}[property];
+  const paint=['fill','stroke'].includes(property),attribute={fill:'fill',stroke:'stroke',width:'stroke-width',miterlimit:'stroke-miterlimit',dashoffset:'stroke-dashoffset',fillOpacity:'fill-opacity',strokeOpacity:'stroke-opacity'}[property];
   if(!attribute)throw Error('Choose a supported stroke setting.');
   check(group,input,id);
   const m=model(input),rendered=group.children[1],parent=group.parentElement,strokePath=[...rendered.children].filter(el=>el.localName==='path').at(-1),changes=[];
   let markup=group.innerHTML,active=true;
   const remember=(el,name)=>{const item={el,name,before:el.getAttribute(name),last:el.getAttribute(name)};changes.push(item);return item;};
-  const field=remember(property==='fill'?[...rendered.children].find(el=>el.localName==='path'):strokePath,attribute),opacity=paint?remember(field.el,property+'-opacity'):null,bounds=m.position==='outside'?[rendered.querySelector('mask'),rendered.querySelector('mask > rect')].flatMap(el=>Object.keys(m.bounds).map(name=>remember(el,name))):[];
+  const field=remember(['fill','fillOpacity'].includes(property)?[...rendered.children].find(el=>el.localName==='path'):strokePath,attribute),opacity=paint?remember(field.el,property+'-opacity'):null,bounds=m.position==='outside'?[rendered.querySelector('mask'),rendered.querySelector('mask > rect')].flatMap(el=>Object.keys(m.bounds).map(name=>remember(el,name))):[];
   const current=()=>active&&group.isConnected&&group.parentElement===parent&&group.children[1]===rendered&&group.innerHTML===markup;
   const set=(item,value)=>{item.last=String(value);item.el.setAttribute(item.name,item.last);};
   return {current,update(value){

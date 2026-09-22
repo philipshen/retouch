@@ -6,7 +6,7 @@ const crypto=require('node:crypto'),G=require('../shell/svg-path.js'),A=require(
 const view=require('./svg-boolean-group.cjs').view;
 const marker='data-rt-stroke-alignment',originalMarker='data-rt-stroke-original';
 const paintNames=['fill','stroke','fill-rule','stroke-width','stroke-linecap','stroke-linejoin','stroke-miterlimit','stroke-dasharray','stroke-dashoffset','opacity','fill-opacity','stroke-opacity'];
-const jsxNames=Object.fromEntries([...paintNames,'clip-rule','clip-path'].map(name=>[name,name.replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]));
+const jsxNames=Object.fromEntries([...paintNames,'clip-rule','clip-path','stop-color','stop-opacity'].map(name=>[name,name.replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]));
 const escape=value=>String(value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function input(model){return {...model,document:G.parseCompound(model.path)};}
 function shape(r,kind,v=view(r,kind)){
@@ -100,6 +100,12 @@ function plan(r,op,kind){
     model=S.normalize({...input(model),placement:op.matrix});
     if(op.matrix===undefined)throw Error('Provide a finite placement matrix.');
    }
+   else if(op.type==='setSVGStrokeSourceGradient'){
+    if(!['fill','stroke'].includes(op.paint))throw Error('Choose a fill or stroke gradient.');
+    if(op.action==='opacity'){if(!model.gradients?.[op.paint]||op.changes!==undefined||op.stop!==undefined||!Number.isFinite(op.value))throw Error('Choose opacity for an existing gradient.');model=S.normalize({...input(model),[op.paint+'Opacity']:op.value});}
+    else if(op.action==='solid'){if(op.changes!==undefined||op.stop!==undefined)throw Error('Choose one gradient edit.');model=S.setPaint(input(model),op.paint,op.value);}
+    else{const gradients={...model.gradients,[op.paint]:require('../shell/svg-stroke-gradient.js').edit(model.gradients?.[op.paint],op)};model=S.normalize({...input(model),gradients,[op.paint]:model[op.paint]==='none'?'#000000':model[op.paint]});}
+   }
    else if(op.type==='setSVGStrokeSourceStyle'){
     if(!['fill','stroke','linecap','linejoin','miterlimit','dasharray','dashoffset'].includes(op.property)||op.value===null||op.value===undefined)throw Error('Choose a supported stroke setting and value.');
     model=['fill','stroke'].includes(op.property)?S.setPaint(input(model),op.property,op.value):S.normalize({...input(model),[op.property]:op.value});
@@ -142,7 +148,7 @@ function creation(r,kind){
 module.exports={plan,context,creation};
 
 // Public creation requires a stable definition identity for deterministic plans.
-const types=new Set(['setSVGStrokeSelection','createSVGStrokeSource','setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','setSVGStrokeSourceStyle','setSVGStrokeSourceTransform','setSVGStrokeSourcePath','restoreSVGStrokeSource']);
+const types=new Set(['setSVGStrokeSelection','createSVGStrokeSource','setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','setSVGStrokeSourceStyle','setSVGStrokeSourceTransform','setSVGStrokeSourcePath','setSVGStrokeSourceGradient','restoreSVGStrokeSource']);
 const deletionTypes=new Set(['deleteElement','deleteSelection','deleteComponent','deleteComponentSelection']);
 function referencedIds(op){
  const ids=new Set();

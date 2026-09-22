@@ -11,8 +11,8 @@ SVG export preserves inside/outside appearance through more complex geometry.
 
 | Requirement | Current repository evidence | Remaining work |
 | --- | --- | --- |
-| Stroke paints | Ordinary and retained SVG shapes expose a single fill/stroke paint; retained paints use the light color picker, compact alpha controls and source history. | Multiple independently editable stroke fills and their order/visibility, retained gradients and responsive paint preservation. |
-| Alignment | The inspector now creates retained strokes from supported literal SVG shapes and edits Inside/Center/Outside, weight, caps, joins and dashes; see the 2026-09-22 integration checkpoint below. | Broader authored attributes, rendered instances, resource-backed previews, retained gradients/multiple paints and current export/package verification. |
+| Stroke paints | Ordinary and retained SVG shapes expose a single fill/stroke paint; retained paints now support solid colors plus owned linear/radial gradients, stop controls, canvas handles and exact source history. | Multiple independently editable stroke fills and their order/visibility, broader gradient types, shared gradient editing and responsive paint preservation. |
+| Alignment | The inspector now creates retained strokes from supported literal SVG shapes and edits Inside/Center/Outside, weight, caps, joins and dashes; see the 2026-09-22 integration checkpoint below. | Broader authored attributes, rendered instances, resource-backed previews, alignment creation from existing referenced paints, multiple paints and current package verification. |
 | Caps, joins, dashes | `svg-paint.js` parses regular/custom patterns; `inspector-ui.js` provides style, dash/gap, custom text, caps and joins. `test/e2e/svg-stroke-settings.cjs` covers source/history and scopes. | Per-point/vector-network equivalence, endpoint placement and full geometry fidelity still need proof. |
 | Width profiles | No profile model or authoring control found. | Profiles, direct width handles, serialization and rendering/export fidelity. |
 | Brush/dynamic strokes | No corresponding model or control found. | Brush source/assets, dynamic parameters, editable geometry and export. |
@@ -909,3 +909,59 @@ WebKit (`/tmp/retouch-refresh-delivery-six.log`). Both React runs passed all
 three deterministic suspension/delivery scenarios, along with the retained path,
 shared paints/settings, transforms, pixels, locks, exact source history and
 form/document preservation checks. Desktop packaging was not rebuilt.
+
+
+## Owned gradients on aligned vectors — 2026-09-22
+
+Aligned vectors can now use independent linear or radial gradients for Fill and
+Stroke. The existing light gradient inspector provides stop colors and opacity,
+positions, insertion/removal, reversal, coordinate fields, units, spread and
+canvas handles. Canvas drags retain the editing session after a source commit;
+Escape restores the draft. A gradient-wide opacity field preserves existing
+paint opacity and supports grouped numeric previews and exact history.
+Converting to Solid uses the first stop with its effective opacity.
+
+Each gradient uses a private definition under the retained owner, separate from
+its clip/mask identity. Source edits regenerate the complete canonical group in
+one transaction, retaining geometry, alignment, placement, the other paint and
+the archived original shape. Original restoration still recovers exact bytes.
+The portable gradient model validates coordinates, stop count, literal paints,
+opacity, hard stops and tiny offsets. Switching types retains inactive
+coordinates. Browser fidelity checks include stop CSS, local references,
+definition uniqueness and unexpected gradient geometry/inheritance attributes.
+
+This does not add multiple fills/strokes, angular or diamond gradients,
+shared multi-selection stop editing, explicit gradient transforms, or alignment
+creation from a shape already using a referenced gradient. Those remain part
+of the full parity objective. Shared retained numeric/transform controls remain
+available; selections containing a gradient ask for one shape when editing its
+stops.
+
+All 2,506 source tests passed without failures or skips in 15.76 seconds
+(`/tmp/retouch-stroke-gradient-final-source.log`). New coverage includes
+HTML/React/Liquid gradient operations, independent fill/stroke identity,
+geometry/placement preservation, solid conversion, original restoration,
+stale/malformed edits, canonical tiny offsets, hard stops and paint validation.
+
+Export verification passed 96 checks in each of Chromium and WebKit
+(`/tmp/retouch-stroke-gradient-export-{chromium,webkit}.log`), including linear
+fill and radial stroke references across inside/center/outside alignment,
+transformed artwork, transparent 1x/2x PNGs, SVG metadata removal and unchanged
+source/DOM.
+
+The full HTML/Liquid/React editor workflows passed in Chromium
+(`/tmp/retouch-stroke-gradient-opacity-three.log`) and WebKit (the WebKit runs
+in `/tmp/retouch-stroke-gradient-final-six.log`). Browser coverage includes
+rendered gradient pixels, stop edits/insertion, linear/radial conversion,
+coordinates, independent stroke gradients, overall opacity and held-key
+preview grouping, canvas commits with continued editing, Escape, CSS refusal,
+solid conversion, exact undo/redo and preserved document/form state. Existing
+alignment, paint, transform, lock and pixel regressions passed in the same runs.
+
+Ordinary SVG gradient editors also remain visible in Fill when CSS image-paint
+controls are present. The organizer had moved them into a collapsed “More fill
+controls” disclosure after a viewport change. Existing persistent gradient
+session tests reproduced the missing canvas button, and now pass in both
+browsers (`/tmp/retouch-stroke-gradient-ordinary-fixed-{chromium,webkit}.log`),
+including consecutive gestures, restored focus, Done, exact individual history
+and Escape during a pending save. Desktop packaging was not rebuilt.

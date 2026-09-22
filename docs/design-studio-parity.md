@@ -28825,3 +28825,12 @@ update still reaches the existing fallback. See the
 [delivery-time investigation](stroke-parity.md#delayed-hot-update-delivery-after-suspension--2026-09-22)
 for the deterministic regression and the separate, still-unresolved intermittent
 React draft reset.
+
+
+### 2026-09-22 — aligned-vector gradients
+
+Aligned vectors now reuse the light gradient inspector and canvas handles for
+linear/radial Fill and Stroke gradients, with independent definitions, stop
+editing, overall opacity, exact history and original-shape restoration. See
+[owned retained gradients](stroke-parity.md#owned-gradients-on-aligned-vectors--2026-09-22)
+for verification and remaining paint/gradient boundaries.
