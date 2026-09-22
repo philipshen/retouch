@@ -57,7 +57,7 @@ function context(r,kind){
   if(typeof encoded!=='string'||encoded.length>200000||!/^[A-Za-z0-9_-]+$/.test(encoded))return null;
   const model=JSON.parse(Buffer.from(encoded,'base64url').toString()),id=v.attr(group,'data-rt-stroke-id');
   const canonical=markup(source,model,id,kind),geometry=shape({...r,element:original},kind,v);
-  if(geometry.path!==canonical.model.path||JSON.stringify(geometry.matrix)!==JSON.stringify(canonical.model.matrix))return null;
+  if(geometry.path!==(canonical.model.originalPath??canonical.model.path)||JSON.stringify(geometry.matrix)!==JSON.stringify(canonical.model.matrix))return null;
   if(r.source.slice(v.start(group),v.end(group))!==canonical.text)return null;
   // The identity is reserved even for center strokes, which have no definition.
   const outside=r.source.slice(0,v.start(group))+r.source.slice(v.end(group));if(outside.includes(id))return null;
@@ -73,7 +73,7 @@ function plan(r,op,kind){
   const v=view(r,kind);let start=v.start(r.element),end=v.end(r.element),original,oldOriginal,model,id,replacement,originalOffset,created=false;
   if(op.type==='createSVGStrokeSource'){
    const geometry=shape(r,kind,v);model=S.normalize(op.model);
-   if(model.placement!==undefined)throw Error('Create the stroke before changing its placement.');
+   if(model.placement!==undefined||model.originalPath!==undefined)throw Error('Create the stroke before changing its placement or path.');
    if(model.path!==geometry.path||JSON.stringify(model.matrix)!==JSON.stringify(geometry.matrix))throw Error('The stroke snapshot does not match the original geometry and transform.');
    for(let parent=v.parents.get(r.element.id);parent;parent=v.parents.get(parent)){const e=v.elements.find(e=>e.id===parent);if(v.attr(e,marker)!==undefined||v.attr(e,'data-rt-boolean')!==undefined)throw Error('Edit the owning retained group first.');}
    original=r.source.slice(start,end);oldOriginal=r.element;created=true;
@@ -90,6 +90,10 @@ function plan(r,op,kind){
    else if(op.type==='setSVGStrokeSourceWidth'){
     if(!Number.isFinite(op.width)||op.width<0||op.width>10000)throw Error('Choose a stroke width between 0 and 10,000 source units.');
     model=S.normalize({...input(model),width:op.width});
+   }
+   else if(op.type==='setSVGStrokeSourcePath'){
+    if(typeof op.path!=='string')throw Error('Provide a supported vector path.');
+    model=S.normalize({...input(model),document:G.parseCompound(op.path),originalPath:model.originalPath??model.path});
    }
    else if(op.type==='setSVGStrokeSourceTransform'){
     // Move the logical layer without changing the archived geometry/matrix.
@@ -138,7 +142,7 @@ function creation(r,kind){
 module.exports={plan,context,creation};
 
 // Public creation requires a stable definition identity for deterministic plans.
-const types=new Set(['setSVGStrokeSelection','createSVGStrokeSource','setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','setSVGStrokeSourceStyle','setSVGStrokeSourceTransform','restoreSVGStrokeSource']);
+const types=new Set(['setSVGStrokeSelection','createSVGStrokeSource','setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','setSVGStrokeSourceStyle','setSVGStrokeSourceTransform','setSVGStrokeSourcePath','restoreSVGStrokeSource']);
 const deletionTypes=new Set(['deleteElement','deleteSelection','deleteComponent','deleteComponentSelection']);
 function referencedIds(op){
  const ids=new Set();

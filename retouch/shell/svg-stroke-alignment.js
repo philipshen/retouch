@@ -22,6 +22,8 @@
  function normalize(input){
   const path=G.serializeCompound(input?.document);
   if(!path||!input.document.subpaths.length)throw Error('Choose a supported nonempty vector path.');
+  const originalPath=input.originalPath===undefined?undefined:G.serializeCompound(G.parseCompound(input.originalPath));
+  if(input.originalPath!==undefined&&(!originalPath||originalPath!==input.originalPath))throw Error('Keep a canonical original stroke path.');
   const position=input.position??'center',width=input.width??1,fillRule=input.fillRule??'nonzero',matrix=input.matrix??[1,0,0,1,0,0];
   if(!['inside','center','outside'].includes(position))throw Error('Choose Inside, Center or Outside.');
   if(position!=='center'&&input.document.subpaths.some(part=>!part.closed))throw Error('Inside and outside strokes require closed contours.');
@@ -42,7 +44,7 @@
   const x=Math.min(...boxes.map(b=>b.x)),y=Math.min(...boxes.map(b=>b.y)),right=Math.max(...boxes.map(b=>b.x+b.width)),bottom=Math.max(...boxes.map(b=>b.y+b.height));
   const padding=width*Math.max(1,miterlimit)+1,bounds={x:x-padding,y:y-padding,width:right-x+padding*2,height:bottom-y+padding*2};
   if(Object.values(bounds).some(n=>!Number.isFinite(n)||Math.abs(n)>1e8))throw Error('The stroke extends beyond supported geometry bounds.');
-  return {path,position,width,fillRule,matrix:[...matrix],...paints,linecap,linejoin,miterlimit,dasharray,dashoffset,opacity,fillOpacity,strokeOpacity,bounds,...(input.placement===undefined?{}:{placement:[...input.placement]})};
+  return {path,position,width,fillRule,matrix:[...matrix],...paints,linecap,linejoin,miterlimit,dasharray,dashoffset,opacity,fillOpacity,strokeOpacity,bounds,...(input.placement===undefined?{}:{placement:[...input.placement]}),...(originalPath===undefined||originalPath===path?{}:{originalPath})};
  }
  const contextualPaint=new Set('currentcolor inherit initial unset revert revert-layer context-fill context-stroke accentcolor accentcolortext activetext buttonborder buttonface buttontext canvas canvastext field fieldtext graytext highlight highlighttext linktext mark marktext selecteditem selecteditemtext visitedtext activeborder activecaption appworkspace background buttonhighlight buttonshadow captiontext inactiveborder inactivecaptiontext infobackground infotext menu menutext scrollbar threeddarkshadow threedface threedhighlight threedlightshadow threedshadow window windowframe windowtext'.split(' '));
  function setPaint(input,property,value){

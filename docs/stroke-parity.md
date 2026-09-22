@@ -12,7 +12,7 @@ SVG export preserves inside/outside appearance through more complex geometry.
 | Requirement | Current repository evidence | Remaining work |
 | --- | --- | --- |
 | Stroke paints | Ordinary and retained SVG shapes expose a single fill/stroke paint; retained paints use the light color picker, compact alpha controls and source history. | Multiple independently editable stroke fills and their order/visibility, retained gradients and responsive paint preservation. |
-| Alignment | The inspector now creates retained strokes from supported literal SVG shapes and edits Inside/Center/Outside, weight, caps, joins and dashes; see the 2026-09-22 integration checkpoint below. | Broader authored attributes, rendered instances, resource-backed previews, editing retained geometry/paints and export/package verification. |
+| Alignment | The inspector now creates retained strokes from supported literal SVG shapes and edits Inside/Center/Outside, weight, caps, joins and dashes; see the 2026-09-22 integration checkpoint below. | Broader authored attributes, rendered instances, resource-backed previews, retained gradients/multiple paints and current export/package verification. |
 | Caps, joins, dashes | `svg-paint.js` parses regular/custom patterns; `inspector-ui.js` provides style, dash/gap, custom text, caps and joins. `test/e2e/svg-stroke-settings.cjs` covers source/history and scopes. | Per-point/vector-network equivalence, endpoint placement and full geometry fidelity still need proof. |
 | Width profiles | No profile model or authoring control found. | Profiles, direct width handles, serialization and rendering/export fidelity. |
 | Brush/dynamic strokes | No corresponding model or control found. | Brush source/assets, dynamic parameters, editable geometry and export. |
@@ -825,3 +825,51 @@ scrubbing, lower limits, Escape, zero-net gestures, absolute typed drafts,
 one-step exact undo/redo, and retained form/document state. Existing paint,
 transform, alignment, lock, pixel and source-sync regressions pass in the same
 workflows. Desktop packaging was not rebuilt for this checkpoint.
+
+
+## Retained stroke path editing — 2026-09-22
+
+Aligned vectors now expose **Edit vector points** in the SVG geometry section.
+The existing point/contour editor edits their current visible path, including
+numeric point movement and canvas dragging through retained placement. The
+source operation regenerates the fill, stroke and clipping/masking geometry
+while retaining alignment, paints, width, original transform and placement.
+
+The original primitive/path remains archived verbatim. An optional canonical
+`originalPath` records that archived geometry when the visible path differs;
+source validation still checks the archive against it. Returning to the original
+path removes that extra metadata. Restore original shape still restores the
+archived source, and undo/redo restore exact source bytes.
+
+Inside/outside edits must remain supported closed, noncrossing contours. Open
+or crossing edits are refused without writing source; Center supports open
+paths. Generated CSS overrides, stale source, locked or repeated instances
+retain the existing refusal boundaries. This adds retained path editing to the
+existing SVG editor; it does not establish full vector-network parity.
+
+All 2,499 source tests passed with no failures or skips in 17.63 seconds
+(`/tmp/retouch-stroke-path-full-final.log`). The new HTML/React/Liquid tests cover
+all three alignments, repeated edits, placement/paint preservation, exact restoration and
+history, invalid paths, stale hashes and altered archived geometry.
+
+The ordinary vector editor also passed its Chromium and WebKit entry/editing
+regressions, including transformed dragging at 50/100/200% zoom, keyboard point
+edits, insertion/deletion, exact history and cancellation
+(`/tmp/retouch-stroke-path-ordinary-{chromium,webkit}.log`).
+
+An initial Chromium React run lost the unrelated form draft during a later
+shared-paint redo (`svg-retained-stroke-shared-paints.cjs:25`), after the retained
+path checks passed. The subsequent traced full run passed without a call to
+`reloadFrame` (`/tmp/retouch-stroke-path-react-trace.log`). The initial failure
+remains recorded in `/tmp/retouch-stroke-path-controls-react-chromium.log`;
+its cause is unresolved and is not claimed fixed by this path-editing change.
+
+The full HTML/Liquid/React workflows ultimately passed in Chromium and WebKit.
+HTML/Liquid Chromium results are in `/tmp/retouch-stroke-path-six.log`; all three
+WebKit results are in `/tmp/retouch-stroke-path-webkit.log`. A final untraced
+Chromium React confirmation passed in `/tmp/retouch-stroke-path-react-confirm.log`.
+The new browser helper checks numeric point edits, rotated point dragging,
+Escape, visible-fill CSS refusal, exact undo/redo, and preserved document/form
+state. Existing shared paint/settings, alignment, transform, lock and pixel
+checks also passed in those workflows. Successful reruns do not resolve the
+intermittent React failure above. Desktop packaging was not rebuilt.

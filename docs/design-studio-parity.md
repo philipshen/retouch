@@ -28805,3 +28805,12 @@ the differences between selected vectors. Gestures share property limits,
 cancel with Escape, and undo together. Typed values remain absolute. See
 [relative stroke gestures](stroke-parity.md#relative-gestures-for-mixed-stroke-numbers--2026-09-22)
 for verification and behavior details.
+
+
+### 2026-09-22 — retained aligned-vector path editing
+
+Aligned vectors now reuse the point/contour editor for their visible paths,
+while preserving paints, alignment, placement and the archived original shape.
+See [retained path editing](stroke-parity.md#retained-stroke-path-editing--2026-09-22)
+for source validation, supported geometry and verification evidence. Full Figma
+Design parity and trusted desktop distribution remain open.

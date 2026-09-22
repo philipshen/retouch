@@ -3728,6 +3728,7 @@ async function writeSVGStrokeSelection(infos,property,value){
  }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 function mountStrokeSourceControls(section,info){
+ const geometry=RetouchInspector.section('SVG geometry'),points=RetouchInspector.button('Edit vector points',()=>editSVGPoints(info));points.dataset.canvasTool='vertices';points.disabled=!strokeSourceEditable(info);geometry.append(points);panelBody.append(geometry);
  const fill=RetouchInspector.section('Fill');mountStrokeSourcePaint(fill,info,'fill');panelBody.append(fill);mountStrokeSourcePaint(section,info,'stroke');
  const I=RetouchInspector,current=()=>strokeSourceEditable(info)&&!panelTasks&&!sourceRequests&&!undoBusy&&!editing;
  const alignment=I.select(section,'Stroke alignment',[['inside','Inside'],['center','Center'],['outside','Outside']],info.svgStrokeSource.position,async position=>{
@@ -3780,7 +3781,7 @@ async function writeSVGStrokeSource(type,extra){
   const removed=result.removedSourceIds||[],deletedLocks=layerLocks.removeSourceIds(removed);
   editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:[primary.id],selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:removed,undoId:result.undoId});
   layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,result.selectionIds);
-  toast(type==='setSVGStrokeSourceTransform'?'Vector updated':type==='restoreSVGStrokeSource'?'Original shape restored':type==='setSVGStrokeSourceWidth'?'Stroke weight updated':type==='setSVGStrokeSourceStyle'?(extra.property==='fill'?'Fill updated':extra.property==='stroke'?'Stroke color updated':'Stroke settings updated'):'Stroke alignment updated','ok');return true;
+  toast(type==='setSVGStrokeSourcePath'?'Vector path updated':type==='setSVGStrokeSourceTransform'?'Vector updated':type==='restoreSVGStrokeSource'?'Original shape restored':type==='setSVGStrokeSourceWidth'?'Stroke weight updated':type==='setSVGStrokeSourceStyle'?(extra.property==='fill'?'Fill updated':extra.property==='stroke'?'Stroke color updated':'Stroke settings updated'):'Stroke alignment updated','ok');return true;
  }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 async function writeSVGMask(type,extra){
@@ -4931,7 +4932,7 @@ function openPendingVectorEntry(){
   if(sel?.info===info&&classificationSerial===serial)void editSVGPoints(info).catch(error=>toast(error.message,'err'));
 }
 function editableVectorField(info){
-  const field=info.svgGeometry?.fields.find(field=>['points','d'].includes(field.name));
+  const field=info.svgStrokeSource?{name:'d',value:info.svgStrokeSource.model.path,editable:true}:info.svgGeometry?.fields.find(field=>['points','d'].includes(field.name));
   if(!field||field.editable===false)return null;
   const points=field.name==='d'?RetouchSVGPath.parseCompound(field.value)?.subpaths[0].nodes:RetouchSVGPoints.parse(field.value);
   return points?.length>=2?field:null;
@@ -4939,14 +4940,19 @@ function editableVectorField(info){
 async function editSVGPoints(info){
   if(panelTasks||undoBusy||sourceRequests||editing)return;
   stopDrawing?.();
-  const targets=matchingEls(info.id),field=info.svgGeometry?.fields.find(field=>['points','d'].includes(field.name)),pathData=field?.name==='d'?RetouchSVGPath.parseCompound(field.value):null,points=pathData?.subpaths[0].nodes||RetouchSVGPoints.parse(field?.value);
+  const targets=matchingEls(info.id),field=editableVectorField(info),pathData=field?.name==='d'?RetouchSVGPath.parseCompound(field.value):null,points=pathData?.subpaths[0].nodes||RetouchSVGPoints.parse(field?.value);
   if(targets.length!==1)return toast('Select a vector rendered once to edit its points.','err');
   if(!points||points.length<2||field.editable===false)return;
-  const target=targets[0];
+  let target=targets[0];
+  if(info.svgStrokeSource){
+   if(!strokeSourceEditable(info))return toast('Select one unlocked aligned vector.','err');
+   try{RetouchSVGStrokeFidelity.check(target,info.svgStrokeSource.model,info.svgStrokeSource.definitionId);}catch(error){return toast(error.message,'err');}
+   target=[...target.children[1].children].find(el=>el.localName==='path');
+  }
   if(field.name==='d'?!RetouchSVGPath.equivalentCompound(pathData,RetouchSVGPath.parseCompound(target.getAttribute('d'))):target.getAttribute(field.name)!==field.value)return toast('The vector changed. Re-select it before editing.','err');
   if(!await prepareVectorCanvas(info,target))return;
   stopDrawing=RetouchSVGVertices.mount({target,points,pathData,propertiesPane:panelBody,frame:iframe,canvas:canvasSurface,
-    onCommit:value=>{if(sel?.info===info)setSVGGeometry(field.name,value);},
+    onCommit:value=>{if(sel?.info===info){if(info.svgStrokeSource)void writeSVGStrokeSource('setSVGStrokeSourcePath',{path:value});else setSVGGeometry(field.name,value);}},
     onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
 async function startCreationAt(target,point,action){
