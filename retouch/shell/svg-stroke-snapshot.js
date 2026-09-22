@@ -39,9 +39,10 @@
   geometry(el,candidate,css);
   const parent=el.parentElement.getScreenCTM?.(),actual=el.getScreenCTM?.();if(!parent||!actual||parent.is2D===false||actual.is2D===false)throw Error('The shape needs a measurable two-dimensional transform.');
   const relative=matrix(parent.inverse().multiply(actual));if(!A().valid(relative)||!A().equivalent(relative,candidate.matrix))throw Error('Page CSS changes the source transform.');
-  const paint=property=>{const value=css.getPropertyValue(property).trim();return value==='currentcolor'||value==='currentColor'?css.color:value;};
+  const gradients={},paint=property=>{const value=css.getPropertyValue(property).trim();if(value.startsWith('url(')){const gradient=root.RetouchSVGStrokeGradientCapture.capture(el,value);if(!gradient)throw Error('Resolve this gradient paint before alignment.');gradients[property]=gradient;return '#000000';}return value==='currentcolor'||value==='currentColor'?css.color:value;};
+  const fill=paint('fill'),stroke=paint('stroke');
   const rawDash=css.strokeDasharray.trim(),dasharray=rawDash==='none'?'none':rawDash.split(/[\s,]+/).map(value=>length(el,value)).join(' ');
-  return root.RetouchSVGStrokeAlignment.normalize({document:G().parseCompound(candidate.path),matrix:candidate.matrix,position:'center',width:length(el,css.strokeWidth),fill:paint('fill'),stroke:paint('stroke'),fillRule:css.fillRule,linecap:css.strokeLinecap,linejoin:css.strokeLinejoin,miterlimit:Number(css.strokeMiterlimit),dasharray,dashoffset:length(el,css.strokeDashoffset),opacity:Number(css.opacity),fillOpacity:Number(css.fillOpacity),strokeOpacity:Number(css.strokeOpacity)});
+  return root.RetouchSVGStrokeAlignment.normalize({document:G().parseCompound(candidate.path),matrix:candidate.matrix,position:'center',width:length(el,css.strokeWidth),fill,stroke,gradients,fillRule:css.fillRule,linecap:css.strokeLinecap,linejoin:css.strokeLinejoin,miterlimit:Number(css.strokeMiterlimit),dasharray,dashoffset:length(el,css.strokeDashoffset),opacity:Number(css.opacity),fillOpacity:Number(css.fillOpacity),strokeOpacity:Number(css.strokeOpacity)});
  }
  const api={capture};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGStrokeSnapshot=api;
 })(typeof window==='object'?window:globalThis);

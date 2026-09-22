@@ -6,7 +6,7 @@ const crypto=require('node:crypto'),G=require('../shell/svg-path.js'),A=require(
 const view=require('./svg-boolean-group.cjs').view;
 const marker='data-rt-stroke-alignment',originalMarker='data-rt-stroke-original';
 const paintNames=['fill','stroke','fill-rule','stroke-width','stroke-linecap','stroke-linejoin','stroke-miterlimit','stroke-dasharray','stroke-dashoffset','opacity','fill-opacity','stroke-opacity'];
-const jsxNames=Object.fromEntries([...paintNames,'clip-rule','clip-path','stop-color','stop-opacity'].map(name=>[name,name.replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]));
+const jsxNames=Object.fromEntries([...paintNames,'clip-rule','clip-path','stop-color','stop-opacity','color-interpolation'].map(name=>[name,name.replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]));
 const escape=value=>String(value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function input(model){return {...model,document:G.parseCompound(model.path)};}
 function shape(r,kind,v=view(r,kind)){

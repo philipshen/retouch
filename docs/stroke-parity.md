@@ -965,3 +965,36 @@ session tests reproduced the missing canvas button, and now pass in both
 browsers (`/tmp/retouch-stroke-gradient-ordinary-fixed-{chromium,webkit}.log`),
 including consecutive gestures, restored focus, Done, exact individual history
 and Escape during a pending save. Desktop packaging was not rebuilt.
+
+### Authored gradient alignment checkpoint
+
+Stroke alignment can now capture an existing local SVG linear or radial fill
+or stroke gradient. It resolves basic local template chains, computed stop
+colors and opacity, effective clamped stop offsets, SVG gradient transforms,
+and color interpolation into the retained shape's private gradient definition.
+The original definition and archived shape stay byte-for-byte intact, and
+restoring the original shape restores its original reference. Other shapes
+keep using the authored definition. The aligned shape becomes an independent
+copy: later edits to the original shared gradient do not propagate to it.
+
+Capture refuses ambiguous/missing/external definitions, cyclic templates,
+animated gradient content, differing template-parent styles and CSS gradient
+transform overrides. This is bounded SVG support, not arbitrary paint-server
+or shared-style parity. Angular/diamond gradients, multiple fills/strokes and
+an explicit gradient-transform inspector remain open. CSS rule inspection is
+conservative and may refuse an override inside an inactive conditional rule.
+
+Verification: 2,507 source tests passed with no failures/skips
+(`/tmp/retouch-gradient-import-source.log`). Chromium and WebKit each passed
+217 read-only snapshot checks and compared 312,000 rendered pixels, including
+linear/radial fill and stroke, transformed/user-space gradients, linearRGB,
+stop opacity, currentColor, single stops, local templates, unchanged shared
+definitions and refusal cases (`/tmp/retouch-gradient-import-{chromium,webkit}.log`).
+Each browser also passed 402 isolated conversion checks, including authored
+gradients, inside/center/outside alignment, CSS collateral checks and preserved
+page/form state (`/tmp/retouch-gradient-import-isolation-{chromium,webkit}.log`).
+The focused inspector creation workflows passed for HTML, Liquid and React in
+both browsers, with CSS/instance refusal, exact undo/redo, original restoration
+and preserved document/form state (`/tmp/retouch-gradient-import-six.log`).
+These focused workflows do not replace the preceding full editor regressions.
+Desktop packaging was not rebuilt.

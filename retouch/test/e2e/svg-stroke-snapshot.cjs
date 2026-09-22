@@ -4,7 +4,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,engine=process.env.RT_E2E_BROWSER
 const shapes=['<rect x="20" y="20" width="60" height="50"/>','<rect x="20" y="20" width="60" height="50" rx="8"/>','<circle cx="55" cy="45" r="25"/>','<ellipse cx="55" cy="45" rx="30" ry="20"/>','<path d="M20 20H80V70H20Z"/>','<polygon points="20,20 80,20 60,70"/>','<polyline points="20,20 80,20 60,70"/>','<line x1="20" y1="20" x2="80" y2="70"/>'];
 const resolve=source=>{const relPath='art.html',elements=A.collect(source,relPath).elements,element=elements.find(el=>S.creation({source,relPath,file:'/tmp/art.html',elements,element:el,hash:A.contentHash(source)},'html'));return {source,relPath,file:'/tmp/art.html',elements,element,hash:A.contentHash(source)};};
 (async()=>{const browser=await require(path.join(fixture,'node_modules/playwright'))[engine].launch();let checked=0,pixels=0;try{
- const page=await browser.newPage();await page.setContent('<iframe style="width:180px;height:160px;border:0"></iframe>');for(const script of ['svg-path.js','svg-affine.js','html-css-values.js'])await page.addScriptTag({path:path.resolve(__dirname,'../../shell',script)});await page.addScriptTag({path:require.resolve('paper/dist/paper-core.min.js')});for(const script of ['svg-stroke-alignment.js','svg-stroke-snapshot.js'])await page.addScriptTag({path:path.resolve(__dirname,'../../shell',script)});const frame=page.frames().find(f=>f.parentFrame());
+ const page=await browser.newPage();await page.setContent('<iframe style="width:180px;height:160px;border:0"></iframe>');for(const script of ['svg-path.js','svg-affine.js','html-css-values.js'])await page.addScriptTag({path:path.resolve(__dirname,'../../shell',script)});await page.addScriptTag({path:require.resolve('paper/dist/paper-core.min.js')});for(const script of ['svg-stroke-gradient.js','svg-stroke-alignment.js','svg-stroke-gradient-capture.js','svg-stroke-snapshot.js'])await page.addScriptTag({path:path.resolve(__dirname,'../../shell',script)});const frame=page.frames().find(f=>f.parentFrame());
  const capture=async candidate=>{
   const result=await page.evaluate(candidate=>{const d=document.querySelector('iframe').contentDocument,el=d.querySelector('[data-rt="'+candidate.id+'"]'),before=d.documentElement.innerHTML,observer=new MutationObserver(()=>{});observer.observe(d,{subtree:true,attributes:true,childList:true,characterData:true});const scopes=Object.keys(paper.PaperScope._scopes).length;let model,error;try{model=RetouchSVGStrokeSnapshot.capture(el,candidate);}catch(e){error=e.message;}const mutations=observer.takeRecords().length;observer.disconnect();return {model,error,mutations,unchanged:before===d.documentElement.innerHTML,scopes:Object.keys(paper.PaperScope._scopes).length-scopes};},candidate);checked++;assert.equal(result.mutations,0);assert.equal(result.unchanged,true);assert.equal(result.scopes,0);return result;
  };
@@ -20,6 +20,34 @@ const resolve=source=>{const relPath='art.html',elements=A.collect(source,relPat
   const property={rect:'width',circle:'r',ellipse:'rx'}[candidate.tag];if(property){const sheet=await frame.addStyleTag({content:'[data-rt]{'+property+':10px}'});assert.match((await capture(candidate)).error,/shape/);await sheet.evaluate(el=>el.remove());}
   await frame.locator('[data-rt]').evaluate(el=>{el.strokeSnapshotAnimation=el.animate([{opacity:.6},{opacity:.2}],{duration:100000});el.strokeSnapshotAnimation.pause();});assert.match((await capture(candidate)).error,/animation/);await frame.locator('[data-rt]').evaluate(el=>{el.strokeSnapshotAnimation.cancel();delete el.strokeSnapshotAnimation;});
   await frame.locator('[data-rt]').evaluate(el=>{el.after(el.cloneNode(true));});assert.match((await capture(candidate)).error,/once/);await frame.locator('[data-rt]').last().evaluate(el=>el.remove());assert.equal((await capture(candidate)).error,undefined);
+ }
+ const gradientCases=[
+  '<linearGradient id="paint"><stop stop-color="red"/><stop offset="1" stop-color="blue"/></linearGradient>',
+  '<linearGradient id="paint" gradientTransform="rotate(25 .5 .5)" color-interpolation="linearRGB"><stop offset="-.2" stop-color="red"/><stop offset="1.2" stop-color="blue" stop-opacity=".5"/></linearGradient>',
+  '<radialGradient id="paint" gradientUnits="userSpaceOnUse" cx="50" cy="40" r="40" gradientTransform="translate(4 2)"><stop stop-color="lime"/><stop offset="1" stop-color="purple"/></radialGradient>',
+  '<linearGradient id="base" x2="70%"><stop stop-color="red"/><stop offset="1" stop-color="blue"/></linearGradient><linearGradient id="paint" href="#base"/>',
+  '<linearGradient id="paint" style="color:rgb(30,60,90)"><stop offset=".4" stop-color="currentColor" stop-opacity=".6"/></linearGradient>'
+ ];
+ for(const defs of gradientCases)for(const paint of ['fill','stroke']){
+  const source='<svg width="120" height="100" viewBox="0 0 120 100"><defs>'+defs+'</defs><rect x="20" y="20" width="60" height="50" fill="orange" stroke="black" stroke-width="8" '+paint+'="url(#paint)"/><circle cx="105" cy="80" r="8" fill="url(#paint)"/></svg>';
+  // Use one attribute per paint; duplicate XML attributes do not model authored SVG.
+  const clean=source.replace(paint+'="'+(paint==='fill'?'orange':'black')+'" ','');
+  const r=resolve(clean),candidate=S.creation(r,'html'),stamped=clean.replace('<rect ','<rect data-rt="'+candidate.id+'" ');
+  await frame.setContent('<style>body{margin:0}</style>'+stamped);const result=await capture(candidate);assert.equal(result.error,undefined,defs);assert.ok(result.model.gradients[paint]);
+  const before=await screenshot(),made=S.plan(r,{type:'createSVGStrokeSource',fileHash:r.hash,model:{...result.model,document:G.parseCompound(result.model.path)}},'html');assert.ok(made.ok,made.reason);assert.ok(made.edits[0].after.includes('<defs>'+defs+'</defs>'));
+  await frame.setContent('<style>body{margin:0}</style>'+made.edits[0].after);const after=await screenshot();let different=0;assert.equal(before.data.length,after.data.length);for(let i=0;i<before.data.length;i+=4){pixels++;if([0,1,2,3].some(c=>Math.abs(before.data[i+c]-after.data[i+c])>16))different++;}assert.ok(different/(before.data.length/4)<.01,JSON.stringify({defs,paint,different}));
+ }
+ for(const defs of [
+  '<linearGradient id="paint" gradientTransform="rotate(30)" style="transform:none"><stop stop-color="red"/></linearGradient>',
+  '<linearGradient id="paint" href="#paint"/>',
+  '<linearGradient id="paint" href="https://example.invalid/art.svg#paint"/>',
+  '<linearGradient id="paint"/>',
+  '<linearGradient id="paint"><stop stop-color="red"/><animate attributeName="x1" dur="5s" values="0;1"/></linearGradient>',
+  '<linearGradient id="paint"><stop stop-color="red"/></linearGradient><linearGradient id="paint"><stop stop-color="blue"/></linearGradient>',
+  '<linearGradient id="base" style="color:red"><stop stop-color="currentColor"/></linearGradient><linearGradient id="paint" href="#base" style="color:blue"/>'
+ ]){
+  const source='<svg width="120" height="100"><defs>'+defs+'</defs><rect x="20" y="20" width="60" height="50" fill="url(#paint)"/></svg>',r=resolve(source),candidate=S.creation(r,'html');
+  await frame.setContent(source.replace('<rect ','<rect data-rt="'+candidate.id+'" '));assert.ok((await capture(candidate)).error,defs);
  }
  console.log(engine+': PASS '+checked+' resolved stroke snapshots and '+pixels+' rendered pixels; source-created center output matches inherited paint, percentages and local transforms; open contours retained; no snapshot DOM mutations or Paper leaks');
 }finally{await browser.close();}})().catch(error=>{console.error(error);process.exitCode=1;});

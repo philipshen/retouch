@@ -5,7 +5,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,engine=process.env.RT_E2E_BROWSER
  const page=await browser.newPage();await page.setContent('<style>svg,path,g{fill:lime;stroke:purple;opacity:.2;transform:scale(3)}</style><iframe style="width:400px;height:400px;border:0"></iframe>');
  for(const script of ['svg-path.js','svg-affine.js','palette-values.js','html-css-values.js'])await page.addScriptTag({path:path.resolve(__dirname,'../../shell',script)});
  await page.addScriptTag({path:require.resolve('paper/dist/paper-core.min.js')});
- for(const script of ['svg-stroke-alignment.js','svg-stroke-fidelity.js'])await page.addScriptTag({path:path.resolve(__dirname,'../../shell',script)});
+ for(const script of ['svg-stroke-gradient.js','svg-stroke-alignment.js','svg-stroke-fidelity.js'])await page.addScriptTag({path:path.resolve(__dirname,'../../shell',script)});
  const frame=page.frames().find(f=>f.parentFrame());
  const snapshot=async()=>page.screenshot({clip:await frame.locator('svg').boundingBox()});
  const run=async(model,expected)=>{

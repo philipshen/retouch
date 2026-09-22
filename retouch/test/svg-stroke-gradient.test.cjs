@@ -12,7 +12,7 @@ test('retained gradient edits preserve inactive coordinates and move stop color 
 test('retained gradients reject contextual paints, invalid stops, foreign coordinates and identities',()=>{
  for(const color of ['currentColor','var(--paint)','url(#foreign)','CanvasText','inherit','light-dark(red,blue)']){const value=input();value.stops[0].color=color;assert.throws(()=>G.normalize(value));}
  for(const offset of [-1,1.1,NaN,Infinity,'20px',{},[],true]){const value=input();value.stops[0].offset=offset;assert.throws(()=>G.normalize(value));}
- for(const fields of [{r:'-1'},{x1:'100001'},{gradientUnits:'screen'},{spreadMethod:'none'},{href:'#foreign'},{gradientTransform:'rotate(20)'}])assert.throws(()=>G.normalize({...input(),fields}));
+ for(const fields of [{r:'-1'},{x1:'100001'},{gradientUnits:'screen'},{spreadMethod:'none'},{href:'#foreign'},{gradientTransform:'scale(0)'}])assert.throws(()=>G.normalize({...input(),fields}));
  for(const stops of [[],input().stops.slice(0,1),Array(65).fill(input().stops[0])])assert.throws(()=>G.normalize({...input(),stops}));
  assert.throws(()=>G.render(input(),'external'));assert.throws(()=>G.edit(input(),{action:'detach'}));
 });
@@ -20,4 +20,11 @@ test('retained stroke renderer uses private gradient URLs without changing other
  const base={document:P.parseCompound('M0 0L100 0L100 100L0 100Z'),fill:'red',stroke:'blue',width:8,position:'outside',gradients:{fill:input(),stroke:{...input(),type:'radialGradient'}}},model=S.normalize(base),id='rt-stroke-0123456789abcdef',html=S.render(base,id);
  assert.ok(html.includes('fill="url(#'+id+'-fill)"'));assert.ok(html.includes('stroke="url(#'+id+'-stroke)"'));assert.ok(html.includes('mask="url(#'+id+')"'));assert.ok(html.includes('stop-opacity="0.75"'));
  const solid=S.setPaint({...model,document:base.document},'fill','none');assert.equal(solid.gradients.fill,undefined);assert.deepEqual(solid.gradients.stroke,model.gradients.stroke);assert.equal(solid.stroke,'blue');assert.equal(solid.fill,'none');
+});
+
+test('imported transform and interpolation survive normalization and gradient edits',()=>{
+ const value=G.normalize({...input(),fields:{gradientTransform:'translate(4 2) rotate(25)', 'color-interpolation':'linearRGB'}});
+ assert.deepEqual(G.normalize(value),value);
+ const edited=G.edit(value,{changes:{x2:'80%'}});assert.equal(edited.fields.gradientTransform,value.fields.gradientTransform);assert.equal(edited.fields['color-interpolation'],'linearRGB');
+ assert.match(G.render(edited,'rt-stroke-0123456789abcdef-fill'),/gradientTransform="matrix/);
 });

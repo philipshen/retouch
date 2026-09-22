@@ -1,7 +1,7 @@
 (function(root){
  'use strict';
- const V=root.RetouchHTMLCSSValues||(typeof require==='function'?require('./html-css-values.js'):null);
- const coordinates={linearGradient:['x1','y1','x2','y2'],radialGradient:['cx','cy','r','fx','fy','fr']},names=[...coordinates.linearGradient,...coordinates.radialGradient,'gradientUnits','spreadMethod'];
+ const A=root.RetouchSVGAffine||(typeof require==='function'?require('./svg-affine.js'):null),V=root.RetouchHTMLCSSValues||(typeof require==='function'?require('./html-css-values.js'):null);
+ const coordinates={linearGradient:['x1','y1','x2','y2'],radialGradient:['cx','cy','r','fx','fy','fr']},names=[...coordinates.linearGradient,...coordinates.radialGradient,'gradientUnits','spreadMethod','gradientTransform','color-interpolation'];
  const escape=value=>String(value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
  const contextual=new Set('currentcolor inherit initial unset revert revert-layer context-fill context-stroke accentcolor accentcolortext activetext buttonborder buttonface buttontext canvas canvastext field fieldtext graytext highlight highlighttext linktext mark marktext selecteditem selecteditemtext visitedtext activeborder activecaption appworkspace background buttonhighlight buttonshadow captiontext inactiveborder inactivecaptiontext infobackground infotext menu menutext scrollbar threeddarkshadow threedface threedhighlight threedlightshadow threedshadow window windowframe windowtext'.split(' '));
  function color(value){if(typeof value!=='string'||!V.valid('color',value)||contextual.has(value.trim().toLowerCase())||/\b(?:url|var|env|light-dark)\s*\(/i.test(value))throw Error('Choose a literal gradient stop color.');return value;}
@@ -11,6 +11,8 @@
   if(!input.fields||Array.isArray(input.fields)||typeof input.fields!=='object'||Object.keys(input.fields).some(name=>!names.includes(name)))throw Error('Choose supported gradient coordinates.');
   const fields={};
   for(const name of names){const value=input.fields[name];if(value===null||value===undefined)continue;if(typeof value!=='string')throw Error('Use literal gradient coordinates.');
+   if(name==='gradientTransform'){const matrix=A.parse(value);if(!matrix||Math.abs(matrix[0]*matrix[3]-matrix[1]*matrix[2])<1e-12)throw Error('Choose a measurable gradient transform.');fields[name]=A.format(matrix);continue;}
+   if(name==='color-interpolation'){if(!['sRGB','linearRGB','srgb','linearrgb'].includes(value))throw Error('Choose supported gradient color interpolation.');fields[name]=value.toLowerCase()==='srgb'?'sRGB':'linearRGB';continue;}
    if(name==='gradientUnits'){if(!['objectBoundingBox','userSpaceOnUse'].includes(value))throw Error('Choose supported gradient units.');}
    else if(name==='spreadMethod'){if(!['pad','reflect','repeat'].includes(value))throw Error('Choose a supported gradient spread.');}
    else{const match=/^([-+]?(?:\d+\.?\d*|\.\d+))(px|%)?$/.exec(value);if(!match||!Number.isFinite(Number(match[1]))||Math.abs(Number(match[1]))>100000||['r','fr'].includes(name)&&Number(match[1])<0)throw Error('Keep gradient coordinates within supported bounds.');}
