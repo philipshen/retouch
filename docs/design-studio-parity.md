@@ -28766,5 +28766,16 @@ Aligned vectors keep position and size controls, flips, keyboard movement,
 and canvas resize/rotation handles. Transform edits preserve their original
 shape and paint settings, with exact undo/redo and full original restoration.
 See [retained vector placement](stroke-parity.md#retained-vector-placement--2026-09-22).
-Path-node editing, simultaneous retained-vector transforms, multiple paints,
-retained gradients, responsive variants and desktop delivery remain open.
+Path-node editing, multiple paints, retained gradients, responsive variants
+and desktop delivery remain open. Multi-selection transforms are covered below.
+
+### 2026-09-22 — mixed aligned-vector selections
+
+Aligned and ordinary SVG vectors now share multi-selection transform controls
+and one-step undo/redo. Covered children move once with selected parents.
+The source planner commits the whole batch atomically, preserving retained
+paint, original geometry and private definitions. History refresh restores
+all selected preview nodes, including after the UI selection is cleared.
+See [mixed vector transforms](stroke-parity.md#mixed-and-multiple-retained-vector-transforms--2026-09-22)
+for evidence and limits. Cross-file selection edits, retained path-node editing,
+multiple paints/gradients, responsive variants and desktop delivery remain open.

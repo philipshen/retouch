@@ -163,6 +163,7 @@ function guard(r,op,kind){
  for(const group of groups)for(const target of targets){
   if(contains(group,target)){
    if(types.has(op.type)&&target.id===group.id&&target.id===r.element.id)continue;
+   if(op.type==='setSVGTransforms'&&target.id===group.id&&context({...r,element:target},kind))continue;
    if(deletionTypes.has(op.type)&&targets.some(e=>contains(e,group)))continue;
    return refuse();
   }
@@ -175,6 +176,9 @@ function validatePlan(r,op,kind,planned){
  const refuse=()=>({ok:false,refused:true,reason:'This edit would alter retained stroke source. Restore the original shape before editing or duplicating its generated structure.'});
  // Source operations are deterministic; only their exact single-file plan may
  // replace the canonical group. Never trust a caller-supplied bypass flag.
+ if(op.type==='setSVGTransforms'&&r.source?.includes(marker)){
+  const expected=require('./svg-transform.cjs').planSelection(r,op,kind);return expected.ok&&JSON.stringify(expected.edits)===JSON.stringify(planned.edits)?planned:refuse();
+ }
  if(types.has(op.type)){
   if(op.type==='createSVGStrokeSource'&&typeof op.definitionId!=='string')return {ok:false,refused:true,reason:'Choose a stable stroke definition identity before creating the stroke.'};
   const expected=plan(r,op,kind);return expected.ok&&JSON.stringify(expected.edits)===JSON.stringify(planned.edits)?planned:refuse();

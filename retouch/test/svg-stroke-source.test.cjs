@@ -187,3 +187,27 @@ for(const kind of ['html','react','liquid'])test(kind+' retained placement prese
  for(const matrix of [undefined,null,[],[1,0,0,0,0,0],[Infinity,0,0,1,0,0],[1,0,0,1,'2',0]])assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceTransform',fileHash:r.hash,matrix}).refused,true);
  assert.equal(create(initial,kind,{model:{...model,placement:[1,0,0,1,1,0]}}).refused,true);
 });
+for(const kind of ['html','react','liquid'])test(kind+' mixed vector batch transforms are atomic and preserve retained ownership',t=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),initial=resolve(kind),source=initial.source.replace('<rect','<g data-rt-name="Outer"><rect').replace('<circle','<rect x="20" y="20" width="60" height="60" fill="red" stroke="blue" transform="translate(70 0)"/><circle').replace('</svg>','</g></svg>');
+ let state=resolve(kind,source);
+ for(const matrix of [[1,0,0,1,0,0],[1,0,0,1,70,0]]){
+  const v=view(state,kind);state.element=state.elements.find(e=>v.tag(e)==='rect'&&S.creation({...state,element:e},kind));
+  const made=create(state,kind,{model:{...model,matrix}});assert.ok(made.ok,made.reason);state=resolve(kind,made.edits[0].after,made.selectionIds[0]);
+ }
+ const v=view(state,kind),groups=state.elements.filter(e=>S.context({...state,element:e},kind)),peer=state.elements.find(e=>v.tag(e)==='circle'),parent=state.elements.find(e=>v.attr(e,'data-rt-name')==='Outer'),originals=groups.map(element=>S.context({...state,element},kind));
+ assert.equal(groups.length,2);
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'rt-stroke-batch-')),file=path.join(root,state.relPath);t.after(()=>fs.rmSync(root,{recursive:true,force:true}));state.file=file;fs.writeFileSync(file,state.source);
+ for(const selected of [[...groups,peer],[peer,...groups]]){
+  const matrices=Object.fromEntries(selected.map((element,i)=>[element.id,[1,.1,.2,1,10+i*4,8]])),r={...state,element:selected[0]},op={type:'setSVGTransforms',fileHash:r.hash,ids:selected.map(e=>e.id),matrices},change=adapter.planOp(r,op);
+  assert.ok(change.ok,change.reason);assert.equal(change.edits.length,1);assert.deepEqual(change.selection.map(e=>e.id),op.ids);assert.deepEqual(adapter.collect(change.edits[0].after,state.relPath).elements.map(e=>e.id),state.elements.map(e=>e.id));
+  for(const [i,group]of groups.entries()){const next=resolve(kind,change.edits[0].after,group.id),retained=S.context(next,kind);assert.deepEqual(retained.model,{...originals[i].model,placement:matrices[group.id]});assert.equal(retained.source,originals[i].source);assert.equal(retained.id,originals[i].id);}
+  assert.equal(S.validatePlan(r,op,kind,change),change);
+  const history=new(require('../src/history.cjs').SourceHistory)(),applied=require('../src/transactions.cjs').applyPlan(root,change);assert.ok(applied.ok,applied.reason);const entry=history.record(applied.edits);assert.ok(history.apply(root,'undo',entry,{}).ok);assert.equal(fs.readFileSync(file,'utf8'),state.source);assert.ok(history.apply(root,'redo',entry,{}).ok);assert.equal(fs.readFileSync(file,'utf8'),change.edits[0].after);assert.ok(history.apply(root,'undo',entry,{}).ok);
+  const next=resolve(kind,change.edits[0].after,selected[0].id);assert.deepEqual(adapter.planOp(next,{...op,fileHash:next.hash}).edits,[]);
+  const corrupt={...change,edits:[{...change.edits[0],after:change.edits[0].after.replace('stroke="blue"','stroke="green"')}]};assert.equal(S.validatePlan(r,op,kind,corrupt).refused,true);
+  for(const matrix of [[0,0,0,0,0,0],[1,0,0,1,Infinity,0]]){const bad=adapter.planOp(r,{...op,matrices:{...matrices,[groups[1].id]:matrix}});assert.equal(bad.refused,true);assert.equal(bad.edits,undefined);assert.equal(fs.readFileSync(file,'utf8'),state.source);}
+  assert.equal(adapter.planOp(r,{...op,fileHash:'stale'}).refused,true);
+ }
+ const covered={type:'setSVGTransforms',fileHash:state.hash,ids:[parent.id,groups[0].id],matrices:{[parent.id]:[1,0,0,1,12,9],[groups[0].id]:[1,0,0,1,0,0]}},moved=adapter.planOp({...state,element:parent},covered);assert.ok(moved.ok,moved.reason);for(const [i,group]of groups.entries())assert.deepEqual(S.context(resolve(kind,moved.edits[0].after,group.id),kind).model,originals[i].model);
+ const damaged=resolve(kind,state.source.replace('width="60"','width="90"'),peer.id),bad=adapter.planOp(damaged,{type:'setSVGTransforms',fileHash:damaged.hash,ids:[peer.id,groups[0].id],matrices:{[peer.id]:[1,0,0,1,1,1],[groups[0].id]:[1,0,0,1,1,1]}});assert.equal(bad.refused,true);
+});

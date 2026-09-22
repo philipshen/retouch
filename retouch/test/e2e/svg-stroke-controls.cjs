@@ -3,7 +3,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
 const fixture=process.env.RT_INSPECTOR_FIXTURE,reactFixture=process.env.RT_REACT_FIXTURE||fixture,engine=process.env.RT_E2E_BROWSER||'chromium',kind=process.env.RT_E2E_RENDERER||'html',sharp=require(process.env.RT_E2E_SHARP_ROOT||path.join(fixture,'node_modules/sharp'));
 (async()=>{
  const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'rt-stroke-controls-'))),relPath=kind==='react'?'app/page.jsx':kind==='liquid'?'index.liquid':'index.html',file=path.join(root,relPath),adapter=require('../../src/adapters/'+kind+'.cjs'),sourceModule=require('../../src/svg-stroke-source.cjs'),G=require('../../shell/svg-path.js'),{view}=require('../../src/svg-boolean-group.cjs');
- const art='<svg width="240" height="240" viewBox="0 0 100 100"><rect data-rt-name="Card" x="20" y="20" width="60" height="60" fill="#ff0000" stroke="#0000ff" stroke-width="8"/><circle cx="5" cy="5" r="2"/></svg><input value="keep"/>',original=kind==='react'?'"use client";export default function Page(){return <main>'+art.replace('stroke-width','strokeWidth').replace('input value=','input defaultValue=')+'</main>}':'<!doctype html><html><body>'+art+'</body></html>';
+ const art='<svg width="240" height="240" viewBox="0 0 100 100"><g data-rt-name="Vectors"><rect data-rt-name="Card" x="20" y="20" width="60" height="60" fill="#ff0000" stroke="#0000ff" stroke-width="8"/><circle cx="5" cy="5" r="2" stroke="#0000ff" stroke-width="1"/></g></svg><input value="keep"/>',original=kind==='react'?'"use client";export default function Page(){return <main>'+art.replaceAll('stroke-width','strokeWidth').replace('input value=','input defaultValue=')+'</main>}':'<!doctype html><html><body>'+art+'</body></html>';
  const resolve=(source,id)=>{const r={source,file,relPath,hash:adapter.contentHash(source),elements:adapter.collect(source,relPath).elements},v=view(r,kind);r.element=id?r.elements.find(e=>e.id===id):r.elements.find(e=>v.tag(e)==='rect');return r;};
  const initial=resolve(original);let made=sourceModule.plan(initial,{type:'createSVGStrokeSource',fileHash:initial.hash,model:{document:G.parseCompound('M20 20H80V80H20Z'),width:8,fill:'#ff0000',stroke:'#0000ff',position:'inside'}},kind);assert.ok(made.ok,made.reason);
  fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,process.env.RT_STROKE_CREATE?original:made.edits[0].after);
@@ -68,6 +68,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,reactFixture=process.env.RT_REACT
 
   }
   await require('./svg-retained-stroke-transforms.cjs')({page,app,read,settled,wait});
+  await require('./svg-retained-stroke-selection.cjs')({page,app,read,settled,wait});
   await require('./svg-retained-stroke-paints.cjs')({page,app,read,settled,wait});
   await require('./svg-retained-stroke-settings.cjs')({page,app,read,settled,wait});
   // One history entry per label gesture; Escape restores the DOM and source.

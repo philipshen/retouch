@@ -974,12 +974,12 @@ function reloadFrame({keepDrawing=null,expectedTag=null}={}) {
 // A source write can finish before the framework invalidates its rendered
 // module. Wait for that revision, retaining the live session when HMR applies it.
 // Reload only when the renderer cannot confirm a matching live update.
-async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null,svgGeometry=false,imageSource=false,classSource=false}={}) {
+async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null,svgGeometry=false,svgSelection=null,imageSource=false,classSource=false}={}) {
   if(classSource&&info.renderRevisionAttribute){await refreshWrittenElement(info,matches,{keepDrawing,expectedTag});const result=await window.RetouchComparisons?.syncSource({select:d=>matchingInDocument(d,info.id,info),matches,revisionAttribute:info.renderRevisionAttribute,hash:info.hash});if(result?.failures.length)throw Error('Retry the failed comparison previews.');return;}
 
   if(imageSource&&/\.(?:html?|liquid)$/i.test(info.file)&&matchingEls(info.id).length&&matchingEls(info.id).every(el=>el.tagName==='IMG')){const select=d=>matchingInDocument(d,info.id,info);await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select,matches});const comparisons=await window.RetouchComparisons?.syncImage({select,matches});if(comparisons?.failures.length)toast('Image saved. Retry the failed comparison previews.','err');return;}
   if(imageSource){await refreshWrittenElement(info,matches);const comparisons=await window.RetouchComparisons?.syncImage({select:d=>matchingInDocument(d,info.id,info),matches,serverRendered:false,revisionAttribute:info.renderRevisionAttribute,hash:info.hash});if(comparisons?.failures.length)toast('Image saved. Retry the failed comparison previews.','err');return;}
-  const geometrySelection=[...new Map([info,...(sel?.multiple||[])].map(item=>[item.id,item])).values()];
+  const geometrySelection=[...new Map([info,...(svgSelection||sel?.multiple||[])].map(item=>[item.id,item])).values()];
   if(svgGeometry&&/\.(?:html?|liquid)$/i.test(info.file)&&geometrySelection.every(item=>{const elements=matchingEls(item.id);return elements.length>0&&elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg');})){
     await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>{
       const selected=geometrySelection.flatMap(item=>matchingInDocument(d,item.id,item));
@@ -2086,7 +2086,11 @@ function renderPanelContents(textEditing=false) {
   panelBody.appendChild(head);
   if(info.svgStrokeOwner||(sel.multiple||[]).some(item=>item.svgStrokeOwner)){
    const section=RetouchInspector.section('Stroke');
-   if(sel.multiple?.length>1)RetouchInspector.note(section,'Select one vector to change stroke alignment.');
+   if(sel.multiple?.length>1){
+    const infos=sel.multiple,elements=infos.map(item=>{const found=matchingEls(item.id);return found.length===1?found[0]:null;}),current=()=>sel?.multiple===infos&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&elements.every(el=>el&&!layerLocks.locked(el));
+    if(infos.every(item=>item.svgTransform?.editable))panelBody.append(RetouchSVGSelection.mount(infos,elements,{current,save:writeSVGSelection,onGaps:axis=>svgSelectionGaps.toggle(infos,axis),gapsActive:axis=>svgSelectionGaps.active(infos,axis)}));
+    RetouchInspector.note(section,'Select one vector to change stroke alignment.');
+   }
    else if(info.svgStrokeSource)mountStrokeSourceControls(section,info);
    else{RetouchInspector.note(section,'This shape belongs to a stroke.');section.append(RetouchInspector.button('Select stroke',async()=>{await restoreLayerSelection([info.svgStrokeOwner]);if(sel)renderPanel();}));}
    panelBody.append(section);
@@ -3740,23 +3744,38 @@ async function writeSVGBooleanSelection(path){
  await refreshSVGBooleanSelection(result.parentId,result.selectionIds);toast('Shapes combined','ok');
  }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
+// Preview all selected transforms together without cloning private SVG definitions.
+// Restore only attributes still owned by this synchronous user-requested preview.
+function checkSVGTransformDraft(infos,elements,matrices){
+ const fields=infos.map((info,i)=>{
+  const el=elements[i],value=matrices[info.id];
+  if(!el||matchingEls(info.id).length!==1||[el,...(info.svgStrokeSource?el.querySelectorAll('[data-rt]'):[])].some(node=>layerLocks.locked(node)))throw Error('Select unlocked vectors rendered once on this page.');
+  if(!RetouchSVGAffine.valid(value)||el.getAttribute('transform')!==info.svgTransform?.value)throw Error('The vector changed. Re-select it.');
+  const reason=RetouchSVGResize.reason(el,info);if(reason)throw Error(reason);
+  if(info.svgStrokeSource)RetouchSVGStrokeFidelity.check(el,info.svgStrokeSource.model,info.svgStrokeSource.definitionId);
+  const before=el.getAttribute('transform'),next=value.every((v,j)=>v===info.svgTransform.matrix[j])?before:RetouchSVGAffine.format(value);
+  return {el,info,value,before,next};
+ });
+ try{
+  for(const field of fields)if(field.next!==field.before)field.el.setAttribute('transform',field.next);
+  for(const {el,info,value,next}of fields){
+   if(el.getAttribute('transform')!==next)throw Error('A vector changed during the transform preview.');
+   const reason=RetouchSVGResize.reason(el,{...info,svgTransform:{...info.svgTransform,value:next,matrix:value}});if(reason)throw Error(reason);
+   if(info.svgStrokeSource)RetouchSVGStrokeFidelity.check(el,{...info.svgStrokeSource.model,placement:value},info.svgStrokeSource.definitionId);
+  }
+ }finally{for(const {el,before,next}of fields.reverse())if(before!==next&&el.getAttribute('transform')===next){if(before===null)el.removeAttribute('transform');else el.setAttribute('transform',before);}}
+}
 async function writeSVGSelection(matrices){
  const infos=sel?.multiple;if(!infos||panelTasks||sourceRequests||undoBusy||editing)return;const ids=infos.map(info=>info.id),primary=sel.info;busyPanel(true);
- try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransforms',id:primary.id,ids,fileHash:primary.hash,matrices});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not transform the selected vectors.');if(result.undoId)editorHistory.record({type:'setSVGTransforms',id:primary.id,selectionIds:ids,undoId:result.undoId});await refreshWrittenElement(result.element,el=>svgSelectionMatches(result.selection,el.ownerDocument),{svgGeometry:true});await restoreLayerSelection(ids);if(sel)renderPanel();toast('Vectors updated','ok');}catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+ try{checkSVGTransformDraft(infos,infos.map(info=>matchingEls(info.id)[0]),matrices);const result=await api('POST','/rt/__api/op',{type:'setSVGTransforms',id:primary.id,ids,fileHash:primary.hash,matrices});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not transform the selected vectors.');if(result.undoId)editorHistory.record({type:'setSVGTransforms',id:primary.id,selectionIds:ids,undoId:result.undoId});await refreshWrittenElement(result.element,el=>svgSelectionMatches(result.selection,el.ownerDocument),{svgGeometry:true,svgSelection:result.selection});await restoreLayerSelection(ids);if(sel)renderPanel();toast('Vectors updated','ok');}catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
 function svgSelectionMatches(infos,d){return infos.every(info=>matchingInDocument(d,info.id,info).some(el=>el.getAttribute('transform')===info.svgTransform?.value));}
 async function writeSVGTransform(info,target,matrix){
   if(sel?.info!==info||panelTasks||undoBusy||sourceRequests||editing)return;
   const reason=RetouchSVGResize.reason(target,info,true);if(reason)return toast(reason,'err');
-  if(info.svgStrokeSource){
-   // Never duplicate retained clip/mask identities in the authored document.
-   // Test this user-requested transform on its existing nodes, then restore
-   // only the attribute still owned by this preview before the source write.
-   const before=target.getAttribute('transform'),next=RetouchSVGAffine.format(matrix);
-   try{target.setAttribute('transform',next);RetouchSVGStrokeFidelity.check(target,{...info.svgStrokeSource.model,placement:matrix},info.svgStrokeSource.definitionId);if(target.getAttribute('transform')!==next)throw Error('The vector changed during the transform preview.');}
-   catch(error){toast(error.message,'err');return false;}
-   finally{if(target.getAttribute('transform')===next){if(before===null)target.removeAttribute('transform');else target.setAttribute('transform',before);}}
-   return writeSVGStrokeSource('setSVGStrokeSourceTransform',{matrix});
+  if(info.svgStrokeSource||target.querySelector('[data-rt-stroke-alignment]')){
+   try{checkSVGTransformDraft([info],[target],{[info.id]:matrix});}catch(error){toast(error.message,'err');return false;}
+   if(info.svgStrokeSource)return writeSVGStrokeSource('setSVGStrokeSourceTransform',{matrix});
   }
   busyPanel(true);
    try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransform',id:info.id,fileHash:info.hash,matrix});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update vector','err');if(result.undoId)editorHistory.record({type:'setSVGTransform',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.getAttribute('transform')===sel.info.svgTransform?.value,{svgGeometry:true});renderPanel();toast('Vector updated','ok');}finally{busyPanel(false);}
@@ -4470,7 +4489,7 @@ async function restoreHistory(direction,op) {
           return tokens(el.getAttribute('class')) === tokens(info.className);
         }
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
-      },{classSource:['setClasses','setClassesSelection'].includes(op.type),verifyText:op.type==='setText'&&!info.textSource,imageSource:op.type==='setSrc',svgGeometry:['setSVGGeometry','setSVGTransform','setSVGTransforms'].includes(op.type)});
+      },{classSource:['setClasses','setClassesSelection'].includes(op.type),verifyText:op.type==='setText'&&!info.textSource,imageSource:op.type==='setSrc',svgGeometry:['setSVGGeometry','setSVGTransform','setSVGTransforms'].includes(op.type),svgSelection:op.type==='setSVGTransforms'&&selectionResult?.every(item=>item?.ok)?selectionResult.map(item=>item.element):null});
       if(op.type==='setHref'){await refreshWrittenLink(info);renderPanel();}
       else if(['setResponsiveImage','setResponsiveImageSource','setResponsiveImageCandidates'].includes(op.type)){await refreshResponsiveImage(info);renderPanel();}
       else if(op.type==='setImageFill'){await refreshLiquidImageFill(info);renderPanel();}

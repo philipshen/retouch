@@ -659,3 +659,40 @@ The CSS override fixture uses an explicit identity matrix so both browsers
 actually enforce the same rendered constraint. Inspected light UI:
 `/tmp/retouch-stroke-placement-html-chromium.png`. Desktop packaging was not
 rebuilt or notarized for this checkpoint.
+
+## Mixed and multiple retained vector transforms — 2026-09-22
+
+Aligned vectors now participate in the normal multi-selection transform
+controls alongside ordinary SVG vectors. The existing move, size, rotation,
+flip, alignment and spacing tools use one `setSVGTransforms` source operation
+and one history entry. Retained members update their canonical placement;
+ordinary members retain the usual literal transform edit. Parent/child
+selections keep covered children's local transforms unchanged, avoiding a
+second application of the same movement.
+
+The planner stages all selected members before returning one file edit, checks
+retained ownership and canonical source, preserves source IDs, and rejects the
+entire selection when a member is invalid. The retained-source plan guard
+independently recomputes the complete batch. Archived geometry, paints and
+private clip/mask identities remain intact. Existing limits remain: 2–100
+vectors in one source file, supported literal transforms, singleton rendering
+and unlocked targets. These transforms are shared across screen sizes.
+
+Before submitting a batch, the editor checks all proposed transforms together
+on existing nodes and restores only attributes still owned by that preview.
+It verifies rendered coordinate spaces and retained paint fidelity without
+cloning private definitions. Ordinary ancestors containing retained vectors
+also avoid that clone probe. This does not prove the absence of arbitrary
+author-script effects or conditional style changes elsewhere in the page.
+
+Testing uncovered an existing multi-selection history refresh issue: undo
+could restore every source transform while refreshing only the primary DOM
+node. SVG refresh now receives the complete explicit selection from the write
+response or history record, independent of temporarily cleared UI selection.
+Descendants are reconciled through selected ancestors once.
+Validation: all 2,484 source tests passed with no failures or skips. The full
+stroke editor workflow passed for HTML, React and Liquid in both Chromium and
+WebKit, including mixed and multiple retained selections, parent/child movement,
+CSS refusal, canvas and held-key previews, exact undo/redo, and retained document
+and input state. Ordinary SVG selection scrub regressions passed in both engines.
+The React/WebKit multi-selection screenshot was also inspected.
