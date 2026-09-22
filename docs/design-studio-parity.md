@@ -28844,3 +28844,13 @@ stops and intrinsic solid alpha stay unchanged. See
 [shared gradient paint opacity](stroke-parity.md#shared-gradient-paint-opacity)
 for semantics and verification. Shared stop editing, multiple paints, full Figma
 Design parity and trusted desktop distribution remain incomplete.
+
+### Shared aligned-gradient settings and stops
+
+Aligned-gradient selections now expose mixed-value type/geometry/spread controls,
+stop color/position/opacity, reversal, insertion and removal. Added stops sample
+each layer independently, and edits preserve each gradient's private identity
+and unrelated settings with atomic history. See
+[shared aligned-gradient editing](stroke-parity.md#shared-aligned-gradient-editing)
+for stop matching rules, verification and remaining work. This advances the full
+parity goal without establishing complete multi-paint or arbitrary-site support.

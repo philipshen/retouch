@@ -20,6 +20,7 @@ module.exports=async({page,app,read,settled,wait})=>{
    if(!allGradients){await field.focus();await page.keyboard.press('Shift+ArrowUp');await settled();assert.equal(read(),before);assert.deepEqual(await models(),original);}
    await history(async()=>{const label=field.locator('xpath=..').locator('span').first(),box=await label.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2-3,box.y+box.height/2,{steps:3});assert.equal(read(),before);await page.mouse.up();},property,original.map(model=>model[property]-.03));
   }
+  if(allGradients)await require('./svg-retained-stroke-shared-gradients.cjs')({page,app,read,settled,wait});
   await app.locator('head').evaluate(head=>{const style=head.ownerDocument.createElement('style');style.id='shared-gradient-override';style.textContent='[data-rt-stroke-alignment] stop{stop-color:lime!important}';head.append(style);});assert.equal(await page.evaluate(()=>writeSVGStrokeSelection(sel.multiple,'fillOpacity',[.2,.3])),false);assert.equal(read(),before);await app.locator('#shared-gradient-override').evaluate(el=>el.remove());
  }
  for(const before of setup.reverse())await undo(before);assert.equal(read(),entry);await select(false);

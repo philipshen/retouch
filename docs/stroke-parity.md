@@ -1044,3 +1044,72 @@ were visually inspected in `/tmp/retouch-shared-gradient-opacity-html-chromium.p
 An initial run was intentionally stopped after identifying a test cleanup wait
 for a gradient-only field after restoring solid paints; the final runs use the
 correct solid-selection wait. Desktop artifacts were not rebuilt or launched.
+
+### Shared aligned-gradient editing
+
+Selections containing aligned gradients now expose common type, geometry,
+spread/units, reversal and stop controls in Fill and Stroke. Different values
+show Mixed. Each edit changes only the requested setting on every selected
+paint; private gradient identity, other paint, geometry, placement, original
+source and overall opacity remain independent. Edits use the existing atomic
+selection transaction and exact source undo/redo. Color-picker previews affect
+all selected stops and Escape restores the original rendered attributes.
+
+Adding a stop samples each gradient independently at 50%, preserving distinct
+colors rather than copying the first selected gradient. Reversal, insertion
+and type changes work across differing stop counts. Individual stop edits and
+removal pair stops by their ordinal position and are exposed when stop counts
+match. Type-specific coordinates are exposed when the selected gradient types
+match; changing the common type preserves inactive coordinates. The geometry
+disclosure stays open across source refreshes.
+
+Mixed solid/gradient selections keep shared opacity; converting those selections
+to a common paint type, multi-selection canvas gradient handles, multiple paints,
+and arbitrary shared authored definitions remain unfinished. Existing single-file,
+single-rendered-instance, lock and CSS-fidelity requirements still apply.
+
+All 2,513 source tests passed without failures or skips in 31.81 seconds
+(`/tmp/retouch-shared-gradients-final-source.log`). New HTML/React/Liquid tests exercise
+common and per-member gradient edits, differing types/colors, reverse/type/stop/
+spread operations, independently colored insertion, unchanged other paint and
+model properties, exact file history, source mapping and canonical validation.
+Invalid edits in a later member, including attempts to inject an operation type
+or file hash, refuse the entire transaction without a partial source edit.
+
+Stop insertion now also respects the gradient's sRGB/linearRGB interpolation
+setting and the product of color alpha and stop opacity. This shared sampler is
+used by the ordinary gradient rail/canvas as well. The SVG interpolation modes
+are described in [the SVG painting specification](https://www.w3.org/TR/SVG2/painting.html#ColorInterpolation).
+Samples use legacy `rgb(...)` syntax: Chromium rendered an equivalent
+`color(srgb ...)` inserted stop differently between neighboring legacy stops in
+an isolated pixel fixture. Unsupported literal-color sampling reports a refusal.
+The existing bounded sRGB gamut mapping for Display P3 remains; arbitrary
+wide-gamut insertion fidelity is not established.
+
+There is a material WebKit limitation: the recovered WebKit build renders the
+linearRGB fixture as sRGB. The standard linearRGB midpoint is therefore correct
+in source but changes that browser's current rendering when inserted. The
+browser test explicitly reports this limit and verifies the source sample; it
+does not claim pixel preservation for that case. Chromium verifies both modes,
+and WebKit verifies sRGB. Full cross-browser linearRGB fidelity remains open.
+
+Final browser verification passed the complete HTML/Liquid/React stroke workflows
+in Chromium and WebKit (`/tmp/retouch-shared-gradients-final-six.log`, individual
+`/tmp/retouch-shared-gradients-{renderer}-{browser}.log`). Coverage includes mixed
+types, different stop counts, per-gradient sampled insertion, removal, common
+coordinates/spread, picker preview/cancel/Display P3, displayed-value restoration
+on refusal, original source history, independent paint metadata and retained
+page/form state. Existing alignment, path, transform, paint and opacity workflows
+passed in the same runs. Pixel comparisons cover combined stop/color alpha in
+sRGB in both browsers and linearRGB in Chromium; WebKit reports the limitation
+above rather than claiming equivalent rendering for that case.
+
+The complete ordinary SVG gradient workflow also passed in both browsers
+(`/tmp/retouch-shared-gradients-ordinary-{chromium,webkit}.log`), including stop
+insertion/deletion, crossings, picker, type/reverse, creation/solid conversion,
+canvas handles, consecutive gestures, cancellation and exact history. The shared
+light inspector was visually inspected in
+`/tmp/retouch-shared-gradients-html-chromium.png`. Earlier Liquid runs used a page
+loaded before the displayed-value restoration fix with a newly loaded assertion;
+the final runs load the complete final implementation. Desktop artifacts were
+not rebuilt or launched.
