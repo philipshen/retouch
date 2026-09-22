@@ -28779,3 +28779,12 @@ all selected preview nodes, including after the UI selection is cleared.
 See [mixed vector transforms](stroke-parity.md#mixed-and-multiple-retained-vector-transforms--2026-09-22)
 for evidence and limits. Cross-file selection edits, retained path-node editing,
 multiple paints/gradients, responsive variants and desktop delivery remain open.
+
+### 2026-09-22 — shared stroke settings
+
+Multiple aligned vectors now expose shared alignment, weight and advanced
+stroke settings, with mixed-value fields and grouped numeric previews. One edit
+updates the whole selection and one undo restores it. See
+[shared aligned-vector settings](stroke-parity.md#shared-aligned-vector-stroke-settings--2026-09-22)
+for adapter boundaries and verification evidence. Full Figma parity and desktop
+distribution remain incomplete.

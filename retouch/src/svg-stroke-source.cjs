@@ -65,6 +65,7 @@ function context(r,kind){
  }catch{return null;}
 }
 function plan(r,op,kind){
+ if(op.type==='setSVGStrokeSelection')return require('./svg-stroke-selection.cjs')(r,op,kind);
  const refuse=reason=>({ok:false,refused:true,reason});
  if(!['html','react','liquid'].includes(kind))return refuse('Choose a supported source adapter.');
  if(op.fileHash!==r.hash)return refuse('The file changed. Re-select the shape.');
@@ -137,7 +138,7 @@ function creation(r,kind){
 module.exports={plan,context,creation};
 
 // Public creation requires a stable definition identity for deterministic plans.
-const types=new Set(['createSVGStrokeSource','setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','setSVGStrokeSourceStyle','setSVGStrokeSourceTransform','restoreSVGStrokeSource']);
+const types=new Set(['setSVGStrokeSelection','createSVGStrokeSource','setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','setSVGStrokeSourceStyle','setSVGStrokeSourceTransform','restoreSVGStrokeSource']);
 const deletionTypes=new Set(['deleteElement','deleteSelection','deleteComponent','deleteComponentSelection']);
 function referencedIds(op){
  const ids=new Set();
@@ -163,7 +164,7 @@ function guard(r,op,kind){
  for(const group of groups)for(const target of targets){
   if(contains(group,target)){
    if(types.has(op.type)&&target.id===group.id&&target.id===r.element.id)continue;
-   if(op.type==='setSVGTransforms'&&target.id===group.id&&context({...r,element:target},kind))continue;
+   if(['setSVGTransforms','setSVGStrokeSelection'].includes(op.type)&&target.id===group.id&&context({...r,element:target},kind))continue;
    if(deletionTypes.has(op.type)&&targets.some(e=>contains(e,group)))continue;
    return refuse();
   }

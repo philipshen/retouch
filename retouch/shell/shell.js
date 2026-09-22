@@ -2089,7 +2089,8 @@ function renderPanelContents(textEditing=false) {
    if(sel.multiple?.length>1){
     const infos=sel.multiple,elements=infos.map(item=>{const found=matchingEls(item.id);return found.length===1?found[0]:null;}),current=()=>sel?.multiple===infos&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&elements.every(el=>el&&!layerLocks.locked(el));
     if(infos.every(item=>item.svgTransform?.editable))panelBody.append(RetouchSVGSelection.mount(infos,elements,{current,save:writeSVGSelection,onGaps:axis=>svgSelectionGaps.toggle(infos,axis),gapsActive:axis=>svgSelectionGaps.active(infos,axis)}));
-    RetouchInspector.note(section,'Select one vector to change stroke alignment.');
+    if(infos.every(item=>item.svgStrokeSource))mountStrokeSelectionControls(section,infos);
+    else RetouchInspector.note(section,'Select aligned vectors to edit their stroke settings together.');
    }
    else if(info.svgStrokeSource)mountStrokeSourceControls(section,info);
    else{RetouchInspector.note(section,'This shape belongs to a stroke.');section.append(RetouchInspector.button('Select stroke',async()=>{await restoreLayerSelection([info.svgStrokeOwner]);if(sel)renderPanel();}));}
@@ -3650,6 +3651,48 @@ function mountStrokeSourcePaint(section,info,property){
   return {update:value=>{if(!current())throw Error('The selected stroke changed.');preview.update(value);},restore:()=>preview.restore()};
  };
  I.field(section,'SVG '+property,input);I.fieldDraft(input);
+}
+function strokeSelectionEditable(infos){
+ return sel?.multiple===infos&&infos.length>1&&new Set(infos.map(info=>info.file+'#'+info.hash)).size===1&&infos.every(info=>{
+  const found=matchingEls(info.id);return info.svgStrokeSource&&found.length===1&&[found[0],...found[0].querySelectorAll('[data-rt]')].every(el=>!layerLocks.locked(el));
+ });
+}
+function mountStrokeSelectionControls(section,infos){
+ const I=RetouchInspector,models=infos.map(info=>info.svgStrokeSource.model),current=()=>strokeSelectionEditable(infos)&&!panelTasks&&!sourceRequests&&!undoBusy&&!editing;
+ const rows=new Map(),labels={position:'Align',width:'Weight',linecap:'Ends',linejoin:'Join',miterlimit:'Miter',dashoffset:'Offset'};
+ const common=property=>models.every(model=>model[property]===models[0][property])?models[0][property]:null;
+ const save=async(property,value,input,initial)=>{if(!current()||value==='__mixed'){input.value=initial;return;}if(!await writeSVGStrokeSelection(infos,property,value))input.value=initial;};
+ const preview=property=>{
+  if(!current())throw Error('Select unlocked aligned vectors rendered once on this page.');
+  const previews=[];
+  try{for(const info of infos)previews.push(RetouchSVGStrokeFidelity.previewProperty(matchingEls(info.id)[0],info.svgStrokeSource.model,info.svgStrokeSource.definitionId,property));}
+  catch(error){for(const p of previews)p.restore();throw error;}
+  return {current:()=>current()&&previews.every(p=>p.current()),update:value=>{try{if(!current())throw Error('The selection changed.');for(const p of previews)p.update(value);}catch(error){for(const p of previews)p.restore();throw error;}},restore:()=>{for(const p of previews)p.restore();}};
+ };
+ for(const [property,label,choices]of [['position','Shared stroke alignment',[['inside','Inside'],['center','Center'],['outside','Outside']]],['linecap','Shared SVG line ends',[['butt','No caps'],['round','Round'],['square','Square']]],['linejoin','Shared SVG line joins',[['miter','Miter'],['round','Round'],['bevel','Bevel']]]]){
+  const value=common(property),initial=value??'__mixed',input=I.select(section,label,value===null?[['__mixed','Mixed'],...choices]:choices,initial,next=>save(property,next,input,initial));
+  const row=input.closest('.inspector-field');rows.set(property,row);row.querySelector('span').textContent=labels[property];
+  input.title='Applies to every selected stroke on every screen.';input.disabled=!strokeSelectionEditable(infos);if(property==='position'){input.closest('.inspector-field').querySelector('span').textContent='Align';for(const option of input.options)option.disabled=option.value==='__mixed'||!infos.every(info=>info.svgStrokeSource.positions.includes(option.value));}
+ }
+ for(const [property,label,min,max]of [['width','Shared stroke weight',0,10000],['miterlimit','Shared SVG miter limit',1,1000],['dashoffset','Shared SVG dash offset',-100000,100000]]){
+  const value=common(property),initial=value===null?'':String(value),input=I.number(section,label,value??NaN,min,max,next=>save(property,next,input,initial));input.value=initial;input.placeholder=value===null?'Mixed':'';input.disabled=!strokeSelectionEditable(infos);I.fieldDraft(input);
+  const row=input.closest('.inspector-field');rows.set(property,row);row.querySelector('span').textContent=labels[property];input.title='Applies to selected strokes in SVG source units on every screen.';input.retouchNumericPreview=()=>preview(property);input.retouchNumericHandle(input,{canvas:true,keyboardOnly:true,keys:['ArrowDown','ArrowUp']});
+ }
+ const value=common('dasharray'),dashes=document.createElement('input');dashes.type='text';dashes.dataset.sourceUnits='true';dashes.value=value??'';dashes.placeholder=value===null?'Mixed':'';dashes.disabled=!strokeSelectionEditable(infos);dashes.onchange=()=>save('dasharray',dashes.value.trim(),dashes,value??'');I.field(section,'Shared SVG dash pattern',dashes);dashes.closest('.inspector-field').querySelector('span').textContent='Dashes';I.fieldDraft(dashes);
+ rows.get('position').after(rows.get('width'));
+ if(!strokeSelectionEditable(infos))I.note(section,'Select unlocked aligned vectors rendered once in one source file.');
+}
+async function writeSVGStrokeSelection(infos,property,value){
+ if(!strokeSelectionEditable(infos)||panelTasks||sourceRequests||undoBusy||editing)return false;
+ const primary=sel.info,ids=infos.map(info=>info.id);busyPanel(true);
+ try{
+  for(const info of infos)RetouchSVGStrokeFidelity.check(matchingEls(info.id)[0],info.svgStrokeSource.model,info.svgStrokeSource.definitionId);
+  const result=await api('POST','/rt/__api/op',{type:'setSVGStrokeSelection',id:primary.id,ids,fileHash:primary.hash,property,value});
+  if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update the selected strokes.');if(result.unchanged)return true;
+  const removed=result.removedSourceIds||[],deletedLocks=layerLocks.removeSourceIds(removed);
+  editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:ids,selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:removed,undoId:result.undoId});
+  layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,result.selectionIds);toast('Stroke settings updated','ok');return true;
+ }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 function mountStrokeSourceControls(section,info){
  const fill=RetouchInspector.section('Fill');mountStrokeSourcePaint(fill,info,'fill');panelBody.append(fill);mountStrokeSourcePaint(section,info,'stroke');

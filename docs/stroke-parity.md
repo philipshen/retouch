@@ -613,9 +613,8 @@ placement together with the retained wrapper and restores the original bytes.
 
 Placement scales the entire vector, including its stroke, as an SVG group.
 The existing stroke width control still edits local source units. This does not
-add non-scaling retained strokes, path-node editing or simultaneous transforms
-of multiple retained vectors. Selection transforms refuse the latter before
-showing active multi-selection handles. Placement remains source-global across
+add non-scaling retained strokes or path-node editing. Multi-selection
+transforms are covered in the following section. Placement remains source-global across
 screen sizes and requires one unlocked rendered instance.
 
 The dedicated source operation validates finite, non-collapsed matrices and
@@ -696,3 +695,43 @@ WebKit, including mixed and multiple retained selections, parent/child movement,
 CSS refusal, canvas and held-key previews, exact undo/redo, and retained document
 and input state. Ordinary SVG selection scrub regressions passed in both engines.
 The React/WebKit multi-selection screenshot was also inspected.
+
+## Shared aligned-vector stroke settings — 2026-09-22
+
+Selecting multiple aligned vectors exposes shared alignment, weight, caps,
+joins, miter limit, dash pattern and dash offset in the Stroke inspector.
+Different values display Mixed. Entering a value applies it to every selected
+stroke; numeric scrubs and held-arrow previews commit once, with Escape
+restoring every preview. Alignment choices are limited to positions supported
+by every selected contour.
+
+The `setSVGStrokeSelection` operation stages 2–100 canonical retained strokes
+from one source file in memory, composes source identity changes, and returns
+one atomic file edit. Each vector preserves its archived shape, definition
+identity, placement and unrelated paint settings. A stale file, invalid member
+or unsupported property refuses the complete batch. The editor checks rendered
+fidelity and locks for every selected stroke before writing, then refreshes the
+common source ancestor and retains the selection through exact undo/redo.
+
+Ordinary shapes must first be aligned individually before joining these shared
+stroke controls. Mixed ordinary/retained selections still have shared transform
+controls. Cross-file edits, path-node editing of retained geometry, shared paint
+picker controls, gradients and multiple paints remain open.
+
+Validation: all 2,490 source tests passed without failures or skips in 16.81
+seconds (`/tmp/retouch-stroke-shared-full-final.log`). Coverage includes
+HTML/React/Liquid, source identity composition across different parents,
+unchanged edits, exact transaction history, generated-child/stale-file refusal,
+and an unsupported open contour refusing the entire alignment batch.
+
+Six complete editor workflows passed across HTML/React/Liquid in Chromium and
+WebKit (`/tmp/retouch-stroke-shared-six.log`). The new checks exercise mixed
+weight fields, shared alignment and advanced settings, late CSS refusal,
+held-key preview cancellation/one-step undo, controls remaining enabled after
+saves, and retained input/document state. Existing transform, paint, lock,
+creation, pixel and history checks remain in the same workflows. After
+shortening visible labels and putting Weight below Align, HTML and Liquid
+Chromium workflows were rerun successfully (`/tmp/retouch-stroke-shared-layout.log`);
+React and WebKit runs already used that final layout. The final HTML/Chromium
+multi-selection screenshot was inspected. Desktop packaging was not rebuilt
+for this checkpoint.

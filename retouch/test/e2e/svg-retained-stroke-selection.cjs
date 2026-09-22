@@ -15,6 +15,7 @@ module.exports=async({page,app,read,settled,wait})=>{
  const history=async(action,global=null)=>{const before=read(),state=await measure();await action();await settled();await wait(()=>read()!==before);const after=read();await verify(state,global);await undo();await wait(()=>read()===before);await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===after);await verify(state,global);await undo();await wait(()=>read()===before);};
  for(const retained of [1,2]){
   await select();assert.equal((await measure()).filter(item=>item.stroke).length,retained);if(retained===2&&process.env.RT_STROKE_CONTROLS_SCREENSHOT)await page.screenshot({path:process.env.RT_STROKE_CONTROLS_SCREENSHOT.replace(/\.png$/,'-selection.png')});
+  if(retained===2)await require('./svg-retained-stroke-shared-properties.cjs')({page,app,read,settled,wait});
   // One CSS-controlled member refuses the entire draft, restoring every node.
   const before=await measure(),saved=read();await app.locator('head').evaluate((head,id)=>{const style=head.ownerDocument.createElement('style');style.id='batch-transform-override';style.textContent='[data-rt="'+id+'"]{transform:matrix(1,0,0,1,0,0)!important}';head.append(style);},before[0].id);
   await page.evaluate(()=>writeSVGSelection(Object.fromEntries(sel.multiple.map(info=>[info.id,[1,0,0,1,9,0]]))));assert.equal(read(),saved);assert.deepEqual((await measure()).map(item=>item.transform),before.map(item=>item.transform));await app.locator('#batch-transform-override').evaluate(el=>el.remove());

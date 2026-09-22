@@ -211,3 +211,33 @@ for(const kind of ['html','react','liquid'])test(kind+' mixed vector batch trans
  const covered={type:'setSVGTransforms',fileHash:state.hash,ids:[parent.id,groups[0].id],matrices:{[parent.id]:[1,0,0,1,12,9],[groups[0].id]:[1,0,0,1,0,0]}},moved=adapter.planOp({...state,element:parent},covered);assert.ok(moved.ok,moved.reason);for(const [i,group]of groups.entries())assert.deepEqual(S.context(resolve(kind,moved.edits[0].after,group.id),kind).model,originals[i].model);
  const damaged=resolve(kind,state.source.replace('width="60"','width="90"'),peer.id),bad=adapter.planOp(damaged,{type:'setSVGTransforms',fileHash:damaged.hash,ids:[peer.id,groups[0].id],matrices:{[peer.id]:[1,0,0,1,1,1],[groups[0].id]:[1,0,0,1,1,1]}});assert.equal(bad.refused,true);
 });
+for(const kind of ['html','react','liquid'])test(kind+' shared stroke properties stage every vector atomically with composed source identities',t=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs');let r=resolve(kind),source=r.source.replace('<circle','<g><rect x="20" y="20" width="60" height="60" fill="red" stroke="blue"/></g><circle');r=resolve(kind,source);
+ for(const position of ['inside','center']){
+  const v=view(r,kind);r.element=r.elements.find(e=>v.tag(e)==='rect'&&S.creation({...r,element:e},kind));const made=create(r,kind,{model:{...model,position,width:position==='inside'?8:3}});assert.ok(made.ok,made.reason);r=resolve(kind,made.edits[0].after,made.selectionIds[0]);
+ }
+ const groups=r.elements.filter(element=>S.context({...r,element},kind)),contexts=groups.map(element=>S.context({...r,element},kind)),selected=groups.map(e=>e.id);r.element=groups[0];
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'rt-stroke-properties-')),file=path.join(root,r.relPath);t.after(()=>fs.rmSync(root,{recursive:true,force:true}));r.file=file;fs.writeFileSync(file,r.source);
+ for(const [property,value]of [['position','outside'],['position','center'],['width',12.5],['linecap','round'],['linejoin','bevel'],['miterlimit',7],['dasharray','4 2'],['dashoffset',3],['fill','#11223380'],['stroke','none']]){
+  const op={type:'setSVGStrokeSelection',ids:selected,fileHash:r.hash,property,value},changed=adapter.planOp(r,op);assert.ok(changed.ok,changed.reason);assert.equal(changed.edits.length,1);assert.equal(S.validatePlan(r,op,kind,changed),changed);
+  const after=changed.edits[0].after,next=resolve(kind,after,changed.selectionIds[0]),mapping=new Map(changed.sourceIdMap);assert.equal(new Set(changed.selectionIds).size,2);
+  changed.selectionIds.forEach((id,i)=>{const c=S.context({...next,element:next.elements.find(e=>e.id===id)},kind);assert.equal(c.model[property],value);assert.equal(c.source,contexts[i].source);assert.equal(c.id,contexts[i].id);assert.equal(id,mapping.get(selected[i])||selected[i]);});
+  for(const e of r.elements)if(!changed.removedSourceIds.includes(e.id))assert.ok(next.elements.some(n=>n.id===(mapping.get(e.id)||e.id)),e.id);
+  assert.ok(next.elements.some(e=>e.id===changed.parentId));assert.equal(adapter.planOp(next,{...op,ids:changed.selectionIds,fileHash:next.hash}).unchanged,true);
+  const history=new(require('../src/history.cjs').SourceHistory)(),applied=require('../src/transactions.cjs').applyPlan(root,changed);assert.ok(applied.ok,applied.reason);const entry=history.record(applied.edits);assert.ok(history.apply(root,'undo',entry,{}).ok);assert.equal(fs.readFileSync(file,'utf8'),r.source);assert.ok(history.apply(root,'redo',entry,{}).ok);assert.equal(fs.readFileSync(file,'utf8'),after);assert.ok(history.apply(root,'undo',entry,{}).ok);
+  assert.equal(S.validatePlan(r,op,kind,{...changed,edits:[{...changed.edits[0],after:after+' '}]}).refused,true);
+ }
+ const op={type:'setSVGStrokeSelection',ids:selected,fileHash:r.hash,property:'width',value:12};
+ for(const extra of [{fileHash:'stale'},{ids:[selected[0],selected[0]]},{ids:[selected[0],'0000000000']},{ids:[selected[0],contexts[1].original.id]},{property:'path',value:'M0 0L1 1'},{value:-1},{value:Infinity},{value:'12'}]){const bad=adapter.planOp(r,{...op,...extra});assert.equal(bad.refused,true);assert.equal(bad.edits,undefined);assert.equal(fs.readFileSync(file,'utf8'),r.source);}
+ // The first member is valid; damage in a later member must still refuse all edits.
+ const damagedSource=r.source.replace(contexts[1].source,contexts[1].source.replace('width="60"','width="61"')),damaged=resolve(kind,damagedSource,selected[0]);const bad=adapter.planOp(damaged,{...op,fileHash:damaged.hash});assert.equal(bad.refused,true);assert.equal(bad.edits,undefined);
+});
+for(const kind of ['html','react','liquid'])test(kind+' shared alignment refuses unsupported open contours without a partial edit',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),initial=resolve(kind);let state=resolve(kind,initial.source.replace('<circle cx="10" cy="10" r="2"/>','<path d="M0 0L10 10" fill="none" stroke="blue"/>'));
+ const made=create(state,kind);assert.ok(made.ok,made.reason);state=resolve(kind,made.edits[0].after,made.selectionIds[0]);
+ const v=view(state,kind),element=state.elements.find(e=>v.tag(e)==='path'&&S.creation({...state,element:e},kind));state.element=element;
+ const open=create(state,kind,{model:{...model,document:G.parseCompound('M0 0L10 10'),fill:'none',position:'center'}});assert.ok(open.ok,open.reason);state=resolve(kind,open.edits[0].after,open.selectionIds[0]);
+ const groups=state.elements.filter(element=>S.context({...state,element},kind));state.element=groups[0];
+ for(const position of ['inside','outside']){const bad=adapter.planOp(state,{type:'setSVGStrokeSelection',fileHash:state.hash,ids:groups.map(e=>e.id),property:'position',value:position});assert.equal(bad.refused,true);assert.equal(bad.edits,undefined);}
+ const center=adapter.planOp(state,{type:'setSVGStrokeSelection',fileHash:state.hash,ids:groups.map(e=>e.id),property:'position',value:'center'});assert.ok(center.ok,center.reason);
+});
