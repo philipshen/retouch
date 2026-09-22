@@ -1,0 +1,28 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({page,app,read,settled,wait})=>{
+ const entry=read(),card=page.getByRole('treeitem',{name:'rect · Card',exact:true}),circle=page.getByRole('treeitem',{name:'circle',exact:true});
+ const select=async()=>{await card.click();await settled();await circle.click({modifiers:['Meta']});await settled();},undo=async()=>{await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();};
+ await card.click();await settled();const precise=page.getByLabel('Stroke weight',{exact:true});await precise.fill('8.123456789');await precise.press('Enter');await settled();await wait(()=>read()!==entry);
+ await circle.click();await settled();for(const [label,value]of [['SVG miter limit','2'],['SVG dash offset','-10']]){if(!await page.getByRole('dialog',{name:'Stroke settings',exact:true}).isVisible())await page.getByLabel('Advanced stroke settings',{exact:true}).click();const before=read(),field=page.getByLabel(label,{exact:true});await field.fill(value);await field.press('Enter');await settled();await wait(()=>read()!==before);}if(await page.getByRole('dialog',{name:'Stroke settings',exact:true}).isVisible())await page.getByRole('button',{name:'Close stroke settings',exact:true}).click();await select();const initial=read();
+ const numbers=property=>page.evaluate(property=>sel.multiple.map(info=>info.svgStrokeSource.model[property]),property);
+ const rendered=property=>page.evaluate(property=>sel.multiple.map(info=>{const group=matchingEls(info.id)[0],stroke=[...group.children[1].children].filter(el=>el.localName==='path').at(-1),value=Number(stroke.getAttribute({width:'stroke-width',miterlimit:'stroke-miterlimit',dashoffset:'stroke-dashoffset'}[property]));return property==='width'?value/(info.svgStrokeSource.position==='center'?1:2):value;}),property);
+ const equal=(actual,expected)=>{assert.equal(actual.length,expected.length);actual.forEach((value,i)=>assert.ok(Math.abs(value-expected[i])<1e-7,JSON.stringify({actual,expected})));};
+ const verify=async(property,expected)=>{equal(await numbers(property),expected);equal(await rendered(property),expected);await page.evaluate(()=>{for(const info of sel.multiple)RetouchSVGStrokeFidelity.check(matchingEls(info.id)[0],info.svgStrokeSource.model,info.svgStrokeSource.definitionId);});assert.equal(await app.locator('input').inputValue(),'retained draft');assert.equal(await app.locator('input').evaluate(()=>window.strokeDocument),'same');};
+ const history=async(property,expected,action)=>{await action();await settled();await wait(()=>read()!==initial);const after=read();await verify(property,expected);await undo();await wait(()=>read()===initial);await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===after);await verify(property,expected);await undo();await wait(()=>read()===initial);};
+ for(const [property,label]of [['width','Shared stroke weight'],['miterlimit','Shared SVG miter limit'],['dashoffset','Shared SVG dash offset']]){
+  const input=page.getByLabel(label,{exact:true}),before=await numbers(property);assert.equal(await input.inputValue(),'');assert.equal(await input.getAttribute('placeholder'),'Mixed');
+  await input.focus();await page.keyboard.down('ArrowUp');await page.keyboard.down('ArrowUp');equal(await rendered(property),before.map(value=>value+2));assert.equal(read(),initial);await page.keyboard.press('Escape');await page.keyboard.up('ArrowUp');equal(await rendered(property),before);assert.equal(await input.inputValue(),'');assert.equal(read(),initial);
+  await history(property,before.map(value=>value+2),async()=>{await input.focus();await page.keyboard.down('ArrowUp');await page.keyboard.down('ArrowUp');assert.equal(read(),initial);await page.keyboard.up('ArrowUp');});assert.equal(await input.inputValue(),'');
+  if(property!=='dashoffset')await history(property,before.map(value=>value-1),async()=>{await input.focus();await page.keyboard.down('Shift');await page.keyboard.down('ArrowDown');equal(await rendered(property),before.map(value=>value-1));assert.equal(read(),initial);await page.keyboard.up('ArrowDown');await page.keyboard.up('Shift');});
+ }
+ const weight=page.getByLabel('Shared stroke weight',{exact:true}),before=await numbers('width');
+ await weight.focus();await page.keyboard.down('ArrowUp');await page.keyboard.down('ArrowDown');await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowDown');await settled();assert.equal(read(),initial);assert.equal(await weight.inputValue(),'');equal(await numbers('width'),before);
+ const drag=async()=>{const label=weight.locator('..').locator('span');await label.scrollIntoViewIfNeeded();const box=await label.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+4,box.y+box.height/2,{steps:4});};
+ await drag();equal(await rendered('width'),before.map(value=>value+4));assert.equal(read(),initial);await page.keyboard.press('Escape');await page.mouse.up();assert.equal(read(),initial);equal(await rendered('width'),before);
+ await history('width',before.map(value=>value+4),async()=>{await drag();assert.equal(read(),initial);await page.mouse.up();});
+ // Typing a draft then nudging edits the absolute draft, not the old mixed values.
+ await history('width',[13,13],async()=>{await weight.fill('12');await page.keyboard.down('ArrowUp');assert.equal(read(),initial);await page.keyboard.up('ArrowUp');});
+ await undo();await undo();await undo();await wait(()=>read()===entry);await select();
+ console.log('PASS mixed stroke numeric gestures: relative previews, lower bounds, Escape, zero-net, absolute drafts and grouped exact history');
+};

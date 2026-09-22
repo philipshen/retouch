@@ -789,3 +789,39 @@ React runs in both engines also pass the deterministic scheduling-gap
 regression; its pre-fix run recorded one unnecessary fetch and reload
 (`/tmp/retouch-stroke-shared-paint-pause-before.log`). Desktop packaging was
 not rebuilt for this checkpoint.
+
+## Relative gestures for mixed stroke numbers — 2026-09-22
+
+Mixed stroke weight, miter limit and dash offset now support label dragging
+and held arrow keys. A gesture adjusts every selected value by the same amount,
+preserving their differences. For example, weights 8 and 1 become 10 and 3 after
+two Up steps. The shared gesture range stops when any member reaches a property
+limit, so moving down from 8 and 1 stops at 7 and 0 rather than collapsing their
+difference. Shift/Option retain the existing coarse/fine gesture increments.
+
+Gestures track a separate delta, so authored fractional precision is retained.
+Escape restores every rendered preview without changing source. Returning to
+the starting value creates no edit. A completed gesture uses one source
+transaction and one undo entry. Typing a value remains absolute; nudging a typed
+draft also edits that absolute draft instead of the previous mixed values.
+
+The batch planner accepts exact per-member finite numeric maps for width,
+miter limit and dash offset, with the same member identity and atomic validation
+used by shared paint maps. A stale source, incomplete map, out-of-range value,
+or invalid late member refuses the whole edit. Numeric previews restore owned
+attributes on every selected vector if any preview fails.
+
+Source validation passed all 2,496 tests without failures or skips in 17.19
+seconds (`/tmp/retouch-stroke-relative-full-final.log`). New HTML/React/Liquid
+coverage includes distinct numeric maps, fractional values, property bounds,
+invalid late members, stale hashes, scalar/map ambiguity, source preservation,
+and exact transaction undo/redo.
+
+Six full HTML/React/Liquid editor workflows passed in Chromium and WebKit on
+the final delta-based implementation (`/tmp/retouch-stroke-relative-precise-six.log`).
+The new browser checks use an authored weight of 8.123456789, verify every
+member's rendered preview, and cover mixed weight/miter/offset nudges, label
+scrubbing, lower limits, Escape, zero-net gestures, absolute typed drafts,
+one-step exact undo/redo, and retained form/document state. Existing paint,
+transform, alignment, lock, pixel and source-sync regressions pass in the same
+workflows. Desktop packaging was not rebuilt for this checkpoint.

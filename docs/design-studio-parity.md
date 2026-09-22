@@ -28797,3 +28797,11 @@ preserves colors; bare hex preserves alpha. Drafts cancel without a source edit,
 and the entire selection uses one undo entry. See
 [shared retained paints](stroke-parity.md#shared-aligned-vector-fill-and-stroke-paint--2026-09-22)
 for verification and current limits.
+
+### 2026-09-22 — mixed stroke numeric gestures
+
+Mixed stroke numbers now respond to drags and held arrow keys while preserving
+the differences between selected vectors. Gestures share property limits,
+cancel with Escape, and undo together. Typed values remain absolute. See
+[relative stroke gestures](stroke-parity.md#relative-gestures-for-mixed-stroke-numbers--2026-09-22)
+for verification and behavior details.
