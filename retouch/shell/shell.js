@@ -2089,7 +2089,9 @@ function renderPanelContents(textEditing=false) {
    if(sel.multiple?.length>1)RetouchInspector.note(section,'Select one vector to change stroke alignment.');
    else if(info.svgStrokeSource)mountStrokeSourceControls(section,info);
    else{RetouchInspector.note(section,'This shape belongs to a stroke.');section.append(RetouchInspector.button('Select stroke',async()=>{await restoreLayerSelection([info.svgStrokeOwner]);if(sel)renderPanel();}));}
-   panelBody.append(section);return;
+   panelBody.append(section);
+   if(info.svgStrokeSource&&strokeSourceEditable(info)){const target=matchingEls(info.id)[0],current=()=>strokeSourceEditable(info)&&!panelTasks&&!undoBusy&&!sourceRequests&&!editing;const position=RetouchInspector.section('Vector position');RetouchSVGResize.positionFields(position,info,target,{onCanvas:()=>resizeSVGOnCanvas(info,target,null,'ne','rotate'),current,save:matrix=>writeSVGTransform(info,target,matrix)});const size=RetouchInspector.section('Vector size');RetouchSVGResize.sizeFields(size,info,target,{current,save:matrix=>writeSVGTransform(info,target,matrix)});panelBody.append(position,size);}
+   return;
   }
   mountLayerStyleClipboard();
   if(sel.multiple?.length>1&&info.styleAuthoring===false){const section=RetouchInspector.section('Selection');RetouchInspector.note(section,'Select one layer to edit its content.');panelBody.append(section);return;}
@@ -3698,7 +3700,7 @@ async function writeSVGStrokeSource(type,extra){
   const removed=result.removedSourceIds||[],deletedLocks=layerLocks.removeSourceIds(removed);
   editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:[primary.id],selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:removed,undoId:result.undoId});
   layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,result.selectionIds);
-  toast(type==='restoreSVGStrokeSource'?'Original shape restored':type==='setSVGStrokeSourceWidth'?'Stroke weight updated':type==='setSVGStrokeSourceStyle'?(extra.property==='fill'?'Fill updated':extra.property==='stroke'?'Stroke color updated':'Stroke settings updated'):'Stroke alignment updated','ok');return true;
+  toast(type==='setSVGStrokeSourceTransform'?'Vector updated':type==='restoreSVGStrokeSource'?'Original shape restored':type==='setSVGStrokeSourceWidth'?'Stroke weight updated':type==='setSVGStrokeSourceStyle'?(extra.property==='fill'?'Fill updated':extra.property==='stroke'?'Stroke color updated':'Stroke settings updated'):'Stroke alignment updated','ok');return true;
  }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 async function writeSVGMask(type,extra){
@@ -3745,7 +3747,18 @@ async function writeSVGSelection(matrices){
 function svgSelectionMatches(infos,d){return infos.every(info=>matchingInDocument(d,info.id,info).some(el=>el.getAttribute('transform')===info.svgTransform?.value));}
 async function writeSVGTransform(info,target,matrix){
   if(sel?.info!==info||panelTasks||undoBusy||sourceRequests||editing)return;
-  const reason=RetouchSVGResize.reason(target,info,true);if(reason)return toast(reason,'err');busyPanel(true);
+  const reason=RetouchSVGResize.reason(target,info,true);if(reason)return toast(reason,'err');
+  if(info.svgStrokeSource){
+   // Never duplicate retained clip/mask identities in the authored document.
+   // Test this user-requested transform on its existing nodes, then restore
+   // only the attribute still owned by this preview before the source write.
+   const before=target.getAttribute('transform'),next=RetouchSVGAffine.format(matrix);
+   try{target.setAttribute('transform',next);RetouchSVGStrokeFidelity.check(target,{...info.svgStrokeSource.model,placement:matrix},info.svgStrokeSource.definitionId);if(target.getAttribute('transform')!==next)throw Error('The vector changed during the transform preview.');}
+   catch(error){toast(error.message,'err');return false;}
+   finally{if(target.getAttribute('transform')===next){if(before===null)target.removeAttribute('transform');else target.setAttribute('transform',before);}}
+   return writeSVGStrokeSource('setSVGStrokeSourceTransform',{matrix});
+  }
+  busyPanel(true);
    try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransform',id:info.id,fileHash:info.hash,matrix});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update vector','err');if(result.undoId)editorHistory.record({type:'setSVGTransform',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.getAttribute('transform')===sel.info.svgTransform?.value,{svgGeometry:true});renderPanel();toast('Vector updated','ok');}finally{busyPanel(false);}
 }
 function svgGradientsMatch(el,info){return (info.svgGradientCreation?.values||[]).every(item=>el.getAttribute(item.paint)===item.value)&&(info.svgGradients||[]).every(gradient=>{const node=el.ownerDocument.getElementById(gradient.id),reference=/^url\(\s*(['"]?)#([\w:.-]+)\1\s*\)$/.exec(el.getAttribute(gradient.paint)||'');if(!node||node.localName!==gradient.type||reference?.[2]!==gradient.id)return false;const stops=[...node.children].filter(child=>child.localName==='stop');return gradient.fields.every(field=>node.getAttribute(field.name)===field.value)&&stops.length===gradient.stops.length&&gradient.stops.every((stop,i)=>stops[i].getAttribute('offset')===stop.offset&&stops[i].getAttribute('stop-color')===stop.color&&stops[i].getAttribute('stop-opacity')===stop.opacity);});}

@@ -39,6 +39,7 @@
    const shadow=host.attachShadow({mode:'closed'}),svg=root.document.createElementNS(group.namespaceURI,'svg'),expected=root.document.createElementNS(group.namespaceURI,'g');
    svg.style.cssText='all:initial!important;display:block!important;';svg.setAttribute('width','100');svg.setAttribute('height','100');svg.setAttribute('viewBox','0 0 100 100');
    expected.innerHTML=root.RetouchSVGStrokeAlignment.render({...m,document:root.RetouchSVGPath.parseCompound(m.path)},id);svg.append(expected);shadow.append(svg);root.document.body.append(host);
+   if(m.placement)expected.setAttribute('transform',root.RetouchSVGAffine.format(m.placement));
    const reference=expected.firstElementChild,actualNodes=[group,rendered,...rendered.querySelectorAll('*')],expectedNodes=[expected,reference,...reference.querySelectorAll('*')];
    if(actualNodes.length!==expectedNodes.length||actualNodes.some((el,i)=>el.localName!==expectedNodes[i].localName))throw Error('The generated stroke structure changed. Re-select the vector.');
    for(let i=0;i<actualNodes.length;i++){
@@ -59,7 +60,7 @@
     for(const property of properties)if(value(css,property,actual)!==value(wanted,property,ref))throw Error('Page CSS overrides '+property+' on this stroke. Resolve that override before editing it.');
    }
    const A=root.RetouchSVGAffine;
-   if(!A.equivalent(relative(group,group.parentElement),A.identity())||!A.equivalent(relative(rendered,group),m.matrix))throw Error('Page CSS changes the stroke coordinate space.');
+   if(!A.equivalent(relative(group,group.parentElement),m.placement||A.identity())||!A.equivalent(relative(rendered,group),m.matrix))throw Error('Page CSS changes the stroke coordinate space.');
    for(const path of [...rendered.children].filter(el=>el.localName==='path'))if(!A.equivalent(relative(path,rendered),A.identity()))throw Error('Page CSS transforms a generated stroke path.');
    return true;
   }finally{host.remove();}

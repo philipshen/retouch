@@ -40,11 +40,11 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,reactFixture=process.env.RT_REACT
   }
   await page.getByRole('treeitem',{name:'rect · Card',exact:true}).click();await settled();await alignment.waitFor();assert.equal(await alignment.inputValue(),'inside');assert.equal(await page.getByLabel('Stroke weight',{exact:true}).isDisabled(),false);
   const tree=await page.evaluate(()=>{const result=[];const walk=items=>{for(const item of items){result.push({id:item.el.getAttribute('data-rt'),label:item.label});walk(item.children);}};walk(RetouchLayers.collect(doc()));return result;});const r=resolve(read(),made.selectionIds[0]),c=sourceModule.context(r,kind);assert.ok(tree.some(e=>e.id===r.element.id));assert.ok(!tree.some(e=>e.id===c.original.id));assert.ok(!tree.some(e=>e.label==='path'||e.label==='g'));await pixels('inside');
-  await app.locator('[data-rt-stroke-alignment]').dblclick({position:{x:80,y:80}});await settled();assert.equal(await alignment.inputValue(),'inside');assert.equal(await page.locator('.svg-vertex-surface').count(),0);assert.equal(await page.locator('.svg-resize-handles').isVisible(),false);
+  await app.locator('[data-rt-stroke-alignment]').dblclick({position:{x:80,y:80}});await settled();assert.equal(await alignment.inputValue(),'inside');assert.equal(await page.locator('.svg-vertex-surface').count(),0);assert.equal(await page.locator('.svg-resize-handles').isVisible(),true);
   const unchanged=read();await app.locator('svg[data-rt]').evaluate(svg=>{const copy=svg.querySelector('[data-rt-stroke-alignment]').cloneNode(true);copy.setAttribute('data-test-stroke-copy','');svg.append(copy);});
   await page.getByRole('treeitem',{name:'rect · Card',exact:true}).first().click();await settled();assert.equal(await alignment.isDisabled(),true);assert.equal(await page.getByLabel('Stroke weight',{exact:true}).isDisabled(),true);assert.equal(read(),unchanged);
   await app.locator('[data-test-stroke-copy]').evaluate(el=>el.remove());await wait(async()=>await page.getByRole('treeitem',{name:'rect · Card',exact:true}).count()===1);await page.getByRole('treeitem',{name:'rect · Card',exact:true}).click();await settled();assert.equal(await alignment.isDisabled(),false);
-  await page.setViewportSize({width:1200,height:700});await page.waitForFunction(()=>{const field=document.querySelector('[aria-label="Stroke alignment"]');if(!field)return false;const box=field.getBoundingClientRect();return innerWidth===1200&&box.top>=0&&box.bottom<=innerHeight;});assert.equal(await alignment.isVisible(),true);await page.setViewportSize({width:1440,height:1000});
+  await page.setViewportSize({width:1200,height:700});await page.waitForFunction(()=>{const field=document.querySelector('[aria-label="Stroke alignment"]');if(!field)return false;field.scrollIntoView({block:'nearest'});const box=field.getBoundingClientRect();return innerWidth===1200&&box.top>=0&&box.bottom<=innerHeight;});assert.equal(await alignment.isVisible(),true);await page.setViewportSize({width:1440,height:1000});
   await page.getByRole('button',{name:'Lock rect · Card',exact:true}).click();await page.getByRole('treeitem',{name:'rect · Card',exact:true}).click();await settled();assert.equal(await alignment.isDisabled(),true);assert.equal(await page.getByLabel('Stroke weight',{exact:true}).isDisabled(),true);assert.equal(await page.getByRole('button',{name:'Restore original shape',exact:true}).isDisabled(),true);assert.equal(read(),made.edits[0].after);
   await page.getByRole('button',{name:'Unlock rect · Card',exact:true}).click();await page.getByRole('treeitem',{name:'rect · Card',exact:true}).click();await settled();assert.equal(await alignment.isDisabled(),false);
   // Check at write time: page styles can change after the inspector is mounted.
@@ -67,6 +67,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,reactFixture=process.env.RT_REACT
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===after);
 
   }
+  await require('./svg-retained-stroke-transforms.cjs')({page,app,read,settled,wait});
   await require('./svg-retained-stroke-paints.cjs')({page,app,read,settled,wait});
   await require('./svg-retained-stroke-settings.cjs')({page,app,read,settled,wait});
   // One history entry per label gesture; Escape restores the DOM and source.

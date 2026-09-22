@@ -41,8 +41,8 @@ for(const kind of ['html','react','liquid']){
  test(kind+' retained source uses atomic transactions and exact history for create, change, restore',t=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'rt-stroke-source-')),initial=resolve(kind),file=path.join(root,initial.relPath),history=new(require('../src/history.cjs').SourceHistory)(),states=[initial.source],entries=[];
   t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(file,initial.source);let selected=initial.element.id;
-  for(const type of ['createSVGStrokeSource','setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','restoreSVGStrokeSource']){
-   const r={...resolve(kind,fs.readFileSync(file,'utf8'),selected),file},plan=S.plan(r,{type,fileHash:r.hash,model,position:'outside',width:12.5},kind);assert.ok(plan.ok,plan.reason);
+  for(const type of ['createSVGStrokeSource','setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','setSVGStrokeSourceTransform','restoreSVGStrokeSource']){
+   const r={...resolve(kind,fs.readFileSync(file,'utf8'),selected),file},plan=S.plan(r,{type,fileHash:r.hash,model,position:'outside',width:12.5,matrix:[.8,.2,-.2,.8,15,20]},kind);assert.ok(plan.ok,plan.reason);
    const result=require('../src/transactions.cjs').applyPlan(root,plan);assert.ok(result.ok,result.reason);selected=result.selectionIds[0];entries.push(history.record(result.edits));states.push(fs.readFileSync(file,'utf8'));
   }
   assert.equal(states.at(-1),states[0]);
@@ -75,7 +75,7 @@ for(const kind of ['html','react','liquid'])test(kind+' retained source covers p
 });
 for(const kind of ['html','react','liquid'])test(kind+' adapter guards retain stroke originals across direct, selection, destination and ancestor edits',()=>{
  const adapter=require('../src/adapters/'+kind+'.cjs'),initial=resolve(kind),made=create(initial,kind),r=resolve(kind,made.edits[0].after,made.selectionIds[0]),v=view(r,kind),c=S.context(r,kind);
- const description=adapter.describe(r);assert.equal(description.svgStrokeSource.position,'inside');assert.equal(description.svgStrokeOwner,r.element.id);assert.equal(description.svgTransform.editable,false);assert.equal(description.svgGeometry,null);assert.equal(description.structure.canDuplicate,false);
+ const description=adapter.describe(r);assert.equal(description.svgStrokeSource.position,'inside');assert.equal(description.svgStrokeOwner,r.element.id);assert.equal(description.svgTransform.editable,true);assert.equal(description.svgGeometry,null);assert.equal(description.structure.canDuplicate,false);
  const change=adapter.planOp(r,{type:'setSVGStrokeSourcePosition',fileHash:r.hash,position:'outside'});assert.ok(change.ok,change.reason);
  assert.equal(adapter.planOp(r,{type:'restoreSVGStrokeSource',fileHash:r.hash}).edits[0].after,initial.source);
  assert.equal(adapter.capabilities.ops.includes('createSVGStrokeSource'),true);
@@ -171,4 +171,19 @@ for(const kind of ['html','react','liquid'])test(kind+' retained paint edits use
  for(const property of ['fill','stroke']){
   const changed=adapter.planOp(r,{type:'setSVGStrokeSourceStyle',fileHash:r.hash,property,value:'#11223380'});assert.ok(changed.ok,changed.reason);const next=resolve(kind,changed.edits[0].after,changed.selectionIds[0]),after=S.context(next,kind);assert.equal(after.model[property],'#11223380');assert.equal(after.model[property+'Opacity'],1);assert.equal(after.model.opacity,.3);assert.equal(after.model[property==='fill'?'strokeOpacity':'fillOpacity'],property==='fill'?.6:.4);assert.equal(after.id,before.id);assert.equal(after.source,before.source);assert.equal(adapter.planOp(next,{type:'restoreSVGStrokeSource',fileHash:next.hash}).edits[0].after,initial.source);
  }
+});
+
+for(const kind of ['html','react','liquid'])test(kind+' retained placement preserves original geometry, identity, paint and restoration',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),initial=resolve(kind),made=create(initial,kind),r=resolve(kind,made.edits[0].after,made.selectionIds[0]),before=S.context(r,kind);
+ for(const matrix of [[1,0,0,1,15,-8],[.8,.2,-.2,.8,15,20],[-1,0,.2,1,100,0]]){
+  const op={type:'setSVGStrokeSourceTransform',fileHash:r.hash,matrix},change=adapter.planOp(r,op);assert.ok(change.ok,change.reason);assert.equal(S.validatePlan(r,op,kind,change),change);
+  const next=resolve(kind,change.edits[0].after,change.selectionIds[0]),after=S.context(next,kind);
+  assert.deepEqual(after.model,{...before.model,placement:matrix});assert.equal(after.source,before.source);assert.equal(after.id,before.id);assert.deepEqual(adapter.describe(next).svgTransform.matrix,matrix);
+  const width=adapter.planOp(next,{type:'setSVGStrokeSourceWidth',fileHash:next.hash,width:14}),wide=resolve(kind,width.edits[0].after,width.selectionIds[0]);assert.deepEqual(S.context(wide,kind).model.placement,matrix);
+  assert.equal(adapter.planOp(next,{type:'restoreSVGStrokeSource',fileHash:next.hash}).edits[0].after,initial.source);
+  assert.equal(adapter.planOp(next,{...op,fileHash:next.hash}).unchanged,true);
+  assert.equal(S.validatePlan(r,op,kind,{...change,edits:[{...change.edits[0],after:change.edits[0].after.replace('stroke="blue"','stroke="green"')}]}).refused,true);
+ }
+ for(const matrix of [undefined,null,[],[1,0,0,0,0,0],[Infinity,0,0,1,0,0],[1,0,0,1,'2',0]])assert.equal(adapter.planOp(r,{type:'setSVGStrokeSourceTransform',fileHash:r.hash,matrix}).refused,true);
+ assert.equal(create(initial,kind,{model:{...model,placement:[1,0,0,1,1,0]}}).refused,true);
 });

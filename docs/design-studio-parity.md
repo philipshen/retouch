@@ -28759,3 +28759,12 @@ WebKit captures also preserve SVG attribute transforms and their CSS overrides.
 See [stroke export bounds](stroke-parity.md#selected-svg-stroke-export-bounds--2026-09-22)
 for verification and limits. Arbitrary filters/markers, exact text/use paint
 bounds, broad Figma parity and trusted desktop distribution remain open.
+
+### 2026-09-22 — transform aligned vectors
+
+Aligned vectors keep position and size controls, flips, keyboard movement,
+and canvas resize/rotation handles. Transform edits preserve their original
+shape and paint settings, with exact undo/redo and full original restoration.
+See [retained vector placement](stroke-parity.md#retained-vector-placement--2026-09-22).
+Path-node editing, simultaneous retained-vector transforms, multiple paints,
+retained gradients, responsive variants and desktop delivery remain open.

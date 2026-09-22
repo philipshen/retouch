@@ -44,7 +44,7 @@ function markup(original,model,id,kind){
  let rendered=S.render(input(normalized),id);
  if(kind==='react')rendered=rendered.replace(/ ([a-z]+(?:-[a-z]+)+)=/g,(token,name)=>jsxNames[name]?' '+jsxNames[name]+'=':token);
  const encoded=Buffer.from(JSON.stringify(normalized)).toString('base64url');
- const prefix='<g '+marker+'="1" data-rt-stroke-id="'+escape(id)+'" data-rt-stroke-model="'+encoded+'"><g display="none" '+originalMarker+'="">';
+ const prefix='<g '+(normalized.placement?'transform="'+A.format(normalized.placement)+'" ':'')+marker+'="1" data-rt-stroke-id="'+escape(id)+'" data-rt-stroke-model="'+encoded+'"><g display="none" '+originalMarker+'="">';
  return {text:prefix+original+'</g>'+rendered+'</g>',originalOffset:prefix.length,model:normalized};
 }
 function context(r,kind){
@@ -72,6 +72,7 @@ function plan(r,op,kind){
   const v=view(r,kind);let start=v.start(r.element),end=v.end(r.element),original,oldOriginal,model,id,replacement,originalOffset,created=false;
   if(op.type==='createSVGStrokeSource'){
    const geometry=shape(r,kind,v);model=S.normalize(op.model);
+   if(model.placement!==undefined)throw Error('Create the stroke before changing its placement.');
    if(model.path!==geometry.path||JSON.stringify(model.matrix)!==JSON.stringify(geometry.matrix))throw Error('The stroke snapshot does not match the original geometry and transform.');
    for(let parent=v.parents.get(r.element.id);parent;parent=v.parents.get(parent)){const e=v.elements.find(e=>e.id===parent);if(v.attr(e,marker)!==undefined||v.attr(e,'data-rt-boolean')!==undefined)throw Error('Edit the owning retained group first.');}
    original=r.source.slice(start,end);oldOriginal=r.element;created=true;
@@ -88,6 +89,11 @@ function plan(r,op,kind){
    else if(op.type==='setSVGStrokeSourceWidth'){
     if(!Number.isFinite(op.width)||op.width<0||op.width>10000)throw Error('Choose a stroke width between 0 and 10,000 source units.');
     model=S.normalize({...input(model),width:op.width});
+   }
+   else if(op.type==='setSVGStrokeSourceTransform'){
+    // Move the logical layer without changing the archived geometry/matrix.
+    model=S.normalize({...input(model),placement:op.matrix});
+    if(op.matrix===undefined)throw Error('Provide a finite placement matrix.');
    }
    else if(op.type==='setSVGStrokeSourceStyle'){
     if(!['fill','stroke','linecap','linejoin','miterlimit','dasharray','dashoffset'].includes(op.property)||op.value===null||op.value===undefined)throw Error('Choose a supported stroke setting and value.');
@@ -131,7 +137,7 @@ function creation(r,kind){
 module.exports={plan,context,creation};
 
 // Public creation requires a stable definition identity for deterministic plans.
-const types=new Set(['createSVGStrokeSource','setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','setSVGStrokeSourceStyle','restoreSVGStrokeSource']);
+const types=new Set(['createSVGStrokeSource','setSVGStrokeSourcePosition','setSVGStrokeSourceWidth','setSVGStrokeSourceStyle','setSVGStrokeSourceTransform','restoreSVGStrokeSource']);
 const deletionTypes=new Set(['deleteElement','deleteSelection','deleteComponent','deleteComponentSelection']);
 function referencedIds(op){
  const ids=new Set();
@@ -206,6 +212,6 @@ function decorateDescription(info){
  const structure={...info.structure,canCopy:false,canDuplicate:false,canReparent:false,canFrame:false,canRemoveFrame:false,canMoveBefore:false,canMoveAfter:false,canMoveFirst:false,canMoveLast:false};
  if(info.svgStrokeOwner!==info.id)structure.canDelete=false;
  return {...info,structure,canRename:false,canCreateComponent:false,svgGeometry:null,svgConversion:null,svgDuplication:null,svgMovement:null,svgInsertion:null,svgBooleanReplacement:null,svgMask:null,
-  svgTransform:info.svgTransform?{...info.svgTransform,editable:false,reason:'Restore the original shape before changing its geometry.'}:null};
+  svgTransform:info.svgStrokeSource?info.svgTransform:info.svgTransform?{...info.svgTransform,editable:false,reason:'Restore the original shape before changing its geometry.'}:null};
 }
 module.exports.decorateDescription=decorateDescription;

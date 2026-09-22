@@ -17,9 +17,9 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE,engine=process.env.RT_E2E_BROWSER
   },{model,id});checks++;assert.equal(result.unchanged,true);assert.equal(result.mutations,0);assert.equal(result.references,0);assert.equal(result.scopes,0);
   if(expected)assert.match(result.error||'',expected);else assert.equal(result.error,undefined);return result;
  };
- for(const position of ['inside','center','outside'])for(const matrix of [[1,0,0,1,0,0],[.8,.2,-.2,.8,20,0],[.75,0,0,1.1,10,-5]]){
-  const input={document:G.parseCompound('M20 20H80V80H20Z'),position,width:8,fill:'#ff0000',stroke:'#0000ff',matrix},model=S.normalize(input),rendered=S.render(input,id);
-  await frame.setContent('<style>body{margin:0}</style><svg width="300" height="300" viewBox="0 0 100 100"><g transform="translate(2 1)"><g data-rt-stroke-alignment="1" data-rt-stroke-id="'+id+'"><g data-rt-stroke-original="" display="none"><rect x="20" y="20" width="60" height="60"/></g>'+rendered+'</g></g></svg>');await run(model);
+ for(const placement of [undefined,[.9,.1,-.1,.9,5,2],[-1,0,0,1,100,0]])for(const position of ['inside','center','outside'])for(const matrix of [[1,0,0,1,0,0],[.8,.2,-.2,.8,20,0],[.75,0,0,1.1,10,-5]]){
+  const input={document:G.parseCompound('M20 20H80V80H20Z'),position,width:8,fill:'#ff0000',stroke:'#0000ff',matrix,...(placement?{placement}:{})},model=S.normalize(input),rendered=S.render(input,id);
+  await frame.setContent('<style>body{margin:0}</style><svg width="300" height="300" viewBox="0 0 100 100"><g transform="translate(2 1)"><g '+(placement?'transform="matrix('+placement.join(' ')+')" ':'')+'data-rt-stroke-alignment="1" data-rt-stroke-id="'+id+'"><g data-rt-stroke-original="" display="none"><rect x="20" y="20" width="60" height="60"/></g>'+rendered+'</g></g></svg>');await run(model);
   const beforePreview=await frame.locator('[data-rt-stroke-alignment]').innerHTML();
   await page.evaluate(({model,id})=>{const group=document.querySelector('iframe').contentDocument.querySelector('[data-rt-stroke-alignment]');window.strokePreview=RetouchSVGStrokeFidelity.previewWeight(group,model,id);window.strokePreviewNodes=[...group.querySelectorAll('*')];},{model,id});
   for(const width of [0,.125,12.5]){await page.evaluate(width=>strokePreview.update(width),width);await run({...model,width});assert.equal(await page.evaluate(()=>strokePreview.current()),true);}

@@ -20,7 +20,7 @@
   if(target.style.getPropertyValue('transform'))return 'CSS controls this vector’s transform. Edit those styles before resizing its SVG geometry.';
   const ownMatrix=el=>{const parent=(el.parentElement===maskDefinition(el)?el.parentElement.parentElement:el.parentElement)?.getScreenCTM?.(),own=el.getScreenCTM?.();try{return parent&&own?matrix(parent.inverse().multiply(own)):null;}catch{return null;}};
   if(!A().equivalent(ownMatrix(target),info.svgTransform.matrix))return 'CSS controls this vector’s transform. Edit those styles before resizing its SVG geometry.';
-  if(probe){const copy=target.cloneNode(true),test=[1.123,.1,.2,.917,1.173,2.271];copy.setAttribute('transform',A().format(test));copy.style.setProperty('visibility','hidden','important');try{target.after(copy);if(!A().equivalent(ownMatrix(copy),test))return 'CSS controls this vector’s transform. Edit those styles before resizing its SVG geometry.';}finally{copy.remove();}}
+  if(probe&&!info.svgStrokeSource){const copy=target.cloneNode(true),test=[1.123,.1,.2,.917,1.173,2.271];copy.setAttribute('transform',A().format(test));copy.style.setProperty('visibility','hidden','important');try{target.after(copy);if(!A().equivalent(ownMatrix(copy),test))return 'CSS controls this vector’s transform. Edit those styles before resizing its SVG geometry.';}finally{copy.remove();}}
   return null;
  }
  function frameClip(frame,canvas){const f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect();return {f,left:Math.max(c.left,f.left),top:Math.max(c.top,f.top),right:Math.min(c.right,f.right),bottom:Math.min(c.bottom,f.bottom),scale:f.width/frame.contentWindow.innerWidth};}
@@ -40,7 +40,7 @@
    const blocked=reason(target,info,true);if(blocked)throw Error(blocked);if(!current())throw Error('Re-select this vector before editing.');const original=target.getAttribute('transform'),data=measure(target),g=data.g,w=target.ownerDocument.defaultView,parent=new w.DOMMatrix(matrix(data.m)).multiply(new w.DOMMatrix(info.svgTransform.matrix).inverse());let last=original,expected=data.m;
    const valid=()=>{if(!current()||!target.isConnected||target.getAttribute('transform')!==last)return false;try{const actual=target.getBBox(),screen=matrix(target.getScreenCTM()),want=matrix(expected);return ['x','y','width','height'].every(k=>Math.abs(actual[k]-g[k])<.01)&&screen.every((v,i)=>Math.abs(v-want[i])<.1);}catch{return false;}};
    return {current:valid,update:value=>{if(!valid())throw Error('The vector changed. Re-select it.');const matrix=matrixFor(value,g);if(!matrix)throw Error('Keep this value within the supported range.');last=A().format(matrix);expected=parent.multiply(new w.DOMMatrix(matrix));target.setAttribute('transform',last);render(matrix);},restore:()=>{if(target.getAttribute('transform')===last){if(original===null)target.removeAttribute('transform');else target.setAttribute('transform',original);}render(info.svgTransform.matrix);}};
-  };return input;
+  };input.retouchNumericHandle(input,{canvas:true,keyboardOnly:true,keys:['ArrowDown','ArrowUp'],onCommit:()=>root.RetouchPanelFocus?.queue(input)});return input;
  }
  function positionFields(section,info,target,{save,current,onCanvas}){
   const I=root.RetouchInspector;let initial;try{const blocked=reason(target,info,true);if(blocked)throw Error(blocked);initial=measure(target);}catch(error){I.note(section,error.message);return;}

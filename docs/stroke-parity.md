@@ -600,3 +600,62 @@ Logs: `/tmp/retouch-export-all-v2.log` and
 startup timeout and a capture run timed out on page reload; both processes
 terminated and unchanged checks passed on rerun. No assertions were relaxed.
 The desktop package was not rebuilt or notarized for this checkpoint.
+
+## Retained vector placement — 2026-09-22
+
+Aligned vectors now retain the normal light inspector's position, rotation,
+flip and size controls, plus canvas resize/rotation handles and keyboard
+movement. The source operation stores an optional placement matrix on the
+canonical outer group. Its original archived shape, source geometry transform,
+definition identity and paints remain unchanged. Older retained sources retain
+their exact serialization until edited. Restore original shape removes the
+placement together with the retained wrapper and restores the original bytes.
+
+Placement scales the entire vector, including its stroke, as an SVG group.
+The existing stroke width control still edits local source units. This does not
+add non-scaling retained strokes, path-node editing or simultaneous transforms
+of multiple retained vectors. Selection transforms refuse the latter before
+showing active multi-selection handles. Placement remains source-global across
+screen sizes and requires one unlocked rendered instance.
+
+The dedicated source operation validates finite, non-collapsed matrices and
+passes the same deterministic plan and exact-history checks as other retained
+edits. Browser fidelity compares the outer placement and inner source matrix
+separately. Normal vector numeric fields now use grouped held-arrow previews:
+release commits once, and Escape restores the previous transform and source.
+
+Retained vectors do not use the ordinary transform probe's cloned subtree.
+Duplicating clip/mask IDs, even briefly, caused stale inside-stroke pixels in
+WebKit after changing alignment. Inspector mounting now avoids that clone.
+A user-requested transform is checked on the existing node with the proposed
+placement model, then its owned transform attribute is restored before source
+submission. This checks the vector's resulting paint and coordinate space;
+it is not a proof that arbitrary author observers or conditional styles on
+other elements have no effects. Current singleton, lock and source revision
+checks still apply before the source write.
+
+All 2,481 source tests passed with no skips in 17.39 seconds
+(`/tmp/retouch-placement-full-verified.log`). Both Chromium and WebKit passed
+1,386 fidelity checks each across three alignments, three original matrices
+and three outer placements, including reflected placement, paint/width
+previews, CSS overrides, identity checks and reference/Paper cleanup.
+Logs: `/tmp/retouch-placement-fidelity-{chromium,webkit}.log`.
+
+Six HTML/React/Liquid editor workflows passed across Chromium and WebKit.
+They cover creation, X/Y/width/height/rotation fields, flips, keyboard movement,
+held-field preview/cancellation, canvas resize/rotation, exact undo/redo,
+unchanged archived source shape and definition identity, and retained form
+input/document identity. Existing alignment, weight, advanced settings and
+paint controls also passed in these runs. The inspector test checks that
+mounting controls adds no duplicate definition IDs; a rendered CSS matrix
+override refuses the requested transform without a source change. React runtime
+revision attributes are excluded from DOM archive comparisons; exact source
+bytes remain covered by history/source checks.
+
+Evidence: `/tmp/retouch-stroke-placement-controls-{html,liquid,react}-chromium.log`,
+`/tmp/retouch-placement-webkit-css.log`, and
+`/tmp/retouch-stroke-placement-controls-{liquid,react}-webkit.log`.
+The CSS override fixture uses an explicit identity matrix so both browsers
+actually enforce the same rendered constraint. Inspected light UI:
+`/tmp/retouch-stroke-placement-html-chromium.png`. Desktop packaging was not
+rebuilt or notarized for this checkpoint.

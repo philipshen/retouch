@@ -24,6 +24,7 @@
   return [sx,0,0,sy,box.left*(1-sx),box.top*(1-sy)];
  }
  function capture(infos,elements,probe=true){
+  if(infos.length>1&&infos.some(info=>info.svgStrokeOwner))throw Error('Select one aligned vector to transform it.');
   if(infos.length!==elements.length||elements.some(el=>!el?.isConnected)||new Set(infos.map(i=>i.file)).size!==1)throw Error('Select visible vectors from one source file.');
   const members=infos.map((info,i)=>{const el=elements[i],reason=root.RetouchSVGResize.reason(el,info,probe);if(reason)throw Error(reason);if(el.getAttribute('transform')!==info.svgTransform.value)throw Error('The vector changed. Re-select it.');const data=root.RetouchSVGResize.measure(el),parent=A().multiply(array(data.m),inverse(info.svgTransform.matrix));return {info,el,parent,covered:elements.some(ancestor=>ancestor!==el&&ancestor.contains(el)),rect:root.RetouchSVGResize.screenBounds(el)};});
   const outer=members.filter(m=>!m.covered);const left=Math.min(...outer.map(m=>m.rect.left)),top=Math.min(...outer.map(m=>m.rect.top)),right=Math.max(...outer.map(m=>m.rect.right)),bottom=Math.max(...outer.map(m=>m.rect.bottom));return {members,box:{left,top,width:right-left,height:bottom-top},w:elements[0].ownerDocument.defaultView};
